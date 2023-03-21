@@ -104,11 +104,10 @@ for d=1:length(periCSveld)
 end
 %%
 % plot mean image per day
-% e200: i=1:16; e201: 17:31
-j = 16; %offset
 figure;
-for i=17:31
-    axes{i-j}=subplot(4,4,i-j);
+j = 0; % offset
+for i=1:length(mice)
+    axes{i-j}=subplot(5,5,i-j);
     imagesc(mice{i}.ops.meanImg) %meanImg or max_proj
     colormap('gray')
     title(sprintf("day %i", i-j))

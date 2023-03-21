@@ -2,10 +2,10 @@
 """
 Created on Fri Feb 24 15:45:37 2023
 
-@author: Han
+@author: Han, Zahra
 """
 
-import os, sys, shutil, suite2p, tifffile, ast
+import os, sys, shutil, tifffile, ast
 import argparse   
 import pandas as pd, numpy as np
 from utils.utils import makedir
@@ -48,10 +48,10 @@ def main(**args):
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            #https://github.com/jcouto/sbxreader; download dependency
-            from sbxreader import sbx_memmap
-            dat = sbx_memmap(sbxfl)
+            #https://github.com/jcouto/sbxreader; download dependency            
             #check if tifs exists
+            from sbxreader import sbx_memmap                
+            dat = sbx_memmap(sbxfl)
             tifs=[xx for xx in os.listdir(imagingflnm) if ".tif" in xx]
             if len(tifs)!=14: #assumes 40000 frames version, TODO: make modular
                 #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16
@@ -64,6 +64,7 @@ def main(**args):
                 print("\n ******14 tifs exists! Running suite2p... ******\n")
             #do suite2p after tifs are made
             # set your options for running
+            import suite2p
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
             ops["reg_tif"]=params["reg_tif"] 
@@ -94,16 +95,31 @@ def main(**args):
         ########################WEEKLY CONCATENATED SUTIE2P RUN########################
         dayflds = [os.path.join(params["datadir"],params["mouse_name"], str(day)) for day in params["days_of_week"]]
         imgpths = [os.path.join(dayfld, xx) for dayfld in dayflds for xx in os.listdir(dayfld) if "000" in xx]
-        #assumes that these tifs have already been made in step 1
+        for imgpth in imgpths:
+            #assumes that these tifs have already been made in step 1
+            tifspth = [os.path.join(imgpth, xx) for xx in os.listdir(imgpth) if ".tif" in xx]
+            if len(tifspth)==0:
+                print("\n writing tifs....")
+                from sbxreader import sbx_memmap
+                sbxfl=[os.path.join(imgpth,xx) for xx in os.listdir(imgpth) if "sbx" in xx][0]
+                dat = sbx_memmap(sbxfl)
+                #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16
+                for nn,i in enumerate(range(0, dat.shape[0], 3000)): #splits into tiffs of 3000 planes each                    
+                    stack = np.array(dat[i:i+3000])
+                    #crop in x
+                    stack=np.squeeze(stack)[:,:,89:718] # hard coded crop from ed's og script
+                    tifffile.imwrite(sbxfl[:-4]+f'_{nn+1:03d}.tif', stack.astype('uint16'))
+        # otherwise concat all tifs
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
         tifspths.sort(); print(tifspths)
         #savedir
         weekdir = os.path.join(params["datadir"],params["mouse_name"], "week"+str(params["week"])); makedir(weekdir)    
         #do suite2p after tifs are made
         # set your options for running
+        import suite2p
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
-        ops["reg_tif"]=params["reg_tif"] 
+        ops["reg_tif"]=False # currently default is not to save reg_tif for weekly videos 
         ops["nplanes"]=params["nplanes"] 
         ops["delete_bin"]=params["delete_bin"] #False
         ops["move_bin"]=params["move_bin"]
