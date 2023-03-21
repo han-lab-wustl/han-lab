@@ -6,7 +6,7 @@ Created on Mon Jan 30 10:59:23 2023
 """
 
 import os, shutil
-animal = "e200"
+animal = "e201"
 src = os.path.join("Z:\sstcre_imaging", animal)
 dst = os.path.join(r"Y:\sstcre_analysis\fmats", animal)
 # get only days, not week fmats
