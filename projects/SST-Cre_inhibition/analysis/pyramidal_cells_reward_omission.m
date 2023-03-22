@@ -1,6 +1,6 @@
 % Zahra
 clear all; close all
-for day=8:21
+for day=19:21
     fl=dir(fullfile(sprintf('Z:\\sstcre_imaging\\e200\\%i',day), '**\*Fall.mat'));
     load(fullfile(fl.folder,fl.name));
     

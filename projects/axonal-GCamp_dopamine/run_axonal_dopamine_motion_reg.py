@@ -5,7 +5,8 @@ Created on Fri Feb 24 15:45:37 2023
 @author: Han
 """
 
-import os, sys, shutil, suite2p, tifffile, ast
+import os, sys, shutil, tifffile, ast
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 import argparse   
 import pandas as pd, numpy as np
 from utils.utils import makedir
@@ -35,7 +36,7 @@ def main(**args):
 
 
     elif args["stepid"] == 1:
-        ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
+        ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS####
         #args should be the info you need to specify the params
         # for a given experiment, but only params should be used below
         
@@ -62,9 +63,17 @@ def main(**args):
                         stack=np.squeeze(stack)[:,89:718,100:750] # crop based on etl artifacts
                         tifffile.imwrite(sbxfl[:-4]+f'_plane{plane+1:02d}_{nn+1:03d}.tif', stack.astype('uint16'))
             else:
-                print("\n ******Tifs exists! Running suite2p... ******\n")
+                print("\n ******Tifs exists! Run suite2p... ******\n")
             #do suite2p after tifs are made
             # set your options for running
+        save_params(params, imagingflnm)
+    
+    elif args["stepid"] == 2:
+            ##############RUN SUITE2P MOTION CORRECTION##############
+            imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
+                                        params["mouse_name"], params["day"])) if "000" in xx][0]
+            imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], imagingfl)
+            import suite2p
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
             ops["reg_tif"]=params["reg_tif"] 
