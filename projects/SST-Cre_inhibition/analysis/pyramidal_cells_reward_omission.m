@@ -1,12 +1,12 @@
 % Zahra
 clear all; close all
-for day=19:21
-    fl=dir(fullfile(sprintf('Z:\\sstcre_imaging\\e200\\%i',day), '**\*Fall.mat'));
+for day=8:15
+    fl=dir(fullfile(sprintf('Y:\\sstcre_imaging\\e200\\%i',day), '**\*Fall.mat'));
     load(fullfile(fl.folder,fl.name));
     
     dff = redo_dFF(F, 31.25, 20, Fneu);
     
-    range=5;
+    range=3;
     bin=0.2;
     rewardsonly=rewards>=1;
     cs=rewards==0.5;
@@ -34,10 +34,11 @@ for day=19:21
     maxA = max(A, [], 2);
     [~, index] = sort(maxA);
     B    = A(index, :);
-    imagesc(B); hold on;
-    xticks([1:5:50, 50])
-    xline(median([1:5:50, 50]),'-k','R'); %{'Conditioned', 'stimulus'}
-    xline(median([1:5:50, 50])-2.5, '-.r','CS'); %{'Conditioned', 'stimulus'}
+    imagesc(B); colorbar;
+    ticks = [1:5:range*10, range*10];
+    xticks(ticks)
+    xline(median(ticks),'-k','R'); %{'Conditioned', 'stimulus'}
+    xline(median(ticks)-2.5, '-.r','CS'); %{'Conditioned', 'stimulus'}
     xticklabels([allbins(1:5:end) range]);
     xlabel('seconds')
     ylabel('dF/F') 
