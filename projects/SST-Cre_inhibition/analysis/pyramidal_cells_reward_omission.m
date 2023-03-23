@@ -1,6 +1,8 @@
 % Zahra
 clear all; close all
-for day=8:15
+grayColor = [.7 .7 .7];
+
+for day=[19,25]
     fl=dir(fullfile(sprintf('Y:\\sstcre_imaging\\e200\\%i',day), '**\*Fall.mat'));
     load(fullfile(fl.folder,fl.name));
     
@@ -12,6 +14,17 @@ for day=8:15
     cs=rewards==0.5;
     % runs for all cells
     [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dff',rewardsonly,timedFF,range,bin); %rewardsonly if mapping to reward
+    % find av velocity too    
+    idx = find(rewardsonly);
+    periCSvel = zeros(length(idx),length(allbins));
+    for iid=1:length(idx)
+        rn = (idx(iid)-(range/0.2):idx(iid)+(range/0.2)-1);
+        if max(rn)>40000
+            rn(find(rn>40000))=NaN;
+        end
+        periCSvel(iid,:)=forwardvel(rn);
+    end     
+     periCSveld_av = nanmean(periCSvel,1);
         
     
     % plot all cells aligned to rewards
@@ -30,6 +43,7 @@ for day=8:15
     % end
     
     figure;
+    subplot(2,1,1);
     A = normalize(binnedPerireward,2);
     maxA = max(A, [], 2);
     [~, index] = sort(maxA);
@@ -42,6 +56,12 @@ for day=8:15
     xticklabels([allbins(1:5:end) range]);
     xlabel('seconds')
     ylabel('dF/F') 
+    subplot(2,1,2);
+    plot(periCSveld_av, 'Color', grayColor)
+    xline(median(ticks),'-k','R'); %{'Conditioned', 'stimulus'}
+    xline(median(ticks)-2.5, '-.r','CS'); %{'Conditioned', 'stimulus'}
+    xlabel('seconds')
+    ylabel('average velocity') 
     title(sprintf("E200, RR, Day %i of recording", day))
 end
 %%
