@@ -2,7 +2,7 @@
 clear all; close all
 grayColor = [.7 .7 .7];
 
-for day=[19,25]
+for day=[16:18]
     fl=dir(fullfile(sprintf('Y:\\sstcre_imaging\\e200\\%i',day), '**\*Fall.mat'));
     load(fullfile(fl.folder,fl.name));
     
@@ -15,54 +15,43 @@ for day=[19,25]
     % runs for all cells
     [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dff',rewardsonly,timedFF,range,bin); %rewardsonly if mapping to reward
     % find av velocity too    
-    idx = find(rewardsonly);
-    periCSvel = zeros(length(idx),length(allbins));
-    for iid=1:length(idx)
-        rn = (idx(iid)-(range/0.2):idx(iid)+(range/0.2)-1);
-        if max(rn)>40000
-            rn(find(rn>40000))=NaN;
-        end
-        periCSvel(iid,:)=forwardvel(rn);
-    end     
-     periCSveld_av = nanmean(periCSvel,1);
+    [binnedPerivelocity,~,rewvel] = perivelocitybinnedactivity(forwardvel,rewardsonly,timedFF,range,bin);
         
     
     % plot all cells aligned to rewards
-    % grayColor = [.7 .7 .7];    
-    % 
-    % figure;
-    % for cellno=1:size(F,1) % plot each cell    
-    %     plot(binnedPerireward(cellno,:), 'Color', grayColor) 
-    %     hold on;        
-    %     % plot reward location as line
-    %     xticks([1:5:50, 50])
-    %     x1=xline(median(1:50),'-.b','Reward'); %{'Conditioned', 'stimulus'}
-    %     xticklabels([allbins(1:5:end) range]);
-    %     xlabel('seconds')
-    %     ylabel('dF/F')        
-    % end
+    grayColor = [.7 .7 .7];    
     
     figure;
-    subplot(2,1,1);
-    A = normalize(binnedPerireward,2);
-    maxA = max(A, [], 2);
-    [~, index] = sort(maxA);
-    B    = A(index, :);
-    imagesc(B); colorbar;
-    ticks = [1:5:range*10, range*10];
-    xticks(ticks)
-    xline(median(ticks),'-k','R'); %{'Conditioned', 'stimulus'}
-    xline(median(ticks)-2.5, '-.r','CS'); %{'Conditioned', 'stimulus'}
-    xticklabels([allbins(1:5:end) range]);
-    xlabel('seconds')
-    ylabel('dF/F') 
-    subplot(2,1,2);
-    plot(periCSveld_av, 'Color', grayColor)
-    xline(median(ticks),'-k','R'); %{'Conditioned', 'stimulus'}
-    xline(median(ticks)-2.5, '-.r','CS'); %{'Conditioned', 'stimulus'}
-    xlabel('seconds')
-    ylabel('average velocity') 
-    title(sprintf("E200, RR, Day %i of recording", day))
+    for cellno=1:size(F,1) % plot each cell    
+        plot(binnedPerireward(cellno,:), 'Color', grayColor) 
+        hold on;        
+        % plot reward location as line
+        ticks = [1:5:range*10, range*10];
+        xticks(ticks)
+        x1=xline(median(ticks),'-.b','Reward'); %{'Conditioned', 'stimulus'}
+        xticklabels([allbins(1:5:end) range]);
+        xlabel('seconds')
+        ylabel('dF/F')        
+    end
+    
+%     figure;
+%     A = normalize(binnedPerireward,2);
+%     maxA = max(A, [], 2);
+%     [~, index] = sort(maxA);
+%     B    = A(index, :);
+%     imagesc(B);
+%     ticks = [1:5:range*10, range*10];
+%     xticks(ticks)
+%     xline(median(ticks),'-k','R'); %{'Conditioned', 'stimulus'}
+%     xline(median(ticks)-2.5, '-.r','CS'); %{'Conditioned', 'stimulus'}
+%     xticklabels([allbins(1:5:end) range]);
+%     xlabel('seconds')
+%     ylabel('cell #') 
+%     yyaxis right
+%     plot(binnedPerivelocity', 'k', 'LineWidth',2)
+%     title(sprintf("E200, RR, Day %i of recording", day))
+%     ylabel('average velocity')
+
 end
 %%
 % plot all cell traces
@@ -80,3 +69,14 @@ end
 copygraphics(gcf, 'BackgroundColor', 'none');
 title(sprintf('Cell no. %03d', cellno));
 
+% plot on top of each other
+for cellno=1:size(dff,1)
+    fig=figure;
+    plot(dff(cellno,:)) % 2 in the first position is cell no
+    hold on;    
+    plot(rewardsonly*10, 'b')
+    plot(cs*10, 'g')
+    plot(lickVoltage*20, 'r')
+    yyaxis right
+    plot(forwardvel, 'Color', grayColor)
+end

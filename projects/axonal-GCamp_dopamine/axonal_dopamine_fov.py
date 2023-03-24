@@ -3,8 +3,8 @@
 
 import os, numpy as np, tifffile, matplotlib.pyplot as plt
 
-dys = [3,4,5] #may change based on mouse
-animal = 'e193' #mouse name in folder
+dys = [2,3,4,5] #may change based on mouse
+animal = 'e194' #mouse name in folder
 src = r'X:\dopamine_imaging'
 
 def getmeanimg(pth):

@@ -14,29 +14,25 @@ for rr = 1:length(Rewindx)
     
     for bin = 1:ceil(range*2/binsize)
         testbin(bin) = round(-range+bin*binsize-binsize,13); %round to nearest 13 so 0 = 0 and not 3.576e-16
-        currentidxt = find(timedFF>rewtime-range+bin*binsize-binsize& timedFF<=rewtime-range+bin*binsize);
+        currentidxt = find(timedFF>rewtime-range+bin*binsize-binsize & timedFF<=rewtime-range+bin*binsize);
         checks = consecutive_stretch(currentidxt);
         if ~isempty(checks{1})
             currentidxlogical = cellfun(@(x) max(ismember(x,currentrewcheckscell{currentrewardlogical})),checks);
             if sum(currentidxlogical)>0
                 checkidx = checks{currentidxlogical};
                 
-                rewvel(bin,rr) = velocity(checkidx);
+                rewvel(bin,rr) = nanmean(velocity(checkidx));
             else
-                rewvel(bin,:,rr) = NaN;
+                rewvel(bin,rr) = NaN;
             end
         else
-            rewvel(bin,:,rr) = NaN;
+            rewvel(bin,rr) = NaN;
         end
     end
     
 end
 
-meanrewvel = nanmean(rewvel,3);
-
-for n = 1:size(dFF,2)
-    normmeanrewvel(:,n) = rescale(meanrewvel(:,n),0,1);
-end
+meanrewvel = nanmean(rewvel,2);
 
 binnedPerivelocity = meanrewvel';
 allbins = testbin;
