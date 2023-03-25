@@ -60,7 +60,7 @@ def main(**args):
                     for plane in range(dat.shape[1]): # typically multiplane
                         stack = np.array(dat[i:i+3000,plane,:,:])
                         #crop in x
-                        stack=np.squeeze(stack)[:,89:718,100:750] # crop based on etl artifacts
+                        stack=np.squeeze(stack)[:,89:718,160:750] # crop based on etl artifacts
                         tifffile.imwrite(sbxfl[:-4]+f'_plane{plane+1:02d}_{nn+1:03d}.tif', stack.astype('uint16'))
             else:
                 print("\n ******Tifs exists! Run suite2p... ******\n")

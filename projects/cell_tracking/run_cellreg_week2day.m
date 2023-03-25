@@ -42,7 +42,9 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-results_directory= fullfile(pth,'e201_week3_2_days', 'Results') ;
+week = 5;
+animal = 'e201';
+results_directory= fullfile(pth,sprintf('%s_week%i_to_days', animal, week), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,8 +55,8 @@ figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
 
-fls = dir(fullfile(fileroot, "fmats\converted_e201*.mat"));
-fls = fls([8:12 18]); % e201, week 3 dropped day 8
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\week%i\\*.mat", animal, week))); % make sure week folder exists 
+% and week spatial footprints are in it
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
@@ -102,7 +104,7 @@ alignment_type='Translations and Rotations'; % either 'Translations', 'Translati
 use_parallel_processing=true; % either true or false
 maximal_rotation=30; % in degrees - only relevant if 'Translations and Rotations' is used
 transformation_smoothness=2; % levels of non-rigid FOV transformation smoothness (range 0.5-3)
-reference_session_index=number_of_sessions; % CHANGED BY ZD FROM 1
+reference_session_index=number_of_sessions; 
 
 % Preparing the data for alignment:
 disp('Stage 2 - Aligning sessions')
