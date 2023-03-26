@@ -61,7 +61,7 @@ def main(**args):
                         stack = np.array(dat[i:i+3000,plane,:,:])
                         #crop in x
                         stack=np.squeeze(stack)[:,89:718,160:750] # crop based on etl artifacts
-                        tifffile.imwrite(sbxfl[:-4]+f'_plane{plane+1:02d}_{nn+1:03d}.tif', stack.astype('uint16'))
+                        tifffile.imwrite(sbxfl[:-4]+f'_plane{plane:02d}_{nn+1:03d}.tif', stack.astype('uint16'))
             else:
                 print("\n ******Tifs exists! Run suite2p... ******\n")
             #do suite2p after tifs are made
@@ -154,7 +154,7 @@ if __name__ == "__main__":
                         help="For step 2, week no.")                        
     parser.add_argument("--reg_tif", default='True',
                         help="Whether or not to save move corrected imagings")
-    parser.add_argument("--nplanes", default=1, type=int,
+    parser.add_argument("--nplanes", default=3, type=int,
                         help="Number of planes imaged")
     parser.add_argument("--delete_bin", default=False,
                         help="Delete data.bin to run suite2p")
