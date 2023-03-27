@@ -52,41 +52,36 @@ def main(**args):
             imagingflnm = maketifs(imagingflnm,170,500,105,750,frames=params["nframes"])
             print(imagingflnm)
 
-        save_params(params, imagingflnm)
-    
-    elif args["stepid"] == 2:
-            ##############RUN SUITE2P MOTION CORRECTION##############
-            imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
-                                        params["mouse_name"], params["day"])) if "000" in xx][0]
-            imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], imagingfl)
-            import suite2p
-            ops = suite2p.default_ops() # populates ops with the default options
-            #edit ops if needed, based on user input
-            ops["reg_tif"]=params["reg_tif"] 
-            ops["nplanes"]=params["nplanes"] 
-            ops["delete_bin"]=params["delete_bin"] #False
-            ops["move_bin"]=params["move_bin"]
-            ops["save_mat"]=True
-            ops["roidetect"]=False # do not detect crappy rois from suite2p
-            ops["keep_movie_raw"]=True # optimizing registration for low SNR
-            ops["two_step_registration"]=True
-            
-            # provide an h5 path in 'h5py' or a tiff path in 'data_path'
-            # db overwrites any ops (allows for experiment specific settings)
-            db = {
-                'h5py': [], # a single h5 file path
-                'h5py_key': 'data',
-                'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
-                'data_path': [imagingflnm], # a list of folders with tiffs 
-                                                        # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
-                                                    
-                'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
-                # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
-                }
+        ##############RUN SUITE2P MOTION CORRECTION##############
 
-            # run one experiment
-            opsEnd = suite2p.run_s2p(ops=ops, db=db)
-            save_params(params, imagingflnm)
+        import suite2p
+        ops = suite2p.default_ops() # populates ops with the default options
+        #edit ops if needed, based on user input
+        ops["reg_tif"]=params["reg_tif"] 
+        ops["nplanes"]=params["nplanes"] 
+        ops["delete_bin"]=params["delete_bin"] #False
+        ops["move_bin"]=params["move_bin"]
+        ops["save_mat"]=True
+        ops["roidetect"]=False # do not detect crappy rois from suite2p
+        ops["keep_movie_raw"]=True # optimizing registration for low SNR
+        ops["two_step_registration"]=True
+        
+        # provide an h5 path in 'h5py' or a tiff path in 'data_path'
+        # db overwrites any ops (allows for experiment specific settings)
+        db = {
+            'h5py': [], # a single h5 file path
+            'h5py_key': 'data',
+            'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
+            'data_path': [imagingflnm], # a list of folders with tiffs 
+                                                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
+                                                
+            'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
+            # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
+            }
+
+        # run one experiment
+        opsEnd = suite2p.run_s2p(ops=ops, db=db)
+        save_params(params, imagingflnm)
 
 
 def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
