@@ -38,12 +38,12 @@ memory_efficient_run = 1;
 %% Setting paths for the cell registration procedure:
 
 % we need to find the path up-two levels
-pth = 'Y:\sstcre_analysis\celltrack';
+pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e201';
-results_directory= fullfile(pth,sprintf('%s_week1-5',animal), 'Results') ;
+animal = 'e200'; % CHANGE
+results_directory= fullfile(pth,sprintf('%s_week1-2',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,7 +53,7 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\converted_%s*_week*.mat", animal, animal)));
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 

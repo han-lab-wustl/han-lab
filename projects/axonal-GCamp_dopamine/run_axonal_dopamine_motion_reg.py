@@ -63,8 +63,6 @@ def main(**args):
         ops["move_bin"]=params["move_bin"]
         ops["save_mat"]=True
         ops["roidetect"]=False # do not detect crappy rois from suite2p
-        ops["keep_movie_raw"]=True # optimizing registration for low SNR
-        ops["two_step_registration"]=True
         
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)

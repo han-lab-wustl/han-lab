@@ -3,8 +3,8 @@
 
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';
-weekfld = 'week1-5';
+animal = 'e200';
+weekfld = 'week1-2';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions

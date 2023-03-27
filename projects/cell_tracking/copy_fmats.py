@@ -6,8 +6,8 @@ Created on Mon Jan 30 10:59:23 2023
 """
 
 import os, shutil
-animal = "e201"
-src = os.path.join("Z:\sstcre_imaging", animal)
+animal = "e200"
+src = os.path.join("Y:\sstcre_imaging", animal)
 dst = r"Y:\sstcre_analysis\fmats"
 # get only days, not week fmats
 days = [int(xx) for xx in os.listdir(src) if  "week" not in xx and "ref" not in xx]
