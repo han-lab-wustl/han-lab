@@ -16,6 +16,7 @@ javaaddpath 'C:\Program Files\MATLAB\R2021b\java\ij.jar'
 
 clear all; close all;
 num_files=input('Enter number of files to run:');
+num_planes=input('Enter number of planes:');
 % Fs=input('Frame Rate? ');
 % num_files=1;
 files{num_files}=0;
@@ -32,8 +33,8 @@ end
 % Fs=31;
 %Send sbx files to be split into a mat file for each plane
 for f=1:num_files
-%     loadVideoTiff(paths{f},files{f},num_planes(f),Fs);
-    loadVideoTiffNoSplit_EH2_new_sbx_uint16(paths{f},files{f},scan_type{f});
+    loadVideoTiff(paths{f},files{f},num_planes,31.25);
+%     loadVideoTiffNoSplit_EH2_new_sbx_uint16(paths{f},files{f},scan_type{f});
 end
 % loadVideo('F:\MA Data\Videos\111215\','1112_MA_000_002',4);
 % loadVideo(path, filename, num_planes);

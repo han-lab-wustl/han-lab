@@ -10,6 +10,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 import argparse   
 import pandas as pd, numpy as np
 from utils.utils import makedir
+from preprocessing import maketifs
 
 def main(**args):
     
@@ -45,27 +46,12 @@ def main(**args):
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
                                         params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], imagingfl)
-        sbxfl=[os.path.join(imagingflnm,xx) for xx in os.listdir(imagingflnm) if "sbx" in xx][0]
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            #https://github.com/jcouto/sbxreader; download dependency
-            from sbxreader import sbx_memmap
-            dat = sbx_memmap(sbxfl)
-            #check if tifs exists
-            tifs=[xx for xx in os.listdir(imagingflnm) if ".tif" in xx]
-            if len(tifs)!=14: #assumes 40000 frames version, TODO: make modular
-                #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16
-                for nn,i in enumerate(range(0, dat.shape[0], 3000)): #splits into tiffs of 3000 planes each
-                    for plane in range(dat.shape[1]): # typically multiplane
-                        stack = np.array(dat[i:i+3000,plane,:,:])
-                        #crop in x
-                        stack=np.squeeze(stack)[:,89:718,160:750] # crop based on etl artifacts
-                        tifffile.imwrite(sbxfl[:-4]+f'_plane{plane:02d}_{nn+1:03d}.tif', stack.astype('uint16'))
-            else:
-                print("\n ******Tifs exists! Run suite2p... ******\n")
-            #do suite2p after tifs are made
-            # set your options for running
+            imagingflnm = maketifs(imagingflnm,170,500,105,750,frames=params["nframes"])
+            print(imagingflnm)
+
         save_params(params, imagingflnm)
     
     elif args["stepid"] == 2:
@@ -80,7 +66,7 @@ def main(**args):
             ops["nplanes"]=params["nplanes"] 
             ops["delete_bin"]=params["delete_bin"] #False
             ops["move_bin"]=params["move_bin"]
-            ops["save_mat"]=params["save_mat"]
+            ops["save_mat"]=True
             ops["roidetect"]=False # do not detect crappy rois from suite2p
             ops["keep_movie_raw"]=True # optimizing registration for low SNR
             ops["two_step_registration"]=True
@@ -104,7 +90,7 @@ def main(**args):
 
 
 def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
-                move_bin, stepid, save_mat, days_of_week, week):
+                move_bin, stepid, days_of_week, week, nframes):
 
     params = {}
 
@@ -115,13 +101,14 @@ def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
     params["datadir"]       = datadir           #main dir
     params["mouse_name"]    = mouse_name        #mouse name w/in main dir
     params["day"]           = day               #session no. w/in mouse name  
-    params["week"]          = week              #week np.
+    params["week"]          = week              #week no.
+    params["nframes"]       = nframes
     #suite2p params
     params["reg_tif"]       = ast.literal_eval(reg_tif)
     params["nplanes"]       = nplanes
     params["delete_bin"]    = delete_bin
     params["move_bin"]      = move_bin
-    params["save_mat"]      = save_mat
+    
         
     return params
 
@@ -160,8 +147,8 @@ if __name__ == "__main__":
                         help="Delete data.bin to run suite2p")
     parser.add_argument("--move_bin", default=False,
                         help="Move data.bin from fast disk")
-    parser.add_argument("--save_mat", default=True,
-                        help="Save Fall.mat (needed for cell tracking)")    
+    parser.add_argument("--nframes", default=15000, type=int,
+                        help="Number of imaging frames")    
     
     args = parser.parse_args()
     
