@@ -1,8 +1,36 @@
 # Zahra
 # preprocessing sbx into tifs (cropping, accounting for multiple planes, etc.)
 
-import os , numpy as np, tifffile
+import os , numpy as np, tifffile, SimpleITK as sitk
 from math import ceil
+
+def readzstack(sbxfl):
+
+    from sbxreader import sbx_memmap
+    dat = sbx_memmap(sbxfl)
+    zstack = np.squeeze(np.array(dat))
+    tifffile.imwrite(sbxfl[:-4]+".tif", zstack.astype("uint16"))
+
+    return sbxfl[:-4]+".tif"
+
+def getmeanimg(pth):
+    """coverts tif to mean img
+
+    Args:
+        pth (str): path to tif
+
+    Returns:
+        tif: meanimg
+    """
+    reader = sitk.ImageFileReader() # uses sitk for motion corrected 
+                                    #mean images because does not work with tiffile>>
+    reader.SetFileName(pth)
+    image = reader.Execute()
+
+    img = sitk.GetArrayFromImage(image)
+
+    meanimg = np.mean(img,axis=0)
+    return meanimg
 
 def maketifs(imagingflnm,y1,y2,x1,x2,frames=40000,nplanes=3,zplns=3000):
     """makes tifs out of sbx file

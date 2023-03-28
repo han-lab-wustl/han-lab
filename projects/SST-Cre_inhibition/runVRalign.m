@@ -3,8 +3,8 @@
 %based on Zahra's pipeline folder structure
 
 mouse_name = "e201";
-days = [23:24];
-src = "Z:\sstcre_imaging";
+days = [27:28];
+src = "Y:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));
 for day=days

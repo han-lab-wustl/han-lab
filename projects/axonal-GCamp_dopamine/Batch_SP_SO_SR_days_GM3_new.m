@@ -9,7 +9,7 @@
 
 clear all
 close all
-mouse_id=171;
+mouse_id=193;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 ref_exist=1;%%% if reference image hase been already choosen
@@ -39,17 +39,17 @@ for allplanes=1:3
         for i=1:numframes
             chone_temp(:,:,i)=imread(myfilename,i,'Info',info);
         end
-        
-        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-        
-        eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
-        eval(['x2=crop_points' num2str(1) '(3)']);
-        eval(['y1=crop_points' num2str(1) '(2)']);
-        eval(['y2=crop_points' num2str(1) '(4)'])
-        
-        M=size(chone_temp,2);
-        N=size(chone_temp,1);
-        chone_temp=chone_temp(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
+        %ZD CROP IS DIFFERENT
+%         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+%         
+%         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
+%         eval(['x2=crop_points' num2str(1) '(3)']);
+%         eval(['y1=crop_points' num2str(1) '(2)']);
+%         eval(['y2=crop_points' num2str(1) '(4)'])
+%         
+%         M=size(chone_temp,2);
+%         N=size(chone_temp,1);
+%         chone_temp=chone_temp(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
         
         mimg(:,:,allplanes,days)=squeeze(mean(chone_temp(:,:,:),3));
         dir_data{days,1}=pr_dir2;
@@ -62,9 +62,7 @@ for allplanes=1:3
         imagesc(squeeze(mean(chone_temp(:,:,:),3))); colormap(gray), axis image
     end
     
-    
-    
-    
+       
     %%%%% reference Roi last drawn on day
     
     %%%% plot reference image and poylgon
@@ -116,7 +114,7 @@ for allplanes=1:3
             [x1,y1,BW,xi,yi]=roipoly;hold on
             plot(xi,yi,color_cod{lopc},'Linewidth',2)
             
-            w=input('input vals 1 to keep drawing or 0 to move to next subplot');
+            w=input('input vals 1 to keep drawing or 0 to move to next subplot: ');
             BW_cell{lopc,1}=BW;
             coords{lopc,1}=[xi,yi];
             
