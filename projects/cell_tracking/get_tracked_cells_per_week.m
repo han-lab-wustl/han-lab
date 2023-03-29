@@ -3,15 +3,15 @@
 
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e200';
-weekfld = 'week1-2';
+animal = 'e201';
+weekfld = 'week1-6';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
 sessions=length(cell_registered_struct.centroid_locations_corrected);% specify no of sessions
-cindex = bins(counts==4); % finding cells AT LEAST 2 SESSIONS???
+cindex = bins(counts==5); % finding cells AT LEAST 2 SESSIONS???
 commoncells=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);

@@ -42,8 +42,8 @@ pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e200'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_week1-2',animal), 'Results') ; % CHANGE WEEK NO
+animal = 'e201'; % CHANGE
+results_directory= fullfile(pth,sprintf('%s_week1-6',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -101,7 +101,7 @@ alignment_type='Non-rigid'; % either 'Translations', 'Translations and Rotations
 use_parallel_processing=true; % either true or false
 maximal_rotation=30; % in degrees - only relevant if 'Translations and Rotations' is used
 transformation_smoothness=2; % levels of non-rigid FOV transformation smoothness (range 0.5-3)
-reference_session_index=number_of_sessions; % CHANGED BY ZD FROM 1
+reference_session_index=number_of_sessions-2; % CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
 
 % Preparing the data for alignment:
 disp('Stage 2 - Aligning sessions')
