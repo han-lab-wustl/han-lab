@@ -40,68 +40,45 @@ for fl=1:numel(fls)
     clear tr %remove condition from previous loop run
 end
 %%
-% average velocity of mouse e200
-% days 2-5 = 3.6071
-% days 8-14 = 14.6167
-forwardvel=zeros(1,40000*7);
-for i=10:16
-    if i==10
-        forwardvel = mice{i}.forwardvel;
-    else
-        forwardvel = [forwardvel mice{i}.forwardvel];
-    end    
-end
-avvel_1 = mean(forwardvel);
-% e201, days 10-16 = 13.18
-forwardvel=zeros(1,40000*7);
-for i=25:31
-    if i==25
-        forwardvel = mice{i}.forwardvel;
-    else
-        forwardvel = [forwardvel mice{i}.forwardvel];
-    end    
-end
-avvel_2 = mean(forwardvel);
-%%
 % peri CS solenoid velocity
-range=30; % FRAMES
-bin=0.2; % HOW TO CONVERT TO BINNED :\
-for d=1:length(fls)
-    day=mice(d);day=day{1};
-    try
-        rewardsonly=day.rewards==1;
-        cs=day.rewards==0.5;
-        % runs for all cells
-        idx = find(cs);
-        periCSvel = zeros(length(idx),61);
-        for iid=1:length(idx)
-            rn = (idx(iid)-range:idx(iid)+range);
-            if max(rn)>40000
-                rn(find(rn>40000))=NaN;
-            end
-            periCSvel(iid,:)=day.lickVoltage(rn);
-        end
-        periCSveld{d}=periCSvel;
-        periCSveld_av{d} = nanmean(periCSvel,1);
-        [daynm,~] = fileparts(day.ops.data_path);
-        [~,daynm] = fileparts(daynm);
-        daynms{d}=daynm;
-    end
-end
-
-% plot CS triggered velocity changes
-for d=1:length(periCSveld)
-    figure;
-    try
-        plot(periCSveld{d}', 'Color', grayColor); hold on;          
-        plot(periCSveld_av{d}, 'b');
-    end
-    xlim([0 61])
-    x1=xline(31,'-.b',{'Conditioned', 'stimulus'}); %{'Conditioned', 'stimulus'}, 'Reward'
-    title(sprintf("%s, day %s", animal , daynms{d}))
-    xlabel('frames')
-    ylabel('lick voltage')
-end
+% range=30; % FRAMES
+% bin=0.2; % HOW TO CONVERT TO BINNED :\
+% for d=1:length(fls)
+%     day=mice(d);day=day{1};
+%     try
+%         rewardsonly=day.rewards==1;
+%         cs=day.rewards==0.5;
+%         % runs for all cells
+%         idx = find(cs);
+%         periCSvel = zeros(length(idx),61);
+%         for iid=1:length(idx)
+%             rn = (idx(iid)-range:idx(iid)+range);
+%             if max(rn)>40000
+%                 rn(find(rn>40000))=NaN;
+%             end
+%             periCSvel(iid,:)=day.lickVoltage(rn);
+%         end
+%         periCSveld{d}=periCSvel;
+%         periCSveld_av{d} = nanmean(periCSvel,1);
+%         [daynm,~] = fileparts(day.ops.data_path);
+%         [~,daynm] = fileparts(daynm);
+%         daynms{d}=daynm;
+%     end
+% end
+% 
+% % plot CS triggered velocity changes
+% for d=1:length(periCSveld)
+%     figure;
+%     try
+%         plot(periCSveld{d}', 'Color', grayColor); hold on;          
+%         plot(periCSveld_av{d}, 'b');
+%     end
+%     xlim([0 61])
+%     x1=xline(31,'-.b',{'Conditioned', 'stimulus'}); %{'Conditioned', 'stimulus'}, 'Reward'
+%     title(sprintf("%s, day %s", animal , daynms{d}))
+%     xlabel('frames')
+%     ylabel('lick voltage')
+% end
 %%
 % plot mean image per day
 figure;
@@ -117,3 +94,26 @@ for i=1:length(mice)
     disp(mice{i}.ops.save_path0)
 end
 linkaxes([axes{:}], 'xy')
+
+%%
+% get success and fail trials
+% use VR files
+src = 'Z:\sstcre_imaging'; 
+animal = 'e201';
+fls = dir(fullfile(src, animal, '**\behavior\vr\*.mat'));
+fls = fls(14:19); % only hrz days
+for fl=1:length(fls)
+    [s,f,tr] = get_success_failure_trials(fullfile(fls(fl).folder,fls(fl).name));
+    success_prop{fl} = s/tr;
+    fail_prop{fl} = f/tr;
+end
+
+x = [success_prop{:}];
+y = [fail_prop{:}];
+figure;
+bar([mean(y);mean(x)]','grouped','FaceColor','flat');
+hold on
+plot(1,y,'ok')
+plot(2,x,'ok')
+xticklabels(["Fails" "Successes"])
+ylabel("Proportion of trials")

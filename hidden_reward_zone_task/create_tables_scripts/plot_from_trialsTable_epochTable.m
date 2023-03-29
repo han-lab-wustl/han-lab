@@ -3,9 +3,9 @@
 %% ========================================================================
 % Settings:
 epochstructure = 'cs_table_last8trials.mat';
-cd ('Z:\HRZ_master_output8trials')
+cd ('Y:\sstcre_analysis\hrz8trials')
 load(epochstructure)
-load('Z:\HRZ_master_outputCS_table_all_trials\CS_trial_by_trial_probes_all.mat')
+load('Y:\sstcre_analysis\hrz8trials\cs_table_last8trials.mat')
 % Summary=readtable("J:\optodata\E186\Summary.xlsx");
 
 splitted_epochstructure_name = split(epochstructure,'_');
@@ -65,7 +65,7 @@ for this_comparison = 1: height(cs_table)
     this_mouse_this_day_EP1 = intersect(this_mouse_this_day,this_EP1);
     this_mouse_this_day_EP2 = intersect(this_mouse_this_day,this_EP2);
 
-    rew_location1 = nanmean(table_trial_by_trial_probes_all_CS.rew_location(this_mouse_this_day_EP1),"omitnan");
+    rew_location1 = mean(table_trial_by_trial_probes_all_CS.rew_location(this_mouse_this_day_EP1),"omitnan");
     rew_location2 = mean(table_trial_by_trial_probes_all_CS.rew_location(this_mouse_this_day_EP2),"omitnan");
     rew_location1_index = rew_location1\bin_size;
     rew_location2_index = rew_location2\bin_size;
@@ -200,24 +200,7 @@ for this_comparison = 1: height(cs_table)
     title(this,{['ordered max ' splitted_epochstructure_name{3}];['epoch ' num2str(EP1) ';epoch ' num2str(EP2)]},'Interpreter','none')
 
     % ----
-    try
-    saveas(fig,['J:\optodata\E186\221212\matlab_output\figures\mat\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2)],'fig')
-    saveas(fig,['J:\optodata\E186\221212\matlab_output\figures\png' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) '.png'],'png')
-    saveas(fig,['J:\optodata\E186\221212\matlab_output\figures\svg\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) '.svg'],'svg')
-    saveas(fig2,['J:\optodata\E186\221212\matlab_output\figures\mat\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity'],'fig')
-    saveas(fig2,['J:\optodata\E186\221212\matlab_output\figures\png\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity' '.png'],'png')
-    saveas(fig2,['J:\optodata\E186\221212\matlab_output\figures\svg\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity' '.svg'],'svg')
-    catch
-        mkdir('J:\optodata\E186\221212\matlab_output\figures\mat\')
-        mkdir('J:\optodata\E186\221212\matlab_output\figures\png\')
-        mkdir('J:\optodata\E186\221212\matlab_output\figures\svg\')
-
-    saveas(fig,['J:\optodata\E186\221212\matlab_output\figures\mat\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2)],'fig')
-    saveas(fig,['J:\optodata\E186\221212\matlab_output\figures\png\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) '.png'],'png')
-    saveas(fig,['J:\optodata\E186\221212\matlab_output\figures\svg\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) '.svg'],'svg')
-    saveas(fig2,['J:\optodata\E186\221212\matlab_output\figures\mat\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity'],'fig')
-    saveas(fig2,['J:\optodata\E186\221212\matlab_output\figures\png\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity' '.png'],'png')
-    saveas(fig2,['J:\optodata\E186\221212\matlab_output\figures\svg\' char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity' '.svg'],'svg')
-    end
+    saveas(fig,[Settings.saving_path char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2)],'fig')
+    saveas(fig2,[Settings.saving_path char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity'],'fig')
 
 end

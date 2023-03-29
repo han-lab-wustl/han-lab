@@ -2,6 +2,12 @@
 
 Project-specific and general scripts from Han Lab @ WUSTL
 
+## hidden_reward_zone_task
+
+`MasterHRZ.m`
+
+Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
+
 ## projects > cell_tracking
 
 Goal is to track pyramidal cells detected by Suite2p across weeks/days
@@ -37,6 +43,7 @@ Cell track cells detected in the weekly concatenated movies across days (**map 2
 `get_tracked_cells_week2day.m`
 
 Map cells tracked per week back to at least 1 day that week, plot them on the mean image per day, and align to behavior
+
 ## projects > axonal-GCamp_dopamine
 
 How to run preprocessing and motion correction on axonal-GCamp images from two-photon
@@ -68,3 +75,6 @@ X:\dopamine_imaging = drive containing mouse folder and imaging day subfolders w
 6 = day (optional argument); this is what the folder will be named
 
 I suggest having a lookup table of day folder to experiment, imaging notes, camera acquisition etc. in a separate spreadsheet
+## utils > utils.py
+
+Contains functions helpful to navigate thru directories, copy `Fall.mat` en masse, and copy VR files

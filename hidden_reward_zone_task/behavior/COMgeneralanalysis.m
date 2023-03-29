@@ -97,9 +97,10 @@ for kk = 1:length(changeRewLoc)-1 % for each reward location...
             if find(VR.reward(trials(jj)+1:trials(jj+1)))>0 % if is a succesfull trial
                 licking = find(VR.lick(trials(jj)+1:find(VR.reward(trials(jj)+1:trials(jj+1)))+trials(jj)))+trials(jj); % find all the licks before and equal to the reward lick
                 licking([2 diff(licking)]==1) = [];%EH, remove consecutive licks. concatenate 2 to keep 1st lick and shift all to maintain index
-                if length(licking)>0
-                    licking(length(licking)) = find(VR.reward(trials(jj)+1:trials(jj+1)))+trials(jj); % GM ensures after consecutive removal that the reward lick is on the same index as the reward received
-                end
+%                 if length(licking)>0
+%                     licking(length(licking)) = find(VR.reward(trials(jj)+1:trials(jj+1)))+trials(jj); % GM ensures after consecutive removal that the 
+%                     % reward lick is on the same index as the reward received
+%                 end
                 periLick=(VR.ypos(licking)>periLow & VR.ypos(licking)<periHigh);  %EH logical of peri-reward licks
                 ratio=(sum(periLick)/length(periLick));%EH ratio of peri to total licks for trial (pre reward, including reward lick)
                 

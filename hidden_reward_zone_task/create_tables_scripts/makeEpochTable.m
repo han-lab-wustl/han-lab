@@ -1,6 +1,6 @@
 function makeEpochTable(Settings)
 
-addpath("C:\Users\Han\Documents\MATLAB\HANLAB_SCRIPTS2\Analysis") % HARDCODED???
+addpath("C:\Users\Han\Documents\MATLAB\HANLAB_SCRIPTS-master\Analysis") % HARDCODED???
 
 for this_day = 1:size(Settings.paths,1)
 
