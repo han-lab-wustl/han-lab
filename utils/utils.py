@@ -33,6 +33,8 @@ def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
     """copy vr files in bulk to internal drive
     assumes usb is plugged in!!
     but theoretically can copy from any drive to any another drive
+    assumes images are copied!!! relies on date of images
+    can copy > 1 mat file if multiple sessions recorded per animal per day
 
     Args:
         usb (str): path to usb drive (e.g. F:\2023_ZD_VR)

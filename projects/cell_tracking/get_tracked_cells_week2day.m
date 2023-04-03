@@ -4,24 +4,24 @@ clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';
-weeknm = 1:6;
+animal = 'e200';
+weeknm = 1:2;
 weekfld = sprintf('week%i-%i', min(weeknm), max(weeknm));
 weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
-[r,c] = find(weeks.cell_registered_struct.cell_to_index_map(:,2:end)~=0); % exclude week 1
+[r,c] = find(weeks.cell_registered_struct.cell_to_index_map~=0); % exclude week 1
 [counts, bins] = hist(r,1:size(r,1));
-sessions=length(weeks.cell_registered_struct.centroid_locations_corrected(2:end));% specify no of sessions
+sessions=length(weeks.cell_registered_struct.centroid_locations_corrected);% specify no of sessions
 cindex = bins(counts==sessions); % finding cells AT LEAST 2 SESSIONS???
 commoncells_4weeks=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
-    commoncells_4weeks(ci,:)=weeks.cell_registered_struct.cell_to_index_map(cindex(ci),2:end);
+    commoncells_4weeks(ci,:)=weeks.cell_registered_struct.cell_to_index_map(cindex(ci));
 end
 
 % for each of these cells, if this cell maps to day 1, or day 1,2,3, etc...
 % find those cells that map to atleast 1 day 
-for week=2:6 % for e201, excluded week 1
+for week=weeknm % for e201, excluded week 1
     week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week%i_to_days'], week), "Results\*cellRegistered*"));
     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
     % find cells in all sessions
@@ -34,7 +34,7 @@ for week=2:6 % for e201, excluded week 1
         commoncells(ci,:)=week2day.cell_registered_struct.cell_to_index_map(cindex(ci),:);
     end    
     % make sure cells map across weeks
-    mask = ismember(commoncells(:,sessions),commoncells_4weeks(:,week-1));
+    mask = ismember(commoncells(:,sessions),commoncells_4weeks(:,week));
     commoncells_mapped = commoncells(mask,:);
     save(fullfile(week2daynm.folder, 'commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat'),'commoncells_mapped')
 end
@@ -49,7 +49,7 @@ end
 %%
 weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_to_days'])));
 week_maps = cell(1,max(weeknm));
-for i=2:6
+for i=weeknm
     week_map=load(fullfile(weektodays(i).folder,weektodays(i).name, ...
         "Results\commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat")).commoncells_mapped;
     week_maps{i}=week_map;
@@ -60,14 +60,14 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=20; %total number of days imaged (e.g. included in dataset)
+sessions_total=11; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks
     week1cell=week1cells_to_map(w);
     cell_across_weeks=commoncells_4weeks(find(commoncells_4weeks(:,1)==week1cell),:);
     for wk=1:size(commoncells_4weeks,2)
-        tweek=week_maps{wk+1}; %skipped week 1
+        tweek=week_maps{wk}; %skipped week 1
         dayscell=tweek(find(tweek(:,end)==cell_across_weeks(wk)),1:end-1); % exclude last column which is 
         % the week
         if isempty(dayscell)
@@ -95,7 +95,8 @@ for fl=1:length(fls)
 end
 
 
-% figures for validation
+%%%%%%%%%%%%%%%%%%%%%% figures for validation %%%%%%%%%%%%%%%%%%%%%%
+
 % align each common cells across all days with an individual mask
 % remember this is the cell index, so you have to find the cell in the
 % original F mat
@@ -121,7 +122,6 @@ end
 %     %savefig(sprintf("Z:\\suite2pconcat1month_commoncellmasks\\cell_%03d.fig",i+250)) %changed to reflect subset of cells plotted
 % end
 
-%%
 % align all cells across all days in 1 fig
 % colormap to iterate thru
 ctab = hsv(length(cc));
@@ -212,13 +212,13 @@ title(han,sprintf('Cell no. %03d', cellno));
 %%
 
 % convert to 1 (temp)'s to bool for reward analysis
-cc(cc==0)=1;
+% cc(cc==0)=1;
 % align to behavior (rewards and solenoid) for each cell?
 % per day, get this data...
 range=5;
 bin=0.2;
 %only get days with rewards (exclude training)
-daysrewards = [9    10    11    12    13];
+daysrewards = 1:11;
 ccbinnedPerireward=cell(1,length(daysrewards));
 ccrewdFF=cell(1,length(daysrewards));
 for d=daysrewards
@@ -237,23 +237,23 @@ end
 % if cell is missing from 1 day, take mean dff of others days from that
 % cell??? NOT implemented yet
 % optodays=[5,6,7,9,10,11,13,14,16,17,18];
-cells_to_plot = 10;
-for cellno=randi([1 500],1,cells_to_plot ) %random number of cells
+cells_to_plot = size(cc,1);
+for cellno=1:cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number of cells
     dd=1; %for legend
     figure;
     clear legg;
     for d=daysrewards
+        clear pltrew;
         pltrew=ccbinnedPerireward{d}; %temp hack that excludes cell #1
         try %if cell exists on that day, otherwise day is dropped...
-%             if ~any(optodays(:)==d)            
-                plot(pltrew(cc(cellno,d),:)')            
+            plot(pltrew(cc(cellno,d),:)')            
 %             else
 %               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
 %             end
             legg{dd}=sprintf('day %d',d); dd=dd+1;           
         end
         hold on;        
-    end    
+    end   
      % plot reward location as line
     xticks([1:5:50, 50])
     x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}

@@ -1,4 +1,4 @@
-function makeEpochTable(Settings)
+ function makeEpochTable(Settings)
 
 addpath("C:\Users\Han\Documents\MATLAB\HANLAB_SCRIPTS-master\Analysis") % HARDCODED???
 

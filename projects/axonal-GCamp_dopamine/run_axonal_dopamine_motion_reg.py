@@ -2,7 +2,7 @@
 """
 Created on Fri Feb 24 15:45:37 2023
 
-@author: Han
+@author: Zahra
 """
 
 import os, sys, shutil, tifffile, ast
@@ -62,7 +62,7 @@ def main(**args):
         ops["delete_bin"]=params["delete_bin"] #False
         ops["move_bin"]=params["move_bin"]
         ops["save_mat"]=True
-        ops["roidetect"]=False # do not detect crappy rois from suite2p
+        # ops["roidetect"]=False # do not detect crappy rois from suite2p
         
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)

@@ -68,3 +68,6 @@ make_trial_Tab(Settings)
 % check settings and saving paths
 
 plot_from_trialsTable_epochTable(Settings)
+
+%plot_from_table_cs_table
+%plot_from_table_trial_by_trials_probesCS

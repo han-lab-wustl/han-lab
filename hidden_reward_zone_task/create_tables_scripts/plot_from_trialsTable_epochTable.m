@@ -1,11 +1,12 @@
+function [outputpath] = plot_from_trialsTable_epochTable(Settings)
 %% final figures:
 % Saves in Ed's figure folder.
 %% ========================================================================
 % Settings:
+% need to customize
 epochstructure = 'cs_table_last8trials.mat';
-cd ('Y:\sstcre_analysis\hrz8trials')
-load(epochstructure)
-load('Y:\sstcre_analysis\hrz8trials\cs_table_last8trials.mat')
+load(fullfile(Settings.saving_path, '8trials', epochstructure))
+load(fullfile(Settings.saving_path, 'CS_table_all_trials\CS_trial_by_trial_probes_all.mat'))
 % Summary=readtable("J:\optodata\E186\Summary.xlsx");
 
 splitted_epochstructure_name = split(epochstructure,'_');
@@ -203,4 +204,5 @@ for this_comparison = 1: height(cs_table)
     saveas(fig,[Settings.saving_path char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2)],'fig')
     saveas(fig2,[Settings.saving_path char(mouse_cd) char(day_cd) '_ep' num2str(EP1) '_vs_ep' num2str(EP2) 'activity'],'fig')
 
+end
 end

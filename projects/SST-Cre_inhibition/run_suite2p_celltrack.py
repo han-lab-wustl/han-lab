@@ -2,7 +2,7 @@
 """
 Created on Fri Feb 24 15:45:37 2023
 
-@author: Han, Zahra
+@author: Zahra
 """
 
 import os, sys, shutil, tifffile, ast
