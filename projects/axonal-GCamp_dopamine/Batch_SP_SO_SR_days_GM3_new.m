@@ -12,7 +12,7 @@ close all
 mouse_id=193;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
-ref_exist=1;%%% if reference image hase been already choosen
+ref_exist=0;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end
@@ -21,7 +21,8 @@ for allplanes=1:3
     for days=days_check
         pr_dir1=strcat(pr_dir{days},'\')
         %%%s2p directory
-        pr_dir2=strcat(pr_dir1,'suite2p\plane',num2str(allplanes-1),'\reg_tif\')
+        pr_dir2=dir(fullfile(pr_dir1,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
+        pr_dir2 = pr_dir2(1).folder;
         %%% grab 1st file/initial 500 frames
         cd(pr_dir2)
         list_tif=dir('*.tif');
@@ -99,7 +100,8 @@ for allplanes=1:3
         end
         %         pr_dir3=strcat(pr_dir,num2str(mouse_id),'\Day_',num2str(1),'\');
         pr_dir3 = strcat(pr_dir{1},'\')
-        pr_dir4=strcat(pr_dir3,'suite2p\plane',num2str(allplanes-1),'\reg_tif\')
+        pr_dir4=dir(fullfile(pr_dir3,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
+        pr_dir4 = pr_dir4(1).folder;
         pr_dir4ref = pr_dir4;
         find_figure(strcat('REFERENCE','_plane',num2str(allplanes)))
         %         for roi_sel=1:4
@@ -186,7 +188,8 @@ for allplanes=1:3
             
         end
         pr_dir_ns=strcat(pr_dir{roi_sel},'\');
-        pr_dir_s=strcat(pr_dir_ns,'suite2p\plane',num2str(allplanes-1),'\reg_tif\')
+        pr_dir_s=dir(fullfile(pr_dir_ns,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
+        pr_dir_s = pr_dir_s(1).folder;
         cd(pr_dir_s)
         params.mimg=mpimg;
         params.newroicoords=newpos;
@@ -199,18 +202,18 @@ end
 
 %%
 %extract base mean from all rois selected before
-clear all
-close all
-mouse_id=170;
+% clear all
+% close all
+mouse_id=193;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 tic
 for allplanes=1:3 %1:4
-    for days=days_check
-        days
+    for days=days_check        
         pr_dir1=strcat(pr_dir{days},'\')
         %%%s2p directory
-        pr_dir2=strcat(pr_dir1,'suite2p\plane',num2str(allplanes-1),'\reg_tif\')
+        pr_dir2=dir(fullfile(pr_dir1,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
+        pr_dir2 = pr_dir2(1).folder;
         %%% grab 1st file/initial 3000 frames
         cd(pr_dir2)
         
@@ -243,17 +246,17 @@ for allplanes=1:3 %1:4
         toc
         %%%%%
         
-        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-        
-        eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
-        eval(['x2=crop_points' num2str(1) '(3)']);
-        eval(['y1=crop_points' num2str(1) '(2)']);
-        eval(['y2=crop_points' num2str(1) '(4)'])
-        
-        M=size(chone,2);
-        N=size(chone,1);
-        chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
-        
+%         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+%         
+%         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
+%         eval(['x2=crop_points' num2str(1) '(3)']);
+%         eval(['y1=crop_points' num2str(1) '(2)']);
+%         eval(['y2=crop_points' num2str(1) '(4)'])
+%         
+%         M=size(chone,2);
+%         N=size(chone,1);
+%         chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
+%         
         
         %         toc
         

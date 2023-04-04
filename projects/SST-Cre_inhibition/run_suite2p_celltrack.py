@@ -5,7 +5,7 @@ Created on Fri Feb 24 15:45:37 2023
 @author: Zahra
 """
 
-import os, sys, shutil, tifffile, ast
+import os, sys, shutil, tifffile, ast, time
 import argparse   
 import pandas as pd, numpy as np
 from utils.utils import makedir
@@ -33,21 +33,25 @@ def main(**args):
             makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "tail")) 
             print("\n****Made folders!****\n")
 
+        ## TODO: implement timer and suite2p run after copy
+        print("\n***********STARTING 1.5 HOUR TIMER TO ALLOW FOR COPYING NOW***********")
+        time.sleep(60*60*0.5) # hours
+        print("\n ****Checking to see if data is copied**** \n")
+        # args["stepid"] = 1 # allows for running suite2p run separately if needed
 
-    elif args["stepid"] == 1:
+    # elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
         #args should be the info you need to specify the params
-        # for a given experiment, but only params should be used below
+        # for a given experiment, but only params should be used below        
         
-        print(params)
         #check to see if imaging files are transferred
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
                                         params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], imagingfl)
         sbxfl=[os.path.join(imagingflnm,xx) for xx in os.listdir(imagingflnm) if "sbx" in xx][0]
-        
-        if len(imagingfl)!=0:           
-            print(imagingfl)
+        # TODO: run make tifs instead
+        if len(imagingfl)!=0: # check to see if data is copied           
+            print(params)
             #https://github.com/jcouto/sbxreader; download dependency            
             #check if tifs exists
             from sbxreader import sbx_memmap                
