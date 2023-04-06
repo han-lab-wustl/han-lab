@@ -9,7 +9,7 @@
 
 clear all
 close all
-mouse_id=193;
+mouse_id=194;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 ref_exist=0;%%% if reference image hase been already choosen
@@ -23,6 +23,8 @@ for allplanes=1:3
         %%%s2p directory
         pr_dir2=dir(fullfile(pr_dir1,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
         pr_dir2 = pr_dir2(1).folder;
+        % ZD changed this in case you have a nested folder structure,
+        % should work even if not
         %%% grab 1st file/initial 500 frames
         cd(pr_dir2)
         list_tif=dir('*.tif');
@@ -204,7 +206,6 @@ end
 %extract base mean from all rois selected before
 % clear all
 % close all
-mouse_id=193;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 tic
@@ -212,7 +213,9 @@ for allplanes=1:3 %1:4
     for days=days_check        
         pr_dir1=strcat(pr_dir{days},'\')
         %%%s2p directory
-        pr_dir2=dir(fullfile(pr_dir1,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
+        pr_dir2=dir(fullfile(pr_dir1,"**",sprintf("plane%i",allplanes-1),'\reg_tif')); 
+        % ZD changed this in case you have a nested folder structure,
+        % should work even if not
         pr_dir2 = pr_dir2(1).folder;
         %%% grab 1st file/initial 3000 frames
         cd(pr_dir2)

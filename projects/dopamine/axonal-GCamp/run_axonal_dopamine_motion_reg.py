@@ -35,10 +35,10 @@ def main(**args):
             makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "tail")) 
             print("\n****Made folders!****\n")
         ## TODO: implement timer and suite2p run after copy
-        print("\n***********STARTING 1.5 HOUR TIMER TO ALLOW FOR COPYING NOW***********")
-        time.sleep(60*60*1.5) # hours
-        print("\n ****Checking to see if data is copied**** \n")
-        args["stepid"] = 1 # allows for running suite2p run separately if needed
+        # print("\n***********STARTING 1.5 HOUR TIMER TO ALLOW FOR COPYING NOW***********")
+        # time.sleep(60*60*1.5) # hours
+        # print("\n ****Checking to see if data is copied**** \n")
+        # args["stepid"] = 1 # allows for running suite2p run separately if needed
 
     elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS####

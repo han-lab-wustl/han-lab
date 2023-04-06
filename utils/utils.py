@@ -5,7 +5,7 @@ Created on Fri Feb 24 16:06:02 2023
 @author: Han
 """
 
-import os, sys, shutil 
+import os, sys, shutil, tifffile, numpy as np
 from datetime import datetime
 
 def makedir(dr):
@@ -103,3 +103,46 @@ def copyfmats(src, dst, animal, overwrite=False):
                 shutil.copy(mat, copypth)        
                 print(f"*********Copied {w} Fall to {dst}*********")
     return 
+
+def deleteregtif(src,keyword='reg_tif'):
+    """deletes reg_tif folder en masse
+    useful after you've checked for motion correction
+
+    Args:
+        src (str): path to animal folder containing processed data
+        keyword (str, optional): folder name. Defaults to 'reg_tif'.
+    """
+    #src = 'Z:\sstcre_imaging\e201'
+    fls = listdir(src)
+
+    from pathlib import Path
+    for path in Path(src).rglob(keyword):
+        # deletes reg_tif directory and all its contents
+        print(f"\n*** deleting {path}***")
+        shutil.rmtree(path)
+
+def get_motion_corrected_tifs_from_suite2p_binary(binarypth, dst, 
+            Ly=512, Lx=629, chunk=1000):
+    """converts suite2p binaries to motion corrected tifs
+
+    Args:
+        binarypth (_type_): path to data.bin
+        dst (_type_): folder to store tifs
+    """
+    import suite2p
+    # pth = 'Z:\sstcre_imaging\e201\week6\suite2p\plane0\data.bin'
+    f_input2 = suite2p.io.BinaryRWFile(Ly=Ly, Lx=Lx, filename=binarypth)
+    # dst = 'X:\\week6_e201_motion_corrected'
+    makedir(dst)
+    for i in range(0,f_input2.shape[0],chunk):
+        print(i) # make folder if it does not exist
+        tifffile.imwrite(os.path.join(dst, f'file_{i:08d}.tif'), f_input2[i:i+chunk])
+
+def convert_zstack_sbx_to_tif(sbxsrc):
+    from sbxreader import sbx_memmap  
+# src = r'Z:\sstcre_imaging\e201\0_ref_pln_day\230213_EH_DH_000_003\230213_EH_DH_000_003.sbx'
+    dat = sbx_memmap(sbxsrc)
+    dat=np.squeeze(dat)
+    tifffile.imwrite(sbxsrc[:-4]+".tif", dat.astype("uint16"))
+
+    return sbxsrc[:-4]+".tif"
