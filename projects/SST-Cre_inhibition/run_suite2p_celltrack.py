@@ -9,6 +9,7 @@ import os, sys, shutil, tifffile, ast, time
 import argparse   
 import pandas as pd, numpy as np
 from utils.utils import makedir
+from utils import preprocessing
 
 def main(**args):
     
@@ -44,55 +45,44 @@ def main(**args):
         #args should be the info you need to specify the params
         # for a given experiment, but only params should be used below        
         
+        print(params)
         #check to see if imaging files are transferred
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
                                         params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], imagingfl)
-        sbxfl=[os.path.join(imagingflnm,xx) for xx in os.listdir(imagingflnm) if "sbx" in xx][0]
-        # TODO: run make tifs instead
-        if len(imagingfl)!=0: # check to see if data is copied           
-            print(params)
-            #https://github.com/jcouto/sbxreader; download dependency            
-            #check if tifs exists
-            from sbxreader import sbx_memmap                
-            dat = sbx_memmap(sbxfl)
-            tifs=[xx for xx in os.listdir(imagingflnm) if ".tif" in xx]
-            if len(tifs)!=14: #assumes 40000 frames version, TODO: make modular
-                #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16
-                for nn,i in enumerate(range(0, dat.shape[0], 3000)): #splits into tiffs of 3000 planes each
-                    stack = np.array(dat[i:i+3000])
-                    #crop in x
-                    stack=np.squeeze(stack)[:,:,89:718] #hard coded crop from ed's og script
-                    tifffile.imwrite(sbxfl[:-4]+f'_{nn+1:03d}.tif', stack.astype('uint16'))
-            else:
-                print("\n ******14 tifs exists! Running suite2p... ******\n")
-            #do suite2p after tifs are made
-            # set your options for running
-            import suite2p
-            ops = suite2p.default_ops() # populates ops with the default options
-            #edit ops if needed, based on user input
-            ops["reg_tif"]=params["reg_tif"] 
-            ops["nplanes"]=params["nplanes"] 
-            ops["delete_bin"]=params["delete_bin"] #False
-            ops["move_bin"]=params["move_bin"]
-            ops["save_mat"]=params["save_mat"]
-            
-            # provide an h5 path in 'h5py' or a tiff path in 'data_path'
-            # db overwrites any ops (allows for experiment specific settings)
-            db = {
-                'h5py': [], # a single h5 file path
-                'h5py_key': 'data',
-                'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
-                'data_path': [imagingflnm], # a list of folders with tiffs 
-                                                        # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
-                                                    
-                'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
-                # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
-                }
+        
+        if len(imagingfl)!=0:           
+            print(imagingfl)
+            imagingflnm = maketifs(imagingflnm,0,512,89,718,frames=40000)
+            print(imagingflnm)
 
-            # run one experiment
-            opsEnd = suite2p.run_s2p(ops=ops, db=db)
-            save_params(params, imagingflnm)
+        #do suite2p after tifs are made
+        # set your options for running
+        import suite2p
+        ops = suite2p.default_ops() # populates ops with the default options
+        #edit ops if needed, based on user input
+        ops["reg_tif"]=params["reg_tif"] 
+        ops["nplanes"]=params["nplanes"] 
+        ops["delete_bin"]=params["delete_bin"] #False
+        ops["move_bin"]=params["move_bin"]
+        ops["save_mat"]=params["save_mat"]
+        
+        # provide an h5 path in 'h5py' or a tiff path in 'data_path'
+        # db overwrites any ops (allows for experiment specific settings)
+        db = {
+            'h5py': [], # a single h5 file path
+            'h5py_key': 'data',
+            'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
+            'data_path': [imagingflnm], # a list of folders with tiffs 
+                                                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
+                                                
+            'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
+            # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
+            }
+
+        # run one experiment
+        opsEnd = suite2p.run_s2p(ops=ops, db=db)
+        save_params(params, imagingflnm)
 
     elif args["stepid"] == 2:
         print(params["days_of_week"])
@@ -128,6 +118,8 @@ def main(**args):
         ops["delete_bin"]=params["delete_bin"] #False
         ops["move_bin"]=params["move_bin"]
         ops["save_mat"]=params["save_mat"]
+        ops["threshold_scaling"]=0.5 #TODO: make modular
+        ops["max_iterations"]=200
 
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)

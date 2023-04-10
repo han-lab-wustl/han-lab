@@ -11,7 +11,7 @@ load(fullfile(pth.folder, pth.name))
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
 sessions=length(cell_registered_struct.centroid_locations_corrected);% specify no of sessions
-cindex = bins(counts==5); % finding cells AT LEAST 2 SESSIONS???
+cindex = bins(counts==6); % finding cells AT LEAST 2 SESSIONS???
 commoncells=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);

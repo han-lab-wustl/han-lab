@@ -12,7 +12,7 @@ close all
 mouse_id=194;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
-ref_exist=0;%%% if reference image hase been already choosen
+ref_exist=1;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end
@@ -72,7 +72,8 @@ for allplanes=1:3
     if ref_exist==1
         %         pr_dir3=strcat(pr_dir,num2str(mouse_id),'\Day_',num2str(ref_day),'\');
         %%%s2p directory
-        pr_dir4ref=strcat(pr_dirref{1},'\suite2p\plane',num2str(allplanes-1),'\reg_tif\');
+        pr_dir4ref=dir(fullfile(pr_dirref{1},"**",sprintf("plane%i",allplanes-1),'\reg_tif\'));
+        pr_dir4ref= pr_dir4ref(1).folder;        
         %%% grab 1st file/initial 3000 frames
         cd(pr_dir4ref)
         load('params')
@@ -206,7 +207,7 @@ end
 %extract base mean from all rois selected before
 % clear all
 % close all
-pr_dir=uipickfiles;
+% pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 tic
 for allplanes=1:3 %1:4
