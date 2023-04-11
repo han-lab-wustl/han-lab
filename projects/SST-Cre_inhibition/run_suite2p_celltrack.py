@@ -8,8 +8,9 @@ Created on Fri Feb 24 15:45:37 2023
 import os, sys, shutil, tifffile, ast, time
 import argparse   
 import pandas as pd, numpy as np
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir
-from utils import preprocessing
+from utils.preprocessing import maketifs
 
 def main(**args):
     
