@@ -9,7 +9,7 @@
 
 clear all
 close all
-mouse_id=193;
+mouse_id=194;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 ref_exist=1;%%% if reference image hase been already choosen
@@ -223,12 +223,15 @@ for allplanes=1:3 %1:4
         
         load('params')
         list_tif=dir('*.tif');
-        %ZD ADDED TO FIX FILE SORTING ISSUE IN SUITE2P
+        %ZD ADDED TO FIX FILE SORTING ISSUE IN SUITE2P NEW VERSION
         for i=1:length(list_tif)
             if strcmp(list_tif(i).name,'file500_chan0.tif') % only messes with this file which seems to be the problem for me
                 % may want to change this if it's different based on num of
                 % frames for different people
                 rename = 'file0500_chan0.tif';
+                movefile(fullfile(list_tif(1).folder, list_tif(i).name), fullfile(list_tif(1).folder, rename))
+            elseif strcmp(list_tif(i).name,'file000_chan0.tif')
+                rename = 'file0000_chan0.tif';
                 movefile(fullfile(list_tif(1).folder, list_tif(i).name), fullfile(list_tif(1).folder, rename))
             end
         end
