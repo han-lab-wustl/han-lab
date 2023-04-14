@@ -101,7 +101,7 @@ linkaxes([axes{:}], 'xy')
 src = 'Z:\sstcre_imaging'; 
 animal = 'e201';
 fls = dir(fullfile(src, animal, '**\behavior\vr\*.mat'));
-fls = fls(14:19); % only hrz days
+fls = fls(25:31); % only hrz days
 for fl=1:length(fls)
     [s,f,tr] = get_success_failure_trials(fullfile(fls(fl).folder,fls(fl).name));
     success_prop{fl} = s/tr;

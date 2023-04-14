@@ -54,7 +54,7 @@ def main(**args):
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            imagingflnm = maketifs(imagingflnm,0,512,89,718,frames=40000)
+            imagingflnm = maketifs(imagingflnm,0,512,89,718)
             print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -197,7 +197,7 @@ if __name__ == "__main__":
                             e.g. 1 2 3")
     parser.add_argument("--week", type=int, default = '1',
                         help="For step 2, week no.")                        
-    parser.add_argument("--reg_tif", default='True',
+    parser.add_argument("--reg_tif", default='False',
                         help="Whether or not to save move corrected imagings")
     parser.add_argument("--nplanes", default=1, type=int,
                         help="Number of planes imaged")

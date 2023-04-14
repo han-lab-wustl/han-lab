@@ -32,7 +32,7 @@ def getmeanimg(pth):
     meanimg = np.mean(img,axis=0)
     return meanimg
 
-def maketifs(imagingflnm,y1,y2,x1,x2,frames=40000,nplanes=3,zplns=3000):
+def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
     """makes tifs out of sbx file
 
     Args:
@@ -41,8 +41,7 @@ def maketifs(imagingflnm,y1,y2,x1,x2,frames=40000,nplanes=3,zplns=3000):
         y2 (int): upper limit of crop in y
         x1 (int): lower limit of crop in x
         x2 (int): upper limit of crop in x
-        frames (int, optional): number of imaging frames. Defaults to 40000.
-        nplanes (int, optional): planes imaged. Defaults to 3.
+        dtype (str): dopamine or pyramidal cell data, diff by # of planes etc.
         zplns (int, optional): zpln chunks to split the tifs. Defaults to 3000.
 
     Returns:
@@ -53,15 +52,24 @@ def maketifs(imagingflnm,y1,y2,x1,x2,frames=40000,nplanes=3,zplns=3000):
     dat = sbx_memmap(sbxfl)
     #check if tifs exists
     tifs=[xx for xx in os.listdir(imagingflnm) if ".tif" in xx]
+    if dtype == 'dopamine':
+        frames=20000
+        nplanes=3
+    elif dtype == 'pyramidal':
+        frames=40000
+        nplanes=1
     split = int(zplns/nplanes) # 3000 planes as normal
     if len(tifs)<ceil(frames/zplns): # if no tifs exists 
         #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16        
         for nn,i in enumerate(range(0, dat.shape[0], split)): #splits into tiffs of 3000 planes each
             stack = np.array(dat[i:i+split,:,:,:])
             #crop in x
-            stack=np.squeeze(stack)[:,:,y1:y2,x1:x2] #170:500,105:750] # crop based on etl artifacts
-            # reshape so planes are one after another
-            stack = np.reshape(stack, (stack.shape[0]*stack.shape[1], stack.shape[2], stack.shape[3]))
+            if dtype == 'dopamine': 
+                stack=np.squeeze(stack)[:,:,y1:y2,x1:x2] #170:500,105:750] # crop based on etl artifacts                
+                # reshape so planes are one after another
+                stack = np.reshape(stack, (stack.shape[0]*stack.shape[1], stack.shape[2], stack.shape[3]))
+            elif dtype == 'pyramidal': 
+                stack=np.squeeze(stack)[:,y1:y2,x1:x2]            
             tifffile.imwrite(sbxfl[:-4]+f'_{nn+1:03d}.tif', stack)
         print("\n ******Tifs made!******\n")    
     else:
