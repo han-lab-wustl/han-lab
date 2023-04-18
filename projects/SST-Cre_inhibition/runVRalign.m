@@ -3,7 +3,7 @@
 %based on Zahra's pipeline folder structure
 
 mouse_name = "e201";
-days = [32:34];
+days = [35:41];
 src = "Z:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));

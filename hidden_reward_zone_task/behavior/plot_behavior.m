@@ -4,7 +4,7 @@
 % https://www.nature.com/articles/s41593-022-01050-4
 
 mouse_name = "e201";
-days = [26:39];
+days = [25:41];
 src = "Z:\sstcre_imaging";
 grayColor = [.7 .7 .7];
 

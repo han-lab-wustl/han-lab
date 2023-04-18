@@ -52,7 +52,7 @@ def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
     dat = sbx_memmap(sbxfl)
     #check if tifs exists
     tifs=[xx for xx in os.listdir(imagingflnm) if ".tif" in xx]
-    if dtype == 'dopamine':
+    if dtype == 'axonal':
         frames=20000
         nplanes=3
     elif dtype == 'pyramidal':
@@ -64,7 +64,7 @@ def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
         for nn,i in enumerate(range(0, dat.shape[0], split)): #splits into tiffs of 3000 planes each
             stack = np.array(dat[i:i+split,:,:,:])
             #crop in x
-            if dtype == 'dopamine': 
+            if dtype == 'axonal': 
                 stack=np.squeeze(stack)[:,:,y1:y2,x1:x2] #170:500,105:750] # crop based on etl artifacts                
                 # reshape so planes are one after another
                 stack = np.reshape(stack, (stack.shape[0]*stack.shape[1], stack.shape[2], stack.shape[3]))

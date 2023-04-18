@@ -336,15 +336,6 @@ for alldays = 1:length(pr_dir0)%[3:1
                     plot(utimedFF,rescale(reward_CS,0,length(reg_name)),'LineWidth',1.5)
                     plot(utimedFF,rescale(licksALL,length(reg_name),length(reg_name)+0.5),'color',[.7 .7 .7],'LineWidth',1.5)
                 end
-
-
-               
-               
-               
-               
-               
-               
-               
                
             end
         end

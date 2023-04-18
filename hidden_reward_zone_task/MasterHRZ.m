@@ -7,8 +7,6 @@
 %%
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\hidden_reward_zone_task\scripts_dFF_Fc3')
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\hidden_reward_zone_task\create_tables_scripts')
-addpath('C:\Users\Han\Documents\MATLAB\han-lab\hidden_reward_zone_task\HRZ_master\behavior')
-addpath('C:\Users\Han\Documents\MATLAB\han-lab\hidden_reward_zone_task\HRZ_master\')
 do_quality_control = true; % sometimes Suite2p finds cells with F = 0 that are difficult to identify. This allow to remove them post hoc if any and keeps track of which of them were removed.
                             % this also creates the 'all' structure. and
                             % appends it to the Fall.   
@@ -17,8 +15,14 @@ do_quality_control = true; % sometimes Suite2p finds cells with F = 0 that are d
 %% MAIN SETTINGS ----------------------------------------------------------
 
 Settings.paths = dir("Z:\sstcre_imaging\e201\**\*Fall.mat"); % you can set a specific day by substituting D* with D1 for example
-Settings.hrz_days = [16:21,23:27]; % ZD added for her folder structure
-Settings.paths = Settings.paths(Settings.hrz_days); % only certain days
+% formatting for zahra's path
+for i=1:length(Settings.paths)
+    [parent,nm,~] = fileparts(fileparts(fileparts(fileparts(Settings.paths(i).folder))));
+    dy{i} = str2num(nm);
+end
+dys = cell2mat(dy);
+Settings.hrz_days = 24; % get days after this day; ZD added for her folder structure
+Settings.paths = Settings.paths(dys > Settings.hrz_days); % only certain days
 Settings.Fs = 32; % Hz
 Settings.level_mouse_name = 3; % at which level of the folder .path is the mouse name contained, 
 % e.g. Z:\sstcre_imaging\e201, mouse name would be level 3

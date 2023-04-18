@@ -43,10 +43,6 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
    
     clearvars lickVoltage forwardvel
   
-    
-    close all
-    
-    
     planeroicount = 0;
     cnt=cnt+1;
     Day=alldays;
@@ -112,8 +108,7 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
             CSUSframelag_win_frames=round(CSUStimelag/frame_time);
             speedftol=10;
             max_nrew_stop_licktol=2*frame_rate;
-            
-            
+                      
             mean_base_mean=mean(base_mean);
             
             norm_base_mean=base_mean;
@@ -126,9 +121,8 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
             temp= find(reward_binned);
             reward_binned(temp(find(diff(temp) == 1))) = 0;
             speed_smth_1=smoothdata(speed_binned,'gaussian',gauss_win)';
-            dop_smth=smoothdata(norm_base_mean,'gaussian',gauss_win);
-            
-            
+            dop_smth=norm_base_mean;%smoothdata(norm_base_mean,'gaussian',gauss_win);
+                    
             %%%figure for behavior plotting
             
             figure;

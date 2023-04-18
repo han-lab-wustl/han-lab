@@ -53,7 +53,8 @@ def main(**args):
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            imagingflnm = maketifs(imagingflnm,170,500,105,750,frames=params["nframes"])
+            imagingflnm = maketifs(imagingflnm,170,500,105,
+                        750,dtype='axonal')
             print(imagingflnm)
 
         ##############RUN SUITE2P MOTION CORRECTION##############
