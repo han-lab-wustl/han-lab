@@ -207,7 +207,7 @@ end
 %extract base mean from all rois selected before
 % clear all
 % close all
-pr_dir=uipickfiles;
+% pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 tic
 for allplanes=1:3 %1:4
@@ -297,7 +297,11 @@ for allplanes=1:3 %1:4
                     roibase_mean{jj,deg}=detrend(mean_roi,deg);%%%detrend
                     
                     %%% munni method 3rd degree moving filtering
-                    noise=sgolayfilt(mean_roi,deg,size(mean_roi,1)-1);
+                    try
+                        noise=sgolayfilt(mean_roi,deg,size(mean_roi,1)-1);
+                    catch % ZD added for odd error?
+                        noise=sgolayfilt(mean_roi,deg,size(mean_roi,1));
+                    end
                     bz_sig=mean_roi-noise;
                     roibase_mean4{jj,deg}=bz_sig;
                 end

@@ -1,9 +1,9 @@
 %Zahra
 %run VR align
 %based on Zahra's pipeline folder structure
-
+% run from han-lab dir
 mouse_name = "e201";
-days = [35:41];
+days = [44];
 src = "Z:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));
@@ -16,7 +16,7 @@ end
 %% 
 % for dopamine mice
 mouse_name = "e194";
-days = [19];
+days = [20:24];
 src = "X:\dopamine_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));

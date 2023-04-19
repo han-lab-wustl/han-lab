@@ -4,7 +4,7 @@
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e201';
-weekfld = 'week5-8';
+weekfld = 'week5-8_stringent';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
@@ -16,6 +16,8 @@ commoncells=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
 end
+% save cells common across all days
+save(fullfile(pth.folder,'commoncells.mat'), 'commoncells')
  
 % load mats from all days
 fls = dir(fullfile(src, 'fmats', 'e201_param_test', 'fall\*.mat')); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));

@@ -42,7 +42,7 @@ def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
         animal (str): animal name (e.g. e200)
     """
     days = listdir(os.path.join(drive, animal.lower())) # assumes drive > per animal folder structure
-    days = [xx for xx in days if "week" not in xx] #excludes weeks
+    days = [xx for xx in days if "week" not in xx and ".mat" not in xx] #excludes weeks
     dates = [];
     for day in days:
         fls = listdir(day)
@@ -73,8 +73,8 @@ def copyfmats(src, dst, animal, overwrite=False):
         dst (str): drive to copy to, e.g.'Y:\\sstcre_imaging\\fmats'
         animal (str): e.g. e200
     """
-    src = os.path.join(src, animal) #"Z:\sstcre_imaging"
-    dst = os.path.join(dst, animal) #"dst='Y:\\sstcre_analysis\\fmats
+    src = os.path.join(src, animal) #src="X:\sstcre_imaging"
+    dst = os.path.join(dst, animal) #dst='Y:\\sstcre_analysis\\fmats'
     # get only days, not week fmats
     days = [int(xx) for xx in os.listdir(src) if  "week" not in xx and "ref" not in xx]
     weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
@@ -96,7 +96,7 @@ def copyfmats(src, dst, animal, overwrite=False):
         for w in weeks:            
             imgfl = os.path.join(src, str(w))
             mat = os.path.join(imgfl, "suite2p", "plane0", "Fall.mat") 
-            copypth = os.path.join(dst, f"{animal}_week{int(w[4:]):02d}_Fall.mat")
+            copypth = os.path.join(dst, f"{animal}_week{int(w[4:5]):02d}_Fall.mat")
             if os.path.exists(copypth) and overwrite==False:
                 print(f"*********Fall for day {i} already exists in {dst}*********")    
             else:

@@ -94,26 +94,3 @@ for i=1:length(mice)
     disp(mice{i}.ops.save_path0)
 end
 linkaxes([axes{:}], 'xy')
-
-%%
-% get success and fail trials
-% use VR files
-src = 'Z:\sstcre_imaging'; 
-animal = 'e201';
-fls = dir(fullfile(src, animal, '**\behavior\vr\*.mat'));
-fls = fls(25:31); % only hrz days
-for fl=1:length(fls)
-    [s,f,tr] = get_success_failure_trials(fullfile(fls(fl).folder,fls(fl).name));
-    success_prop{fl} = s/tr;
-    fail_prop{fl} = f/tr;
-end
-
-x = [success_prop{:}];
-y = [fail_prop{:}];
-figure;
-bar([mean(y);mean(x)]','grouped','FaceColor','flat');
-hold on
-plot(1,y,'ok')
-plot(2,x,'ok')
-xticklabels(["Fails" "Successes"])
-ylabel("Proportion of trials")

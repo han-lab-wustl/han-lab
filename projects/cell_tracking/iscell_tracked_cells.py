@@ -5,15 +5,30 @@ from scipy.io import loadmat
 import h5py
 
 # make stat array
-fpath = r'X:\sstcre_imaging\e201\week6\suite2p\plane0'
-iscell=np.load(os.path.join(fpath, 'iscell.npy'),
-allow_pickle=True)
+tracked_cells = r'Y:\sstcre_analysis\celltrack\e201_week5-8_stringent\Results\commoncells.mat'
+tracked_cells_arr = loadmat(tracked_cells)['commoncells']
 
-tracked_cells = r'Y:\sstcre_analysis\celltrack\e201_week5-8\Results\commoncells.mat'
-f = h5py.File(tracked_cells, 'r')
-tracked_cells_arr = f['commoncells'][:].astype(int)
+weeks = ['week5', 'week6', 'week7', 'week8']
+for i,week in enumerate(weeks): 
+    fpath = rf'X:\sstcre_imaging\e201\{week}\suite2p\plane0'
+    iscell=np.load(os.path.join(fpath, 'iscell.npy'),
+    allow_pickle=True)
 
-cellind = np.arange(0,len(iscell))
-iscell_v2 = [[int(xx in tracked_cells_arr.T[:,1]) ,iscell[i,1]] for i,
-             xx in enumerate(cellind)]
-np.save(os.path.join(fpath,'iscell.npy'), np.array(iscell_v2))
+    cellind = np.arange(0,len(iscell))
+    iscell_v2 = [[int(xx in tracked_cells_arr[:,i]) ,iscell[i,1]] for i,
+                xx in enumerate(cellind)]
+    np.save(os.path.join(fpath,'iscell.npy'), np.array(iscell_v2))
+
+tracked_cells = r'Y:\sstcre_analysis\celltrack\e201_week5-8_permissive\Results\commoncells.mat'
+tracked_cells_arr = loadmat(tracked_cells)['commoncells']
+
+weeks = ['week5_permissive', 'week6_permissive', 'week7_permissive', 'week8_permissive']
+for i,week in enumerate(weeks): 
+    fpath = rf'X:\sstcre_imaging\e201\{week}\suite2p\plane0'
+    iscell=np.load(os.path.join(fpath, 'iscell.npy'),
+    allow_pickle=True)
+
+    cellind = np.arange(0,len(iscell))
+    iscell_v2 = [[int(xx in tracked_cells_arr[:,i]) ,iscell[i,1]] for i,
+                xx in enumerate(cellind)]
+    np.save(os.path.join(fpath,'iscell.npy'), np.array(iscell_v2))
