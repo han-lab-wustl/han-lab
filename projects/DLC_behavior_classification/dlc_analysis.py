@@ -8,9 +8,13 @@ config_path = 'Y:\DLC\DLC_networks\pupil_licks_nose_paw-Zahra-2023-02-27\config.
 src = r'Y:\DLC\DLC_networks\pupil_licks_nose_paw-Zahra-2023-02-27\videos' 
 videos = ['230306_E200.avi', '230222_E200.avi']
 videos = [os.path.join(src, xx) for xx in videos]
+# analyze videos
+deeplabcut.analyze_videos(config_path, videos, shuffle=4,
+        save_as_csv=True)
+# extract outlier frames
 deeplabcut.extract_outlier_frames(config_path, 
     videos,
     extractionalgorithm='kmeans')
 
-deeplabcut.refine_labels(config_path)
-deeplabcut.merge_datasets(config_path)
+# deeplabcut.refine_labels(config_path)
+# deeplabcut.merge_datasets(config_path)
