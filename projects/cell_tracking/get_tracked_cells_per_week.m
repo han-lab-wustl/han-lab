@@ -1,10 +1,10 @@
-% Zahra
+ % Zahra
 % get cells detected in cellreg and do analysis
 
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e201';
-weekfld = 'week5-8_stringent';
+weekfld = 'week5-8_permissive';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions

@@ -3,7 +3,7 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 mouse_name = "e201";
-days = [44];
+days = [44:45];
 src = "Z:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));
@@ -15,8 +15,8 @@ for day=days
 end
 %% 
 % for dopamine mice
-mouse_name = "e194";
-days = [20:24];
+mouse_name = "e193";
+days = [20:25];
 src = "X:\dopamine_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));

@@ -15,9 +15,10 @@ for i,week in enumerate(weeks):
     allow_pickle=True)
 
     cellind = np.arange(0,len(iscell))
-    iscell_v2 = [[int(xx in tracked_cells_arr[:,i]) ,iscell[i,1]] for i,
+    iscell_v2 = [[int(xx in tracked_cells_arr[:,i]) ,iscell[ii,1]] for ii,
                 xx in enumerate(cellind)]
     np.save(os.path.join(fpath,'iscell.npy'), np.array(iscell_v2))
+    print(week)
 
 tracked_cells = r'Y:\sstcre_analysis\celltrack\e201_week5-8_permissive\Results\commoncells.mat'
 tracked_cells_arr = loadmat(tracked_cells)['commoncells']
@@ -29,6 +30,6 @@ for i,week in enumerate(weeks):
     allow_pickle=True)
 
     cellind = np.arange(0,len(iscell))
-    iscell_v2 = [[int(xx in tracked_cells_arr[:,i]) ,iscell[i,1]] for i,
+    iscell_v2 = [[int(xx in tracked_cells_arr[:,i]) ,iscell[ii,1]] for ii,
                 xx in enumerate(cellind)]
     np.save(os.path.join(fpath,'iscell.npy'), np.array(iscell_v2))

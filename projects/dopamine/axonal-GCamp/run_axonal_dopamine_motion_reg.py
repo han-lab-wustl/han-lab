@@ -67,6 +67,9 @@ def main(**args):
         ops["delete_bin"]=params["delete_bin"] #False
         ops["move_bin"]=params["move_bin"]
         ops["save_mat"]=True
+        # 2-step registration
+        ops["keep_movie_raw"]=True
+        ops["two_step_registration"]=True
         # ops["roidetect"]=False # do not detect crappy rois from suite2p
         
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'

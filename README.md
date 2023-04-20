@@ -2,12 +2,22 @@
 
 Project-specific and general scripts from Han Lab @ WUSTL
 
+## behavior_analysis
+
+General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
+
 ## hidden_reward_zone_task
 
 `MasterHRZ.m`
 
 Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
 
+### hidden_reward_zone_task > behavior
+
+`COMgeneralview_multiple_EBGMEH1602.m`
+
+Plots HRZ behavior using multiple VR files across multiple days. Relies on `COMgeneralanalysis`.
+`
 ## projects > cell_tracking
 
 Goal is to track pyramidal cells detected by Suite2p across weeks/days
@@ -44,7 +54,17 @@ Cell track cells detected in the weekly concatenated movies across days (**map 2
 
 Map cells tracked per week back to at least 1 day that week, plot them on the mean image per day, and align to behavior
 
-## projects > axonal-GCamp_dopamine
+## projects > dopamine
+
+`Batch_SP_SO_SR_days_GM3_new.m`
+
+Munni's original code. Allows drawing/selection of a ROI and extraction of dFF.
+
+`VRdarkrewards_init_analysis5v2_addrewNew.m`
+
+Munni's original code that aligns behavioral events to dFF. Modifications for labels/titles made by ZD.
+
+### projects > dopamine > axonal-GCamp
 
 How to run preprocessing and motion correction on axonal-GCamp images from two-photon
 

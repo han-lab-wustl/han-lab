@@ -642,7 +642,12 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
                 legend(['velocity'])  
                 text(-5, min(ylim), 'Stopped', 'Horiz','left', 'Vert','bottom')
                 text(5, min(ylim), 'Moving', 'Horiz','right', 'Vert','bottom')
-                title(sprintf('%s, day %s, plane %i', mousenm, daynm, plane))              
+                title(sprintf('%s, day %s, plane %i', mousenm, daynm, plane))
+                
+                
+                
+                
+                
                 
             end
             
@@ -1352,9 +1357,7 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
                     for stamps=1:length(rew_stop_success_tmpts)
                         if sum(~isnan(rew_stop_success_tmpts))>=1
                             currentidx =  find(timedFF>=utimedFF(rew_stop_success_tmpts(stamps)),1);
-                            try % zd added
-                                roidop_success_peristop_reward(stamps,:)= roinorm_base_mean(currentidx-pre_win_frames:currentidx+post_win_frames);
-                            end
+                            roidop_success_peristop_reward(stamps,:)= roinorm_base_mean(currentidx-pre_win_frames:currentidx+post_win_frames);
                         else
                             roidop_success_peristop_reward=NaN(length(-pre_win_frames:post_win_frames));
                             
@@ -1413,35 +1416,33 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
                     
                     
                     %%
-              
+                    
+                    
+                    
                     find_figure('velocity');clf
                     vr_speed=smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5));
                     plot(vr_speed)
                     hold on
-                   
                     vr_speed2=zeros(1,length(vr_speed)); vr_speed2(moving_middle)=1; vr_speed2(find(vr_speed2==0))=NaN;
                     plot(vr_speed.*vr_speed2,'r.')
-                   
                     vr_speed2=zeros(1,length(vr_speed));vr_speed2(stop)=1; vr_speed2(find(vr_speed2==0))=NaN;
                     plot(vr_speed.*vr_speed2,'k.')
-                   
                     rew_idx2=zeros(1,length(forwardvelALL)); rew_idx2(rew_idx)=1; rew_idx2(find(rew_idx2==0))=NaN;
                     plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*rew_idx2,'bo')
-                   
+                    hold on
                     tempspeed = smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5));
                     stop_tmpts2=zeros(1,length(forwardvelALL)); stop_tmpts2(stop_success_tmpts)=1; stop_tmpts2(find(stop_tmpts2==0))=NaN;
                     plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*stop_tmpts2,'go')
-                    
                     scatter(nonrew_stop_success_tmpts,tempspeed(nonrew_stop_success_tmpts),'ys','filled')
+                    legend(['non-rewarded stops'])
                     scatter(rew_stop_success_tmpts,tempspeed(rew_stop_success_tmpts),'bs','filled')
+                    legend(['rewarded stops'])
                     scatter(lick_norew_stop_success_tmpts-1,tempspeed(lick_norew_stop_success_tmpts),'mv','filled')
+                    legend(['non-rewarded stop licks'])
                     scatter(nolick_norew_stop_success_tmpts-1,tempspeed(  nolick_norew_stop_success_tmpts),'gv','filled')
-                                    
+                    legend(['non-rewarded and non-licking stops'])                   
                     plot(rescale(supraLick,-10,-5),'Color',[.7 .7 .7])
-                    legend({'vr speed', 'moving middle', 'stop', 'reward', ...
-                        'stops', 'non-rewarded stops', 'rewarded stops', ...
-                        'lick during non-rewarded stops', ...
-                        'non-rewarded and non-licking stops', 'licks'})   
+                    
                     title({sprintf('%s, day %s, plane %i', mousenm, daynm, plane)}) 
                     
                     %%
@@ -1886,7 +1887,7 @@ if exist([allsavedir allsavefilename filetype],'file') == 2 %file exists already
 else
     outFile = [allsavedir allsavefilename filetype];
 end
-% close all
+close all
 %save(outFile)
 
 
