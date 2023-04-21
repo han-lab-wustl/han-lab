@@ -52,15 +52,28 @@
 %08/13/21 edit - converted ROE into actual velocity for analysis purposes
 %(just after loading)
 
+%20230421
+% ZD changed filepaths for her folder structure, see previous version to
+% use uigetfile
 % NB: mtit function is required for matlab 2017b.
 %% ------------------------------------------------------------------------
 clc
 clear %clean up the environment
-[filename,filepath] = uigetfile('*.mat','MultiSelect','on');
+% [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
+mouse_name = "e201";
+days = [43:47];
+src = "Z:\sstcre_imaging";
+for day=1:length(days)
+    daypth = dir(fullfile(src, mouse_name, string(days(day)), "behavior", "vr\*.mat"));
+    filename{day} = daypth.name;
+    filepath{day} = daypth.folder;
+end
+
 months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 datescell = cellfun(@(s)find(~cellfun('isempty',strfind(filename,s))),months,'uni',0);
 dates = cell2mat(cellfun(@(s) fliplr(s),datescell,'uni',0));
 filename = filename(dates);
+filepath = filepath(dates); % also order my folders
 %%
 for day_number = 1:length(filename)
     if mod(day_number,24) == 1
@@ -71,11 +84,11 @@ for day_number = 1:length(filename)
     else
     subplot(min(ceil(length(filename)/4),6),4,mod(day_number,24))
     end
-    file = [filepath filename{day_number}];
+    file = fullfile(filepath{day_number}, filename{day_number});
     load(file) %load it
     if 1 %length(find(VR.changeRewLoc)) > 1
-        cd (filepath); %EH set path
-        
+        cd (filepath{day_number}); %EH set path
+        addpath('C:\Users\Han\Documents\MATLAB\han-lab\hidden_reward_zone_task\behavior'); % ZD code path
         COMgeneralanalysis
         
 %         
