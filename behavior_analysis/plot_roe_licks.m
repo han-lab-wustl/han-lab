@@ -6,13 +6,21 @@
 % VR file, but there is a clampex file)
 
 clear all; close all;
-src = 'Y:\sstcre_analysis\fmats'; 
+src = 'Z:\sstcre_imaging'; 
 animal = 'e201';
-fls = dir(fullfile(src, animal, sprintf("%s*Fall.mat", animal)));
+fls = dir(fullfile(src, animal, "**\Fall.mat"));
+for i=1:length(fls)
+    [parent,nm,~] = fileparts(fileparts(fileparts(fileparts(fls(i).folder))));
+    dy{i} = str2num(nm);
+end
+dys = cell2mat(dy);
+behavior_days = [15:18, 43:47]; % get behavior for only these days; ZD added for her folder structure
+fls = {behavior_days,fls(ismember(dys,behavior_days))}; % only certain days
+% 1 is day name, 2 is folder structure
 grayColor = [.7 .7 .7];
 
-for fl=1:numel(fls)
-    flnm = fullfile(fls(fl).folder, fls(fl).name);
+for fl=1:numel(fls{1})
+    flnm = fullfile(fls{2}(fl).folder, fls{2}(fl).name);
     mouse=load(flnm);
     try % don't plot if no behavior data aligned
         tr = mouse.rewards;
@@ -25,11 +33,10 @@ for fl=1:numel(fls)
         plot(rew*50, 'b', 'LineWidth',3); hold on; 
         test = mouse.lickVoltage*1000;
         plot(test,'r'); hold on;
-        plot(find(mouse.licks),test(find(mouse.licks)),'k*')
+%         plot(find(mouse.licks),test(find(mouse.licks)),'k*')
 
         plot(mouse.forwardvel, 'Color', grayColor)
-        mousenm = flnm(26:29); day = str2num(flnm(39:41));
-        title(sprintf("mouse %s, day %i", mousenm, day))
+        title(sprintf("mouse %s, day %i", animal, fls{1}(fl)))
         xticks(1:1000:numel(mouse.ybinned))
         xticklabels(ceil(mouse.timedFF(1:1000:end))) % plots in seconds
         xlabel("time (s)")
@@ -41,44 +48,46 @@ for fl=1:numel(fls)
 end
 %%
 % peri CS solenoid velocity
-% range=30; % FRAMES
-% bin=0.2; % HOW TO CONVERT TO BINNED :\
-% for d=1:length(fls)
-%     day=mice(d);day=day{1};
-%     try
-%         rewardsonly=day.rewards==1;
-%         cs=day.rewards==0.5;
-%         % runs for all cells
-%         idx = find(cs);
-%         periCSvel = zeros(length(idx),61);
-%         for iid=1:length(idx)
-%             rn = (idx(iid)-range:idx(iid)+range);
-%             if max(rn)>40000
-%                 rn(find(rn>40000))=NaN;
-%             end
-%             periCSvel(iid,:)=day.lickVoltage(rn);
-%         end
-%         periCSveld{d}=periCSvel;
-%         periCSveld_av{d} = nanmean(periCSvel,1);
-%         [daynm,~] = fileparts(day.ops.data_path);
-%         [~,daynm] = fileparts(daynm);
-%         daynms{d}=daynm;
-%     end
-% end
-% 
-% % plot CS triggered velocity changes
-% for d=1:length(periCSveld)
-%     figure;
-%     try
-%         plot(periCSveld{d}', 'Color', grayColor); hold on;          
-%         plot(periCSveld_av{d}, 'b');
-%     end
-%     xlim([0 61])
-%     x1=xline(31,'-.b',{'Conditioned', 'stimulus'}); %{'Conditioned', 'stimulus'}, 'Reward'
-%     title(sprintf("%s, day %s", animal , daynms{d}))
-%     xlabel('frames')
-%     ylabel('lick voltage')
-% end
+range=75; % FRAMES
+for d=1:length(fls{1})
+    day=mice(d);day=day{1};
+    
+    rewardsonly=day.rewards==1;
+    cs=day.rewards==0.5;
+    % runs for all cells
+    idx = find(cs);
+    periCSvel = zeros(length(idx),(range*2)+1);
+    for iid=1:length(idx)
+        rn = (idx(iid)-range:idx(iid)+range);
+        if max(rn)>40000
+            rn(find(rn>40000))=NaN;
+        end
+        try
+            periCSvel(iid,:)=day.licks(rn);
+        end
+    end
+    periCSveld{d}=periCSvel;
+    periCSveld_av{d} = nanmean(periCSvel,1);
+    [daynm,~] = fileparts(day.ops.data_path);
+    [~,daynm] = fileparts(daynm);
+    daynms{d}=daynm;
+    
+end
+
+% plot CS triggered velocity changes
+for d=1:length(periCSveld)
+    figure;
+    try
+%         periCSveld{d}(periCSveld{d}==0) = NaN;
+%         plot(periCSveld{d}', 'k*'); hold on;          
+        plot(periCSveld_av{d}, 'k');
+    end
+    xlim([0 range*2+1])
+    x1=xline(range+1,'-.b',{'Conditioned', 'stimulus'}); %{'Conditioned', 'stimulus'}, 'Reward'
+    title(sprintf("%s, day %s", animal , daynms{d}))
+    xlabel('frames')
+    ylabel('average number of licks')
+end
 %%
 % plot mean image per day
 figure;

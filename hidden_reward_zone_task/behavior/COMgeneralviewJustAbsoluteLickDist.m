@@ -57,9 +57,9 @@ clear %clean up the environment
 close all;
 % [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
 % ZD added for loop for multiple days
-mouse_name = "e200";
-days = [47:50];
-src = "Y:\sstcre_imaging";
+mouse_name = "e201";
+days = [35:36];
+src = "Z:\sstcre_imaging";
 for day=1:length(days)    
     clearvars -except mouse_name days src day % Zahra added for for loop
     daypth = dir(fullfile(src, mouse_name, string(days(day)), "behavior", "vr\*.mat"));
