@@ -197,7 +197,9 @@ for kk = 1:length(changeRewLoc)-1 % for each reward location...
             
             trialyposlicks{kk}{jj} = VR.ypos(licking); %store the ypos of each lick
 %             allCOM{kk}(jj) =mean(VR.ypos(licking))-RewLoc(kk); %calculate the normalized COM of all the trials successfull of not. Note that for failed trials all the licks are included, not only the ones before the rew loc
-            allCOM{kk}(jj) =mean(VR.ypos(licking))-RewLoc(kk); %EH shift to start of rew zone. calculate the normalized COM of all the trials successfull of not. Note that for failed trials all the licks are included, not only the ones before the rew loc
+            allCOM{kk}(jj) =mean(VR.ypos(licking))-RewLoc(kk); %EH shift to start of rew zone. 
+            % calculate the normalized COM of all the trials successfull of not. 
+            % Note that for failed trials all the licks are included, not only the ones before the rew loc
             allstdCOM{kk}(jj) = std(VR.ypos(licking))/sqrt(length(licking));
             allRatio{kk}(jj)=ratio; %EH
             

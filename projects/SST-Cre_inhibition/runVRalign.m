@@ -3,7 +3,7 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 mouse_name = "e201";
-days = [44:45];
+days = [45:47];
 src = "Z:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));

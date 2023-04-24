@@ -10,14 +10,30 @@ General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ.
 
 `MasterHRZ.m`
 
+Eleonora's HRZ (and remapping) analysis
+
 Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
 
 ### hidden_reward_zone_task > behavior
 
-`COMgeneralview_multiple_EBGMEH1602.m`
+Primarily Gerardo's scripts for HRZ analysis
 
-Plots HRZ behavior using multiple VR files across multiple days. Relies on `COMgeneralanalysis`.
-`
+`COMgeneralview_multiple_EBGMEH1602.m`: Plots HRZ behavior using multiple VR files across multiple days. Relies on `COMgeneralanalysis`.
+` 
+`Comgeneralview_EBGMEH1602`: does all the graphs we've ever made for behavior to view
+  
+`correct_artifact_licks`: not sure if needed, should remove licks in the dark
+ 
+`COMgeneralanalysis`: All of our actual analysis, used in most scripts. Separated for the sake of space and convenience for debugging.
+ 
+`COMgeneralPlotMini`: just behavior subplot
+ 
+`COMgeneralviewJustAbsolutelickDist`: Plots behavior with just the absolute lick distance ttest
+ 
+`COMsmallversion`: (note! uses specific days I know are good to test out, can select others but will post those if you want to use the same) attempts all the different versions and shows how the statistical tests compare accross each day, skips behavior plots
+ 
+`mtit`: if you have matlab earlier than 2018(?) will use this function to put a title on a subplotted figure
+
 ## projects > cell_tracking
 
 Goal is to track pyramidal cells detected by Suite2p across weeks/days

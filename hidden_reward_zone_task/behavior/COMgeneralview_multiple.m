@@ -61,7 +61,7 @@ clc
 clear %clean up the environment
 % [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
 mouse_name = "e201";
-days = [43:47];
+days = [43:48];
 src = "Z:\sstcre_imaging";
 for day=1:length(days)
     daypth = dir(fullfile(src, mouse_name, string(days(day)), "behavior", "vr\*.mat"));
