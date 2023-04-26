@@ -69,7 +69,7 @@ def main(**args):
         ops["save_mat"]=params["save_mat"]
         ops["threshold_scaling"]=0.5 #TODO: make modular
         ops["max_iterations"]=200
-        
+
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -110,7 +110,9 @@ def main(**args):
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
         tifspths.sort(); print(tifspths)
         #savedir
-        weekdir = os.path.join(params["datadir"],params["mouse_name"], "week"+str(params["week"])); makedir(weekdir)    
+        params["savedir"] = "X:\sstcre_imaging" #TODO: make var
+        weekdir = os.path.join(params["savedir"],params["mouse_name"], 
+                               "week"+str(params["week"])); makedir(weekdir)    
         #do suite2p after tifs are made
         # set your options for running
         import suite2p

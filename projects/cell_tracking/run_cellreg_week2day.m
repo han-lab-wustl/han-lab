@@ -42,7 +42,7 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 2;
+week = 1;
 animal = 'e200';
 results_directory= fullfile(pth,sprintf('%s_week%i_to_days', animal, week), 'Results') ;
 
@@ -104,7 +104,7 @@ alignment_type='Translations and Rotations'; % either 'Translations', 'Translati
 use_parallel_processing=true; % either true or false
 maximal_rotation=30; % in degrees - only relevant if 'Translations and Rotations' is used
 transformation_smoothness=2; % levels of non-rigid FOV transformation smoothness (range 0.5-3)
-reference_session_index=number_of_sessions; 
+reference_session_index=number_of_sessions; % ZD: HAS TO BE LAST FILE (week)
 
 % Preparing the data for alignment:
 disp('Stage 2 - Aligning sessions')
@@ -303,7 +303,7 @@ disp('Done')
 % correlations.
 
 % Defining the parameters for final registration:
-registration_approach='Simple threshold'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD
+registration_approach='Probabilistic'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD
 model_type=best_model_string; % either 'Spatial correlation' or 'Centroid distance'
 p_same_threshold=0.5; % only relevant if probabilistic approach is used
 

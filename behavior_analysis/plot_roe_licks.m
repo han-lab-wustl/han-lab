@@ -47,8 +47,9 @@ for fl=1:numel(fls{1})
     clear tr %remove condition from previous loop run
 end
 %%
-% peri CS solenoid velocity
-range=75; % FRAMES
+% peri CS solenoid 
+range=75; % peri triggered FRAMES
+recframes = 40000 ;
 for d=1:length(fls{1})
     day=mice(d);day=day{1};
     
@@ -59,15 +60,15 @@ for d=1:length(fls{1})
     periCSvel = zeros(length(idx),(range*2)+1);
     for iid=1:length(idx)
         rn = (idx(iid)-range:idx(iid)+range);
-        if max(rn)>40000
-            rn(find(rn>40000))=NaN;
+        if max(rn)>recframes% exclude rews towards the end of recording
+            rn(find(rn>recframes))=NaN;
         end
         try
             periCSvel(iid,:)=day.licks(rn);
         end
     end
-    periCSveld{d}=periCSvel;
-    periCSveld_av{d} = nanmean(periCSvel,1);
+    periCSveld{d}=periCSvel; % per trial
+    periCSveld_av{d} = nanmean(periCSvel,1); % average
     [daynm,~] = fileparts(day.ops.data_path);
     [~,daynm] = fileparts(daynm);
     daynms{d}=daynm;

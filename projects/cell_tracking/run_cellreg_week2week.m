@@ -42,8 +42,8 @@ pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e201'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_week5-8_permissive',animal), 'Results') ; % CHANGE WEEK NO
+animal = 'e186'; % CHANGE
+results_directory= fullfile(pth,sprintf('%s_week1-4_probabilistic',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,7 +53,8 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
+fls = dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
+% dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
@@ -137,10 +138,17 @@ elseif strcmp(alignment_type,'Non-rigid')
         footprints_projections_corrected,centroid_projections_corrected,...
         maximal_cross_correlation,alignment_translations,overlapping_FOV,...
         displacement_fields]=...
-        align_images(adjusted_spatial_footprints,centroid_locations,adjusted_footprints_projections,centroid_projections,adjusted_FOV,microns_per_pixel,reference_session_index,alignment_type,sufficient_correlation_centroids,sufficient_correlation_footprints,use_parallel_processing,transformation_smoothness);
+        align_images(adjusted_spatial_footprints,centroid_locations, ...
+        adjusted_footprints_projections,centroid_projections,adjusted_FOV,microns_per_pixel, ...
+        reference_session_index,alignment_type,sufficient_correlation_centroids, ...
+        sufficient_correlation_footprints,use_parallel_processing,transformation_smoothness);
 else
-    [spatial_footprints_corrected,centroid_locations_corrected,footprints_projections_corrected,centroid_projections_corrected,maximal_cross_correlation,alignment_translations,overlapping_FOV]=...
-        align_images(adjusted_spatial_footprints,centroid_locations,adjusted_footprints_projections,centroid_projections,adjusted_FOV,microns_per_pixel,reference_session_index,alignment_type,sufficient_correlation_centroids,sufficient_correlation_footprints,use_parallel_processing);
+    [spatial_footprints_corrected,centroid_locations_corrected,footprints_projections_corrected,
+        centroid_projections_corrected,maximal_cross_correlation,alignment_translations,overlapping_FOV]=...
+        align_images(adjusted_spatial_footprints,centroid_locations, ...
+        adjusted_footprints_projections,centroid_projections,adjusted_FOV,microns_per_pixel, ...
+        reference_session_index,alignment_type,sufficient_correlation_centroids, ...
+        sufficient_correlation_footprints,use_parallel_processing);
 end
 
 
@@ -152,9 +160,17 @@ end
 
 % plotting alignment results:
 if strcmp(alignment_type,'Non-rigid')
-    plot_alignment_results(adjusted_spatial_footprints,centroid_locations,spatial_footprints_corrected,centroid_locations_corrected,adjusted_footprints_projections,footprints_projections_corrected,reference_session_index,all_projections_correlations,maximal_cross_correlation,alignment_translations,overlapping_FOV,alignment_type,number_of_cells_per_session,figures_directory,figures_visibility,displacement_fields)
+    plot_alignment_results(adjusted_spatial_footprints,centroid_locations, ...
+        spatial_footprints_corrected,centroid_locations_corrected,adjusted_footprints_projections, ...
+        footprints_projections_corrected,reference_session_index,all_projections_correlations, ...
+        maximal_cross_correlation,alignment_translations,overlapping_FOV,alignment_type, ...
+        number_of_cells_per_session,figures_directory,figures_visibility,displacement_fields)
 else
-    plot_alignment_results(adjusted_spatial_footprints,centroid_locations,spatial_footprints_corrected,centroid_locations_corrected,adjusted_footprints_projections,footprints_projections_corrected,reference_session_index,all_projections_correlations,maximal_cross_correlation,alignment_translations,overlapping_FOV,alignment_type,number_of_cells_per_session,figures_directory,figures_visibility)
+    plot_alignment_results(adjusted_spatial_footprints,centroid_locations, ...
+        spatial_footprints_corrected,centroid_locations_corrected,adjusted_footprints_projections, ...
+        footprints_projections_corrected,reference_session_index,all_projections_correlations, ...
+        maximal_cross_correlation,alignment_translations,overlapping_FOV,alignment_type, ...
+        number_of_cells_per_session,figures_directory,figures_visibility)
 end
 
 if use_parallel_processing
@@ -300,7 +316,7 @@ disp('Done')
 % correlations.
 
 % Defining the parameters for final registration:
-registration_approach='Simple threshold'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD
+registration_approach='Probabilistic'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD WHYYY
 model_type=best_model_string; % either 'Spatial correlation' or 'Centroid distance'
 p_same_threshold=0.5; % only relevant if probabilistic approach is used
 

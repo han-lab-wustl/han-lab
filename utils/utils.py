@@ -63,7 +63,8 @@ def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
     return
 
 
-def copyfmats(src, dst, animal, overwrite=False):
+def copyfmats(src, dst, animal, overwrite=False, days=False, 
+              weeks=False, weekdir=False):
     """useful for cell tracking, copies Fall to another location for each day in animal folder
     if you align to behavior can also use for further analysis 
     (run runVRalign.m in MATLAB, in projects > SST-cre inhibition)
@@ -72,12 +73,17 @@ def copyfmats(src, dst, animal, overwrite=False):
         src (str): drive with raw data and Fall.mat from suite2p, assumes animal folder exists inside it
         dst (str): drive to copy to, e.g.'Y:\\sstcre_imaging\\fmats'
         animal (str): e.g. e200
+        days (list of integers): specify list of days(integers) corresponding to fld name
+        weeks (list of strings): specify list of weeks(string, e.g. 'week4') corresponding to fld name
     """
     src = os.path.join(src, animal) #src="X:\sstcre_imaging"
     dst = os.path.join(dst, animal) #dst='Y:\\sstcre_analysis\\fmats'
+    if weekdir: weekdir = os.path.join(weekdir, animal)
     # get only days, not week fmats
-    days = [int(xx) for xx in os.listdir(src) if  "week" not in xx and "ref" not in xx]
-    weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
+    if not days:
+        days = [int(xx) for xx in os.listdir(src) if  "week" not in xx and "ref" not in xx]
+    if not weeks:
+        weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
     days.sort()
     # move all converted fmats to separate folder
     for i in days:        
@@ -94,7 +100,10 @@ def copyfmats(src, dst, animal, overwrite=False):
 
     if len(weeks)>0:
         for w in weeks:            
-            imgfl = os.path.join(src, str(w))
+            if not weekdir: 
+                imgfl = os.path.join(src, str(w))
+            else:
+                imgfl = os.path.join(weekdir, str(w))
             mat = os.path.join(imgfl, "suite2p", "plane0", "Fall.mat") 
             copypth = os.path.join(dst, f"{animal}_week{int(w[4:5]):02d}_Fall.mat")
             if os.path.exists(copypth) and overwrite==False:
