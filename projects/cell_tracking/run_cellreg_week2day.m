@@ -42,8 +42,8 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 1;
-animal = 'e200';
+week = 7;
+animal = 'e201';
 results_directory= fullfile(pth,sprintf('%s_week%i_to_days', animal, week), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');

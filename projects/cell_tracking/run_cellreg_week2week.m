@@ -42,8 +42,8 @@ pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e186'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_week1-4_probabilistic',animal), 'Results') ; % CHANGE WEEK NO
+animal = 'e200'; % CHANGE
+results_directory= fullfile(pth,sprintf('%s_week1236',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,7 +53,8 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\converted_%s*_week*.mat", animal, animal)));
+%dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
 % dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
@@ -143,9 +144,8 @@ elseif strcmp(alignment_type,'Non-rigid')
         reference_session_index,alignment_type,sufficient_correlation_centroids, ...
         sufficient_correlation_footprints,use_parallel_processing,transformation_smoothness);
 else
-    [spatial_footprints_corrected,centroid_locations_corrected,footprints_projections_corrected,
-        centroid_projections_corrected,maximal_cross_correlation,alignment_translations,overlapping_FOV]=...
-        align_images(adjusted_spatial_footprints,centroid_locations, ...
+    [spatial_footprints_corrected,centroid_locations_corrected,footprints_projections_corrected,centroid_projections_corrected,maximal_cross_correlation, ...
+        alignment_translations,overlapping_FOV]=align_images(adjusted_spatial_footprints,centroid_locations, ...
         adjusted_footprints_projections,centroid_projections,adjusted_FOV,microns_per_pixel, ...
         reference_session_index,alignment_type,sufficient_correlation_centroids, ...
         sufficient_correlation_footprints,use_parallel_processing);
