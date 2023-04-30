@@ -241,7 +241,7 @@ for d=daysrewards
     cs=day.rewards==0.5;
     % runs for all cells
     [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dff{d}', ...
-        rewardsonly,day.timedFF,range,bin); %rewardsonly if mapping to reward
+        cs,day.timedFF,range,bin); %rewardsonly if mapping to reward
     % now extract ids only of the common cells
     ccbinnedPerireward{d}=binnedPerireward;
     ccrewdFF{d}=rewdFF;
@@ -252,7 +252,7 @@ end
 % cell??? NOT implemented yet
 pavlovian=[1:5];
 hrz = [6:18];
-cells_to_plot = 20:40;%randi([1 20],1,5);
+cells_to_plot = 1:50;%randi([1 20],1,5);
 for cellno=cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number of cells
     dd=1; %for legend
     figure;

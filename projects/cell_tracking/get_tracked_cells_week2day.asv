@@ -19,74 +19,76 @@ commoncells_4weeks=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells_4weeks(ci,:)=weeks.cell_registered_struct.cell_to_index_map(cindex(ci));
 end
-
-% for each of these cells, if this cell maps to day 1, or day 1,2,3, etc...
-% find those cells that map to atleast 1 day 
-wkcount = 1;
-for week=weeknms % for e201, excluded week 1
-    week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week%i_to_days'], week), "Results\*cellRegistered*"));
-    week2day = load(fullfile(week2daynm.folder,week2daynm.name));
-    % find cells in all sessions
-    [r,c] = find(week2day.cell_registered_struct.cell_to_index_map~=0);
-    [counts, bins] = hist(r,1:size(r,1));
-    sessions=size(week2day.cell_registered_struct.cell_to_index_map,2);% specify no of sessions, exclude week
-    cindex = bins(counts>=2); % finding cells across only 1 session + the week 
-    commoncells=zeros(length(cindex),sessions);
-    for ci=1:length(cindex)
-        commoncells(ci,:)=week2day.cell_registered_struct.cell_to_index_map(cindex(ci),:);
-    end    
-    % make sure cells map across weeks
-    mask = ismember(commoncells(:,sessions),commoncells_4weeks(:,wkcount));
-    commoncells_mapped = commoncells(mask,:);
-    save(fullfile(week2daynm.folder, 'commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat'),'commoncells_mapped')
-    wkcount=wkcount+1; % add to counter because week numbers do not always start from 1
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ANALYSIS AND PLOTS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%
-weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_to_days'])));
-week_maps = cell(1,length(weeknms));
-wkcount = 1;
-for i=weeknms
-    week_map=load(fullfile(weektodays(wkcount).folder,weektodays(wkcount).name, ...
-        "Results\commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat")).commoncells_mapped;
-    week_maps{wkcount}=week_map;
-    wkcount = wkcount + 1;
-end
-
-% for each week, we need to find cells that 1) map to days of that week
-% (already in week1,2,... arrays) and 2) map to other days of the week
-% need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
-% see below...
-week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=18; %total number of days imaged (e.g. included in dataset)
-cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
-for w=1:length(week1cells_to_map)
-    %cell index in other weeks
-    week1cell=week1cells_to_map(w);
-    cell_across_weeks=commoncells_4weeks(find(commoncells_4weeks(:,1)==week1cell),:);
-    for wk=1:size(commoncells_4weeks,2)
-        tweek=week_maps{wk}; %skipped week 1
-        dayscell=tweek(find(tweek(:,end)==cell_across_weeks(wk)),1:end-1); % exclude last column which is 
-        % the week
-        if isempty(dayscell)
-            daysweekcell{wk}=zeros(1,size(dayscell,2));
-        else
-            daysweekcell{wk}=dayscell;
-        end
-    end
-    cellmap2dayacrossweeks(w,:) = [daysweekcell{:}];
-end
-
-%save
-save(fullfile(weekdst.folder, ...
-    "commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat"), "cellmap2dayacrossweeks")
+% 
+% % for each of these cells, if this cell maps to day 1, or day 1,2,3, etc...
+% % find those cells that map to atleast 1 day 
+% wkcount = 1;
+% for week=weeknms % for e201, excluded week 1
+%     week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week%i_to_days'], week), "Results\*cellRegistered*"));
+%     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
+%     % find cells in all sessions
+%     [r,c] = find(week2day.cell_registered_struct.cell_to_index_map~=0);
+%     [counts, bins] = hist(r,1:size(r,1));
+%     sessions=size(week2day.cell_registered_struct.cell_to_index_map,2);% specify no of sessions, exclude week
+%     cindex = bins(counts>=2); % finding cells across only 1 session + the week 
+%     commoncells=zeros(length(cindex),sessions);
+%     for ci=1:length(cindex)
+%         commoncells(ci,:)=week2day.cell_registered_struct.cell_to_index_map(cindex(ci),:);
+%     end    
+%     % make sure cells map across weeks
+%     mask = ismember(commoncells(:,sessions),commoncells_4weeks(:,wkcount));
+%     commoncells_mapped = commoncells(mask,:);
+%     save(fullfile(week2daynm.folder, 'commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat'),'commoncells_mapped')
+%     wkcount=wkcount+1; % add to counter because week numbers do not always start from 1
+% end
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ANALYSIS AND PLOTS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%
+% weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_to_days'])));
+% week_maps = cell(1,length(weeknms));
+% wkcount = 1;
+% for i=weeknms
+%     week_map=load(fullfile(weektodays(wkcount).folder,weektodays(wkcount).name, ...
+%         "Results\commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat")).commoncells_mapped;
+%     week_maps{wkcount}=week_map;
+%     wkcount = wkcount + 1;
+% end
+% 
+% % for each week, we need to find cells that 1) map to days of that week
+% % (already in week1,2,... arrays) and 2) map to other days of the week
+% % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
+% % see below...
+% week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
+% sessions_total=18; %total number of days imaged (e.g. included in dataset)
+% cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
+% for w=1:length(week1cells_to_map)
+%     %cell index in other weeks
+%     week1cell=week1cells_to_map(w);
+%     cell_across_weeks=commoncells_4weeks(find(commoncells_4weeks(:,1)==week1cell),:);
+%     for wk=1:size(commoncells_4weeks,2)
+%         tweek=week_maps{wk}; %skipped week 1
+%         dayscell=tweek(find(tweek(:,end)==cell_across_weeks(wk)),1:end-1); % exclude last column which is 
+%         % the week
+%         if isempty(dayscell)
+%             daysweekcell{wk}=zeros(1,size(dayscell,2));
+%         else
+%             daysweekcell{wk}=dayscell;
+%         end
+%     end
+%     cellmap2dayacrossweeks(w,:) = [daysweekcell{:}];
+% end
+% 
+% %save
+% save(fullfile(weekdst.folder, ...
+%     "commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat"), "cellmap2dayacrossweeks")
+load(fullfile(weekdst.folder, ...
+    "commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat"))
 %%
 
 % load mats from all days
@@ -128,7 +130,7 @@ end
 % align all cells across all days in 1 fig
 % colormap to iterate thru
 cc=cellmap2dayacrossweeks;
-
+sessions_total=18;
 ctab = hsv(length(cc));
 figure;
 axesnm=zeros(1,sessions_total);
@@ -149,22 +151,24 @@ for ss=1:sessions_total
     title(sprintf('day %s', daynm))
 end
 linkaxes(axesnm, 'xy')
-savefig(fullfile(weekdst.folder, "cellmasks.pdf"))
+% savefig(fullfile(weekdst.folder, "cellmasks.pdf"))
 %%
 %calculate dff
-dff={};
-for i=1:length(days)
-    day=days(i);day=day{1};
-    dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
-    disp(i)
-end
-save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
-% dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff");
+% TODO: find a way to add to fall.mat
+% dff={};
+% for i=1:length(days)
+%     day=days(i);day=day{1};
+%     dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
+%     disp(i)
+% end
+% save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
+dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff");
+dff=dff.dff;
 %%
 % plot F (and ideally dff) over ypos
 
-days_to_plot=[10,12,13]; %plot 5 days at a time
-cellno=randi([1 500],1,1);
+days_to_plot=[14,15,17]; %plot 5 days at a time
+cellno=randi([1 length(cc)],1,1);
 grayColor = [.7 .7 .7];
 sessions_total=3;
 fig=figure;
@@ -174,7 +178,10 @@ for dayplt=days_to_plot
     day=days(dayplt);day=day{1};
     plot(day.ybinned, 'Color', grayColor); hold on; 
     plot(day.changeRewLoc, 'b')
-    plot(find(day.licks),day.ybinned(find(day.licks)),'r.')
+    plot(find(day.licks),day.ybinned(find(day.licks)),'r.')     
+    rew = day.rewards>0.5; % codes for single or double rewards
+    plot(find(rew),day.ybinned(find(rew)),'b.', ...
+        'MarkerSize',10); 
     yyaxis right
     try
         plot(dff{dayplt}(cc(cellno,dayplt),:),'g') % 2 in the first position is cell no
@@ -190,7 +197,7 @@ han.XAxis.Visible='off';
 han.YLabel.Visible='on';
 ylabel(han,'Y position');
 xlabel(han,'Frames');
-title(han,sprintf('Cell no. %03d', cellno));
+sgtitle(sprintf('Cell no. %03d', cellno));
 
 % savefig(sprintf('Z:\\cellregtest_behavior\\cell_%05d_days%02d_%02d_%02d_%02d_%02d.fig', cellno, days_to_plot))
 %%
@@ -223,8 +230,9 @@ title(han,sprintf('Cell no. %03d', cellno));
 % per day, get this data...
 range=5;
 bin=0.2;
+addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
-daysrewards = 1:11;
+daysrewards = 1:18;
 ccbinnedPerireward=cell(1,length(daysrewards));
 ccrewdFF=cell(1,length(daysrewards));
 for d=daysrewards
@@ -242,9 +250,10 @@ end
 % plot
 % if cell is missing from 1 day, take mean dff of others days from that
 % cell??? NOT implemented yet
-% optodays=[5,6,7,9,10,11,13,14,16,17,18];
-cells_to_plot = size(cc,1);
-for cellno=1:cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number of cells
+pavlovian=[1:5];
+hrz = [6:18];
+cells_to_plot = 20:40;%randi([1 20],1,5);
+for cellno=cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number of cells
     dd=1; %for legend
     figure;
     clear legg;
@@ -252,7 +261,11 @@ for cellno=1:cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number
         clear pltrew;
         pltrew=ccbinnedPerireward{d}; %temp hack that excludes cell #1
         try %if cell exists on that day, otherwise day is dropped...
-            plot(pltrew(cc(cellno,d),:)')            
+            if ismember(d,pavlovian)
+                plot(pltrew(cc(cellno,d),:)','r')            
+            else
+                plot(pltrew(cc(cellno,d),:)','k')            
+            end
 %             else
 %               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
 %             end
