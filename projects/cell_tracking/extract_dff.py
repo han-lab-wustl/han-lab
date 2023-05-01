@@ -1,5 +1,6 @@
 # Zahra
 # extract dff and cluster
+# TODO: convert to functions and for loop
 import numpy as np, os, sys
 from scipy.io import loadmat
 import h5py, scipy
@@ -88,7 +89,7 @@ mask=cc[:,tracked_day] # 17 is the dark num
 # get cell ids 
 cellids = mask[mask>-1]
 dff_day = dff[tracked_day].T#[mask][mask>-1] # only get tracked cells
-dst = rf'Y:\sstcre_analysis\clustering\day{day}'
+dst = rf'Y:\sstcre_analysis\clustering\day{day}';makedir(dst)
 # run for each epoch
 for ep in range(len(epoch[1])):
     print(ep)
@@ -162,7 +163,8 @@ for ep in range(len(epoch[1])):
             cluster_map.append((idx,f"Cluster {winner_node[0]*som_y+winner_node[1]+1}"))
 
         cluster_df = pd.DataFrame(cluster_map,columns=["Series","Cluster"]).sort_values(by="Cluster")
-        cluster_df.to_csv(os.path.join(dst, f'clusters_all_cells_epoch{ep+1}.csv', index = None))
+        cluster_df.to_csv(os.path.join(dst, f'clusters_all_cells_epoch{ep+1}.csv'), 
+                          index = None)
         ##########################HIEARCHICAL CLUSTERING, DID NOT WORK##########################
         #     Z_columns = scipy.cluster.hierarchy.linkage(dff_av_arr, method='centroid')
         #     max_d = 5
@@ -195,9 +197,11 @@ for ep in range(len(epoch[1])):
         #     )
 
         #     plt.close()        
+    tracked_cells_in_cluster = []
     for cl in cluster_df['Cluster'].unique():
         iid = cluster_df.loc[cluster_df.Cluster == cl, 'Series']
         tracked_iid = [ii for ii in iid if ii in cellids] #only tracked cells heatmap
+        tracked_cells_in_cluster.append((tracked_iid, cl))
         if len(tracked_iid)> 0: # only if cluster contains tracked cells
             heatmap = dff_av_norm[tracked_iid]
             plt.figure()
@@ -206,9 +210,105 @@ for ep in range(len(epoch[1])):
             plt.ylabel("day cell ID")
             plt.xlabel("track length (cm)")
             plt.title(f"epoch{ep+1}, {cl}")
-            plt.axvline(x=rewloc,color='white')
-            makedir(dst)
+            plt.axvline(x=rewloc,color='white')            
             plt.savefig(os.path.join(dst, f'epoch{ep+1}_{cl}.pdf'),
                 bbox_inches='tight'
                 )
             plt.close()
+            
+tracked_cell_df = pd.DataFrame(tracked_cells_in_cluster)
+tracked_cell_df.columns = ['day_cellid', 'cluster']
+tracked_cell_df.to_pickle(os.path.join(dst, 'clusters_tracked_cells.p'))
+#%%
+# apply clusters to diff day
+tracked_days = np.arange(5,17)
+days = [27, 28, 29, 30, 31, 32, 33, 34, 36,38,39,40]
+
+for di,day in enumerate(days):
+    tracked_day = tracked_days[di] # 0 index bc python list
+    daypth = rf'Z:\sstcre_imaging\e201\{day}'
+    daypth = [os.path.join(daypth, xx) for xx in os.listdir(daypth) if "ZD" in xx][0]
+    fallpth = os.path.join(daypth,'suite2p', 'plane0', 'Fall.mat')
+    fall = loadmat(fallpth)
+    epoch = np.where(fall['changeRewLoc']>1)
+    mask=cc[:,tracked_day] # 17 is the dark num
+    # get cell ids 
+    cellids = mask[mask>-1]
+    dff_day = dff[tracked_day].T#[mask][mask>-1] # only get tracked cells
+    dst = rf'Y:\sstcre_analysis\clustering\day{day}';makedir(dst)
+    with open(r'Y:\sstcre_analysis\clustering\clusters_tracked_cells.p', "rb") as fp: #unpickle
+        tracked_cell_clusters_day41 = pickle.load(fp)
+    tracked_cell_clusters = []
+    for cl in tracked_cell_clusters_day41.cluster.unique():
+        day41_iid = tracked_cell_clusters_day41.loc[tracked_cell_clusters_day41.cluster == cl, 
+                            'day_cellid'].values[0]
+        cl_iid = []; weekinds = []
+        if len(day41_iid)>0:
+            for cell in day41_iid:
+                weekind = np.where(cc[:,17]==cell)[0][0]; weekinds.append(weekind)
+                cl_iid.append(cc[weekind, tracked_day])
+            cl_iid = np.array(cl_iid)
+            cl_iid = cl_iid[cl_iid>-1]
+            weekinds = np.array(weekinds)
+            tracked_cell_clusters.append((cl_iid, weekinds, cl))
+    tracked_cell_clusters = pd.DataFrame(tracked_cell_clusters,
+                             columns = ['day_cellid', 'week_cellid', 'cluster'])
+    tracked_cell_clusters.to_pickle(os.path.join(dst, 'clusters_tracked_cells.p'))
+
+    for ep in range(len(epoch[1])):
+        print(ep)
+        try:
+            epoch_start,epoch_stop = epoch[1][ep],epoch[1][ep+1]
+        except:
+            epoch_start,epoch_stop = epoch[1][ep],len(fall['trialnum'][0]) #else set 
+            # to end of RECORDING
+        rewloc = np.unique(fall['changeRewLoc'])[ep+1]
+        trials = max(max(fall['trialnum'][:, epoch_start:epoch_stop])) # total number of trials
+        dff_av = []
+        
+        for trial in range(trials-10,trials): #only first epoch, 10 trials
+            print(trial)
+            if trial > 0:
+                trialind = np.where(fall['trialnum']==trial)[1]
+                trialind = trialind[epoch_start <= trialind]
+                trialind = trialind[trialind <= epoch_stop] # first trial of first epoch?
+                # dff structure = each item of list is a day
+                # 18 days 
+                # days=[14,15,16,17,18,27, 28, 29, 30, 31, 32, 33,36,38,39,40,41]
+                # cluster dff 1 day   
+                # bin into 500 frames
+                dff_trial = dff_day[:,trialind].T
+                dff_binned = np.zeros((270,dff_day.T[trialind].shape[1])) # init binning by track length
+                for i in range(dff_trial.shape[1]): # bin per cell
+                    llen = dff_trial.shape[0] # get frames per trial
+                    # TODO: how to speed this up?
+                    data= np.linspace(1,llen,llen)  
+                    bins=np.linspace(1,llen,271)     
+                    dig = np.digitize(data,bins)  
+                    bin_means = [np.nanmean(dff_trial[:,i][dig == ii]) for ii in range(1,
+                                len(bins))]
+                    dff_binned[:,i]=bin_means
+                dff_av.append(dff_binned) #mean across all frames
+                print(dff_binned.shape)
+
+        dff_av_arr = np.mean(np.array(dff_av),axis=0).T # gets all cells at this stage        
+        dff_av_norm=MinMaxScaler().fit_transform(dff_av_arr.T).T 
+            
+        for cl in tracked_cell_clusters.cluster:
+            tracked_iid = tracked_cell_clusters.loc[tracked_cell_clusters.cluster == cl,
+                        'day_cellid'].values[0]
+            if len(tracked_iid)>0:
+                heatmap = dff_av_norm[tracked_iid]
+                week_cellid = tracked_cell_clusters.loc[tracked_cell_clusters.cluster == cl,
+                        'week_cellid'].values[0]
+                plt.figure()
+                sns.heatmap(heatmap, cmap='viridis',yticklabels=week_cellid)
+                sns.set(font_scale=0.5)
+                plt.ylabel("week cell ID")
+                plt.xlabel("track length (cm)")
+                plt.title(f"epoch{ep+1}, {cl}")
+                plt.axvline(x=rewloc,color='white')            
+                plt.savefig(os.path.join(dst, f'epoch{ep+1}_{cl}.pdf'),
+                    bbox_inches='tight'
+                    )
+                plt.close()
