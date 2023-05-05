@@ -19,30 +19,6 @@ import math
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir
 
-def fancy_dendrogram(*args, **kwargs):
-    max_d = kwargs.pop('max_d', None)
-    if max_d and 'color_threshold' not in kwargs:
-        kwargs['color_threshold'] = max_d
-    annotate_above = kwargs.pop('annotate_above', 0)
-
-    ddata = scipy.cluster.hierarchy.dendrogram(*args, **kwargs)
-
-    if not kwargs.get('no_plot', False):
-        plt.title('Hierarchical Clustering Dendrogram (truncated)')
-        plt.xlabel('sample index or (cluster size)')
-        plt.ylabel('distance')
-        for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
-            x = 0.5 * sum(i[1:3])
-            y = d[1]
-            if y > annotate_above:
-                plt.plot(x, y, 'o', c=c)
-                plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
-                             textcoords='offset points',
-                             va='top', ha='center')
-        if max_d:
-            plt.axhline(y=max_d, c='k')
-    return ddata
-
 def plot_som_series_dba_center(som_x, som_y, win_map):
     fig, axs = plt.subplots(som_x,som_y,figsize=(25,25))
     fig.suptitle('Clusters')
@@ -90,18 +66,19 @@ mask=cc[:,tracked_day] # 17 is the dark num
 cellids = mask[mask>-1]
 dff_day = dff[tracked_day].T#[mask][mask>-1] # only get tracked cells
 dst = rf'Y:\sstcre_analysis\clustering\day{day}';makedir(dst)
+dst = os.path.join(dst, 'across_epochs');makedir(dst)
 # run for each epoch
-for ep in range(len(epoch[1])):    
+dff_av = []
+
+for ep in range(len(epoch[1])):
+    print(ep)
     try:
         epoch_start,epoch_stop = epoch[1][ep],epoch[1][ep+1]
     except:
         epoch_start,epoch_stop = epoch[1][ep],len(fall['trialnum'][0]) #else set 
         # to end of RECORDING
-    rewloc = (np.unique(fall['changeRewLoc'])/0.666667)[ep+1]
-    # set gain factor of 0.6667 for new track
-    print(f"\nEpoch {ep+1}, reward location {rewloc} cm")
+    rewloc = np.unique(fall['changeRewLoc'])[ep+1]
     trials = max(max(fall['trialnum'][:, epoch_start:epoch_stop])) # total number of trials
-    dff_av = []
     
     for trial in range(trials-10,trials): #only first epoch, 10 trials
         print(trial)
@@ -128,70 +105,102 @@ for ep in range(len(epoch[1])):
             dff_av.append(dff_binned) #mean across all frames
             print(dff_binned.shape)
 
-    dff_av_arr = np.mean(np.array(dff_av),axis=0).T # gets all cells at this stage        
-    dff_av_norm=MinMaxScaler().fit_transform(dff_av_arr.T).T 
-    #https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
-    #https://www.kaggle.com/code/izzettunc/introduction-to-time-series-clustering
-    if ep==0: # only make clusteres for first epoch and apply to 2nd epoch...
-        # make the self organizing maps
-        som_x = som_y = math.ceil(math.sqrt(math.sqrt(len(dff_av_norm))))
-        som = MiniSom(som_x, som_y,len(dff_av_norm[0]), sigma=0.3, 
-                    learning_rate = 0.1)
-        som.random_weights_init(dff_av_norm)
-        som.train(dff_av_norm, 50000)
-        win_map = som.win_map(dff_av_norm)
-        # Returns the mapping of the winner nodes and inputs
+dff_av_arr_ep1 = np.mean(np.array(dff_av)[:10],axis=0).T # gets all cells at this stage        
+dff_av_arr_ep2 = np.mean(np.array(dff_av)[10:],axis=0).T
+dff_av_arr = np.zeros((dff_av_arr_ep1.shape[0]*2,dff_av_arr_ep1.shape[1]))
+dff_av_arr[:dff_av_arr_ep1.shape[0]]=dff_av_arr_ep1
+dff_av_arr[dff_av_arr_ep1.shape[0]:]=dff_av_arr_ep2
+dff_av_norm=MinMaxScaler().fit_transform(dff_av_arr.T).T 
+#https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
+#https://www.kaggle.com/code/izzettunc/introduction-to-time-series-clustering
+    # make the self organizing maps
+som_x = som_y = math.ceil(math.sqrt(math.sqrt(len(dff_av_norm))))
+som = MiniSom(som_x, som_y,len(dff_av_norm[0]), sigma=0.3, learning_rate = 0.1)
+som.random_weights_init(dff_av_norm)
+som.train(dff_av_norm, 50000)
+win_map = som.win_map(dff_av_norm)
+# Returns the mapping of the winner nodes and inputs
 
-        plot_som_series_dba_center(som_x, som_y, win_map)
-        cluster_c = []
-        cluster_n = []
-        for x in range(som_x):
-            for y in range(som_y):
-                cluster = (x,y)
-                if cluster in win_map.keys():
-                    cluster_c.append(len(win_map[cluster]))
-                else:
-                    cluster_c.append(0)
-                cluster_number = x*som_y+y+1
-                cluster_n.append(f"Cluster {cluster_number}")
+plot_som_series_dba_center(som_x, som_y, win_map)
+cluster_c = []
+cluster_n = []
+for x in range(som_x):
+    for y in range(som_y):
+        cluster = (x,y)
+        if cluster in win_map.keys():
+            cluster_c.append(len(win_map[cluster]))
+        else:
+            cluster_c.append(0)
+        cluster_number = x*som_y+y+1
+        cluster_n.append(f"Cluster {cluster_number}")
 
-        plt.figure(figsize=(25,5))
-        plt.title("Cluster Distribution for SOM")
-        plt.bar(cluster_n,cluster_c)
-        plt.show()
-        cluster_map = []
-        for idx in range(len(dff_av_norm)):
-            winner_node = som.winner(dff_av_norm[idx])
-            cluster_map.append((idx,f"Cluster {winner_node[0]*som_y+winner_node[1]+1}"))
+plt.figure(figsize=(25,5))
+plt.title("Cluster Distribution for SOM")
+plt.bar(cluster_n,cluster_c)
+plt.show()
+cluster_map = []
+for idx in range(len(dff_av_norm)):
+    winner_node = som.winner(dff_av_norm[idx])
+    cluster_map.append((idx,f"Cluster {winner_node[0]*som_y+winner_node[1]+1}"))
 
-        cluster_df = pd.DataFrame(cluster_map,columns=["Series","Cluster"]).sort_values(by="Cluster")
-        cluster_df.to_csv(os.path.join(dst, f'clusters_all_cells_epoch{ep+1}.csv'), 
-                          index = None)
+cluster_df = pd.DataFrame(cluster_map,columns=["Series","Cluster"]).sort_values(by="Cluster")
+cluster_df.to_csv(os.path.join(dst, f'clusters_all_cells_epoch{ep+1}.csv'), 
+                    index = None)
+    ##########################HIEARCHICAL CLUSTERING, DID NOT WORK##########################
+    #     Z_columns = scipy.cluster.hierarchy.linkage(dff_av_arr, method='centroid')
+    #     max_d = 5
 
-    tracked_cells_in_cluster = []
-    for cl in cluster_df['Cluster'].unique():
-        iid = cluster_df.loc[cluster_df.Cluster == cl, 'Series']
-        tracked_iid = [ii for ii in iid if ii in cellids] #only tracked cells heatmap
-        weekinds = [np.where(cc[:,tracked_day]==cell)[0][0] for cell in tracked_iid]
-        tracked_cells_in_cluster.append((tracked_iid, weekinds, cl))
-        if len(tracked_iid)> 0: # only if cluster contains tracked cells
-            heatmap = dff_av_norm[tracked_iid]
-            plt.figure()
-            sns.heatmap(heatmap, cmap='viridis',yticklabels=tracked_iid)
-            sns.set(font_scale=0.5)
-            plt.ylabel("day cell ID")
-            plt.xlabel("track length (cm)")
-            plt.title(f"epoch{ep+1}, {cl}")
-            plt.axvline(x=rewloc,color='white')            
-            plt.savefig(os.path.join(dst, f'epoch{ep+1}_{cl}.pdf'),
-                bbox_inches='tight'
-                )
-            plt.close()
+    #     fancy_dendrogram(
+    #         Z_columns,
+    #         truncate_mode='lastp',  # show only the last p merged clusters
+    #         p=12,  # show only the last p merged clusters
+    #         leaf_rotation=90.,
+    #         leaf_font_size=12.,
+    #         show_contracted=True,  # to get a distribution impression in truncated branches
+    #         max_d=max_d # max distance
+    #     )
+    
+    #     clusters = scipy.cluster.hierarchy.fcluster(Z_columns, max_d, 
+    #                                                 criterion='distance')
+
+    # for cl in np.unique(clusters):
+    #     heatmap=dff_av_arr[clusters==cl]
+    #     cellids = np.array(range(dff_av_arr.shape[0]))[clusters==cl]
+    #     plt.figure()
+    #     sns.heatmap(heatmap, cmap='viridis',yticklabels=cellids)
+    #     sns.set(font_scale=0.3)
+    #     plt.ylabel("# of cells")
+    #     plt.xlabel("track length (cm)")
+    #     plt.title(f"cluster {cl}")
+    #     plt.axvline(x=rewloc,color='white')
+    #     plt.savefig(rf'Y:\sstcre_analysis\clustering\epoch{ep}_cluster{cl}_maxd{max_d}.pdf',
+    #     bbox_inches='tight'
+    #     )
+
+    #     plt.close()        
+tracked_cells_in_cluster = []
+for cl in cluster_df['Cluster'].unique():
+    iid = cluster_df.loc[cluster_df.Cluster == cl, 'Series']
+    tracked_iid = [ii for ii in iid if ii in cellids] #only tracked cells heatmap
+    weekinds = [np.where(cc[:,17]==cell)[0][0] for cell in tracked_iid]
+    tracked_cells_in_cluster.append((tracked_iid, weekinds, cl))
+    if len(tracked_iid)> 0: # only if cluster contains tracked cells
+        heatmap = dff_av_norm[tracked_iid]
+        plt.figure()
+        sns.heatmap(heatmap, cmap='viridis',yticklabels=weekinds)
+        sns.set(font_scale=0.5)
+        plt.ylabel("week cell ID")
+        plt.xlabel("track length (cm)")
+        plt.title(f"epoch{ep+1}, {cl}")
+        plt.axvline(x=rewloc,color='white')            
+        # plt.savefig(os.path.join(dst, f'epoch{ep+1}_{cl}.pdf'),
+        #     bbox_inches='tight'
+        #     )
+        # plt.close()
             
-    tracked_cell_df = pd.DataFrame(tracked_cells_in_cluster,
-                                   columns = ['day_cellid', 'week_cellid',
-                                'cluster'])
-    tracked_cell_df.to_pickle(os.path.join(dst, f'clusters_tracked_cells_epoch{ep+1}.p'))
+tracked_cell_df = pd.DataFrame(tracked_cells_in_cluster)
+tracked_cell_df.columns = ['day_cellid', 'cluster']
+tracked_cell_df.to_pickle(os.path.join(dst, 'across_epochs_clusters_tracked_cells.p'))
 #%%
 # apply clusters to diff day
 tracked_days = np.arange(5,17)
@@ -209,7 +218,7 @@ for di,day in enumerate(days):
     cellids = mask[mask>-1]
     dff_day = dff[tracked_day].T#[mask][mask>-1] # only get tracked cells
     dst = rf'Y:\sstcre_analysis\clustering\day{day}';makedir(dst)
-    with open(r'Y:\sstcre_analysis\clustering\day41\clusters_tracked_cells_epoch1.p', "rb") as fp: #unpickle
+    with open(r'Y:\sstcre_analysis\clustering\clusters_tracked_cells.p', "rb") as fp: #unpickle
         tracked_cell_clusters_day41 = pickle.load(fp)
     tracked_cell_clusters = []
     for cl in tracked_cell_clusters_day41.cluster.unique():
@@ -231,14 +240,13 @@ for di,day in enumerate(days):
     tracked_cell_clusters.to_pickle(os.path.join(dst, 'clusters_tracked_cells.p'))
 
     for ep in range(len(epoch[1])):
+        print(ep)
         try:
             epoch_start,epoch_stop = epoch[1][ep],epoch[1][ep+1]
         except:
             epoch_start,epoch_stop = epoch[1][ep],len(fall['trialnum'][0]) #else set 
             # to end of RECORDING
-        rewloc = (np.unique(fall['changeRewLoc'])/0.666667)[ep+1]
-        # set gain factor of 0.6667 for new track
-        print(f"\nEpoch {ep+1}, reward location {rewloc} cm")
+        rewloc = np.unique(fall['changeRewLoc'])[ep+1]
         trials = max(max(fall['trialnum'][:, epoch_start:epoch_stop])) # total number of trials
         dff_av = []
         

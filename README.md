@@ -111,6 +111,15 @@ X:\dopamine_imaging = drive containing mouse folder and imaging day subfolders w
 6 = day (optional argument); this is what the folder will be named
 
 I suggest having a lookup table of day folder to experiment, imaging notes, camera acquisition etc. in a separate spreadsheet
-## utils > utils.py
+## utils
+
+`runVideosTiff_EH_new_sbx_2channel.m`, `loadVideoTiffNoSplit_EH2_new_sbx_2channel.m`
+
+Visualize 2 channel sbx files in MATLAB. Useful for optogenetics or tracing experiments where 2 channels of fluorophores exist in the images.
+
+`viewgreenandredzstackssbx.m`
+
+To avoid the ImageJ saving
+### utils > utils.py
 
 Contains functions helpful to navigate thru directories, copy `Fall.mat` en masse, and copy VR files

@@ -16,15 +16,15 @@ do_quality_control = true; % sometimes Suite2p finds cells with F = 0 that are d
                             
 %% MAIN SETTINGS ----------------------------------------------------------
 
-Settings.paths = dir("Y:\sstcre_imaging\e200\**\*Fall.mat"); % you can set a specific day by substituting D* with D1 for example
+Settings.paths = dir("Z:\sstcre_imaging\e201\**\*Fall.mat"); % you can set a specific day by substituting D* with D1 for example
 % formatting for zahra's path
 for i=1:length(Settings.paths)
     [parent,nm,~] = fileparts(fileparts(fileparts(fileparts(Settings.paths(i).folder))));
     dy{i} = str2num(nm);
 end
 dys = cell2mat(dy);
-Settings.hrz_days = 46; % get days after this day; ZD added for her folder structure
-Settings.paths = Settings.paths(dys > Settings.hrz_days); % only certain days
+Settings.hrz_days = [55:56]; % get days after this day; ZD added for her folder structure
+Settings.paths = Settings.paths(ismember(dys,Settings.hrz_days)); % only certain days
 Settings.Fs = 32; % Hz
 Settings.level_mouse_name = 3; % at which level of the folder .path is the mouse name contained, 
 % e.g. Z:\sstcre_imaging\e201, mouse name would be level 3
@@ -56,7 +56,7 @@ clearvars -except Settings
 
 Settings.saving_path = 'Y:\sstcre_analysis\hrz\' ; % please just change the path where you want the folder 'CS_table_last' to be created/saved.
 Settings.probe_trials = 'exclude'; % DO NOT change. Probe trials are excluded from the analysis.
-Settings.trials_2compare = 10; % take the last 8 trials of one epoch
+Settings.trials_2compare = 8; % take the last 8 trials of one epoch
 Settings.I_want2save_figures = true; % save figures for each epoch
 Settings.I_want2reanlyze = true; % start table from scratch 
 

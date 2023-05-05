@@ -45,6 +45,7 @@ def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
     days = [xx for xx in days if "week" not in xx and ".mat" not in xx] #excludes weeks
     dates = [];
     for day in days:
+        print(day)
         fls = listdir(day)
         imgfl = [xx for xx in fls if "23" in xx or "ZD" in xx][0] # change conditional strings if you need!
         date = os.path.basename(imgfl)[:6]
@@ -82,11 +83,13 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
     # get only days, not week fmats
     if not days:
         days = [int(xx) for xx in os.listdir(src) if  "week" not in xx and "ref" not in xx]
-    if not weeks:
-        weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
+    #dont copy weeks if not specified
+    # if not weeks:
+    #     weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
     days.sort()
     # move all converted fmats to separate folder
-    for i in days:        
+    for i in days:     
+        print(i)   
         pth = os.path.join(src, str(i))
         imgfl = [os.path.join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
         mat = os.path.join(imgfl, "suite2p", "plane0", "Fall.mat") 
@@ -98,7 +101,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
                 shutil.copy(mat, copypth)            
                 print(f"*********Copied day {i} Fall to {dst}*********")
 
-    if len(weeks)>0:
+    if weeks:
         for w in weeks:            
             if not weekdir: 
                 imgfl = os.path.join(src, str(w))
@@ -113,7 +116,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
                 print(f"*********Copied {w} Fall to {dst}*********")
     return 
 
-def deleteregtif(src,keyword='reg_tif'):
+def deleteregtif(src,fls=False,keyword='reg_tif'):
     """deletes reg_tif folder en masse
     useful after you've checked for motion correction
 
@@ -122,13 +125,14 @@ def deleteregtif(src,keyword='reg_tif'):
         keyword (str, optional): folder name. Defaults to 'reg_tif'.
     """
     #src = 'Z:\sstcre_imaging\e201'
-    fls = listdir(src)
-
-    from pathlib import Path
-    for path in Path(src).rglob(keyword):
-        # deletes reg_tif directory and all its contents
-        print(f"\n*** deleting {path}***")
-        shutil.rmtree(path)
+    if not fls:
+        fls = listdir(src)
+    for fl in fls:
+        from pathlib import Path
+        for path in Path(src).rglob(keyword):
+            # deletes reg_tif directory and all its contents
+            print(f"\n*** deleting {path}***")
+            shutil.rmtree(path)
 
 def get_motion_corrected_tifs_from_suite2p_binary(binarypth, dst, 
             Ly=512, Lx=629, chunk=1000):
@@ -155,3 +159,9 @@ def convert_zstack_sbx_to_tif(sbxsrc):
     tifffile.imwrite(sbxsrc[:-4]+".tif", dat.astype("uint16"))
 
     return sbxsrc[:-4]+".tif"
+
+if __name__ == "__main__":
+    usb = r'I:\2023_ZD_VR'
+    drive = r'Z:\sstcre_imaging'
+    animal = 'e201'
+    copyvr(usb, drive, animal)

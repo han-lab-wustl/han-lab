@@ -4,7 +4,7 @@
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e201';
-weekfld = 'week5-8_permissive_probabilistic';
+weekfld = 'week47891011';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
@@ -25,8 +25,8 @@ end
 mean_Psame_mat = cell2mat(mean_Psame)';
 % calculate average p-same for validation of probabilistic model
 
-% load mats from all days
-fls = dir(fullfile(src, 'fmats', 'e201_param_test', 'fall\*.mat')); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));
+% load mats from all weeks
+fls = dir(fullfile(src, 'fmats', animal, sprintf('%s_week*',animal))); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));
 days = cell(1, length(fls));
 for fl=1:length(fls)
     day = fls(fl);
@@ -39,7 +39,7 @@ ctab = hsv(length(cc));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ANALYSIS AND PLOTS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ANALYSIS AND PLOTS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,13 +47,14 @@ ctab = hsv(length(cc));
 % align all cells across all days in 1 fig
 figure;
 axes=zeros(1,sessions);
+cells_to_plot = [470];
 for ss=1:sessions
     day=days(ss);day=day{1};
     axes(ss)=subplot(2,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;
-    for i=1:200%length(commoncells)
+    for i=cells_to_plot%length(commoncells)
         try % in case selecting cells that do not exist in every week
             plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.3]);
         end

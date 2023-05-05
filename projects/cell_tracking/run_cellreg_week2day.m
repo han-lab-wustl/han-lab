@@ -42,7 +42,7 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 7;
+week = 4;
 animal = 'e201';
 results_directory= fullfile(pth,sprintf('%s_week%i_to_days', animal, week), 'Results') ;
 
@@ -100,7 +100,7 @@ clear footprints_projections
 % 3. Evaluating how suitable the data is for longitudinal analysis
 
 % Defining the parameters for image alignment:
-alignment_type='Translations and Rotations'; % either 'Translations', 'Translations and Rotations' or 'Non-rigid'
+alignment_type='Non-rigid'; % either 'Translations', 'Translations and Rotations' or 'Non-rigid'
 use_parallel_processing=true; % either true or false
 maximal_rotation=30; % in degrees - only relevant if 'Translations and Rotations' is used
 transformation_smoothness=2; % levels of non-rigid FOV transformation smoothness (range 0.5-3)
