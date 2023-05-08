@@ -161,8 +161,9 @@ linkaxes(axesnm, 'xy')
 %calculate dff
 % TODO: find a way to add to fall.mat
 % dff from master hrz only on 'selected' cells
-dff={};
-for i=1:length(days)
+dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff"); %load from old weekrun
+dff=dff.dff;
+for i=length(dff)+1:length(days)
     day=days(i);day=day{1};
     dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
     disp(i)
@@ -238,7 +239,7 @@ range=5;
 bin=0.2;
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
-daysrewards = 1:18;
+daysrewards = 1:sessions_total;
 ccbinnedPerireward=cell(1,length(daysrewards));
 ccrewdFF=cell(1,length(daysrewards));
 for d=daysrewards

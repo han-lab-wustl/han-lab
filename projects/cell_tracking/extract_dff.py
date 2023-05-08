@@ -19,29 +19,29 @@ import math
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir
 
-def fancy_dendrogram(*args, **kwargs):
-    max_d = kwargs.pop('max_d', None)
-    if max_d and 'color_threshold' not in kwargs:
-        kwargs['color_threshold'] = max_d
-    annotate_above = kwargs.pop('annotate_above', 0)
+# def fancy_dendrogram(*args, **kwargs):
+#     max_d = kwargs.pop('max_d', None)
+#     if max_d and 'color_threshold' not in kwargs:
+#         kwargs['color_threshold'] = max_d
+#     annotate_above = kwargs.pop('annotate_above', 0)
 
-    ddata = scipy.cluster.hierarchy.dendrogram(*args, **kwargs)
+#     ddata = scipy.cluster.hierarchy.dendrogram(*args, **kwargs)
 
-    if not kwargs.get('no_plot', False):
-        plt.title('Hierarchical Clustering Dendrogram (truncated)')
-        plt.xlabel('sample index or (cluster size)')
-        plt.ylabel('distance')
-        for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
-            x = 0.5 * sum(i[1:3])
-            y = d[1]
-            if y > annotate_above:
-                plt.plot(x, y, 'o', c=c)
-                plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
-                             textcoords='offset points',
-                             va='top', ha='center')
-        if max_d:
-            plt.axhline(y=max_d, c='k')
-    return ddata
+#     if not kwargs.get('no_plot', False):
+#         plt.title('Hierarchical Clustering Dendrogram (truncated)')
+#         plt.xlabel('sample index or (cluster size)')
+#         plt.ylabel('distance')
+#         for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
+#             x = 0.5 * sum(i[1:3])
+#             y = d[1]
+#             if y > annotate_above:
+#                 plt.plot(x, y, 'o', c=c)
+#                 plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
+#                              textcoords='offset points',
+#                              va='top', ha='center')
+#         if max_d:
+#             plt.axhline(y=max_d, c='k')
+#     return ddata
 
 def plot_som_series_dba_center(som_x, som_y, win_map):
     fig, axs = plt.subplots(som_x,som_y,figsize=(25,25))
@@ -58,18 +58,18 @@ def plot_som_series_dba_center(som_x, som_y, win_map):
 
     plt.show()
 
-src = r'Y:\sstcre_analysis\celltrack\e201_week4789\Results'
-# mat = os.path.join(src,'dff_per_day.mat')
-# f = h5py.File(mat)
-# # extract from h5py
-# dff = [] # takes a long time, if saved extract from pickle
-# for i in range(len(f['dff'][:])):
-#     dff.append(f[f['dff'][i][0]][:])
+src = r'Y:\sstcre_analysis\celltrack\e201_week47891011\Results'
+mat = os.path.join(src,'dff_per_day.mat')
+f = h5py.File(mat)
+# extract from h5py
+dff = [] # takes a long time, if saved extract from pickle
+for i in range(len(f['dff'][:])):
+    dff.append(f[f['dff'][i][0]][:])
 
-# with open(os.path.join(src,"dff_per_day.p"), "wb") as fp:   #Pickling
-#    pickle.dump(dff, fp)
-with open(os.path.join(src,"dff_per_day.p"), "rb") as fp: #unpickle
-    dff = pickle.load(fp)
+with open(os.path.join(src,"dff_per_day.p"), "wb") as fp:   #Pickling
+   pickle.dump(dff, fp)
+# with open(os.path.join(src,"dff_per_day.p"), "rb") as fp: #unpickle
+#     dff = pickle.load(fp)
 # need only tracked cells
 commoncells = os.path.join(src,'commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat')
 cc = loadmat(commoncells)['cellmap2dayacrossweeks'].astype(int)
@@ -78,8 +78,8 @@ cc=cc-1 # subtract from matlab ind
 # day 41
 # tracked day 17
 #%%
-day = 41
-tracked_day = 17
+day = 53
+tracked_day = 25
 daypth = rf'Z:\sstcre_imaging\e201\{day}'
 daypth = [os.path.join(daypth, xx) for xx in os.listdir(daypth) if "ZD" in xx][0]
 fallpth = os.path.join(daypth,'suite2p', 'plane0', 'Fall.mat')
@@ -177,9 +177,9 @@ for ep in range(len(epoch[1])):
         if len(tracked_iid)> 0: # only if cluster contains tracked cells
             heatmap = dff_av_norm[tracked_iid]
             plt.figure()
-            sns.heatmap(heatmap, cmap='viridis',yticklabels=tracked_iid)
+            sns.heatmap(heatmap, cmap='viridis',yticklabels=weekinds)
             sns.set(font_scale=0.5)
-            plt.ylabel("day cell ID")
+            plt.ylabel("week cell ID")
             plt.xlabel("track length (cm)")
             plt.title(f"epoch{ep+1}, {cl}")
             plt.axvline(x=rewloc,color='white')            
@@ -194,8 +194,10 @@ for ep in range(len(epoch[1])):
     tracked_cell_df.to_pickle(os.path.join(dst, f'clusters_tracked_cells_epoch{ep+1}.p'))
 #%%
 # apply clusters to diff day
-tracked_days = np.arange(5,17)
-days = [27, 28, 29, 30, 31, 32, 33, 34, 36,38,39,40]
+tracked_days = np.arange(5,25)
+days = [27, 28, 29, 30, 31, 32, 33, 34, 36,38,39,40, 41, 44, 46,48,49,
+        50,51,52]
+cluster_day = 25
 
 for di,day in enumerate(days):
     tracked_day = tracked_days[di] # 0 index bc python list
@@ -209,7 +211,7 @@ for di,day in enumerate(days):
     cellids = mask[mask>-1]
     dff_day = dff[tracked_day].T#[mask][mask>-1] # only get tracked cells
     dst = rf'Y:\sstcre_analysis\clustering\day{day}';makedir(dst)
-    with open(r'Y:\sstcre_analysis\clustering\day41\clusters_tracked_cells_epoch1.p', "rb") as fp: #unpickle
+    with open(r'Y:\sstcre_analysis\clustering\day53\clusters_tracked_cells_epoch1.p', "rb") as fp: #unpickle
         tracked_cell_clusters_day41 = pickle.load(fp)
     tracked_cell_clusters = []
     for cl in tracked_cell_clusters_day41.cluster.unique():
@@ -218,7 +220,7 @@ for di,day in enumerate(days):
         cl_iid = []; weekinds = []
         if len(day41_iid)>0:
             for cell in day41_iid:
-                weekind = np.where(cc[:,17]==cell)[0][0]; weekinds.append(weekind)
+                weekind = np.where(cc[:,cluster_day]==cell)[0][0]; weekinds.append(weekind)
                 cl_iid.append(cc[weekind, tracked_day])
             cl_iid_org = np.array(cl_iid)
             cl_iid = cl_iid_org[cl_iid_org>-1]

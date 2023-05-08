@@ -20,6 +20,7 @@ def main(**args):
     if args["stepid"] == 0:
         ###############################MAKE FOLDERS#############################
         #check to see if day directory exists
+        #TODO make function
         if not os.path.exists(os.path.join(params["datadir"],params["mouse_name"])): #first make mouse dir
             makedir(os.path.join(params["datadir"],params["mouse_name"]))
         if not os.path.exists(os.path.join(params["datadir"],params["mouse_name"], params["day"])): 

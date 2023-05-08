@@ -160,6 +160,21 @@ def convert_zstack_sbx_to_tif(sbxsrc):
 
     return sbxsrc[:-4]+".tif"
 
+def movesbx(src, dst, fldkeyword='ZD'):
+    #dst = r'G:\sstcre_imaging\e201'
+    fls = listdir(src)
+    for fl in fls:
+        try:
+            imgfl = [xx for xx in listdir(fl) if fldkeyword in xx][0]
+            sbxfl = [xx for xx in listdir(imgfl) if ".sbx" in xx][0]
+            matfl = [xx for xx in listdir(imgfl) if ".mat" in xx][0]
+            print(f"\n*** moving {sbxfl}***")
+            shutil.move(sbxfl, dst)
+            print(f"\n*** copying {matfl}***")
+            shutil.move(matfl, dst)
+        except:
+            print(f"\n*** no sbx in {fl}***")
+
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
     drive = r'Z:\sstcre_imaging'
