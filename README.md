@@ -119,6 +119,10 @@ Visualize 2 channel sbx files in MATLAB. Useful for optogenetics or tracing expe
 
 `viewgreenandredzstackssbx.m`
 
+`MacroconverttoAVI.ijm`
+
+Converts tiffs to avi in ImageJ. Useful for converting behavior videos into avis for DLC. Use in batch mode.
+
 To avoid the ImageJ saving
 ### utils > utils.py
 

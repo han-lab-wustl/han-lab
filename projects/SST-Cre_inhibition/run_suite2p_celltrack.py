@@ -10,7 +10,7 @@ import argparse
 import pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir 
-from utils.preprocessing import maketifs
+from utils import preprocessing
 
 def main(**args):
     
@@ -21,21 +21,7 @@ def main(**args):
         ###############################MAKE FOLDERS#############################
         #check to see if day directory exists
         #TODO make function
-        if not os.path.exists(os.path.join(params["datadir"],params["mouse_name"])): #first make mouse dir
-            makedir(os.path.join(params["datadir"],params["mouse_name"]))
-        if not os.path.exists(os.path.join(params["datadir"],params["mouse_name"], params["day"])): 
-            print(f"Folder for day {params['day']} of mouse {params['mouse_name']} does not exist. \n\
-                  Making folders...")
-            makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"]))
-            #behavior folder
-            makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "behavior"))
-            makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "behavior", "vr"))
-            makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "behavior", "clampex")) 
-            #cameras (for processed data)
-            makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "eye"))
-            makedir(os.path.join(params["datadir"],params["mouse_name"], params["day"], "tail")) 
-            print("\n****Made folders!****\n")
-
+        preprocessing.makeflds(params["datadir"], params["mouse_name"], params["day"])
         ## TODO: implement timer and suite2p run after copy
         # print("\n***********STARTING 1.5 HOUR TIMER TO ALLOW FOR COPYING NOW***********")
         # time.sleep(60*60*0.5) # hours
@@ -55,7 +41,7 @@ def main(**args):
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            imagingflnm = maketifs(imagingflnm,0,512,89,718)
+            imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)
             print(imagingflnm)
 
         #do suite2p after tifs are made

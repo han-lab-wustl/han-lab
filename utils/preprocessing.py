@@ -1,8 +1,27 @@
 # Zahra
 # preprocessing sbx into tifs (cropping, accounting for multiple planes, etc.)
 
-import os , numpy as np, tifffile, SimpleITK as sitk
+import os , numpy as np, tifffile, SimpleITK as sitk, sys
 from math import ceil
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+from utils.utils import makedir
+
+def makeflds(datadir, mouse_name, day):
+    if not os.path.exists(os.path.join(datadir,mouse_name)): #first make mouse dir
+        makedir(os.path.join(datadir,mouse_name))
+    if not os.path.exists(os.path.join(datadir,mouse_name, day)): 
+        print(f"Folder for day {day} of mouse {mouse_name} does not exist. \n\
+                Making folders...")
+        makedir(os.path.join(datadir,mouse_name, day))
+        #behavior folder
+        makedir(os.path.join(datadir,mouse_name, day, "behavior"))
+        makedir(os.path.join(datadir,mouse_name, day, "behavior", "vr"))
+        makedir(os.path.join(datadir,mouse_name, day, "behavior", "clampex")) 
+        #cameras (for processed data)
+        makedir(os.path.join(datadir,mouse_name, day, "eye"))
+        makedir(os.path.join(datadir,mouse_name, day, "tail")) 
+        print("\n****Made folders!****\n")
+
 
 def readzstack(sbxfl):
 
