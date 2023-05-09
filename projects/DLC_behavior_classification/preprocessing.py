@@ -1,22 +1,25 @@
 import os, sys, shutil, tifffile, numpy as np, pandas as pd
 from datetime import datetime
 import scipy.io as sio, matplotlib.pyplot as plt
-import h5py
+import h5py, pickle
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
 
 def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     
-    h5s = [xx for xx in listdir(dlcfls) if '.h5' in xx]
+    csvs = [xx for xx in listdir(dlcfls) if '.csv' in xx]
     mouse_data = {}
-    for h5fl in h5s:
-        print(h5fl)        
-        date = os.path.basename(h5fl)[:6]
+    mouse_dlc = {}
+    for csvfl in csvs:
+        print(csvfl)        
+        date = os.path.basename(csvfl)[:6]
         datetime_object = datetime.strptime(date, '%y%m%d')
-        if not os.path.basename(h5fl)[7:11] in mouse_data.keys(): # allows for adding multiple dates
-            mouse_data[os.path.basename(h5fl)[7:11]] = [str(datetime_object.date())]
+        if not os.path.basename(csvfl)[7:11] in mouse_data.keys(): # allows for adding multiple dates
+            mouse_data[os.path.basename(csvfl)[7:11]] = [str(datetime_object.date())]
+            mouse_dlc[os.path.basename(csvfl)[7:11]] = [csvfl]
         else:
-            mouse_data[os.path.basename(h5fl)[7:11]].append(str(datetime_object.date()))
+            mouse_data[os.path.basename(csvfl)[7:11]].append(str(datetime_object.date()))
+            mouse_dlc[os.path.basename(csvfl)[7:11]].append(csvfl)
     
     mice = list(np.unique(np.array(mouse_data.keys()))[0]) #make to simple list
     mouse_vr = {}
@@ -34,8 +37,9 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
         
         print(f"\n********* copied vr files to dlc pose data for {mouse} *********")
      
-    mouse_df = pd.DataFrame(pd.Series(mouse_data), columns = ['dlcfl_date'])
+    mouse_df = pd.DataFrame(pd.Series(mouse_dlc), columns = ['dlcfiles'])
     mouse_df['vrfiles'] = pd.Series(mouse_vr)
+
     return mouse_df
 
 def fixcsvcols(csv):
@@ -52,6 +56,14 @@ def fixcsvcols(csv):
     return df
 
 def VRalign(vrfl, dlccsv):
+    """zahra's implementation for VRstandendsplit for python dlc pipeline
+    TODO: does not care about planes, figure out what to do with this
+    NOTE: subsamples to half of video (imaging frames) - should I not do this???
+
+    Args:
+        vrfl (_type_): _description_
+        dlccsv (_type_): _description_
+    """
     # modified VRstartendsplit
     f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag
     VR = f['VR']
@@ -200,7 +212,7 @@ def VRalign(vrfl, dlccsv):
     
     # sometimes trial number increases by 1 for 1 frame at the end of an epoch before
     # going to probes. this removes those
-    trialchange = np.concatenate(([0], np.diff(trialnum)))
+    trialchange = np.concatenate(([0], np.diff(np.squeeze(trialnum))))
     artefact = np.where(np.concatenate(([0], trialchange[:-1])) == 1 & (trialchange < 0))[0]
     if artefact.size != 0:
         trialnum[artefact-1] = trialnum[artefact-2]
@@ -208,8 +220,8 @@ def VRalign(vrfl, dlccsv):
     # this ensures that all trial number changes happen on when the
     # yposition goes back to the start, not 1 frame before or after
     ypos = ybinned.copy()
-    trialsplit = np.where(np.diff(trialnum))[0]
-    ypossplit = np.where(np.diff(ypos) < -50)[0]
+    trialsplit = np.where(np.diff(np.squeeze(trialnum)))[0]
+    ypossplit = np.where(np.diff(np.squeeze(ypos)) < -50)[0]
     for t in range(len(trialsplit)):
         try: # accounts for different lengths, ok to bypass?
             if trialsplit[t] < ypossplit[t]:
@@ -226,3 +238,20 @@ def VRalign(vrfl, dlccsv):
             idx = np.argmin(np.abs(ypossplit+1-rewlocsplit[c]))
             changeRewLoc[ypossplit[idx]+1] = changeRewLoc[rewlocsplit[c]]
             changeRewLoc[rewlocsplit[c]] = 0
+    
+    vralign = {}
+    vralign['ybinned']=ybinned
+    vralign['rewards']=rewards
+    vralign['forwardvel']=forwardvel
+    vralign['licks']=licks
+    vralign['changeRewLoc']=changeRewLoc
+    vralign['trialnum']=trialnum
+    vralign['timedFF']=timedFF
+    vralign['lickVoltage']=lickVoltage
+    dst = os.path.join(os.path.dirname(vrfl),os.path.basename(vrfl)[:16]+
+                '_vr_dlc_align.p')
+    with open(dst, "wb") as fp:   #Pickling
+        pickle.dump(vralign, fp)
+    print(f"\n ********* saved to {dst} *********")
+
+    return 
