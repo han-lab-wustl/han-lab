@@ -6,11 +6,13 @@ Created on Wed Feb 15 14:13:27 2023
 """
 
 import pandas as pd, matplotlib.pyplot as plt, numpy as np, seaborn as sns
+import os
 import scipy.ndimage
 from scipy.io import loadmat
 
-df = pd.read_csv(r'Y:\DLC\DLC_networks\pupil_licks_nose_paw-Zahra-2023-02-27\videos\230301_E201DLC_resnet50_pupil_licks_nose_pawFeb27shuffle1_50000.csv')
-mat = loadmat(r'Z:\sstcre_imaging\e201\10\230301_ZD_000_001\suite2p\plane0\Fall.mat') # load fall with behavior aligned data
+src = r'Y:\DLC\dlc_mixedmodel2'
+df = pd.read_csv(os.path.join(src,'220712_E169DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'))
+mat = loadmat(os.path.join(src, 'E169_12_Jul_2022_time(15_49_30).mat'))['VR'] # load fall with behavior aligned data
 forwardvelocity = mat['forwardvel'][0]
 plt.plot(forwardvelocity)
 plt.axhline(y=75, color='r', linestyle='-')
@@ -20,7 +22,7 @@ cols=[[xx+"_x",xx+"_y",xx+"_likelihood"] for xx in pd.unique(df.iloc[0]) if xx!=
 cols = [yy for xx in cols for yy in xx]; cols.insert(0, 'bodyparts')
 df.columns = cols
 df=df.drop([0,1])
-
+df.to_csv()
 #plot blinks
 #here i think y pos starts from above
 plt.plot(df['eyeBottom_y'].astype('float32').values - df['eyeTop_y'].astype('float32').values)

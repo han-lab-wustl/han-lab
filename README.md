@@ -121,7 +121,10 @@ Visualize 2 channel sbx files in MATLAB. Useful for optogenetics or tracing expe
 
 `MacroconverttoAVI.ijm`
 
-Converts tiffs to avi in ImageJ. Useful for converting behavior videos into avis for DLC. Use in batch mode.
+Converts tiffs to avi in ImageJ. Useful for converting behavior videos into avis for DLC. Use in regular mode.
+`input` = directory with directories of tifs 
+`output` = directory to store avis
+`name` = regex to filter by animal
 
 To avoid the ImageJ saving
 ### utils > utils.py

@@ -23,7 +23,7 @@ for i=1:length(Settings.paths)
     dy{i} = str2num(nm);
 end
 dys = cell2mat(dy);
-Settings.hrz_days = [55:56]; % get days after this day; ZD added for her folder structure
+Settings.hrz_days = [54:59]; % get days after this day; ZD added for her folder structure
 Settings.paths = Settings.paths(ismember(dys,Settings.hrz_days)); % only certain days
 Settings.Fs = 32; % Hz
 Settings.level_mouse_name = 3; % at which level of the folder .path is the mouse name contained, 

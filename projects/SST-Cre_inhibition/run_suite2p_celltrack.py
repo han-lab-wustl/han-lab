@@ -20,13 +20,7 @@ def main(**args):
     if args["stepid"] == 0:
         ###############################MAKE FOLDERS#############################
         #check to see if day directory exists
-        #TODO make function
         preprocessing.makeflds(params["datadir"], params["mouse_name"], params["day"])
-        ## TODO: implement timer and suite2p run after copy
-        # print("\n***********STARTING 1.5 HOUR TIMER TO ALLOW FOR COPYING NOW***********")
-        # time.sleep(60*60*0.5) # hours
-        # print("\n ****Checking to see if data is copied**** \n")
-        # args["stepid"] = 1 # allows for running suite2p run separately if needed
 
     elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
@@ -37,7 +31,8 @@ def main(**args):
         #check to see if imaging files are transferred
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
                                         params["mouse_name"], params["day"])) if "000" in xx][0]
-        imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], imagingfl)
+        imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], 
+                                 imagingfl)
         
         if len(imagingfl)!=0:           
             print(imagingfl)
@@ -83,16 +78,9 @@ def main(**args):
             #assumes that these tifs have already been made in step 1
             tifspth = [os.path.join(imgpth, xx) for xx in os.listdir(imgpth) if ".tif" in xx]
             if len(tifspth)==0:
-                print("\n writing tifs....")
-                from sbxreader import sbx_memmap
-                sbxfl=[os.path.join(imgpth,xx) for xx in os.listdir(imgpth) if "sbx" in xx][0]
-                dat = sbx_memmap(sbxfl)
-                #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16
-                for nn,i in enumerate(range(0, dat.shape[0], 3000)): #splits into tiffs of 3000 planes each                    
-                    stack = np.array(dat[i:i+3000])
-                    #crop in x
-                    stack=np.squeeze(stack)[:,:,89:718] # hard coded crop from ed's og script
-                    tifffile.imwrite(sbxfl[:-4]+f'_{nn+1:03d}.tif', stack.astype('uint16'))
+                print("\n writing tifs....")                
+                preprocessing.maketifs(imgpth,0,512,89,718)
+                print(imgpth)
         # otherwise concat all tifs
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
         tifspths.sort(); print(tifspths)
