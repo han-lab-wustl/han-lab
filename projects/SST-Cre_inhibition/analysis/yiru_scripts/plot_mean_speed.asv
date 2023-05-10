@@ -36,11 +36,11 @@ for this_day = 1:size(data,1)
     legend(lg,'color','none')
     xlabel('Trial number')
     ylabel('Speed (cm/s)')
-    title(['Mean speed of trials on ' char(data(this_day).date)])
+    title(['Mean speed of trials on ' char(data(this_day).date) '(' char(data(this_day).day) ')'])
     hold off
 
     nexttile
-    for i = 1:length([eps.epoch])
+    for i = 1:length([eps.epoch])-1
         os = eps(i).opto_stim;
         linestyle = '-';
         if sum(os)>0
@@ -60,11 +60,11 @@ for this_day = 1:size(data,1)
     legend(lg,'color','none')
     xlabel('Trial number')
     ylabel('Speed (cm/s)')
-    title(['Mean speed (nonstop) of trials on ' char(data(this_day).date)])
+    title(['Mean speed (nonstop) of trials on ' char(data(this_day).date) '(' char(data(this_day).day) ')'])
     hold off
 
     nexttile
-    for i = 1:length([eps.epoch])
+    for i = 1:length([eps.epoch])-1
         os = eps(i).opto_stim;
         linestyle = '-';
         if sum(os)>0
@@ -84,11 +84,11 @@ for this_day = 1:size(data,1)
     legend(lg,'color','none')
     xlabel('Trial number')
     ylabel('Speed (cm/s)')
-    title(['Mean speed (in dark) of trials on ' char(data(this_day).date)])
+    title(['Mean speed (in dark) of trials on ' char(data(this_day).date) '(' char(data(this_day).day) ')'])
     hold off
 
     nexttile
-    for i = 1:length([eps.epoch])
+    for i = 1:length([eps.epoch])-1
         os = eps(i).opto_stim;
         linestyle = '-';
         if sum(os)>0
@@ -108,7 +108,7 @@ for this_day = 1:size(data,1)
     legend(lg,'color','none')
     xlabel('Trial number')
     ylabel('Speed (cm/s)')
-    title(['Mean speed (1/3 track) of trials on ' char(data(this_day).date)])
+    title(['Mean speed (1/3 track) of trials on ' char(data(this_day).date) '(' char(data(this_day).day) ')'])
     hold off
 
 %     saveas(t, ['H:\E186\E186\speed\fig\mean_speed_' char(data(this_day).date) '(' char(data(this_day).day) ').fig'], 'fig')

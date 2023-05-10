@@ -4,11 +4,16 @@ for i=1:length(Settings.fmatpaths)
     [parent,nm,~] = fileparts(fileparts(fileparts(fileparts(Settings.fmatpaths(i).folder))));
     dy{i} = str2num(nm);
 end
-dys = cell2mat(dy);
+dys = cell2mat(dy); % some days may have beahvior but not imaging and vice versa
 Settings.hrz_days = [50:60]; % get days after this day; ZD added for her folder structure
 Settings.fmatpaths = Settings.fmatpaths(ismember(dys,Settings.hrz_days)); % only certain days
 
 Settings.vrpaths=dir('Z:\sstcre_imaging\e201\**\behavior\vr\*.mat');
+for i=1:length(Settings.vrpaths)
+    [parent,nm,~] = fileparts(fileparts(fileparts(Settings.vrpaths(i).folder)));
+    dy{i} = str2num(nm);
+end
+dys = cell2mat(dy);
 Settings.vrpaths = Settings.vrpaths(ismember(dys,Settings.hrz_days)); % only certain days
 
 Settings.level_mouse_name = 3;
