@@ -1,7 +1,10 @@
+function plot_mean_speed(data)
 % Show the mean speed changes of trials of days. One figure contains lines of eps, opto eps use dashed line
 % 4x1 subplot (mean, mean(nonstop), mean(dark), mean(1/3 track)
-
-load('Z:\hrz_info.mat')
+% 'Z:\hrz_info.mat'
+if isstring(data)
+    load(data)
+end
 for this_day = 1:size(data,1)
     eps = data(this_day).day_eps;
     if length([eps.epoch])<2
@@ -116,3 +119,5 @@ for this_day = 1:size(data,1)
 end
 disp('Done!')
 % close all
+
+end

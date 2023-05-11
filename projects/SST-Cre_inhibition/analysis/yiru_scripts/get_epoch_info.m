@@ -10,6 +10,7 @@ info = split(directory,'\');
 mouse_cd = string(mouse_level);
 
 load(file)
+Fall = load(file);
 vr=load(vrfl);
 specific_date = extractAfter(extractBefore(vr.VR.name_date_vr, "_time"), ...
     sprintf(upper(mouse_cd)+'_'));
@@ -114,6 +115,10 @@ if isfield(vr,'vr') && isfield(vr.vr.VR, 'optotrigger')
 else
     data(d,1).Opto = 0;
 end
+
+% add fall and vr file to structu
+data(d,1).Fall = Fall;
+data(d,1).VR = vr;
 
 
 end

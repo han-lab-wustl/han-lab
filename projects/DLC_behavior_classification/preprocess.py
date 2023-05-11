@@ -1,7 +1,3 @@
-    """dlc preprocessing scripts
-    relies on han-lab repo
-    """
-
 import os, sys, pickle
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 import preprocessing
@@ -30,9 +26,10 @@ if __name__ == "__main__":
     with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
         df = pickle.load(fp)
     for i,mouse in enumerate(df.index):
-        dlcflss, vrfls = df.iloc[i] # get vr and dlc paired files
-        for j,dlcfl in enumerate(dlcflss):                
-            # reassign since you copied over the vr files to the dlc files folder
-            vrflv2 = os.path.join(dlcfls,os.path.basename(vrfls[j]))
-            print(mouse, vrflv2, dlcfl)
-            preprocessing.VRalign(vrflv2, dlcfl)
+        if i>8:
+            dlcflss, vrfls = df.iloc[i] # get vr and dlc paired files
+            for j,dlcfl in enumerate(dlcflss):                
+                # reassign since you copied over the vr files to the dlc files folder
+                vrflv2 = os.path.join(dlcfls,os.path.basename(vrfls[j]))
+                print(mouse, vrflv2, dlcfl)
+                preprocessing.VRalign(vrflv2, dlcfl)

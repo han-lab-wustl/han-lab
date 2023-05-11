@@ -8,47 +8,60 @@ Created on Wed Feb 15 14:13:27 2023
 import pandas as pd, matplotlib.pyplot as plt, numpy as np, seaborn as sns
 import os
 import scipy.ndimage
-from scipy.io import loadmat
+import pickle
 
+def centeroidnp(arr):
+    length = arr.shape[0]
+    sum_x = np.sum(arr[:, 0])
+    sum_y = np.sum(arr[:, 1])
+    return sum_x/length, sum_y/length
+
+
+def runkmeans(df,mat):
 src = r'Y:\DLC\dlc_mixedmodel2'
-df = pd.read_csv(os.path.join(src,'220712_E169DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'))
-mat = loadmat(os.path.join(src, 'E169_12_Jul_2022_time(15_49_30).mat'))['VR'] # load fall with behavior aligned data
-forwardvelocity = mat['forwardvel'][0]
+df = pd.read_csv(os.path.join(src,'230418_E200DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'), index_col=None)
+#cleanup
+df = df.drop(columns = ["Unnamed: 0"])
+with open(os.path.join(src,"E200_18_Apr_2023_vr_dlc_align.p"), "rb") as fp: #unpickle
+     mat = pickle.load(fp)
+forwardvelocity = mat['forwardvel']
 plt.plot(forwardvelocity)
 plt.axhline(y=75, color='r', linestyle='-')
-
-#change column names
-cols=[[xx+"_x",xx+"_y",xx+"_likelihood"] for xx in pd.unique(df.iloc[0]) if xx!="bodyparts"]
-cols = [yy for xx in cols for yy in xx]; cols.insert(0, 'bodyparts')
-df.columns = cols
-df=df.drop([0,1])
-df.to_csv()
+poses = df.columns[1:]
+eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
+        'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
 #plot blinks
 #here i think y pos starts from above
-plt.plot(df['eyeBottom_y'].astype('float32').values - df['eyeTop_y'].astype('float32').values)
-plt.ylabel('eyelbottom-eyetop y position (pixels)')
-plt.ylim([0,100])
+plt.plot(df['EyeNorth_y'].astype('float32').values - df['EyeSouth_y'].astype('float32').values)
+plt.ylabel('y position (pixels)')
+plt.ylim(-50, 100)
 plt.xlabel('frames')
-plt.axhline(y=60, color='r', linestyle='-')
 
 #plot nose movement
-plt.plot(np.mean(df[['noseTop_y', 'noseBottom_y']].astype('float32').values,1))
+plt.plot(np.mean(df[['NoseTopPoint_y', 'NoseBottomPoint_y', 'NoseTip_y']].astype('float32').values,1))
 plt.ylabel('nose y position (pixels)')
 plt.xlabel('frames')
-plt.axhline(y=260, color='r', linestyle='-')
 
 #plot tongue1 movement
 #assign to nans/0
-keep1=df['tongue1_likelihood'].astype('float32') > 0.9
-df['tongue1_x'][~keep1]=0
-keep2=df['tongue2_likelihood'].astype('float32') > 0.9
-df['tongue2_x'][~keep2]=0
-keep3=df['tongue3_likelihood'].astype('float32') > 0.9
-df['tongue3_x'][~keep3]=0
+df['TongueTip_x'][df['TongueTip_likelihood'].astype('float32') < 0.9] = 0
+df['TongueTip_y'][df['TongueTip_likelihood'].astype('float32') < 0.9] = 0
+df['TongueTop_x'][df['TongueTop_likelihood'].astype('float32') < 0.9] = 0
+df['TongueTop_y'][df['TongueTop_likelihood'].astype('float32') < 0.9] = 0
+df['TongueBottom_x'][df['TongueBottom_likelihood'].astype('float32') < 0.9] = 0
+df['TongueBottom_y'][df['TongueBottom_likelihood'].astype('float32') < 0.9] = 0
+plt.plot(df['TongueTip_y'].astype('float32'))
+plt.plot(df['TongueTop_y'].astype('float32'))
+plt.plot(df['TongueBottom_y'].astype('float32'))
 
-plt.scatter(np.arange(80001),df['tongue1_x'].astype('float32').values)
-plt.scatter(np.arange(80001),df['tongue2_x'].astype('float32').values)
-plt.scatter(np.arange(80001),df['tongue3_x'].astype('float32').values)
+centroids = []
+for i in range(len(df)):
+    eye_x = np.array([df[xx+"_x"].iloc[i] for xx in eye])
+    eye_y = np.array([df[xx+"_y"].iloc[i] for xx in eye])
+    eye_coords = np.array([eye_x, eye_y])
+    centroid_x, centroid_y = centeroidnp(eye_coords)
+    centroids.append((centroid_x,centroid_y))
+df['eye_centroid_xy'] = centroids
 
 blinks=scipy.ndimage.gaussian_filter(df['eyeBottom_y'].astype('float32').values - df['eyeTop_y'].astype('float32').values,sigma=3)
 #tongue movement

@@ -68,8 +68,8 @@ def VRalign(vrfl, dlccsv):
     dst = os.path.join(os.path.dirname(vrfl),
             os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
     print(dst)
-    if not os.path.exists(dst):
-        f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag
+    if not os.path.exists(dst): # if pickle is made already
+        f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
         VR = f['VR']
         
         # Find start and stop of imaging using VR
