@@ -17,64 +17,109 @@ def centeroidnp(arr):
     return sum_x/length, sum_y/length
 
 
-def runkmeans(df,mat):
-src = r'Y:\DLC\dlc_mixedmodel2'
-df = pd.read_csv(os.path.join(src,'230418_E200DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'), index_col=None)
-#cleanup
-df = df.drop(columns = ["Unnamed: 0"])
-with open(os.path.join(src,"E200_18_Apr_2023_vr_dlc_align.p"), "rb") as fp: #unpickle
-     mat = pickle.load(fp)
-forwardvelocity = mat['forwardvel']
-plt.plot(forwardvelocity)
-plt.axhline(y=75, color='r', linestyle='-')
-poses = df.columns[1:]
-eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
-        'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
-#plot blinks
-#here i think y pos starts from above
-plt.plot(df['EyeNorth_y'].astype('float32').values - df['EyeSouth_y'].astype('float32').values)
-plt.ylabel('y position (pixels)')
-plt.ylim(-50, 100)
-plt.xlabel('frames')
+def collect_clustering_vars(df,mat):
+    #cleanup
+    df = pd.read_csv(df)
+    if "Unnamed: 0" in df.columns:
+        df = df.drop(columns = ["Unnamed: 0"])
+    with open(mat,'rb') as fp: #unpickle
+        mat = pickle.load(fp)
+    forwardvelocity = mat['forwardvel']
+    # plt.plot(forwardvelocity)
+    # plt.axhline(y=75, color='r', linestyle='-')
+    # bin every other row
+    idx = len(df) - 1 if len(df) % 2 else len(df)
+    df = df[:idx].groupby(df.index[:idx] // 2).mean()
+    poses = df.columns[1:]
+    eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
+            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
+    #plot blinks
+    #here i think y pos starts from above
+    # plt.plot(df['EyeNorth_y'].astype('float32').values - df['EyeSouth_y'].astype('float32').values)
+    # plt.ylabel('y position (pixels)')
+    # plt.ylim(-50, 10)
+    # plt.xlabel('frames')
 
-#plot nose movement
-plt.plot(np.mean(df[['NoseTopPoint_y', 'NoseBottomPoint_y', 'NoseTip_y']].astype('float32').values,1))
-plt.ylabel('nose y position (pixels)')
-plt.xlabel('frames')
+    #plot nose movement
+    # plt.plot(np.mean(df[['NoseTopPoint_y', 'NoseBottomPoint_y', 'NoseTip_y']].astype('float32').values,1))
+    # plt.ylabel('nose y position (pixels)')
+    # plt.xlabel('frames')
 
-#plot tongue1 movement
-#assign to nans/0
-df['TongueTip_x'][df['TongueTip_likelihood'].astype('float32') < 0.9] = 0
-df['TongueTip_y'][df['TongueTip_likelihood'].astype('float32') < 0.9] = 0
-df['TongueTop_x'][df['TongueTop_likelihood'].astype('float32') < 0.9] = 0
-df['TongueTop_y'][df['TongueTop_likelihood'].astype('float32') < 0.9] = 0
-df['TongueBottom_x'][df['TongueBottom_likelihood'].astype('float32') < 0.9] = 0
-df['TongueBottom_y'][df['TongueBottom_likelihood'].astype('float32') < 0.9] = 0
-plt.plot(df['TongueTip_y'].astype('float32'))
-plt.plot(df['TongueTop_y'].astype('float32'))
-plt.plot(df['TongueBottom_y'].astype('float32'))
+    #plot tongue1 movement
+    #assign to nans/0
+    df['TongueTip_x'][df['TongueTip_likelihood'].astype('float32') < 0.9] = 0
+    df['TongueTip_y'][df['TongueTip_likelihood'].astype('float32') < 0.9] = 0
+    df['TongueTop_x'][df['TongueTop_likelihood'].astype('float32') < 0.9] = 0
+    df['TongueTop_y'][df['TongueTop_likelihood'].astype('float32') < 0.9] = 0
+    df['TongueBottom_x'][df['TongueBottom_likelihood'].astype('float32') < 0.9] = 0
+    df['TongueBottom_y'][df['TongueBottom_likelihood'].astype('float32') < 0.9] = 0
+    # plt.plot(df['TongueTip_y'].astype('float32'))
+    # plt.plot(df['TongueTop_y'].astype('float32'))
+    # plt.plot(df['TongueBottom_y'].astype('float32'))
+    #whisker
+    df['WhiskerUpper1_x'][df['WhiskerUpper1_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerUpper1_y'][df['WhiskerUpper1_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerUpper_x'][df['WhiskerUpper_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerUpper_y'][df['WhiskerUpper_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerUpper3_x'][df['WhiskerUpper3_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerUpper3_y'][df['WhiskerUpper3_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerLower_x'][df['WhiskerLower_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerLower_y'][df['WhiskerLower_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerLower1_x'][df['WhiskerLower1_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerLower1_y'][df['WhiskerLower1_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerLower3_x'][df['WhiskerLower3_likelihood'].astype('float32') < 0.9] = 0
+    df['WhiskerLower3_y'][df['WhiskerLower3_likelihood'].astype('float32') < 0.9] = 0
+    # plt.plot(df['WhiskerUpper_x'].astype('float32'))
+    # plt.plot(df['WhiskerLower_x'].astype('float32'))
 
-centroids = []
-for i in range(len(df)):
-    eye_x = np.array([df[xx+"_x"].iloc[i] for xx in eye])
-    eye_y = np.array([df[xx+"_y"].iloc[i] for xx in eye])
-    eye_coords = np.array([eye_x, eye_y])
-    centroid_x, centroid_y = centeroidnp(eye_coords)
-    centroids.append((centroid_x,centroid_y))
-df['eye_centroid_xy'] = centroids
+    #paw
+    df['PawTop_x'][df['PawTop_likelihood'].astype('float32') < 0.9] = 0
+    df['PawTop_y'][df['PawTop_likelihood'].astype('float32') < 0.9] = 0
+    df['PawMiddle_x'][df['PawMiddle_likelihood'].astype('float32') < 0.9] = 0
+    df['PawMiddle_y'][df['PawMiddle_likelihood'].astype('float32') < 0.9] = 0
+    df['PawBottom_x'][df['PawBottom_likelihood'].astype('float32') < 0.9] = 0
+    df['PawBottom_y'][df['PawBottom_likelihood'].astype('float32') < 0.9] = 0
+    # plt.plot(df['PawTop_y'].astype('float32'))
+    # plt.plot(df['PawMiddle_x'].astype('float32'))
+    # plt.plot(df['PawBottom_x'].astype('float32'))
 
-blinks=scipy.ndimage.gaussian_filter(df['eyeBottom_y'].astype('float32').values - df['eyeTop_y'].astype('float32').values,sigma=3)
-#tongue movement
-# tongue=df[['tongue1_x','tongue2_x','tongue3_x']].astype('float32').mean(axis=1, skipna=False)
-tongue = df['tongue1_x'].astype('float32').values
-plt.scatter(np.arange(len(tongue)), tongue)
+    #eye centroids
+    centroids = []
+    for i in range(len(df)):
+        eye_x = np.array([df[xx+"_x"].iloc[i] for xx in eye])
+        eye_y = np.array([df[xx+"_y"].iloc[i] for xx in eye])
+        eye_coords = np.array([eye_x, eye_y])
+        centroid_x, centroid_y = centeroidnp(eye_coords)
+        centroids.append((centroid_x,centroid_y))
 
-#nose
-nose=df[['noseTop_y','noseBottom_y']].astype('float32').mean(axis=1, skipna=False).astype('float32').values
-#lip movement/mouth open
-mouth_open=df[['lip1_x','lip2_x']].astype('float32').mean(axis=1, skipna=False)
-plt.scatter(np.arange(len(mouth_open)),mouth_open)
-plt.axhline(y=420, color='r', linestyle='-')
+    #centroids
+    df['eye_centroid_xy'] = centroids
+    # plt.plot(centroids[1000:])
+    #blinks
+    blinks=scipy.ndimage.gaussian_filter(df['EyeNorth_y'].astype('float32').values - df['EyeSouth_y'].astype('float32').values,sigma=3)
+    #tongue movement
+    tongue=df[['TongueTip_x','TongueTop_x','TongueBottom_x']].astype('float32').mean(axis=1, skipna=False)
+    #nose
+    nose=df[['NoseTopPoint_y', 'NoseBottomPoint_y', 'NoseTip_y']].astype('float32').mean(axis=1, skipna=False).astype('float32').values
+    whiskerUpper = df[['WhiskerUpper_x', 'WhiskerUpper1_x', 'WhiskerUpper3_x']].astype('float32')
+    whiskerLower = df[['WhiskerLower_x','WhiskerLower3_x']].astype('float32').mean(axis=1)
+    paw = df[['PawTop_y','PawBottom_y','PawMiddle_y']].astype('float32').mean(axis=1)
+
+    return blinks, tongue, nose, whiskerUpper,whiskerLower, paw, forwardvelocity
+    
+
+bigdf = []
+src = 'Y:\DLC\dlc_mixedmodel2'
+with open(os.path.join(src,'mouse_df.p'),'rb') as fp: #unpickle
+        mouse_df = pickle.load(fp)
+for i,mouse in enumerate(mouse_df.index):
+    dlcflss, vrfls = mouse_df.iloc[i] # get vr and dlc paired files
+    for j,dlcfl in enumerate(dlcflss):                
+        # reassign since you copied over the vr files to the dlc files folder
+        vrfl_p = os.path.join(src,os.path.basename(vrfls[j])[:16]+"_vr_dlc_align.p")    
+        print(mouse, vrfl_p, dlcfl)
+        bigdf.append(collect_clustering_vars(dlcfl,vrfl_p))
+
 
 #%%
 # PCA and kmeans
@@ -83,10 +128,12 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 #https://towardsdatascience.com/understanding-k-means-clustering-in-machine-learning-6a6e67336aa1
-dfkmeans = pd.DataFrame(np.array([blinks[1::2],
-    nose[1::2],tongue[1::2],mouth_open[1::2], forwardvelocity]).T)
+dfkmeans = pd.DataFrame(np.array([blinks, tongue, nose, whiskerUpper,
+        whiskerLower, paw, forwardvelocity]).T)
 
-columns = ['blinks','nose','tongue','mouth_open', 'velocity']
+columns = ['blinks','tongue','nose','whiskerUpper', 'whiskerLower','paw',
+           'forwardvelocity']
+
 dfkmeans.columns=columns
 
 #classify blinks, sniffs, licks?

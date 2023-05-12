@@ -8,37 +8,42 @@ from utils.utils import listdir
 def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     
     csvs = [xx for xx in listdir(dlcfls) if '.csv' in xx]
+    csvs.sort()
     mouse_data = {}
-    mouse_dlc = {}
+    mouse_dlc = []
     for csvfl in csvs:
         print(csvfl)        
         date = os.path.basename(csvfl)[:6]
         datetime_object = datetime.strptime(date, '%y%m%d')
         if not os.path.basename(csvfl)[7:11] in mouse_data.keys(): # allows for adding multiple dates
             mouse_data[os.path.basename(csvfl)[7:11]] = [str(datetime_object.date())]
-            mouse_dlc[os.path.basename(csvfl)[7:11]] = [csvfl]
         else:
             mouse_data[os.path.basename(csvfl)[7:11]].append(str(datetime_object.date()))
-            mouse_dlc[os.path.basename(csvfl)[7:11]].append(csvfl)
+        mouse_dlc.append([os.path.basename(csvfl)[7:11],csvfl,str(datetime_object.date())])
     
     mice = list(np.unique(np.array(mouse_data.keys()))[0]) #make to simple list
-    mouse_vr = {}
+    mouse_vr = []
     for mouse in mice:
         print(mouse)
-        mouse_vr[mouse]=[]
         mouse = mouse.upper()
         vrfls = [xx for xx in listdir(vrdir, ifstring='.mat') if os.path.basename(xx)[:4].upper() in mouse]
+        vrfls.sort()
         dates = mouse_data[mouse] # if a mouse has multiple dates
         for xx in vrfls:
             if 'test'.lower() not in xx and 'test'.upper() not in xx and str(datetime.strptime(os.path.basename(xx)[5:16], 
                 '%d_%b_%Y').date()) in dates:
-                shutil.copy(xx,dlcfls)
-                mouse_vr[mouse].append(xx)
-        
+                # shutil.copy(xx,dlcfls)
+                mouse_vr.append([mouse, xx, str(datetime.strptime(os.path.basename(xx)[5:16], 
+                '%d_%b_%Y').date())])
         print(f"\n********* copied vr files to dlc pose data for {mouse} *********")
-     
-    mouse_df = pd.DataFrame(pd.Series(mouse_dlc), columns = ['dlcfiles'])
-    mouse_df['vrfiles'] = pd.Series(mouse_vr)
+    
+    # pair dlc files with vr
+    paired_df = []
+    for mouse, csv, exp_date in mouse_dlc:
+        ind = np.where((exp_date==np.array(mouse_vr)[:,2]) & (mouse==np.array(mouse_vr)[:,0]))[0][0]
+        # remove leading path in case we move things
+        paired_df.append([mouse, os.path.basename(csv), os.path.basename(np.array(mouse_vr)[ind,1]), exp_date])
+    mouse_df = pd.DataFrame(paired_df, columns = ["mouse", "DLC", "VR", "date"])
 
     return mouse_df
 

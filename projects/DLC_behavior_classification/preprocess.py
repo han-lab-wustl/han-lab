@@ -12,24 +12,28 @@ def preprocess(step,vrdir, dlcfls):
     if step == 0:
     #vrdir =  r'I:\VR_data' # copy of vr data, curated to remove badly labeled files
     #dlcfls = r'G:\dlc_mixedmodel2' # h5 and csv files from dlc
-        mouse_df = preprocessing.copyvr_dlc(vrdir, dlcfls)  
+        mouse_df = preprocessing.copyvr_dlc(vrdir, dlcfls)          
         mouse_df.to_pickle(os.path.join(dlcfls,"mouse_df.p"))  
-    return mouse_df
+
+        return mouse_df
+
+    if step == 1:
+        with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
+            df = pickle.load(fp)
+        [preprocessing.VRalign(os.path.join(dlcfls,row["VR"]), 
+                    os.path.join(dlcfls,row["DLC"])) for i,row in df.iterrows()]
+            
+
 
 if __name__ == "__main__":
     vrdir =  r'I:\VR_data' # copy of vr data, curated to remove badly labeled files
     dlcfls = r'Y:\DLC\dlc_mixedmodel2' # h5 and csv files from dlc
     step=0
-    # df = preprocess(step,vrdir,dlcfls)
+    df = preprocess(step,vrdir,dlcfls)
     # now need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
-    with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
-        df = pickle.load(fp)
-    for i,mouse in enumerate(df.index):
-        if i>8:
-            dlcflss, vrfls = df.iloc[i] # get vr and dlc paired files
-            for j,dlcfl in enumerate(dlcflss):                
-                # reassign since you copied over the vr files to the dlc files folder
-                vrflv2 = os.path.join(dlcfls,os.path.basename(vrfls[j]))
-                print(mouse, vrflv2, dlcfl)
-                preprocessing.VRalign(vrflv2, dlcfl)
+    # uncomment below if you don't want to re
+    # with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
+    #     df = pickle.load(fp)
+    step=1
+    preprocess(step,vrdir,dlcfls)
