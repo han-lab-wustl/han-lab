@@ -177,6 +177,6 @@ def movesbx(src, dst, fldkeyword='ZD'):
 
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
-    drive = r'Z:\sstcre_imaging'
-    animal = 'e201'
+    drive = r'Y:\sstcre_imaging'
+    animal = 'e200'
     copyvr(usb, drive, animal)

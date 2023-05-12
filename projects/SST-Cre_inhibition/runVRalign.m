@@ -2,9 +2,10 @@
 %run VR align
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
-mouse_name = "e201";
-days = [32];
-src = "Z:\sstcre_imaging";
+clear all;
+mouse_name = "e200";
+days = [55:64];
+src = "Y:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));
 for day=days

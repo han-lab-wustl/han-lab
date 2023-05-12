@@ -108,19 +108,6 @@ def collect_clustering_vars(df,mat):
     return blinks, tongue, nose, whiskerUpper,whiskerLower, paw, forwardvelocity
     
 
-bigdf = []
-src = 'Y:\DLC\dlc_mixedmodel2'
-with open(os.path.join(src,'mouse_df.p'),'rb') as fp: #unpickle
-        mouse_df = pickle.load(fp)
-for i,mouse in enumerate(mouse_df.index):
-    dlcflss, vrfls = mouse_df.iloc[i] # get vr and dlc paired files
-    for j,dlcfl in enumerate(dlcflss):                
-        # reassign since you copied over the vr files to the dlc files folder
-        vrfl_p = os.path.join(src,os.path.basename(vrfls[j])[:16]+"_vr_dlc_align.p")    
-        print(mouse, vrfl_p, dlcfl)
-        bigdf.append(collect_clustering_vars(dlcfl,vrfl_p))
-
-
 #%%
 # PCA and kmeans
 import sklearn as sk

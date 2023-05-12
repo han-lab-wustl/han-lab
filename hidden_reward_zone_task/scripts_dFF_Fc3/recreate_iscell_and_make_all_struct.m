@@ -13,8 +13,8 @@ for this_day = 1:size(Settings.paths,1)
     day=str2num(day_cd(2:end));
 
    l = load(file);
-   skewdcells = find(skewness(l.F,1,2)<2); %looks at skewness of cells, <2 --> interneurons; if omitted, gets all cells
-   l.iscell(skewdcells,1) = 0;
+%    skewdcells = find(skewness(l.F,1,2)<2); %looks at skewness of cells, <2 --> interneurons; if omitted, gets all cells
+%    l.iscell(skewdcells,1) = 0;
    disp ([file ' ... loaded'])
     %don't remove iscells==0, unnecessary for this analysis
     %filter by only common cells

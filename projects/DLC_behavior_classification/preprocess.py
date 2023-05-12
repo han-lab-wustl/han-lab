@@ -1,6 +1,7 @@
 import os, sys, pickle
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 import preprocessing
+from kmeans import collect_clustering_vars
 #analyze videos and copy vr files before this step
 import matplotlib
 matplotlib.use('TkAgg')
@@ -23,6 +24,14 @@ def preprocess(step,vrdir, dlcfls):
         [preprocessing.VRalign(os.path.join(dlcfls,row["VR"]), 
                     os.path.join(dlcfls,row["DLC"])) for i,row in df.iterrows()]
             
+    if step == 2: 
+        bigdf = []
+        with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
+                mouse_df = pickle.load(fp)
+        for i,row in mouse_df.iterrows():
+            vrfl_p = os.path.join(dlcfls,row["VR"][:16]+"_vr_dlc_align.p")    
+            print(row["mouse"], row["VR"])
+            bigdf.append(collect_clustering_vars(dlcfl,vrfl_p))
 
 
 if __name__ == "__main__":
