@@ -156,8 +156,13 @@ def convert_zstack_sbx_to_tif(sbxsrc):
 # src = r'Z:\sstcre_imaging\e201\0_ref_pln_day\230213_EH_DH_000_003\230213_EH_DH_000_003.sbx'
     dat = sbx_memmap(sbxsrc)
     dat=np.squeeze(dat)
-    tifffile.imwrite(sbxsrc[:-4]+".tif", dat.astype("uint16"))
-
+    if len(dat.shape)>3:
+        green = dat[:,0,:,:]
+        red = dat[:,1,:,:]
+        tifffile.imwrite(sbxsrc[:-4]+"_green.tif", green.astype("uint16"))
+        tifffile.imwrite(sbxsrc[:-4]+"_red.tif", red.astype("uint16"))
+    else:
+        tifffile.imwrite(sbxsrc[:-4]+".tif", dat.astype("uint16"))
     return sbxsrc[:-4]+".tif"
 
 def movesbx(src, dst, fldkeyword='ZD'):
@@ -177,6 +182,7 @@ def movesbx(src, dst, fldkeyword='ZD'):
 
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
-    drive = r'Y:\sstcre_imaging'
-    animal = 'e200'
-    copyvr(usb, drive, animal)
+    drives = [r'Y:\sstcre_imaging', r'Z:\sstcre_imaging']
+    animals = ['e200', 'e201']
+    for i,drive in enumerate(drives):
+        copyvr(usb, drive, animals[i])

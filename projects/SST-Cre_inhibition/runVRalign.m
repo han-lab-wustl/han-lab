@@ -3,9 +3,9 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e200";
-days = [55:64];
-src = "Y:\sstcre_imaging";
+mouse_name = "e201";
+days = [63];
+src = "Z:\sstcre_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));
 for day=days
