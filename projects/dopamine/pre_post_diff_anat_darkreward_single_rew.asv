@@ -17,7 +17,7 @@ darkreward=1;
 pr_dir0 = uipickfiles;
 
 %%
-for alldays=1:length(pr_dir0)
+for alldays=1:length(pr_dir0)%31%41%12%30%ays_check%[1:2 4:5 12:27 29]%[2:3 5:8 10 12:17 21  24 26]%22:29%[1:2 4:5 12:22]%1:21%[1:2 4:5 12:22]%21%[1:2 4:5 12:22]%[1:21]%%[1:2 4:5 12:20]%%[1:21]%
     
     subp=subp+1;
     clearvars -except alldays mouse_id mov_corr stop_corr mov_stop conc_coeff_rew conc_coeff_nr dop_suc_movint dop_suc_stopint roe_suc_movint roe_suc_stopint ...
@@ -47,19 +47,6 @@ for alldays=1:length(pr_dir0)
             
             
             list_tif=dir('*.tif');
-             %ZD ADDED TO FIX FILE SORTING ISSUE IN SUITE2P NEW VERSION
-            for i=1:length(list_tif)
-                if strcmp(list_tif(i).name,'file500_chan0.tif') % only messes with this file which seems to be the problem for me
-                    % may want to change this if it's different based on num of
-                    % frames for different people
-                    rename = 'file0500_chan0.tif';
-                    movefile(fullfile(list_tif(1).folder, list_tif(i).name), fullfile(list_tif(1).folder, rename))
-                elseif strcmp(list_tif(i).name,'file000_chan0.tif')
-                    rename = 'file0000_chan0.tif';
-                    movefile(fullfile(list_tif(1).folder, list_tif(i).name), fullfile(list_tif(1).folder, rename))
-                end
-            end
-            list_tif=dir('*.tif'); % re list
             filenames={list_tif(:).name};
             checks=strfind(filenames,('plane'));
             plane_tif=cellfun(@(x) ~isempty(x), checks);
@@ -141,14 +128,12 @@ for alldays=1:length(pr_dir0)
             reward_binned=rewards;
             R = bwlabel(reward_binned>rew_thresh);%label rewards, ascending
             rew_idx=find(R);%get indexes of all rewards
-            % ZD moved this up bc errors
-            temp = consecutive_stretch(rew_idx);         
-            rew_idx = cellfun(@(x) x(1), temp,'UniformOutput',1); %If the threshold over counts the same reward 
             rew_idx_diff=diff(rew_idx);%difference in reward index from last
-               
+            temp = consecutive_stretch(rew_idx);
+            rew_idx = cellfun(@(x) x(1), temp,'UniformOutput',1); %If the threshold over counts the same reward
             
             short= (reward_binned == 1);%logical for rewards that happen less than x frames from last reward. 0 = single rew.
-            short(rew_idx(rew_idx_diff<num_rew_win_frames)) = 0;
+            short(rew_idx(find(rew_idx_diff<num_rew_win_frames))) = 0;
             short(rew_idx(find(rew_idx_diff<num_rew_win_frames)+1)) = 0;
             
             
@@ -189,15 +174,15 @@ for alldays=1:length(pr_dir0)
             
             %%%% remove strippy lines
             
-%             
-%             x1=41; % ZD changed this dim to remove stripy lines
-%             x2=619;
-%             y1=169;
-%             y2=500;
-%             
-%             chone_lick_movie=chone_lick_movie(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);%
-%             
-%             
+            
+            x1=41; % ZD changed this dim to remove stripy lines
+            x2=619;
+            y1=169;
+            y2=500;
+            
+            chone_lick_movie=chone_lick_movie(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);%
+            
+            
             
             
             clear smallimage
@@ -210,8 +195,7 @@ for alldays=1:length(pr_dir0)
             end
             
             limss = max([abs(min(min(min(smallimage)))) abs(max(max(max(smallimage))))]);
-            %ZD = don't crop
-            chone_crop=chone;%(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);%
+            chone_crop=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);%
             
             find_figure('reward_alig_movie'); h1=subplot(1,2,1),imagesc((imresize(squeeze(mean(chone_crop,3)),1/4))); colormap(h1,gray); axis image
             
@@ -221,7 +205,7 @@ for alldays=1:length(pr_dir0)
             for fra = 1:size(smallimage,3)
                 imagen=squeeze(smallimage(:,:,fra));
                 h2=subplot(1,2,2),imagesc(imagen);
-                colormap(h2,'default'); axis image
+                colormap(h2,default); axis image
                 caxis([-1*limss limss]);
                 
                 

@@ -80,6 +80,9 @@ Munni's original code. Allows drawing/selection of a ROI and extraction of dFF.
 
 Munni's original code that aligns behavioral events to dFF. Modifications for labels/titles made by ZD.
 
+`pre_post_diff_anat_darkreward_single_rew.m`
+
+Plots a heatmap of CS-triggered averages across days in the Pavlovian task.
 ### projects > dopamine > axonal-GCamp
 
 How to run preprocessing and motion correction on axonal-GCamp images from two-photon

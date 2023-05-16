@@ -49,14 +49,14 @@ for this_day = 1:size(Settings.paths,1)
        
        all = create_all_structure(l.F,l.Fneu,l.spks,Settings.Fs,cells);
        
-       skews=[];
-       skews = skewness(all.dff,1,2);
-       removed.Fc3 = all.Fc3(skews<2,:);
-       removed.Spks = all.Spks(skews<2,:);
-       removed.dff = all.dff(skews<2,:);
-       all.Fc3(skews<2,:) = [];
-       all.Spks(skews<2,:)=[];
-       all.dff(skews<2,:) = [];
+%        skews=[];
+%        skews = skewness(all.dff,1,2);
+%        removed.Fc3 = all.Fc3(skews<2,:);
+%        removed.Spks = all.Spks(skews<2,:);
+%        removed.dff = all.dff(skews<2,:);
+%        all.Fc3(skews<2,:) = [];
+%        all.Spks(skews<2,:)=[];
+%        all.dff(skews<2,:) = [];
         save( "Fall.mat" , 'all','-append') 
         save("Fall.mat",'removed','-append')
         disp('done recreating all !')
