@@ -318,7 +318,7 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
             for i=1:length(all_rew_lick)
                 start_exc_wind=all_rew_lick(1,i)-exclusion_win_frames;
                 stop_exc_wind=all_rew_lick(1,i)+exclusion_win_frames;
-                if start_exc_wind<0
+                if start_exc_wind<=0 % ZD added less than or =
                     start_exc_wind=1;
                     nr_lick(start_exc_wind:stop_exc_wind,1)=0;
                 else
@@ -814,7 +814,7 @@ for alldays = 1:length(pr_dir0)%%%number of days to run data on
                 for i=1:length(all_rew_lick)
                     start_exc_wind=all_rew_lick(1,i)-exclusion_win_frames;
                     stop_exc_wind=all_rew_lick(1,i)+exclusion_win_frames;
-                    if start_exc_wind<0
+                    if start_exc_wind<=0
                         start_exc_wind=1;
                         nr_lick(1,start_exc_wind:stop_exc_wind)=0;
                     else
@@ -1886,7 +1886,7 @@ if exist([allsavedir allsavefilename filetype],'file') == 2 %file exists already
 else
     outFile = [allsavedir allsavefilename filetype];
 end
-% close all
-%save(outFile)
+close all
+save(outFile)
 
 

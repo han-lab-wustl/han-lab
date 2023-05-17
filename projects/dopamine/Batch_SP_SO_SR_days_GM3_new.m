@@ -16,7 +16,7 @@ ref_exist=1;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end
-
+%%
 for allplanes=1:3
     for days=days_check
         pr_dir1=strcat(pr_dir{days},'\')

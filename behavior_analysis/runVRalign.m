@@ -16,8 +16,8 @@ for day=days
 end
 %% 
 % for dopamine mice
-mouse_name = "e193";
-days = [20:25];
+mouse_name = "e194";
+days = [19:27];
 src = "X:\dopamine_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));

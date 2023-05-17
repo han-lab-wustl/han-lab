@@ -32,7 +32,7 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
         for xx in vrfls:
             if 'test'.lower() not in xx and 'test'.upper() not in xx and str(datetime.strptime(os.path.basename(xx)[5:16], 
                 '%d_%b_%Y').date()) in dates:
-                # shutil.copy(xx,dlcfls)
+                shutil.copy(xx,dlcfls)
                 mouse_vr.append([mouse, xx, str(datetime.strptime(os.path.basename(xx)[5:16], 
                 '%d_%b_%Y').date())])
         print(f"\n********* copied vr files to dlc pose data for {mouse} *********")

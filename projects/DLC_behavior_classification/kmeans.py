@@ -122,14 +122,11 @@ def collect_clustering_vars(df,matfl):
               'changeRewLoc','experiment'])
 
 #%%
-def run_pca(dfkmeans):
+def run_pca(dfkmeans,columns):
     # PCA and kmeans
     #https://towardsdatascience.com/understanding-k-means-clustering-in-machine-learning-6a6e67336aa1
     #things to feed into kmeasn
-    columns = ['blinks', 'eye_centroid_x', 'eye_centroid_y', 
-        'tongue', 'nose', 'whiskerUpper',
-       'whiskerLower', 'paw', 'forwardvelocity', 'ybinned', 'licks',
-       'lickVoltage']
+    
     dfkmeans[columns] = dfkmeans[columns].astype(float)
     # drops a few last frames with na fron vr??
     dfkmeans = dfkmeans.dropna()
@@ -140,7 +137,7 @@ def run_pca(dfkmeans):
     dfkmeans['sniff_lbl'] =  dfkmeans['nose']>dfkmeans["nose"].mean()+dfkmeans["nose"].std()*3
     dfkmeans['tongue_lbl'] =  dfkmeans['tongue']>0
     dfkmeans['grooms'] = dfkmeans['paw']>0
-    dfkmeans['whisking'] = dfkmeans['whiskerUpper']>dfkmeans["whiskerUpper"].mean()+dfkmeans["whiskerUpper"].std()*3
+    # dfkmeans['whisking'] = dfkmeans['whiskerUpper']<dfkmeans["whiskerUpper"].mean()+dfkmeans["whiskerUpper"].std()*3
     dfkmeans['fastruns'] =  dfkmeans['forwardvelocity']>dfkmeans["forwardvelocity"].mean()+dfkmeans["forwardvelocity"].std()*3 #arbitrary thres
     #stopped for 5 seconds around the cell
     dfkmeans['stops'] =  [True if sum(dfkmeans["forwardvelocity"].iloc[xx-5:xx+5])==0 else False for xx in range(len(dfkmeans["forwardvelocity"]))]
@@ -167,71 +164,40 @@ def run_pca(dfkmeans):
 
     # Silhouette score value ranges from 0 to 1, 0 being the worst and 1 being the best.
 
-    # candidate values for our number of cluster
-    parameters = np.linspace(2,10,9).astype(int)
-    # instantiating ParameterGrid, pass number of clusters as input
-    parameter_grid = sk.model_selection.ParameterGrid({'n_clusters': parameters})
-    best_score = -1
-    kmeans_model = KMeans()     # instantiating KMeans model
-    silhouette_scores = []
-    # evaluation based on silhouette_score
-    for p in parameter_grid:
-        kmeans_model.set_params(**p)    # set current hyper parameter
-        kmeans_model.fit(X_scaled)          # fit model on wine dataset, this will find clusters based on parameter p
-        ss = sk.metrics.silhouette_score(X_scaled, kmeans_model.labels_)   # calculate silhouette_score
-        silhouette_scores += [ss]       # store all the scores
-        print('Parameter:', p, 'Score', ss)
-        # check p which has the best score
-        if ss > best_score:
-            best_score = ss
-            best_grid = p
-    # plotting silhouette score
-    plt.figure()
-    plt.bar(range(len(silhouette_scores)), list(silhouette_scores), align='center', color='#722f59', width=0.5)
-    plt.xticks(range(len(silhouette_scores)), list(parameters))
-    plt.title('Silhouette Score', fontweight='bold')
-    plt.xlabel('Number of Clusters')
-    plt.show()
+    # # candidate values for our number of cluster
+    # parameters = np.linspace(2,10,9).astype(int)
+    # # instantiating ParameterGrid, pass number of clusters as input
+    # parameter_grid = sk.model_selection.ParameterGrid({'n_clusters': parameters})
+    # best_score = -1
+    # kmeans_model = KMeans()     # instantiating KMeans model
+    # silhouette_scores = []
+    # # evaluation based on silhouette_score
+    # for p in parameter_grid:
+    #     kmeans_model.set_params(**p)    # set current hyper parameter
+    #     kmeans_model.fit(X_scaled)          # fit model on wine dataset, this will find clusters based on parameter p
+    #     ss = sk.metrics.silhouette_score(X_scaled, kmeans_model.labels_)   # calculate silhouette_score
+    #     silhouette_scores += [ss]       # store all the scores
+    #     print('Parameter:', p, 'Score', ss)
+    #     # check p which has the best score
+    #     if ss > best_score:
+    #         best_score = ss
+    #         best_grid = p
+    # # plotting silhouette score
+    # plt.figure()
+    # plt.bar(range(len(silhouette_scores)), list(silhouette_scores), align='center', color='#722f59', width=0.5)
+    # plt.xticks(range(len(silhouette_scores)), list(parameters))
+    # plt.title('Silhouette Score', fontweight='bold')
+    # plt.xlabel('Number of Clusters')
+    # plt.show()
 
     return X_scaled, pca_2_result, dfkmeans
 
-def run_kmeans(X_scaled, pca_2_result, dfkmeans):
+def run_kmeans(X_scaled, pca_2_result, dfkmeans, n_clusters=4):
     # fitting KMeans    
-    kmeans = KMeans(n_clusters=3)    
+    kmeans = KMeans(n_clusters=n_clusters)    
     kmeans.fit(X_scaled)
     label = kmeans.fit_predict(X_scaled)
-
-    plt.figure()
-    # plot pc components
-    uniq = np.unique(label)
-    for i in uniq:
-        plt.scatter(pca_2_result[label == i, 0] , pca_2_result[label == i , 1] , label = i)
-
-    #plot behaviors
-    # pca_2_result_bl=pca_2_result[dfkmeans['blinks_lbl']]
-    # plt.scatter(pca_2_result_bl[:, 0] , pca_2_result_bl[: , 1] , color='k', marker='+')
-    # pca_2_result_sn=pca_2_result[dfkmeans['eye_centroid_xlbl']]
-    # plt.scatter(pca_2_result_sn[:, 0] , pca_2_result_sn[: , 1] , 
-    #             color='k', marker='x')
-    # pca_2_result_lk=pca_2_result[dfkmeans['tongue_lbl']]
-    # plt.scatter(pca_2_result_lk[:, 0] , pca_2_result_lk[: , 1] , 
-    #             color='k', marker='o', facecolors='none')
-    # pca_2_result_mo=pca_2_result[dfkmeans['mouth_mov']]
-    # plt.scatter(pca_2_result_mo[:, 0] , pca_2_result_mo[: , 1] , 
-    #             color='k', marker='d', facecolors='none')
-    # pca_2_result_fast=pca_2_result[dfkmeans['fastruns']]
-    # plt.scatter(pca_2_result_fast[:, 0] , pca_2_result_fast[: , 1] , 
-    #             color='k', marker='s', facecolors='none')
-    # pca_2_result_stop=pca_2_result[dfkmeans['stops']]
-    # plt.scatter(pca_2_result_stop[:, 0] , pca_2_result_stop[: , 1] , 
-    #             color='k', marker='|')
-
-    plt.legend(['Cluster 1', 'Cluster 2', 'Cluster 3', 'blink', 
-                'centroid', 'tongue'])
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.title(f"K-means, n = {len(dfkmeans.animal.unique())}, experiment: \n{dfkmeans.experiment.unique()[0]}")
-
+   
     return pca_2_result, label, dfkmeans
     # #only get cluster 2 frames
     # cluster2=df[label==3]
