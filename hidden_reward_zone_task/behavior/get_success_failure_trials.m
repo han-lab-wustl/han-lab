@@ -1,15 +1,23 @@
-function [success,fail,total_trials] = get_success_failure_trials(vrfl)
+function [success,fail,total_trials] = get_success_failure_trials(vrfl,typefl)
 % Zahra
 % basic behavior quantification for HRZ
 % integrate with MasterHRZ?
 
 % vrfl = 'Z:\sstcre_imaging\e201\28\behavior\vr\E201_28_Mar_2023_time(08_56_06).mat';
-load(vrfl,'VR');
+if typefl == 'vrfile'
+    load(vrfl,'VR');
+    trialnum = VR.trialNum;
+    reward = VR.reward;
+else
+    fmat = load(vrfl);
+    trialnum = fmat.trialnum;
+    reward = fmat.rewards;
+end
 
 success=0;fail=0;
-for trial=unique(VR.trialNum)
+for trial=unique(trialnum)
     if trial>3 % trial < 3, probe trial
-        if sum(VR.reward(VR.trialNum==trial)==1)>0 % if reward was found in the trial
+        if sum(reward(trialnum==trial)==1)>0 % if reward was found in the trial
             success=success+1;
         else
             fail=fail+1;
@@ -17,6 +25,6 @@ for trial=unique(VR.trialNum)
     end
 end
 
-total_trials = sum(unique(VR.trialNum)>3);
+total_trials = sum(unique(trialnum)>3);
 
 end

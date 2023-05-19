@@ -53,7 +53,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
                                     columns)
         pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
         cluster_output['pavlovian'] = [pca,lbl,df_kmeans]
-        #hrz
+        #hrz; clusters = 3
         tasks = ['M3_M4_altered_dim_HRZ_norewards__MM_sol2', 
                  'M3_M4_altered_dim_HRZ_double_probe_middle_5cmRL_GM_sol2']
         X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment.isin(tasks)],
@@ -65,17 +65,19 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 
 
 if __name__ == "__main__":
-    vrdir =  r'I:\VR_data' # copy of vr data, curated to remove badly labeled files
+    vrdir =  r'Y:\DLC\VR_data' # copy of vr data, curated to remove badly labeled files
     dlcfls = r'Y:\DLC\dlc_mixedmodel2' # h5 and csv files from dlc
-    # df = preprocess(0,vrdir,dlcfls)
+    df = preprocess(0,vrdir,dlcfls)
     # now need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
     # uncomment below if you don't want to re-run step 0 but want the mouse df 
-
+    # if you just want to remake the mouse df after deleting mice
+    # you can run step 0 and go directly to step 2
+    # (do not need to remake vr_align.p as you have just deleted some mice)
     with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
         df = pickle.load(fp)
     # preprocess(1,vrdir,dlcfls)
-    # dfs = preprocess(2,vrdir,dlcfls)
+    dfs = preprocess(2,vrdir,dlcfls)
     columns = ['blinks', 'eye_centroid_x', 'eye_centroid_y', 
         'tongue', 'nose', 'paw', 'forwardvelocity']#, 'whiskerUpper',
     #    'whiskerLower', 'ybinned', 'licks',
@@ -99,7 +101,7 @@ for experiment in experiments:
         plt.scatter(pca_2_result[label == i, 0] , pca_2_result[label == i , 1] , label = i)
 
     #plot behaviors
-    pca_2_result_bl=pca_2_result[dfkmeans['tongue_lbl']]
+    pca_2_result_bl=pca_2_result[dfkmeans['grooms']]
     plt.scatter(pca_2_result_bl[:, 0] , pca_2_result_bl[: , 1] , color='k', 
                 marker='o', facecolors='none')
     # pca_2_result_sn=pca_2_result[dfkmeans['eye_centroid_ylbl']]
@@ -121,9 +123,34 @@ for experiment in experiments:
     # plt.legend(['Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4'
     #             ])
     plt.legend(['Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4',
-                'tongue'])
+                'paw'])
     plt.xlabel("PC1")
     plt.ylabel("PC2")
     plt.title(f"K-means, n = {len(dfkmeans.animal.unique())}, experiment: \n{dfkmeans.experiment.unique()[0]}")
 
 # %%
+test = dfkmeans[(dfkmeans.animal=='E189') & (dfkmeans.data=='18_Apr_2023')]
+
+fig, ax1 = plt.subplots(figsize=(10,6))
+ax2 = ax1.twinx()
+ax3 = ax1.twinx()
+
+ax1.plot(test.lickVoltage.astype(float).values,  
+             color='r')
+ax2.scatter(np.arange(len(test))[test.licks.astype(float).values>0],
+        test.licks.astype(float).values[test.licks.astype(float).values>0]*.995,
+        marker = 'o', s=40, facecolors='none', color = 'k')
+ax3.scatter(np.arange(len(test))[test.tongue_lbl.astype(float).values>0],
+        test.tongue_lbl.astype(float).values[test.tongue_lbl.astype(float).values>0]*1.01,
+        marker = 'o', s=40, facecolors='none', color = 'b')
+
+ax2.set_ylim(0.98, 1.02) #Define limit/scale for primary Y-axis
+ax1.set_ylim(-.1, -.02) #Define limit/scale for secondary Y-axis
+ax3.set_ylim(0.98, 1.02) #Define limit/scale for primary Y-axis
+
+plt.show()
+
+plt.plot()
+plt.scatter(np.arange(len(test))[test.licks.astype(float).values>0],
+        test.licks.astype(float).values[test.licks.astype(float).values>0],
+        marker = 'o', s=2)

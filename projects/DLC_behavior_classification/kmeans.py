@@ -164,31 +164,31 @@ def run_pca(dfkmeans,columns):
 
     # Silhouette score value ranges from 0 to 1, 0 being the worst and 1 being the best.
 
-    # # candidate values for our number of cluster
-    # parameters = np.linspace(2,10,9).astype(int)
-    # # instantiating ParameterGrid, pass number of clusters as input
-    # parameter_grid = sk.model_selection.ParameterGrid({'n_clusters': parameters})
-    # best_score = -1
-    # kmeans_model = KMeans()     # instantiating KMeans model
-    # silhouette_scores = []
-    # # evaluation based on silhouette_score
-    # for p in parameter_grid:
-    #     kmeans_model.set_params(**p)    # set current hyper parameter
-    #     kmeans_model.fit(X_scaled)          # fit model on wine dataset, this will find clusters based on parameter p
-    #     ss = sk.metrics.silhouette_score(X_scaled, kmeans_model.labels_)   # calculate silhouette_score
-    #     silhouette_scores += [ss]       # store all the scores
-    #     print('Parameter:', p, 'Score', ss)
-    #     # check p which has the best score
-    #     if ss > best_score:
-    #         best_score = ss
-    #         best_grid = p
-    # # plotting silhouette score
-    # plt.figure()
-    # plt.bar(range(len(silhouette_scores)), list(silhouette_scores), align='center', color='#722f59', width=0.5)
-    # plt.xticks(range(len(silhouette_scores)), list(parameters))
-    # plt.title('Silhouette Score', fontweight='bold')
-    # plt.xlabel('Number of Clusters')
-    # plt.show()
+    # candidate values for our number of cluster
+    parameters = np.linspace(2,10,9).astype(int)
+    # instantiating ParameterGrid, pass number of clusters as input
+    parameter_grid = sk.model_selection.ParameterGrid({'n_clusters': parameters})
+    best_score = -1
+    kmeans_model = KMeans()     # instantiating KMeans model
+    silhouette_scores = []
+    # evaluation based on silhouette_score
+    for p in parameter_grid:
+        kmeans_model.set_params(**p)    # set current hyper parameter
+        kmeans_model.fit(X_scaled)          # fit model on wine dataset, this will find clusters based on parameter p
+        ss = sk.metrics.silhouette_score(X_scaled, kmeans_model.labels_)   # calculate silhouette_score
+        silhouette_scores += [ss]       # store all the scores
+        print('Parameter:', p, 'Score', ss)
+        # check p which has the best score
+        if ss > best_score:
+            best_score = ss
+            best_grid = p
+    # plotting silhouette score
+    plt.figure()
+    plt.bar(range(len(silhouette_scores)), list(silhouette_scores), align='center', color='#722f59', width=0.5)
+    plt.xticks(range(len(silhouette_scores)), list(parameters))
+    plt.title('Silhouette Score', fontweight='bold')
+    plt.xlabel('Number of Clusters')
+    plt.show()
 
     return X_scaled, pca_2_result, dfkmeans
 

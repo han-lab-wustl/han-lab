@@ -36,7 +36,10 @@ def main(**args):
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)
+            if params["crop_opto"]:
+                imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+            else:
+                imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
             print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -78,8 +81,11 @@ def main(**args):
             #assumes that these tifs have already been made in step 1
             tifspth = [os.path.join(imgpth, xx) for xx in os.listdir(imgpth) if ".tif" in xx]
             if len(tifspth)==0:
-                print("\n writing tifs....")                
-                preprocessing.maketifs(imgpth,0,512,89,718)
+                print("\n writing tifs....")     
+                if params["crop_opto"]:
+                    preprocessing.maketifs(imgpth,89,512,89,718)
+                else:
+                    preprocessing.maketifs(imgpth,0,512,89,718)
                 print(imgpth)
         # otherwise concat all tifs
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
@@ -124,7 +130,8 @@ def main(**args):
         #save_params(params, )
 
 def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
-                move_bin, stepid, save_mat, days_of_week, week):
+                move_bin, stepid, save_mat, crop_opto,
+                days_of_week, week):
 
     params = {}
 
@@ -146,6 +153,7 @@ def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
     params["delete_bin"]    = delete_bin
     params["move_bin"]      = move_bin
     params["save_mat"]      = save_mat
+    params["crop_opto"]      = crop_opto
         
     return params
 
@@ -186,6 +194,9 @@ if __name__ == "__main__":
                         help="Move data.bin from fast disk")
     parser.add_argument("--save_mat", default=True,
                         help="Save Fall.mat (needed for cell tracking)")    
+    parser.add_argument("--crop_opto", default=False,
+                        help="Crop top band of opto to not mess up cell detection")    
+    
     
     args = parser.parse_args()
     

@@ -181,8 +181,8 @@ def movesbx(src, dst, fldkeyword='ZD'):
             print(f"\n*** no sbx in {fl}***")
 
 if __name__ == "__main__":
-    usb = r'I:\2023_ZD_VR\transferred'
-    drives = [r'Y:\sstcre_imaging', r'Z:\sstcre_imaging', 'X:\dopamine_imaging']
-    animals = ['e200', 'e201', 'e194']
+    usb = r'I:\2023_ZD_VR'
+    drives = [r'Y:\sstcre_imaging', r'Z:\sstcre_imaging']
+    animals = ['e200', 'e201']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

@@ -61,9 +61,9 @@ if fltype == 'select'
     days = filename;
 else
     % ZD added for loop for multiple days
-    mouse_name = "e200";
-    days = [57:62];
-    src = "Y:\sstcre_imaging";
+    mouse_name = "e201";
+    days = [55:68];
+    src = "Z:\sstcre_imaging";
 end
 for dy=1:length(days)        
     if fltype == 'select'
