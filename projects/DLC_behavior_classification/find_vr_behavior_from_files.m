@@ -22,4 +22,4 @@ rr_t = cell2table(an_rr');
 hrz_t = cell2table(an_hrz');
 
 writetable(rr_t, fullfile(src, 'random_reward.csv'))
-writetable(rr_t, fullfile(src, 'hrz.csv'))
+writetable(hrz_t, fullfile(src, 'hrz.csv'))

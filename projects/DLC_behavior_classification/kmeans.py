@@ -6,13 +6,29 @@ Created on Wed Feb 15 14:13:27 2023
 """
 
 import pandas as pd, matplotlib.pyplot as plt, numpy as np, seaborn as sns
-import os
+import os, cv2
 import scipy.ndimage
 import pickle
+from PIL import Image, ImageDraw
 import sklearn as sk
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
+
+def get_eye_features(eye_coords, eyelbl = False):
+    # eye coords format = list of (x,y) tuples
+    img = Image.new('L', (600, 422), 0) # L is imagetype, 600, 422 is image dim
+
+    ImageDraw.Draw(img).polygon(eye_coords, outline=1, fill=1)
+    mask = np.array(img)
+
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, 
+                        cv2.CHAIN_APPROX_SIMPLE)
+    cnt = contours[0]
+    area = cv2.contourArea(cnt)  # Area of first contour
+    perimeter = cv2.arcLength(cnt, True)  # Perimeter of first contour 
+
+    return area, perimeter
 
 def centeroidnp(arr):
     length = arr.shape[0]
@@ -87,16 +103,20 @@ def collect_clustering_vars(df,matfl):
     # plt.plot(df['PawMiddle_x'].astype('float32'))
     # plt.plot(df['PawBottom_x'].astype('float32'))
 
-    #eye centroids
-    centroids_x = []; centroids_y = []
+    #eye centroids, area, perimeter
+    centroids_x = []; centroids_y = [];
+    areas = []; circumferences = [];
     for i in range(len(df)):
         eye_x = np.array([df[xx+"_x"].iloc[i] for xx in eye])
         eye_y = np.array([df[xx+"_y"].iloc[i] for xx in eye])
-        eye_coords = np.array([eye_x, eye_y])
+        eye_coords = np.array([eye_x, eye_y]).astype(float)
         centroid_x, centroid_y = centeroidnp(eye_coords)
+        area, circumference = get_eye_features([(float(df[xx+"_x"].iloc[i]), 
+                                  float(df[xx+"_y"].iloc[i])) for xx in eye])
         centroids_x.append(centroid_x)
         centroids_y.append(centroid_y)
-
+        areas.append(area); circumferences.append(circumference)
+    
     # plt.plot(centroids[1000:])
     #blinks
     blinks=scipy.ndimage.gaussian_filter(df['EyeNorth_y'].astype('float32').values - df['EyeSouth_y'].astype('float32').values,sigma=3)
@@ -164,31 +184,31 @@ def run_pca(dfkmeans,columns):
 
     # Silhouette score value ranges from 0 to 1, 0 being the worst and 1 being the best.
 
-    # candidate values for our number of cluster
-    parameters = np.linspace(2,10,9).astype(int)
-    # instantiating ParameterGrid, pass number of clusters as input
-    parameter_grid = sk.model_selection.ParameterGrid({'n_clusters': parameters})
-    best_score = -1
-    kmeans_model = KMeans()     # instantiating KMeans model
-    silhouette_scores = []
-    # evaluation based on silhouette_score
-    for p in parameter_grid:
-        kmeans_model.set_params(**p)    # set current hyper parameter
-        kmeans_model.fit(X_scaled)          # fit model on wine dataset, this will find clusters based on parameter p
-        ss = sk.metrics.silhouette_score(X_scaled, kmeans_model.labels_)   # calculate silhouette_score
-        silhouette_scores += [ss]       # store all the scores
-        print('Parameter:', p, 'Score', ss)
-        # check p which has the best score
-        if ss > best_score:
-            best_score = ss
-            best_grid = p
-    # plotting silhouette score
-    plt.figure()
-    plt.bar(range(len(silhouette_scores)), list(silhouette_scores), align='center', color='#722f59', width=0.5)
-    plt.xticks(range(len(silhouette_scores)), list(parameters))
-    plt.title('Silhouette Score', fontweight='bold')
-    plt.xlabel('Number of Clusters')
-    plt.show()
+    # # candidate values for our number of cluster
+    # parameters = np.linspace(2,10,9).astype(int)
+    # # instantiating ParameterGrid, pass number of clusters as input
+    # parameter_grid = sk.model_selection.ParameterGrid({'n_clusters': parameters})
+    # best_score = -1
+    # kmeans_model = KMeans()     # instantiating KMeans model
+    # silhouette_scores = []
+    # # evaluation based on silhouette_score
+    # for p in parameter_grid:
+    #     kmeans_model.set_params(**p)    # set current hyper parameter
+    #     kmeans_model.fit(X_scaled)          # fit model on wine dataset, this will find clusters based on parameter p
+    #     ss = sk.metrics.silhouette_score(X_scaled, kmeans_model.labels_)   # calculate silhouette_score
+    #     silhouette_scores += [ss]       # store all the scores
+    #     print('Parameter:', p, 'Score', ss)
+    #     # check p which has the best score
+    #     if ss > best_score:
+    #         best_score = ss
+    #         best_grid = p
+    # # plotting silhouette score
+    # plt.figure()
+    # plt.bar(range(len(silhouette_scores)), list(silhouette_scores), align='center', color='#722f59', width=0.5)
+    # plt.xticks(range(len(silhouette_scores)), list(parameters))
+    # plt.title('Silhouette Score', fontweight='bold')
+    # plt.xlabel('Number of Clusters')
+    # plt.show()
 
     return X_scaled, pca_2_result, dfkmeans
 

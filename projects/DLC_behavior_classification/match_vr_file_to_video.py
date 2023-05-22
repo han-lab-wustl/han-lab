@@ -34,7 +34,7 @@ rrcsv.dropna().to_csv(os.path.join(src, 'random_reward_videos.csv'))
 
 hrzcsv = pd.read_csv(os.path.join(src,'hrz.csv'))
 # add animal and dates to column
-hrzcsv['animal'] = [xx[:4].upper() for xx in hrzcsv.Var1.values]
+hrzcsv['animal '] = [xx[:4].upper() for xx in hrzcsv.Var1.values]
 dates = []
 for xx in hrzcsv.Var1.values:
     try:

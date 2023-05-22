@@ -65,18 +65,20 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 
 
 if __name__ == "__main__":
-    vrdir =  r'Y:\DLC\VR_data' # copy of vr data, curated to remove badly labeled files
+    vrdir =  r'Y:\DLC\VR_data\dlc' # copy of vr data, curated to remove badly labeled files
     dlcfls = r'Y:\DLC\dlc_mixedmodel2' # h5 and csv files from dlc
     df = preprocess(0,vrdir,dlcfls)
-    # now need to fix vr mat files separately in matlab, lol
+    # need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
+    # you would want to run `fix_vr_data...` on the whole VR_data folder to avoid 
+    # errors
     # uncomment below if you don't want to re-run step 0 but want the mouse df 
     # if you just want to remake the mouse df after deleting mice
     # you can run step 0 and go directly to step 2
     # (do not need to remake vr_align.p as you have just deleted some mice)
-    with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
-        df = pickle.load(fp)
-    # preprocess(1,vrdir,dlcfls)
+    # with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
+    #     df = pickle.load(fp)
+    preprocess(1,vrdir,dlcfls)
     dfs = preprocess(2,vrdir,dlcfls)
     columns = ['blinks', 'eye_centroid_x', 'eye_centroid_y', 
         'tongue', 'nose', 'paw', 'forwardvelocity']#, 'whiskerUpper',

@@ -26,7 +26,7 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     for mouse in mice:
         print(mouse)
         mouse = mouse.upper()
-        vrfls = [xx for xx in listdir(vrdir, ifstring='.mat') if os.path.basename(xx)[:4].upper() in mouse]
+        vrfls = [xx for xx in listdir(vrdir, ifstring='.mat') if mouse in os.path.basename(xx)[:4].upper()]
         vrfls.sort()
         dates = mouse_data[mouse] # if a mouse has multiple dates
         for xx in vrfls:

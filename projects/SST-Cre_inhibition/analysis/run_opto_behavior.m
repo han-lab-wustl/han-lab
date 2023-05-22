@@ -11,68 +11,87 @@ opts = detectImportOptions('Y:\data_organization.csv');
 addpath(fullfile(pwd, "hidden_reward_zone_task\behavior"));
 
 for i=1:length(animals)
-    success_prop = {}; fail_prop = {};speeds = {};
+    successes = {}; fails = {};speeds = {}; totals = {};
     
     for d=1:length(days{i})
         fmatfl = dir(fullfile(drives{i}, animals{i}, string(days{i}(d)), "behavior", "vr\*.mat")); 
-%         fmat = load(fullfile(fmatfl.folder,fmatfl.name));
-        [s,f,t] = get_success_failure_trials(fullfile(fmatfl.folder,fmatfl.name),'vrfile');
         condind = rem(d,3); 
         if condind == 0
             condind = length(conditions);
         end
-        [speed_5trialsep, speed_ep, speed_ep1, speed_ep2, speed_ep3, speed_5trialsep2, speed_5trialsep3] = get_mean_speed(fullfile(fmatfl.folder,fmatfl.name),conditions{condind});
-        success_prop{d} = s/t;
-        fail_prop{d} = f/t;     
-        speeds{d} = [speed_5trialsep, speed_ep, speed_ep1, speed_ep2,speed_ep3, speed_5trialsep2, speed_5trialsep3];
+        [speed_5trialsep, speed_ep, speed_5trialsep1, speed_ep1, speed_5trialsep2, speed_ep2, ...
+            speed_5trialsep3, speed_ep3, s, f, t] = get_mean_speed_success_failure_trials(fullfile(fmatfl.folder,fmatfl.name),conditions{condind});
+        successes{d} = s;
+        fails{d} = f;     
+        totals{d} = t;
+        speeds{d} = [speed_5trialsep, speed_ep, speed_5trialsep1, speed_ep1, ...
+            speed_5trialsep2, speed_ep2, speed_5trialsep3, speed_ep3];
     end
 
     % plot trial performance as bar graph    
-    x = [success_prop{:}];    
-    y = [fail_prop{:}];
-    ep2x = x(1:3:end); ep2y = y(1:3:end); % TODO: fix to make conditions modular
-    ep3x = x(2:3:end); ep3y = y(2:3:end);
-    ctrlx = x(3:3:end); ctrly = y(3:3:end);
-    xs = {ep2x, ep3x, ctrlx};
-    ys = {ep2y, ep3y, ctrly};
-    for j=1:length(ys) % iterate through conditions
-        figure;
-        bar([mean(ys{j});mean(xs{j})]','grouped','FaceColor','flat');
-        hold on
-        plot(1,ys{j},'ok')
-        plot(2,xs{j},'ok')
-        xticklabels(["Fails" "Successes"])
-        ylabel("Proportion of trials")
-        title(sprintf("animal %s, %s", animals{i}, conditions{j}))
+    for j=1:length(conditions) % iterate through conditions
         % plot speeds across conditions
-        sp = speeds(j:3:end);
+        sp = speeds(j:3:end); sc = successes(j:3:end); fl = fails(j:3:end); tr = totals(j:3:end);
         % init
         optotrials = {}; restofep = {}; spep1 = {}; spep2 = {}; spep3 = {}; spep25trials = {};
-        spep35trails = {};
+        spep35trails = {}; spep15trails = {};
         for ii=1:length(sp) % iterature thorugh n
             optotrials{ii} = sp{ii}(1);
             restofep{ii} = sp{ii}(2);
-            spep1{ii} = sp{ii}(3);
-            spep2{ii} = sp{ii}(4);
-            spep3{ii} = sp{ii}(5);
-            spep25trials{ii} = sp{ii}(6);
+            spep15trials{ii} = sp{ii}(3);
+            spep1{ii} = sp{ii}(4);
+            spep25trials{ii} = sp{ii}(5);
+            spep2{ii} = sp{ii}(6);
             spep35trials{ii} = sp{ii}(7);
+            spep3{ii} = sp{ii}(8);
+            
         end
         figure;
-        bar([mean([optotrials{:}]);mean([restofep{:}]);mean([spep1{:}]);mean([spep2{:}]); ...
-            mean([spep3{:}]); nanmean([spep25trials{:}]); nanmean([spep35trials{:}])]','grouped','FaceColor','flat');
+        % automatically segments diff conditions
+        bar([mean(cell2mat(cellfun(@(x) x{1}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{1}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{2}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{2}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{3}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{3}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{4}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{4}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{5}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{5}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{6}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{6}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{7}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{7}(1), tr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{8}(1), sc, 'UniformOutput', false))/cell2mat(cellfun(@(x) x{8}(1), tr, 'UniformOutput', false)), 'omitnan')]','grouped','FaceColor','flat');
+        hold on
+        plot(1,cell2mat(cellfun(@(x) x{1}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{1}(1), tr, 'UniformOutput', false)),'ok')
+        plot(2,cell2mat(cellfun(@(x) x{2}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{2}(1), tr, 'UniformOutput', false)),'ok')
+        plot(3,cell2mat(cellfun(@(x) x{3}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{3}(1), tr, 'UniformOutput', false)),'ok')
+        plot(4,cell2mat(cellfun(@(x) x{4}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{4}(1), tr, 'UniformOutput', false)),'ok')
+        plot(5,cell2mat(cellfun(@(x) x{5}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{5}(1), tr, 'UniformOutput', false)),'ok')
+        plot(6, cell2mat(cellfun(@(x) x{6}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{6}(1), tr, 'UniformOutput', false)), 'ok')
+        plot(7, cell2mat(cellfun(@(x) x{7}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{7}(1), tr, 'UniformOutput', false)), 'ok')
+        plot(8, cell2mat(cellfun(@(x) x{8}(1), sc, 'UniformOutput', false))./cell2mat(cellfun(@(x) x{8}(1), tr, 'UniformOutput', false)), 'ok')
+        
+        xticklabels(["optotrials", "rest of opto epoch", "1st 5 trials epoch 1", ...
+            "rest of epoch 1", "1st 5 trials epoch 2", "rest of epoch 2", "1st 5 trials epoch 3", ...
+            "rest of epoch 3"])
+        ylabel("% successful trials")
+        title(sprintf("animal %s, %s", animals{i}, conditions{j}))
+
+        % plot mean speed
+        figure;
+        bar([mean([optotrials{:}], 'omitnan');mean([restofep{:}], 'omitnan'); ...
+            mean([spep15trials{:}], 'omitnan');mean([spep1{:}], 'omitnan'); ...
+            mean([spep25trials{:}], 'omitnan'); mean([spep2{:}], 'omitnan'); ...
+            mean([spep35trials{:}], 'omitnan'); mean([spep3{:}], 'omitnan')]','grouped','FaceColor','flat');
         hold on
         plot(1,[optotrials{:}],'ok')
         plot(2,[restofep{:}],'ok')
-        plot(3,[spep1{:}],'ok')
-        plot(4,[spep2{:}],'ok')
-        plot(5,[spep3{:}],'ok')
-        plot(6, [spep25trials{:}], 'ok')
+        plot(3,[spep15trials{:}],'ok')
+        plot(4,[spep1{:}],'ok')
+        plot(5,[spep25trials{:}],'ok')
+        plot(6, [spep2{:}], 'ok')
         plot(7, [spep35trials{:}], 'ok')
+        plot(8, [spep3{:}], 'ok')
         
-        xticklabels(["optotrials" "rest opto epoch", "epoch 1", ...
-            "epoch 2", "epoch 3", "1st 5 trials epoch 2", "1st 5 trials epoch 3"])
-        ylabel("mean ROE")
+        xticklabels(["optotrials", "rest of opto epoch", "1st 5 trials epoch 1", ...
+            "rest of epoch 1", "1st 5 trials epoch 2", "rest of epoch 2", "1st 5 trials epoch 3", ...
+            "rest of epoch 3"])        
+        ylabel("mean speed")
         title(sprintf("animal %s, %s", animals{i}, conditions{j}))
 
     end
