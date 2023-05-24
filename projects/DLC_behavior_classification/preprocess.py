@@ -29,8 +29,9 @@ def preprocess(step,vrdir, dlcfls,columns=False,
                 mouse_df = pickle.load(fp)
         for i,row in mouse_df.iterrows():
             vrfl_p = os.path.join(dlcfls,row["VR"][:16]+"_vr_dlc_align.p")    
-            print(row["mouse"], row["VR"])
-            bigdf.append(collect_clustering_vars(os.path.join(dlcfls,row["DLC"]),vrfl_p))                    
+            if os.path.exists(vrfl_p):
+                print(row["mouse"], row["VR"])
+                bigdf.append(collect_clustering_vars(os.path.join(dlcfls,row["DLC"]),vrfl_p))                    
 
         big_df = pd.concat(bigdf)
         big_df.to_pickle(os.path.join(dlcfls,'all_mice_dlc_vr_df.p'))
@@ -41,7 +42,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
         with open(os.path.join(dlcfls,'all_mice_dlc_vr_df.p'),'rb') as fp: #unpickle
                 df = pickle.load(fp)
         cluster_output = {}
-        #novr; clusters = 4; default
+        #novr
         X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment=='no_Random_Rewards_no_VR_Sol2_CS'],
                                     columns)
         pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
@@ -53,7 +54,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
                                     columns)
         pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
         cluster_output['pavlovian'] = [pca,lbl,df_kmeans]
-        #hrz; clusters = 3
+        #hrz
         tasks = ['M3_M4_altered_dim_HRZ_norewards__MM_sol2', 
                  'M3_M4_altered_dim_HRZ_double_probe_middle_5cmRL_GM_sol2']
         X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment.isin(tasks)],
@@ -76,9 +77,11 @@ if __name__ == "__main__":
     # if you just want to remake the mouse df after deleting mice
     # you can run step 0 and go directly to step 2
     # (do not need to remake vr_align.p as you have just deleted some mice)
-    # with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
-    #     df = pickle.load(fp)
+    with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
+        df = pickle.load(fp)
+    # makes vr align pickle
     preprocess(1,vrdir,dlcfls)
+    # gets clustering vars
     dfs = preprocess(2,vrdir,dlcfls)
     columns = ['blinks', 'eye_centroid_x', 'eye_centroid_y', 
         'tongue', 'nose', 'paw', 'forwardvelocity']#, 'whiskerUpper',

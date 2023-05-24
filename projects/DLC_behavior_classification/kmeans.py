@@ -9,6 +9,7 @@ import pandas as pd, matplotlib.pyplot as plt, numpy as np, seaborn as sns
 import os, cv2
 import scipy.ndimage
 import pickle
+from preprocessing import fixcsvcols
 from PIL import Image, ImageDraw
 import sklearn as sk
 from sklearn.cluster import KMeans
@@ -36,9 +37,11 @@ def centeroidnp(arr):
     sum_y = np.sum(arr[:, 1])
     return sum_x/length, sum_y/length
 
-def collect_clustering_vars(df,matfl):
+def collect_clustering_vars(dfpth,matfl):
     #cleanup
-    df = pd.read_csv(df)
+    df = pd.read_csv(dfpth)
+    if 'bodyparts' not in df.columns:
+        df = fixcsvcols(dfpth)
     if "Unnamed: 0" in df.columns:
         df = df.drop(columns = ["Unnamed: 0"])
     with open(matfl,'rb') as fp: #unpickle
@@ -116,10 +119,10 @@ def collect_clustering_vars(df,matfl):
         centroids_x.append(centroid_x)
         centroids_y.append(centroid_y)
         areas.append(area); circumferences.append(circumference)
-    
-    # plt.plot(centroids[1000:])
+        
     #blinks
     blinks=scipy.ndimage.gaussian_filter(df['EyeNorth_y'].astype('float32').values - df['EyeSouth_y'].astype('float32').values,sigma=3)
+    areas=scipy.ndimage.gaussian_filter((areas),sigma=2)
     #tongue movement
     tongue=df[['TongueTip_x','TongueTop_x','TongueBottom_x']].astype('float32').mean(axis=1, skipna=False)
     #nose
@@ -130,13 +133,13 @@ def collect_clustering_vars(df,matfl):
 
     datadf = [[os.path.basename(matfl)[:4]]*len(blinks), 
               [os.path.basename(matfl)[5:-15]]*len(blinks),
-              blinks, centroids_x, centroids_y, tongue, nose, whiskerUpper,whiskerLower, paw, 
+              blinks, centroids_x, centroids_y, areas, tongue, nose, whiskerUpper,whiskerLower, paw, 
               forwardvelocity, mat['ybinned'], mat['licks'], mat['lickVoltage'],
               mat['changeRewLoc'],
               [mat['experiment']]*len(blinks)]
     datadf = np.array([np.ravel(np.array(xx)) for xx in datadf])
     return pd.DataFrame(datadf.T, columns = ["animal","data",
-                "blinks", "eye_centroid_x", "eye_centroid_y","tongue", "nose", "whiskerUpper",
+                "blinks", "eye_area", "eye_centroid_x", "eye_centroid_y","tongue", "nose", "whiskerUpper",
                 "whiskerLower", "paw", 
               "forwardvelocity",'ybinned', 'licks', 'lickVoltage',
               'changeRewLoc','experiment'])
@@ -152,6 +155,7 @@ def run_pca(dfkmeans,columns):
     dfkmeans = dfkmeans.dropna()
     #classify blinks, sniffs, licks?
     dfkmeans['blinks_lbl'] = dfkmeans['blinks']>dfkmeans["blinks"].mean()+dfkmeans["blinks"].std()*3
+    dfkmeans['eye_area'] = dfkmeans['eye_area']>dfkmeans["eye_area"].mean()+dfkmeans["eye_area"].std()*3
     dfkmeans['eye_centroid_xlbl'] = dfkmeans['eye_centroid_x']>dfkmeans["eye_centroid_x"].mean()+dfkmeans["eye_centroid_x"].std()*3
     dfkmeans['eye_centroid_ylbl'] = dfkmeans['eye_centroid_y']>dfkmeans["eye_centroid_y"].mean()+dfkmeans["eye_centroid_y"].std()*3
     dfkmeans['sniff_lbl'] =  dfkmeans['nose']>dfkmeans["nose"].mean()+dfkmeans["nose"].std()*3

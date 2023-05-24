@@ -28,8 +28,72 @@ for i in range(len(df)):
     eye_coords.append([(float(df[xx+"_x"].iloc[i]), 
                                   float(df[xx+"_y"].iloc[i])) for xx in eye]),
 
-video = r'G:\eye\eye_videos\230505_E200.avi'
+import tifffile, os
+dst = r'Y:\DLC\eye_videos\test\eye_mask_13000-15000_e201_230402'
+def get_eye_mask(eye_coords, i, dst, eyelbl = False):
+    # eye coords format = list of (x,y) tuples
+    img = Image.new('L', (600, 422), 0) # L is imagetype, 600, 422 is image dim
+
+    ImageDraw.Draw(img).polygon(eye_coords, outline=1, fill=1)
+    mask = np.array(img)
+
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, 
+                        cv2.CHAIN_APPROX_SIMPLE)
+    cnt = contours[0]
+    tifffile.imsave(os.path.join(dst, f"frame{i}.tif"),mask.astype('uint8'))
+
+def get_video_values_of_eye_mask(eye_coords, video):
+    # eye coords format = list of (x,y) tuples
+    img = Image.new('L', (600, 422), 0) # L is imagetype, 600, 422 is image dim
+
+    ImageDraw.Draw(img).polygon(eye_coords, outline=1, fill=1)
+    mask = np.array(img)
+    pixel_values_mask = np.mean(video[mask])
+
+    return pixel_values_mask
+
+
+# get contours
+dfpth = r'Y:\\DLC\\dlc_mixedmodel2\\230402_E201DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
+dst = r'Y:\DLC\eye_videos\test\eye_mask_13000-15000_e201_230402'
+
+for i in range(26000,30000): # define df from kmeans script
+    get_eye_mask([(float(df[xx+"_x"].iloc[i]), 
+                   float(df[xx+"_y"].iloc[i])) for xx in eye],i,dst)
+import time
+pixel_values_mask = []
+video = r'Y:\DLC\eye_videos\230402_E201.avi'
+output_loc = r'Y:\DLC\eye_videos\test'
 cap = cv2.VideoCapture(video)
+# Find the number of frames
+video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
+print ("Number of frames: ", video_length)
+count = 0
+print ("Converting video..\n")
+# Start converting the video
+while cap.isOpened():
+    # Extract the frame
+    ret, frame = cap.read()
+    if not ret:
+        continue
+    if count/2 >= 13000 and count/2 < 15000:
+        print(count)
+        pixel_values_mask.append(get_video_values_of_eye_mask([(float(df[xx+"_x"].iloc[i]), 
+                   float(df[xx+"_y"].iloc[i])) for xx in eye],frame,dst))
+        # cv2.imwrite(output_loc + "/%#05d.jpg" % (count+1), frame)
+    count = count + 1
+
+    # If there are no more frames left
+    if (count > (video_length-1)):
+        # Log the time again
+        time_end = time.time()
+        # Release the feed
+        cap.release()
+        # Print stats
+        print ("Done extracting frames.\n%d frames extracted" % count)
+        print ("It took %d seconds forconversion." % (time_end-time_start))
+        break
+
 ret, frame = cap.read()    
 fig = plt.figure()
 plt.imshow(frame)
@@ -43,21 +107,32 @@ plt.figure()
 
 plt.imshow(frame)
 plt.imshow(mask, 'Reds', alpha=0.1)
-contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, 
-                    cv2.CHAIN_APPROX_SIMPLE)
-cnt = contours[0]
-area = cv2.contourArea(cnt)  # Area of first contour
-perimeter = cv2.arcLength(cnt, True)  # Perimeter of first contour 
-
 #%%
 # plot test
+
+pth = r'Y:\\DLC\\dlc_mixedmodel2\\230402_E201DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
+# pth = r'Y:\\DLC\\dlc_mixedmodel2\\230418_E200DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
+try:
+    df = fixcsvcols(pth)
+except:
+    df = pd.read_csv(pth)
+matfl = r'Y:\\DLC\\dlc_mixedmodel2\\E201_02_Apr_2023_vr_dlc_align.p'
+# matfl = r'Y:\\DLC\\dlc_mixedmodel2\\E200_18_Apr_2023_vr_dlc_align.p'
+with open(matfl,'rb') as fp: #unpickle
+        mat = pickle.load(fp)
+idx = len(df) - 1 if len(df) % 2 else len(df)
+df = df[:idx].groupby(df.index[:idx] // 2).mean()
+
 fig, ax1 = plt.subplots(figsize=(10,6))
 ax2 = ax1.twinx()
 ax3 = ax1.twinx()
 ax4 = ax1.twinx()
-rng1 = 13000; rng2 = 15000
+ax5 = ax1.twinx()
+mat['licks'][mat['licks']<1]=np.nan
+rng1 = 10000; rng2 = 13000
 ax1.plot(mat['ybinned'][rng1:rng2])
-ax2.plot(areafil[rng1:rng2],'r')
+ax2.plot(areas[rng1:rng2],'r')
 ax3.plot(mat['forwardvel'][rng1:rng2],'k')
-ax4.plot((mat['rewards']==1)[rng1:rng2],'g')
-#ax2.set_ylim(1000,1500) #Define limit/scale for primary Y-axis
+ax4.plot(mat['rewards'][rng1:rng2],'g')
+ax5.plot(mat['licks'][rng1:rng2],'ob')
+#ax2.set_ylim(1000,1500) #Define limit/scale for primary Y-axis#ax2.set_ylim(1000,1500) #Define limit/scale for primary Y-axis
