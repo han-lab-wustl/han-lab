@@ -161,7 +161,7 @@ def run_pca(dfkmeans,columns):
     dfkmeans['sniff_lbl'] =  dfkmeans['nose']>dfkmeans["nose"].mean()+dfkmeans["nose"].std()*3
     dfkmeans['tongue_lbl'] =  dfkmeans['tongue']>0
     dfkmeans['grooms'] = dfkmeans['paw']>0
-    # dfkmeans['whisking'] = dfkmeans['whiskerUpper']<dfkmeans["whiskerUpper"].mean()+dfkmeans["whiskerUpper"].std()*3
+    dfkmeans['whisking'] = dfkmeans['whiskerUpper']<dfkmeans["whiskerUpper"].mean()-dfkmeans["whiskerUpper"].std()*3
     dfkmeans['fastruns'] =  dfkmeans['forwardvelocity']>dfkmeans["forwardvelocity"].mean()+dfkmeans["forwardvelocity"].std()*3 #arbitrary thres
     #stopped for 5 seconds around the cell
     dfkmeans['stops'] =  [True if sum(dfkmeans["forwardvelocity"].iloc[xx-5:xx+5])==0 else False for xx in range(len(dfkmeans["forwardvelocity"]))]

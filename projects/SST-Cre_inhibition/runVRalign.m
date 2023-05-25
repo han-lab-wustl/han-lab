@@ -3,9 +3,9 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab behavior_analysis dir
 clear all;
-mouse_name = "e200";
-days = [66:67];
-src = "Y:\sstcre_imaging";
+mouse_name = "e201";
+days = [71:72];
+src = "Z:\sstcre_imaging";
 for day=days
     daypth = dir(fullfile(src, mouse_name, string(day), "behavior", "vr\*.mat"));
     fmatfl = dir(fullfile(src, mouse_name, string(day), '**\Fall.mat')); 

@@ -83,8 +83,9 @@ if __name__ == "__main__":
     preprocess(1,vrdir,dlcfls)
     # gets clustering vars
     dfs = preprocess(2,vrdir,dlcfls)
-    columns = ['blinks', 'eye_centroid_x', 'eye_centroid_y', 
-        'tongue', 'nose', 'paw', 'forwardvelocity']#, 'whiskerUpper',
+    columns = ['blinks', 'areas','eye_centroid_x', 'eye_centroid_y', 
+        'tongue', 'nose', 'paw', 'whiskerUpper']
+        # , 'forwardvelocity']#, 'whiskerUpper',
     #    'whiskerLower', 'ybinned', 'licks',
        #'lickVoltage']
     

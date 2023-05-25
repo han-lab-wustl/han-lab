@@ -43,13 +43,11 @@ for this_day = 1:size(Settings.paths,1)
         disp('..recreating all structure.. ')
         
        cells = l.iscell(:,1)== 1 ;
-
-       cd(Settings.paths(this_day).folder)
-       
-       
+       cd(Settings.paths(this_day).folder)              
        all = create_all_structure(l.F,l.Fneu,l.spks,Settings.Fs,cells);
        
        % ZD removed, filters out a LOT of cells in e200
+       % luca added skewness filter after dff calculation
 %        skews=[];
 %        skews = skewness(all.dff,1,2);
 %        removed.Fc3 = all.Fc3(skews<2,:);

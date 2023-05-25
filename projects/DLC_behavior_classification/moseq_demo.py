@@ -28,7 +28,7 @@ coordinates, confidences, bodyparts = kpms.load_deeplabcut_results(dlc_results)
 data, labels = kpms.format_data(coordinates, confidences=confidences, 
                                 **config())
 #wtf is this
-kpms.noise_calibration(project_dir, coordinates, confidences, **config())
+# kpms.noise_calibration(project_dir, coordinates, confidences, **config())
 
 pca = kpms.fit_pca(**data, **config())
 kpms.save_pca(pca, project_dir)

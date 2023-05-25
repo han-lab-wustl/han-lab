@@ -9,7 +9,7 @@ conditions = {'ep2', 'ep3', 'control'};
 opts = detectImportOptions('Y:\data_organization.csv');
 % assumes VR align has been run
 addpath(fullfile(pwd, "hidden_reward_zone_task\behavior"));
-lrs = {}; scs = {};
+lrs = {};
 for i=1:length(animals)
     successes = {}; fails = {};speeds = {}; totals = {}; lick_rates = {};
     
@@ -23,7 +23,6 @@ for i=1:length(animals)
             speed_5trialsep3, speed_ep3, s, f, t, lick_rate] = get_mean_speed_success_failure_trials(fullfile(fmatfl.folder,fmatfl.name), ...
             conditions{condind});
         successes{d} = s;
-        srs{d} = cell2mat(s)./cell2mat(t);
         fails{d} = f;     
         totals{d} = t;
         lick_rates{d} = lick_rate;
@@ -31,7 +30,7 @@ for i=1:length(animals)
             speed_5trialsep2, speed_ep2, speed_5trialsep3, speed_ep3];
     end
     lrs{i} = lick_rates;
-    scs{i} = srs;
+
     % plot trial performance as bar graph    
     for j=1:length(conditions) % iterate through conditions
         % plot speeds across conditions
@@ -132,18 +131,18 @@ end
 %%
 % significance for lick rate;
 % ep2
-lick_rates = lrs{2}; j=1; % condition 1
+lick_rates = lrs{2}; j=1;
 lr = lick_rates(j:3:end);
 ep2restofopto = cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false));
 j=3;
 lr = lick_rates(j:3:end);
 ep2restofcontrol = cell2mat(cellfun(@(x) x{6}(1), lr, 'UniformOutput', false));
-[h,p,~,stats]=ttest2(ep2restofopto,ep2restofcontrol)
+[h,p,~,stats]=ttest(ep2restofopto,mean(ep2restofcontrol))
 % ep3
-lick_rates = lrs{2}; j=2; % condition 2
+lick_rates = lrs{1}; j=1;
 lr = lick_rates(j:3:end);
 ep3restofopto = cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false));
 j=3;
 lr = lick_rates(j:3:end);
 ep3restofcontrol = cell2mat(cellfun(@(x) x{8}(1), lr, 'UniformOutput', false));
-[h,p,~,stats]=ttest2(ep3restofopto,ep3restofcontrol)
+[h,p,~,stats]=ttest(ep3restofopto,mean(ep3restofcontrol))

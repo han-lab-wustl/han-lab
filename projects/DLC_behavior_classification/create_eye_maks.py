@@ -77,9 +77,9 @@ while cap.isOpened():
     if not ret:
         continue
     if count/2 >= 13000 and count/2 < 15000:
-        print(count)
+        if count%1000==0: print(count)
         pixel_values_mask.append(get_video_values_of_eye_mask([(float(df[xx+"_x"].iloc[i]), 
-                   float(df[xx+"_y"].iloc[i])) for xx in eye],frame,dst))
+                   float(df[xx+"_y"].iloc[i])) for xx in eye],frame))
         # cv2.imwrite(output_loc + "/%#05d.jpg" % (count+1), frame)
     count = count + 1
 
