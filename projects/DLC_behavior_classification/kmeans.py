@@ -40,8 +40,11 @@ def centeroidnp(arr):
 def collect_clustering_vars(dfpth,matfl):
     #cleanup
     df = pd.read_csv(dfpth)
-    if 'bodyparts' not in df.columns:
+    # if 'bodyparts' not in df.columns: ## this was missing some dfs
+    try:  
         df = fixcsvcols(dfpth)
+    except Exception as e:
+        print(e)
     if "Unnamed: 0" in df.columns:
         df = df.drop(columns = ["Unnamed: 0"])
     with open(matfl,'rb') as fp: #unpickle

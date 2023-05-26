@@ -134,7 +134,7 @@ for kk = 1:length(changeRewLoc)-1 % for each reward location...
                 
                 %GM
                 start = find(diff(VR.ypos(trials(jj)+1:trials(jj+1))),1,'first')+trials(jj); %defines start and stop indices for binning
-                stop = (trials(jj+1)); % before cs
+                stop = (trials(jj+1));
                 binstart = floor(VR.ypos(start)); %defines the ypos of the bins
                 binstop = ceil(VR.ypos(stop));
                 

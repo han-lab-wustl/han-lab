@@ -55,6 +55,7 @@
 clc
 clear %clean up the environment
 close all;
+mouse_name = "e201";
 fltype = 'daypth'; %vs. day path
 if fltype == 'select'
     [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
@@ -62,7 +63,7 @@ if fltype == 'select'
 else
     % ZD added for loop for multiple days
     mouse_name = "e201";
-    days = [55:73];
+    days = [55:73,75];
     src = "Z:\sstcre_imaging";
 end
 for dy=1:length(days)        
@@ -236,6 +237,12 @@ for dy=1:length(days)
     %         end
     %     end    
          %% lick dist plot
+        % save COM - ZD
+        dst = 'Y:\sstcre_analysis\hrz\lick_analysis';
+        save(fullfile(dst, sprintf('%s_days%i-%i_lickCOM.mat', mouse_name, ...
+            min(days), max(days))), "allCOM")
+
+        
         
         figure;
         %raw data plot
@@ -330,11 +337,7 @@ for dy=1:length(days)
                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
                 end
             end
-            earlyLickDists{tt} = earlyLickDist;
-            lateLickDists{tt} = lateLickDist;
         end
-        earlyLickDists_day{i} = earlyLickDists;
-        lateLickDists_day{i} = lateLickDists;
     %     %% Speed Mean Plots
     %      
     %     figure;
@@ -592,42 +595,42 @@ for dy=1:length(days)
     %     end   
     end
     
-    % %% InterLick Interval and Total Lick Count
-    figure; 
-    x = 1:2;
-    numtrialcompair = 5;
-    for i = 1:size(InterLickInterval,1)
-        successful = find(failure{i} == 0);
-    subplot(2,size(InterLickInterval,1),i)
-    imagesc(flipud(squeeze(InterLickInterval(i,:,:))'))
-    xlabel('trial number')
-    y1 = yticklabels;
-    yticklabels(flipud(y1))
-    ylabel('Interlick Interval Number')
-    if length(successful) >= numtrialcompair*2
-    earlyInterval = reshape(InterLickInterval(i,successful(1:numtrialcompair),:),1,numtrialcompair*size(InterLickInterval,3));
-    lateInterval = reshape(InterLickInterval(i,successful(end-numtrialcompair+1:end),:),1,numtrialcompair*size(InterLickInterval,3));
-    earlyInterval(isnan(earlyInterval)) = [];
-    lateInterval(isnan(lateInterval)) = [];
-    earlymean = nanmean(earlyInterval);
-    latemean = nanmean(lateInterval);
-    earlystd =nanstd(earlyInterval)/sqrt(length(earlyInterval));
-    latestd = nanstd(lateInterval)/sqrt(length(lateInterval));
-    subplot(2,size(InterLickInterval,1),i+size(InterLickInterval,1))
-    bar(x,[earlymean latemean])
-    hold on
-    er = errorbar(x,[earlymean...
-        latemean]...
-        ,[earlystd latestd],[earlystd latestd]);
-    er.Color = [0 0 0];
-    [h,p] = ttest2(earlyInterval,lateInterval);
-    text(1.5,max([earlymean latemean] +0.001),['t-test2 p = ' num2str(p)])
-           Labels = {['first ' num2str(numtrialcompair) ' trials'], ['last ' num2str(numtrialcompair) ' trials']};
-                    set(gca,'XTick', 1:2, 'XTickLabel', Labels);
-    hold off
-    end
+%     % %% InterLick Interval and Total Lick Count
+%     figure; 
+%     x = 1:2;
+%     numtrialcompair = 5;
+%     for i = 1:size(InterLickInterval,1)
+%         successful = find(failure{i} == 0);
+%     subplot(2,size(InterLickInterval,1),i)
+%     imagesc(flipud(squeeze(InterLickInterval(i,:,:))'))
+%     xlabel('trial number')
+%     y1 = yticklabels;
+%     yticklabels(flipud(y1))
+%     ylabel('Interlick Interval Number')
+%     if length(successful) >= numtrialcompair*2
+%     earlyInterval = reshape(InterLickInterval(i,successful(1:numtrialcompair),:),1,numtrialcompair*size(InterLickInterval,3));
+%     lateInterval = reshape(InterLickInterval(i,successful(end-numtrialcompair+1:end),:),1,numtrialcompair*size(InterLickInterval,3));
+%     earlyInterval(isnan(earlyInterval)) = [];
+%     lateInterval(isnan(lateInterval)) = [];
+%     earlymean = nanmean(earlyInterval);
+%     latemean = nanmean(lateInterval);
+%     earlystd =nanstd(earlyInterval)/sqrt(length(earlyInterval));
+%     latestd = nanstd(lateInterval)/sqrt(length(lateInterval));
+%     subplot(2,size(InterLickInterval,1),i+size(InterLickInterval,1))
+%     bar(x,[earlymean latemean])
+%     hold on
+%     er = errorbar(x,[earlymean...
+%         latemean]...
+%         ,[earlystd latestd],[earlystd latestd]);
+%     er.Color = [0 0 0];
+%     [h,p] = ttest2(earlyInterval,lateInterval);
+%     text(1.5,max([earlymean latemean] +0.001),['t-test2 p = ' num2str(p)])
+%            Labels = {['first ' num2str(numtrialcompair) ' trials'], ['last ' num2str(numtrialcompair) ' trials']};
+%                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
+%     hold off
+%     end
     
-    end
+%     end
 end
 
 %%

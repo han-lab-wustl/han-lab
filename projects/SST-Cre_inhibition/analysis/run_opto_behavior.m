@@ -4,7 +4,7 @@
 clear all; close all;
 animals = {'e200', 'e201'};
 drives = {'Y:\sstcre_imaging', 'Z:\sstcre_imaging'};
-days = {[65:74], [55:73]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
+days = {[65:75], [55:73,75]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
 conditions = {'ep2', 'ep3', 'control'};
 opts = detectImportOptions('Y:\data_organization.csv');
 % assumes VR align has been run
