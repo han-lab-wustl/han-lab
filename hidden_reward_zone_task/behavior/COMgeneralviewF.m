@@ -1,4 +1,4 @@
-function COM = COMgeneralviewF(VR)
+function [allCOM, allstdCOM, COM] = COMgeneralviewF(VR, allLicks, scalefactor)
 %%
 %[filename,filepath] = uigetfile('*.mat');
 % file = [filepath filename];
@@ -6,7 +6,7 @@ function COM = COMgeneralviewF(VR)
 % mice_names=[{'E142'}];
 % trialWindow = 3 ; % what is the number of trial size of your sliding window
 % cmBeforeRewZone = 15;
-allLicks = 2 ; % 1, if you want to use all the licks, 2 if you want to use only licks before reward (reward lick included)
+% 1, if you want to use all the licks, 2 if you want to use only licks before reward (reward lick included)
 
 % m=1; % you can create a for loop
 % mouseName=mice_names{m};
@@ -38,12 +38,15 @@ mouseName_Date=VR.name_date_vr;
     allCOM = cell(length(changeRewLoc)-1,1); % all the trials
     allstdCOM = cell(length(changeRewLoc)-1,1);
 for kk = 1:length(changeRewLoc)-1
-    if (VR.changeRewLoc(changeRewLoc(kk)))<=93
-    COM{kk,2} = 1;
-    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=127 && (VR.changeRewLoc(changeRewLoc(kk)))>93
-    COM{kk,2} = 2;
-    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=161 && (VR.changeRewLoc(changeRewLoc(kk)))>127
-    COM{kk,2} = 3;
+    if (VR.changeRewLoc(changeRewLoc(kk)))<=93*scalefactor
+    COM{kk,2} = 1; % rew loc 1
+    allCOM{kk,2} = 1;
+    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=127*scalefactor && (VR.changeRewLoc(changeRewLoc(kk)))>93*scalefactor
+    COM{kk,2} = 2;% rew loc 2
+    allCOM{kk,2} = 2;
+    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=161*scalefactor && (VR.changeRewLoc(changeRewLoc(kk)))>127*scalefactor
+    COM{kk,2} = 3; % rew loc 3
+    allCOM{kk,2} = 3;
     end
 
     
