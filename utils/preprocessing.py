@@ -22,16 +22,6 @@ def makeflds(datadir, mouse_name, day):
         makedir(os.path.join(datadir,mouse_name, day, "tail")) 
         print("\n****Made folders!****\n")
 
-
-def readzstack(sbxfl):
-
-    from sbxreader import sbx_memmap
-    dat = sbx_memmap(sbxfl)
-    zstack = np.squeeze(np.array(dat))
-    tifffile.imwrite(sbxfl[:-4]+".tif", zstack.astype("uint16"))
-
-    return sbxfl[:-4]+".tif"
-
 def getmeanimg(pth):
     """coverts tif to mean img
 

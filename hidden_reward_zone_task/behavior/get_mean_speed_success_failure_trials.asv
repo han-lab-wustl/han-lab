@@ -1,5 +1,5 @@
 function [speed_5trialsep, speed_ep, speed_5trialsep1, speed_ep1, speed_5trialsep2, ...s
-    speed_ep2, speed_5trialsep3, speed_ep3, s,f,t, lick_rate, rewzone] = get_mean_speed_success_failure_trials(vrfl, condition)
+    speed_ep2, speed_5trialsep3, speed_ep3, s,f,t, lick_rate] = get_mean_speed_success_failure_trials(vrfl, condition)
 %only relies on vr file
 %   custom conditions
 % s f t ordered by conditions
@@ -15,20 +15,6 @@ else
 end
 
 speed = -0.013*VR.ROE(2:end)./diff(VR.time);
-% get reward zone info
-% same as what is coded in original COMgeneralviewF script
-changeRewLoc=find(VR.changeRewLoc);
-changeRewLoc = [changeRewLoc length(VR.changeRewLoc)];
-for kk = 1:length(changeRewLoc)-1
-    if (VR.changeRewLoc(changeRewLoc(kk)))<=93
-        rewzone{kk} = 1; % rew zone 1
-    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=127 && (VR.changeRewLoc(changeRewLoc(kk)))>93
-        rewzone{kk} = 2;
-    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=161 && (VR.changeRewLoc(changeRewLoc(kk)))>127
-        rewzone{kk} = 3;
-    end
-end
-
 
 if strcmp(condition,'ep2')
     % opto epoch
@@ -59,7 +45,21 @@ if strcmp(condition,'ep2')
     speed_5trialsep3 = mean(speed(mask));
     eplicks = VR.lick(eps(3):endep);
     lick_rate{8} = sum(eplicks(~mask))/size(unique(trialnum(~mask)),2);
-            
+    
+    % get reward zone info
+    changeRewLoc=find(VR.changeRewLoc);
+    changeRewLoc = [changeRewLoc length(VR.changeRewLoc)];
+
+    if (VR.changeRewLoc(changeRewLoc(2)))<=93
+    COM{kk,2} = 1; % rew loc 1
+    allCOM{kk,2} = 1;
+    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=127 && (VR.changeRewLoc(changeRewLoc(kk)))>93
+    COM{kk,2} = 2;% rew loc 2
+    allCOM{kk,2} = 2;
+    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=161 && (VR.changeRewLoc(changeRewLoc(kk)))>127
+    COM{kk,2} = 3; % rew loc 3
+    allCOM{kk,2} = 3;
+    end
 
 elseif strcmp(condition,'ep3')
     % opto epoch
@@ -89,8 +89,7 @@ elseif strcmp(condition,'ep3')
     speed_ep3 = NaN;
     s{7} = NaN; f{7} = NaN; t{7} = NaN;
     s{8} = NaN; f{8} = NaN; t{8} = NaN;
-    lick_rate{7} = NaN; lick_rate{8} = NaN;   
-
+    lick_rate{7} = NaN; lick_rate{8} = NaN;
 elseif strcmp(condition,'control')
     % NaNs for opto epochs
     speed_5trialsep = NaN;

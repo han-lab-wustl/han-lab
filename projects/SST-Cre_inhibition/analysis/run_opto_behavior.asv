@@ -4,7 +4,7 @@
 clear all; close all;
 animals = {'e200', 'e201'};
 drives = {'Y:\sstcre_imaging', 'Z:\sstcre_imaging'};
-days = {[65:76,78:79], [55:73,75:79]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
+days = {[65:79], [55:73,75:79]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
 conditions = {'ep2', 'ep3', 'control'};
 colors = {'b' 'r' 'k' 'g' 'm' 'c' };
 
@@ -55,54 +55,58 @@ for i=1:length(animals)
             
         end
         % plot COM split by reward zones
-        % get COM
-        comfl = sprintf('Y:\\sstcre_analysis\\hrz\\lick_analysis\\%s_COMsplit_condition_%s.mat', ...
-                animals{i}, conditions{j}); % saved from Gerardo's com code
-        com = getCOMopto(comfl, j); % just for ep2
-        if i==1 && sum(ismember(days{i}(j:3:end), 75))==1 % exlclude e200 day 75 ep 3 bc not enough trials in ep 3
-            com = cellfun(@(x) x(1:4), com, 'UniformOutput', false);
-        end
-        figure;
-        bar([mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{1}, 'UniformOutput', false)), 'omitnan'); ... %this unravels the cellarray
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{2}, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{3}, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{4}, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{5}, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{6}, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{7}, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{8}, 'UniformOutput', false)), 'omitnan')]','grouped','FaceColor','red');
-        hold on
-        plot(1,cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{1}, 'UniformOutput', false)),'ok')
-        plot(2,cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{2}, 'UniformOutput', false)),'ok')
-        plot(3,cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{3}, 'UniformOutput', false)),'ok')
-        plot(4,cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{4}, 'UniformOutput', false)),'ok')
-        plot(5,cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{5}, 'UniformOutput', false)),'ok')
-        plot(6, cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{6}, 'UniformOutput', false)), 'ok')
-        plot(7, cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{7}, 'UniformOutput', false)), 'ok')
-        plot(8, cell2mat(cellfun(@(x) mean(x, 'omitnan'), com{8}, 'UniformOutput', false)), 'ok')
-
-        xticklabels(["optotrials", "rest of opto epoch", "1st 5 trials epoch 1", ...
-            "rest of epoch 1", "1st 5 trials epoch 2", "rest of epoch 2", "1st 5 trials epoch 3", ...
-            "rest of epoch 3"])
-        ylabel("COM licks of successful trials")
-        title(sprintf("animal %s, %s", animals{i}, conditions{j}))
+        load(sprintf('Y:\\sstcre_analysis\\hrz\\lick_analysis\\%s_COMsplit_condition_%s.mat', ...
+            animals{i}, conditions{j}))
         % across all days of epoch 2,3,control, split by rew zone
 
-        % plot rew zone representation across days
-%         if j==1 % check what rew zone is epoch 2 
-%         rew1 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(2))==1), rewzones(j:3:end), 'UniformOutput', false)));
-%         rew2 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(2))==2), rewzones(j:3:end), 'UniformOutput', false)));
-%         rew3 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(2))==3), rewzones(j:3:end), 'UniformOutput', false)));
-%         elseif j==2
-%         rew1 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(3))==1), rewzones(j:3:end), 'UniformOutput', false)));
-%         rew2 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(3))==2), rewzones(j:3:end), 'UniformOutput', false)));
-%         rew3 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(3))==3), rewzones(j:3:end), 'UniformOutput', false)));       
+%         figure; % com is already split by condition
+%         if j==3
+%         for ii = 1:size(COMsplit,2) % zd changed because some mice don't have rew zones yet
+%             % plot diff rew zones
+%             % if opto rew zone, plot in green, else, plot normal colors
+%             % (rew 1 = blue, rew 2= red, rew 3 = black)            
+%             errorbar(meanCOMsplit{1,ii},meanCOMsplit{2,ii},colors{ii}) % set color to {mice} to have same mice
+%             hold on
 %         end
-%         figure;
-%         bar([rew1,rew2,rew3],'grouped','FaceColor','flat');
-%         xticklabels(["rewzone 1", "rewzone 2", "rewzone 3"])
-%         ylabel("# of days")
-%         title(sprintf("animal %s, %s", animals{i}, conditions{j}))
+%         else
+%             %only get opto rew zone for each day
+%             for rzi=1:length(rz)
+%                 comopto{1,rz(rzi)}=mean(COMsplit{rzi,rz(rzi)},'omitnan');
+%                 comopto{2,rzi}=nanstd(COMsplit{rzi,rz(rzi)})/sqrt(size(COMsplit{rzi,rz(rzi)},2));
+%                 %for the rest of the rew zones
+%                 
+%                 for rr=rewzones(rewzones~=rz(rzi))
+%                 comrest{1,rzi}=mean(COMsplit{rzi,rr},'omitnan');
+%                 comrest{2,rzi}=nanstd(COMsplit{rzi,rr})/sqrt(size(COMsplit{rzi,rr},2));
+%                 end
+%             end
+% %             for ii = 1:size(COMsplit,2) % zd changed because some mice don't have rew zones yet
+% %             % plot diff rew zones
+% %             % if opto rew zone, plot in green, else, plot normal colors
+% %             % (rew 1 = blue, rew 2= red, rew 3 = black)            
+% %                 errorbar(meanCOMsplit{1,ii}(j:3:end),meanCOMsplit{2,ii}(j:3:end),colors{ii}) % set color to {mice} to have same mice
+% %                 hold on
+% %             end
+%         end
+        
+        
+%         title(sprintf('%s \n mean COM split by rew zones, condition %s', animals{i}, conditions{j}))            
+%         hold off;
+        % plot rew zone representation across days
+        if j==1 % check what rew zone is epoch 2 
+        rew1 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(2))==1), rewzones(j:3:end), 'UniformOutput', false)));
+        rew2 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(2))==2), rewzones(j:3:end), 'UniformOutput', false)));
+        rew3 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(2))==3), rewzones(j:3:end), 'UniformOutput', false)));
+        elseif j==2
+        rew1 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(3))==1), rewzones(j:3:end), 'UniformOutput', false)));
+        rew2 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(3))==2), rewzones(j:3:end), 'UniformOutput', false)));
+        rew3 = sum(cell2mat(cellfun(@(x) sum(cell2mat(x(3))==3), rewzones(j:3:end), 'UniformOutput', false)));       
+        end
+        figure;
+        bar([rew1,rew2,rew3],'grouped','FaceColor','flat');
+        xticklabels(["rewzone 1", "rewzone 2", "rewzone 3"])
+        ylabel("# of days")
+        title(sprintf("animal %s, %s", animals{i}, conditions{j}))
         % plot success rates       
         figure;
         % automatically segments diff conditions
@@ -132,7 +136,7 @@ for i=1:length(animals)
 
         % plot lick rate
         figure;
-        % automatically segments diff (opto) conditions
+        % automatically segments diff conditions
         bar([mean(cell2mat(cellfun(@(x) x{1}(1), lr, 'UniformOutput', false)), 'omitnan'); ... %this unravels the cellarray
         mean(cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
         mean(cell2mat(cellfun(@(x) x{3}(1), lr, 'UniformOutput', false)), 'omitnan'); ...

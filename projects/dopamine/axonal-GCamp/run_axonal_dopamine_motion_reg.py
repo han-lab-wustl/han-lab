@@ -53,7 +53,7 @@ def main(**args):
         
         if len(imagingfl)!=0:           
             print(imagingfl)
-            imagingflnm = maketifs(imagingflnm,170,500,105,
+            imagingflnm = maketifs(imagingflnm,0,512,105,
                         750,dtype='axonal')
             print(imagingflnm)
 

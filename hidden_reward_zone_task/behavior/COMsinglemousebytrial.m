@@ -5,14 +5,20 @@ clc
 COMbytrial = figure;
 variance = figure;
 mice_names= [{'e200'} {'e201'}];
-days_per_mouse = {[65:75],[55:73]};
+days_per_mouse = {[65:79], [55:73,75:79]};
+conditions = {'ep2', 'ep3', 'control'};
 srcs = ["Y:\sstcre_imaging", "Z:\sstcre_imaging"];
+%iterate through conditions
+
+for condind=1:length(conditions)
+
+
 meanClose2farByTrial = [];
 meanFar2closeByTrial = [];
 meanFirstRewEpoch = [];
 
 for mice=1:size(mice_names,2)
-    clearvars -except mice_names variance COMbytrial mice meanClose2farByTrial meanFar2closeByTrial meanFirstRewEpoch days_per_mouse srcs
+    clearvars -except conditions condind mice_names variance COMbytrial mice meanClose2farByTrial meanFar2closeByTrial meanFirstRewEpoch days_per_mouse srcs
     variab = 2;  % set to 2 for reward location absolute distance (1,2,3) , to 3 for relative distance (first rew loc, far to close, close to far)
     
     % files = dir('*).mat');
@@ -29,7 +35,7 @@ for mice=1:size(mice_names,2)
     b=1;
     c=1;
     
-    for i=1:length(files)
+    for i=condind:3:length(files)
             
         %zd added
         daypth = dir(fullfile(src, mouse_name, string(days(i)), "behavior", "vr\*.mat"));
@@ -43,14 +49,14 @@ for mice=1:size(mice_names,2)
         % if VR.scalingFACTOR ==1 % session should be referred to mouse and it has to have more than 2 rew loc
         if sum(VR.changeRewLoc>0)>3 || sum(VR.changeRewLoc>0)==3 && VR.trialNum(end)>15 % changed from 20 to 15 
             % calc the COM
-           allLicks = 1; % 1, if you want to use all the licks, 2 if you want to use only licks before reward (reward lick included)
+           allLicks = 2; % 1, if you want to use all the licks, 2 if you want to use only licks before reward (reward lick included)
            scalefactor = 1/(2/3); % need to include this in function to characterise rew zone 1,2,3
            [allcom, allstdcom, COM{i}] = COMgeneralviewF(VR, allLicks, scalefactor); %{i} % works fine until here 
            % epoch x trial structure
             for j = 1:size(COM{i},1)
             %      if length(COM{i}{j}) >20 % what is this for?
                  if COM{i}{j,variab}==1 % if assigned to rew lock 1
-                   COMsplit{a,COM{i}{j,variab}}=COM{i}{j,1};
+                   COMsplit{a,COM{i}{j,variab}}=COM{i}{j,1}; % zd added i to preserve epoch, only for saving
                    a=a+1;            
                  elseif COM{i}{j,variab}==2
                    COMsplit{b,COM{i}{j,variab}}=COM{i}{j,1};
@@ -62,7 +68,7 @@ for mice=1:size(mice_names,2)
             end
         end
     end
-end
+
 
 %% nan matrix COM
 a=1;
@@ -120,50 +126,52 @@ for i = 1:1:size(COMsplit,2)
     end
 end
 
+save(sprintf('Y:\\sstcre_analysis\\hrz\\lick_analysis\\%s_COMsplit_condition_%s', ...
+    mouse_name, conditions{condind}), 'COM', 'meanCOMsplit')
+
 end
-
-
+end
 
 %% final plot 
 
 %color pick@ https://learnui.design/tools/data-color-picker.html#palette
-
-str = '#505c57';
-color1 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
-
-str = '#789c50';
-color2 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
-
-str = '#ffc414';
-color3 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
-
-x = 1:22;
-N = length(x);
-y1 = nanmean(meanFirstRewEpoch,1);
-y2 = nanmean(meanClose2farByTrial,1);
-y3 = nanmean(meanFar2closeByTrial,1);
-
-b1 = nanstd(meanFirstRewEpoch,1);
-b2 = nanstd(meanClose2farByTrial,1);
-b3 = nanstd(meanFar2closeByTrial,1);
-
-
-ba= figure
-hold on
-boundedline(x, y1, b1,'cmap', color1, 'alpha');
-boundedline(x, y2, b2,'cmap',  color2, 'alpha');
-boundedline(x, y3, b3,'cmap',  color3, 'alpha');
-hold off
-
-htitle = title('Lick accuracy');
-set(htitle,'FontSize',14);
-xlabel('Trial number');
-ylabel('Cm to Reward Zone');
-yticks([-50 -25 -7.5]);
-ylim([-59,-7.5])
-xlim([1,22])
-set(gca,'FontSize',12);
-set(gca,'Color', 'none');
-grid on 
-a = legendflex({'First Epoch' 'Far to Close' 'Close to Far'},'buffer', [0 -20],'color','none')
+% 
+% str = '#505c57';
+% color1 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
+% 
+% str = '#789c50';
+% color2 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
+% 
+% str = '#ffc414';
+% color3 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
+% 
+% x = 1:22;
+% N = length(x);
+% y1 = nanmean(meanFirstRewEpoch,1);
+% y2 = nanmean(meanClose2farByTrial,1);
+% y3 = nanmean(meanFar2closeByTrial,1);
+% 
+% b1 = nanstd(meanFirstRewEpoch,1);
+% b2 = nanstd(meanClose2farByTrial,1);
+% b3 = nanstd(meanFar2closeByTrial,1);
+% 
+% 
+% ba= figure;
+% hold on
+% boundedline(x, y1, b1,'cmap', color1, 'alpha');
+% boundedline(x, y2, b2,'cmap',  color2, 'alpha');
+% boundedline(x, y3, b3,'cmap',  color3, 'alpha');
+% hold off
+% 
+% htitle = title('Lick accuracy');
+% set(htitle,'FontSize',14);
+% xlabel('Trial number');
+% ylabel('Cm to Reward Zone');
+% yticks([-50 -25 -7.5]);
+% ylim([-59,-7.5])
+% xlim([1,22])
+% set(gca,'FontSize',12);
+% set(gca,'Color', 'none');
+% grid on 
+% a = legendflex({'First Epoch' 'Far to Close' 'Close to Far'},'buffer', [0 -20],'color','none');
 

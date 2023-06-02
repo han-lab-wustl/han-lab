@@ -17,13 +17,13 @@ end
 %% 
 % for dopamine mice
 mouse_name = "e194";
-days = [19:27];
+days = [29:31];
 src = "X:\dopamine_imaging";
 % add function path
 addpath(fullfile(pwd, "utils"));
 for day=days
     daypth = dir(fullfile(src, mouse_name, string(day), "behavior", "vr\*.mat"));
-    planes = 3;
+    planes = 4;
     fmatfl = dir(fullfile(src, mouse_name, string(day), '**\params.mat'));     % finds all params files
     savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),planes, fmatfl);
     disp(savepthfmat)

@@ -12,14 +12,14 @@ close all
 mouse_id=194;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
-ref_exist=1;%%% if reference image hase been already choosen
+ref_exist=0;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end
 %%
-for allplanes=1:3
+for allplanes=1:4
     for days=days_check
-        pr_dir1=strcat(pr_dir{days},'\')
+        pr_dir1=strcat(pr_dir{days},'\');
         %%%s2p directory
         pr_dir2=dir(fullfile(pr_dir1,"**",sprintf("plane%i",allplanes-1),'\reg_tif'));
         pr_dir2 = pr_dir2(1).folder;
@@ -43,16 +43,16 @@ for allplanes=1:3
             chone_temp(:,:,i)=imread(myfilename,i,'Info',info);
         end
         %ZD CROP IS DIFFERENT
-%         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-%         
-%         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
-%         eval(['x2=crop_points' num2str(1) '(3)']);
-%         eval(['y1=crop_points' num2str(1) '(2)']);
-%         eval(['y2=crop_points' num2str(1) '(4)'])
-%         
-%         M=size(chone_temp,2);
-%         N=size(chone_temp,1);
-%         chone_temp=chone_temp(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
+        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+        
+        eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
+        eval(['x2=crop_points' num2str(1) '(3)']);
+        eval(['y1=crop_points' num2str(1) '(2)']);
+        eval(['y2=crop_points' num2str(1) '(4)']);
+        
+        M=size(chone_temp,2);
+        N=size(chone_temp,1);
+        chone_temp=chone_temp(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
         
         mimg(:,:,allplanes,days)=squeeze(mean(chone_temp(:,:,:),3));
         dir_data{days,1}=pr_dir2;
@@ -207,10 +207,10 @@ end
 %extract base mean from all rois selected before
 % clear all
 % close all
-% pr_dir=uipickfiles;
+pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 tic
-for allplanes=1:3 %1:4
+for allplanes=1:4 %1:4
     for days=days_check        
         pr_dir1=strcat(pr_dir{days},'\')
         %%%s2p directory
@@ -263,19 +263,19 @@ for allplanes=1:3 %1:4
         toc
         %%%%%
         
-%         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-%         
-%         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
-%         eval(['x2=crop_points' num2str(1) '(3)']);
-%         eval(['y1=crop_points' num2str(1) '(2)']);
-%         eval(['y2=crop_points' num2str(1) '(4)'])
-%         
-%         M=size(chone,2);
-%         N=size(chone,1);
-%         chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
-%         
+        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
         
-        %         toc
+        eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
+        eval(['x2=crop_points' num2str(1) '(3)']);
+        eval(['y1=crop_points' num2str(1) '(2)']);
+        eval(['y2=crop_points' num2str(1) '(4)'])
+        
+        M=size(chone,2);
+        N=size(chone,1);
+        chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
+        
+        
+                toc
         
         clear chone_temp  roim_sel roibase_mean roibase_mean2 roibase_mean3 roibase_mean4
         %%%% extract df/f for an roi
@@ -305,7 +305,6 @@ for allplanes=1:3 %1:4
                     bz_sig=mean_roi-noise;
                     roibase_mean4{jj,deg}=bz_sig;
                 end
-                
                 
                 toc
                 find_figure('base_mean_rois');
