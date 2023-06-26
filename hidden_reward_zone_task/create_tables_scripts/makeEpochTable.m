@@ -55,14 +55,14 @@ for this_day = 1:size(Settings.paths,1)
                 check2 = sum(l.iscell(:,1));
                 check3 = size(all.dff,1);
                 if check2-check1 ~= check3
-                    try
+%                     try
                         all.dff(remove_iscell==1,:) = [];
                         all.Fc3(remove_iscell==1,:) = [];
                         all.Spks(remove_iscell==1,:) = [];
-                    catch
-                        disp('watsup')
-                        keyboard
-                    end
+%                     catch
+%                         disp('watsup')
+%                         keyboard
+%                     end
                 else
                     disp(' F = 0 cells already removed here')
                 end

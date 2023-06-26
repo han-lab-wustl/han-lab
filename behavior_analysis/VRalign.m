@@ -132,24 +132,33 @@ end
 %sometimes trial number increases by 1 for 1 frame at the end of an epoch before
 %going to probes. this removes those
 trialchange = [0 diff(trialnum)]; 
+% GM and ZD added to fix times when VR does not have data for the imaging
+% frames; seems to happen randomly
+artefact1 = find([0 0 trialchange(1:end-2)] == 1 & trialchange < 0);
+trialnum(artefact1-1) = trialnum(artefact1);
+
+trialchange = [0 diff(trialnum)]; 
 artefact = find([0 trialchange(1:end-1)] == 1 & trialchange < 0);
+
 if ~isempty(artefact)
     trialnum(artefact-1) = trialnum(artefact-2);
 end
 %this ensures that all trial number changes happen on when the
 %yposition goes back to the start, not 1 frame before or after
 ypos = ybinned;
-trialsplit = find(diff(trialnum));
+% trialsplit = find(diff(trialnum));
 ypossplit = find(diff(ypos)<-50);
-for t = 1:length(trialsplit)
-    try % accounts for different lenghts, ok to bypass?
-        if trialsplit(t) < ypossplit(t)
-            trialnum(trialsplit(t):ypossplit(t)) = trialnum(trialsplit(t)-1);
-        elseif trialsplit(t) > ypossplit(t)
-            trialnum(ypossplit(t)+1:trialsplit(t)) = trialnum(trialsplit(t)+1);
-        end
-    end
-end
+% ZD commented out because it was setting trialnum to a constant as
+% previously debugged by GM and ZD above
+% for t = 1:length(trialsplit)
+%     try % accounts for different lenghts, ok to bypass?
+%         if trialsplit(t) < ypossplit(t)
+%             trialnum(trialsplit(t):ypossplit(t)) = trialnum(trialsplit(t)-1);
+%         elseif trialsplit(t) > ypossplit(t)
+%             trialnum(ypossplit(t)+1:trialsplit(t)) = trialnum(trialsplit(t)+1);
+%         end
+%     end
+% end
 
 %doing the same thing but with changerewloc
 rewlocsplit = find(changeRewLoc);
@@ -163,5 +172,7 @@ for c = 2:length(rewlocsplit) %2 because the first is always the first index
 end
     
  pause(1);
-  save(fmatfl,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','lickVoltage','-append');
+  % ZD saved additional vars to make rerunning easier  
+  save(fmatfl,'ybinned','rewards','forwardvel','licks','changeRewLoc', ...
+      'trialnum','timedFF','lickVoltage','scanstart','scanstop','VR','-append'); 
 end

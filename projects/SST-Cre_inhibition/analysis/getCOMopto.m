@@ -17,23 +17,17 @@ if condind==1
     com{5} = init;
     com{6} = init;
     COMep3=cellfun(@(x) x{1}, cellfun(@(x) x(3,1), COM, 'UniformOutput', false), 'UniformOutput', false);
-    try
-        com{7} = cellfun(@(x) x(1:5), COMep3, 'UniformOutput', false);
-        com{8} = cellfun(@(x) x(6:end), COMep3, 'UniformOutput', false);
-    catch %  assume it failed bc not enough trials for now (eg trials < 5)
-        com{7} = cellfun(@(x) x(1:end), COMep3, 'UniformOutput', false);
-        com{8} = init;
-    end
+    % only get days which have more than 6 trials in ep3
+    COMep3 = COMep3(cell2mat(cellfun(@(x) length(x)>6, COMep3, 'UniformOutput', false)));
+    com{7} = cellfun(@(x) x(1:5), COMep3, 'UniformOutput', false);
+    com{8} = cellfun(@(x) x(6:end), COMep3, 'UniformOutput', false);
 elseif condind==2
     COMep3=cellfun(@(x) x{1}, cellfun(@(x) x(3,1), COM, 'UniformOutput', false), 'UniformOutput', false);
+    % only get days which have more than 6 trials in ep3
+    COMep3 = COMep3(cell2mat(cellfun(@(x) length(x)>6, COMep3, 'UniformOutput', false)));
     % first 5 trials of ep 3 ('optoed')
-    try
-        com{1} = cellfun(@(x) x(1:5), COMep3, 'UniformOutput', false);
-        com{2} = cellfun(@(x) x(6:end), COMep3, 'UniformOutput', false);
-    catch
-        com{1} = cellfun(@(x) x(1:end), COMep3, 'UniformOutput', false);
-        com{2} = init;
-    end
+    com{1} = cellfun(@(x) x(1:5), COMep3, 'UniformOutput', false);
+    com{2} = cellfun(@(x) x(6:end), COMep3, 'UniformOutput', false);
     COMep2=cellfun(@(x) x{1}, cellfun(@(x) x(2,1), COM, 'UniformOutput', false), 'UniformOutput', false);
     com{5} = cellfun(@(x) x(1:5), COMep2, 'UniformOutput', false);
     com{6} = cellfun(@(x) x(6:end), COMep2, 'UniformOutput', false);

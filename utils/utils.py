@@ -152,6 +152,11 @@ def get_motion_corrected_tifs_from_suite2p_binary(binarypth, dst,
         tifffile.imwrite(os.path.join(dst, f'file_{i:08d}.tif'), f_input2[i:i+chunk])
 
 def convert_zstack_sbx_to_tif(sbxsrc):
+    """converts sbx from zstacks/opto tests to tifs
+
+    Args:
+        sbxsrc (_type_): path to sbx file
+    """
     from sbxreader import sbx_memmap  
 # src = r'Z:\sstcre_imaging\e201\0_ref_pln_day\230213_EH_DH_000_003\230213_EH_DH_000_003.sbx'
     dat = sbx_memmap(sbxsrc)
@@ -182,8 +187,7 @@ def movesbx(src, dst, fldkeyword='ZD'):
 
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
-    drives = [r'Y:\sstcre_imaging', r'Z:\sstcre_imaging', 
-              r'X:\dopamine_imaging']
-    animals = ['e200', 'e201', 'e194']
+    drives = [r'Y:\sstcre_imaging', r'Z:\sstcre_imaging']
+    animals = ['e200', 'e201']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

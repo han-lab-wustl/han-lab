@@ -94,32 +94,34 @@ for kk = 1:length(changeRewLoc)-1 % for each reward location...
         trials=find(difftrials>=1 & trialNum(changeRewLoc(kk):changeRewLoc(kk+1)-1)>(numProbe-1))+changeRewLoc(kk)-1; % find the starting of each trial within reward location
         
         for jj = 1:length(trials)-1 %for each trial...
-            if find(VR.reward(trials(jj)+1:trials(jj+1)))>0 % if is a succesfull trial
-                licking = find(VR.lick(trials(jj)+1:find(VR.reward(trials(jj)+1:trials(jj+1)),1)+trials(jj)))+trials(jj); % find all the licks before and equal to the reward lick
-                licking([2 diff(licking)]==1) = [];%EH, remove consecutive licks. concatenate 2 to keep 1st lick and shift all to maintain index
+            if sum(find(VR.reward(trials(jj)+1:trials(jj+1))))>0 && sum(find(VR.lick(trials(jj)+1:find(VR.reward(trials(jj)+1:trials(jj+1)),1)+trials(jj)))+trials(jj))>0 % if is a succesfull trial
+            licking = find(VR.lick(trials(jj)+1:find(VR.reward(trials(jj)+1:trials(jj+1)),1)+trials(jj)))+trials(jj); % find all the licks before and equal to the reward lick
+            % only consider success if there are licks, this avoids trials where exp manual gave rews
+            licking([2 diff(licking)]==1) = [];%EH, remove consecutive licks. concatenate 2 to keep 1st lick and shift all to maintain index
 %                 if length(licking)>0
 %                     licking(length(licking)) = find(VR.reward(trials(jj)+1:trials(jj+1)))+trials(jj); % GM ensures after consecutive removal that the 
 %                     % reward lick is on the same index as the reward received
 %                 end
-                periLick=(VR.ypos(licking)>periLow & VR.ypos(licking)<periHigh);  %EH logical of peri-reward licks
-                ratio=(sum(periLick)/length(periLick));%EH ratio of peri to total licks for trial (pre reward, including reward lick)
-                
+            periLick=(VR.ypos(licking)>periLow & VR.ypos(licking)<periHigh);  %EH logical of peri-reward licks
+            ratio=(sum(periLick)/length(periLick));%EH ratio of peri to total licks for trial (pre reward, including reward lick)
+            
 %                 COM{kk} = [COM{kk} mean(VR.ypos(licking))-RewLoc(kk)]; %calculate the normalized COM for each trial and store it
 %                 stdCOM{kk} = [stdCOM{kk} std(VR.ypos(licking))-RewLoc(kk)]; %calculate the std of the COM for each trial and store it
+            
+            COM{kk} = [COM{kk} mean(VR.ypos(licking))-RewLoc(kk)]; %calculate the normalized COM for each trial and store it
+            stdCOM{kk,jj} = [stdCOM{kk} std(VR.ypos(licking))-RewLoc(kk)]; %calculate the std of the COM for each trial and store it
+            
+            lickDist{kk,jj}=abs(VR.ypos(licking)-RewLocStart(kk));%EH abs distace of each lick from rewStart
+            
+            %GM
+            start = find(diff(VR.ypos(trials(jj)+1:trials(jj+1))),1,'first')+trials(jj); %defines start and stop indices for binning, 
+            % start is from the moment they are allowed to move.
+            stop = find(VR.reward(trials(jj)+1:trials(jj+1)),1)+trials(jj);
+            binstart = floor(VR.ypos(start)); %defines the ypos of the bins
+            binstop = ceil(VR.ypos(stop));
+                      
+            failure{kk}(jj) = 0; % keep track of failed trials
                 
-                COM{kk} = [COM{kk} mean(VR.ypos(licking))-RewLoc(kk)]; %calculate the normalized COM for each trial and store it
-                stdCOM{kk,jj} = [stdCOM{kk} std(VR.ypos(licking))-RewLoc(kk)]; %calculate the std of the COM for each trial and store it
-                
-                lickDist{kk,jj}=abs(VR.ypos(licking)-RewLocStart(kk));%EH abs distace of each lick from rewStart
-                
-                %GM
-                start = find(diff(VR.ypos(trials(jj)+1:trials(jj+1))),1,'first')+trials(jj); %defines start and stop indices for binning, 
-                % start is from the moment they are allowed to move.
-                stop = find(VR.reward(trials(jj)+1:trials(jj+1)),1)+trials(jj);
-                binstart = floor(VR.ypos(start)); %defines the ypos of the bins
-                binstop = ceil(VR.ypos(stop));
-                          
-                failure{kk}(jj) = 0; % keep track of failed trials
             else
                 licking = find(VR.lick(trials(jj)+1:(trials(jj+1))))+trials(jj); % else, find all the licks of that trial
                 licking([2 diff(licking)]==1) = [];%EH, remove consecutive licks. concatenate 2 to keep 1st lick and shift all to maintain index

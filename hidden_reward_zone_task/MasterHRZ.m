@@ -21,9 +21,9 @@ Settings.paths = dir("Y:\sstcre_imaging\e200\**\*Fall.mat"); % you can set a spe
 for i=1:length(Settings.paths)
     [parent,nm,~] = fileparts(fileparts(fileparts(fileparts(Settings.paths(i).folder))));
     dy{i} = str2num(nm);
-end
+end 
 dys = cell2mat(dy);
-Settings.hrz_days = [62:71]; % get days after this day; ZD added for her folder structure
+Settings.hrz_days = [65];%[55:73,75:80];%[62:74, 76, 78:81]; % get days after this day; ZD added for her folder structure
 Settings.paths = Settings.paths(ismember(dys,Settings.hrz_days)); % only certain days
 Settings.Fs = 32; % Hz
 Settings.level_mouse_name = 3; % at which level of the folder .path is the mouse name contained, 
@@ -54,7 +54,7 @@ end
 
 clearvars -except Settings
 
-Settings.saving_path = 'Y:\sstcre_analysis\hrz\opto\e200\' ; % please just change the path where you want the folder 'CS_table_last' to be created/saved.
+Settings.saving_path = 'Y:\sstcre_analysis\hrz\opto\e201\' ; % please just change the path where you want the folder 'CS_table_last' to be created/saved.
 Settings.probe_trials = 'exclude'; % DO NOT change. Probe trials are excluded from the analysis.
 Settings.trials_2compare = 8; % take the last 8 trials of one epoch
 Settings.I_want2save_figures = true; % save figures for each epoch

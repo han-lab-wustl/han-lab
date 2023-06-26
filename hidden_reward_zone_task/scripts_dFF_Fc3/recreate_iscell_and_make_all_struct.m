@@ -14,7 +14,7 @@ for this_day = 1:size(Settings.paths,1)
 
    l = load(file);
 %    skewdcells = find(skewness(l.F(:,:)')<2);%EB GM W
-%    l.iscell(skewdcells,1) = 0;
+%    l.iscell(skewdcells,1) = 0;s
    disp ([file ' ... loaded'])
 
     remove_iscell = [];
