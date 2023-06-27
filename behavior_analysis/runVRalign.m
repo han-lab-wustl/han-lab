@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e201";
-days = [87, 89];
+days = [91,92];
 src = "Z:\sstcre_imaging";
 
 for day=days
