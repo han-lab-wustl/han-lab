@@ -55,8 +55,8 @@
 clc
 clear %clean up the environment
 close all;
-mouse_name = "e201";
-fltype = 'daypth'; %vs. day path
+mouse_name = "e135";
+fltype = 'select'; %vs. day path
 if fltype == 'select'
     [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
     days = filename;
@@ -68,7 +68,7 @@ else
 end
 for dy=1:length(days)        
     if fltype == 'select'
-        clearvars -except filepath filename dy days fltype
+        clearvars -except mouse_name filepath filename dy days fltype
         file = fullfile(filepath,filename{dy});
     else        
         clearvars -except mouse_name days src dy fltype % Zahra added for for loop
@@ -238,9 +238,9 @@ for dy=1:length(days)
     %     end    
          %% lick dist plot
         % save COM - ZD
-        dst = 'Y:\sstcre_analysis\hrz\lick_analysis';
-        save(fullfile(dst, sprintf('%s_days%i-%i_lickCOM.mat', mouse_name, ...
-            min(days), max(days))), "allCOM")
+%         dst = 'Y:\sstcre_analysis\hrz\lick_analysis';
+%         save(fullfile(dst, sprintf('%s_days%i-%i_lickCOM.mat', mouse_name, ...
+%             min(days), max(days))), "allCOM")
 
         
         
