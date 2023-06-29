@@ -3,11 +3,10 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e200";
-days = [66:67];
-src = "Y:\sstcre_imaging";
-% add function path
-addpath(fullfile(pwd, "utils"));
+mouse_name = "e201";
+days = [91,92];
+src = "Z:\sstcre_imaging";
+
 for day=days
     daypth = dir(fullfile(src, mouse_name, string(day), "behavior", "vr\*.mat"));
     fmatfl = dir(fullfile(src, mouse_name, string(day), '**\Fall.mat')); 
@@ -15,16 +14,16 @@ for day=days
     disp(savepthfmat)
 end
 %% 
-% for dopamine mice
-mouse_name = "e194";
-days = [29:31];
-src = "X:\dopamine_imaging";
+% for old data
+mouse_name = "E145";
+days = [9];
+src = "F:\";
 % add function path
 addpath(fullfile(pwd, "utils"));
 for day=days
-    daypth = dir(fullfile(src, mouse_name, string(day), "behavior", "vr\*.mat"));
-    planes = 4;
-    fmatfl = dir(fullfile(src, mouse_name, string(day), '**\params.mat'));     % finds all params files
-    savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),planes, fmatfl);
+    daypth = dir(fullfile(src, mouse_name, sprintf('Day%i',day), sprintf("%s*.mat", mouse_name)));
+    planes = 3;
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('Day%i',day), '**\plane*\Fall.mat'));     % finds all params files
+    savepthfmat = VRalign_multi_plane(fullfile(daypth.folder, daypth.name), planes, fmatfl);
     disp(savepthfmat)
 end

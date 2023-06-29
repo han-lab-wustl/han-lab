@@ -20,11 +20,11 @@ speed = -0.013*VR.ROE(2:end)./diff(VR.time);
 changeRewLoc=find(VR.changeRewLoc);
 changeRewLoc = [changeRewLoc length(VR.changeRewLoc)];
 for kk = 1:length(changeRewLoc)-1
-    if (VR.changeRewLoc(changeRewLoc(kk)))<=93
+    if (VR.changeRewLoc(changeRewLoc(kk)))<=86
         rewzone{kk} = 1; % rew zone 1
-    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=127 && (VR.changeRewLoc(changeRewLoc(kk)))>93
+    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=120 && (VR.changeRewLoc(changeRewLoc(kk)))>=101
         rewzone{kk} = 2;
-    elseif (VR.changeRewLoc(changeRewLoc(kk)))<=161 && (VR.changeRewLoc(changeRewLoc(kk)))>127
+    elseif (VR.changeRewLoc(changeRewLoc(kk)))>=135
         rewzone{kk} = 3;
     end
 end

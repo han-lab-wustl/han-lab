@@ -5,7 +5,7 @@ clc
 COMbytrial = figure;
 variance = figure;
 mice_names= [{'e200'} {'e201'}];
-days_per_mouse = {[65:79], [55:73,75:79]};
+days_per_mouse = {[65:76,78:82], [55:73,75:80]};
 conditions = {'ep2', 'ep3', 'control'};
 srcs = ["Y:\sstcre_imaging", "Z:\sstcre_imaging"];
 %iterate through conditions
@@ -49,7 +49,7 @@ for mice=1:size(mice_names,2)
         % if VR.scalingFACTOR ==1 % session should be referred to mouse and it has to have more than 2 rew loc
         if sum(VR.changeRewLoc>0)>3 || sum(VR.changeRewLoc>0)==3 && VR.trialNum(end)>15 % changed from 20 to 15 
             % calc the COM
-           allLicks = 2; % 1, if you want to use all the licks, 2 if you want to use only licks before reward (reward lick included)
+           allLicks = 1; % 1, if you want to use all the licks, 2 if you want to use only licks before reward (reward lick included)
            scalefactor = 1/(2/3); % need to include this in function to characterise rew zone 1,2,3
            [allcom, allstdcom, COM{i}] = COMgeneralviewF(VR, allLicks, scalefactor); %{i} % works fine until here 
            % epoch x trial structure
