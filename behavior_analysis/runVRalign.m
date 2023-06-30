@@ -15,15 +15,13 @@ for day=days
 end
 %% 
 % for old data
-mouse_name = "E145";
-days = [9];
+mouse_name = "E135";
+days = [1];
 src = "F:\";
-% add function path
-addpath(fullfile(pwd, "utils"));
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('Day%i',day), sprintf("%s*.mat", mouse_name)));
     planes = 3;
     fmatfl = dir(fullfile(src, mouse_name, sprintf('Day%i',day), '**\plane*\Fall.mat'));     % finds all params files
-    savepthfmat = VRalign_multi_plane(fullfile(daypth.folder, daypth.name), planes, fmatfl);
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name), planes, fmatfl);
     disp(savepthfmat)
 end
