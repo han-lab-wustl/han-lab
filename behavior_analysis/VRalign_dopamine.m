@@ -353,7 +353,8 @@ end
 
 for n = 1:numfiles
     fullFfile = fullfile(Ffilepath{n},Ffile{n});
-    save(fullFfile,'ybinnedALL','rewardsALL','forwardvelALL','licksALL','changeRewLocALL','trialnumALL','utimedFF','lickVoltageALL','solenoid2ALL','urew_solenoidALL','rew_us_solenoidALL','-append');
+    save(fullFfile,'ybinnedALL','rewardsALL','forwardvelALL','licksALL','changeRewLocALL','trialnumALL', ...
+        'utimedFF','lickVoltageALL','solenoid2ALL','urew_solenoidALL','rew_us_solenoidALL','-append');
     load(fullFfile);
     
     clear ybinned rewards forwardvel licks changeRewLoc trialnum timedFF lickVoltage urew_solenoid solenoid2  rew_us_solenoid 

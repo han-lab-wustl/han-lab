@@ -3,27 +3,26 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e201";
-days = [91,92];
-src = "Z:\sstcre_imaging";
+mouse_name = "e200";
+days = [88];
+src = "Y:\sstcre_imaging";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, string(day), "behavior", "vr\*.mat"));
     fmatfl = dir(fullfile(src, mouse_name, string(day), '**\Fall.mat')); 
-    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fullfile(fmatfl.folder, fmatfl.name));
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
 %% 
 % for old data
 mouse_name = "E145";
-days = [9];
+days = [9:12];
 src = "F:\";
 % add function path
-addpath(fullfile(pwd, "utils"));
+
 for day=days
-    daypth = dir(fullfile(src, mouse_name, sprintf('Day%i',day), sprintf("%s*.mat", mouse_name)));
-    planes = 3;
+    daypth = dir(fullfile(src, mouse_name, sprintf('Day%i',day), sprintf("%s*.mat", mouse_name)));    
     fmatfl = dir(fullfile(src, mouse_name, sprintf('Day%i',day), '**\plane*\Fall.mat'));     % finds all params files
-    savepthfmat = VRalign_multi_plane(fullfile(daypth.folder, daypth.name), planes, fmatfl);
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name), fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
