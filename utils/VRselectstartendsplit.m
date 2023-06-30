@@ -1,12 +1,54 @@
-function [fmatfl] = VRalign(vrfl, fmatfl, numfiles)
+%% VRSselectEndStartEndSplit
+%First select the behavior file for the imaging session, and then select the number of planes that
+%were imaged and the cell traces for each of these planes.
+%HRZ Edition!!! Here alignment is made at the end of this section. If you
+%do not want to do so, simply edit the code to save all variables with a u
+%in front.
+%1/5/2020 - added a per plane data savability in the form a for loop around
+%the alignment code
 
-% modified VRstartendsplit for Zahra's early 2023 experiemtns with sst cre
-% mice
-% 6/28 - added back multiplane function
-load(vrfl);
+%1/7/2020 - added abf data (unaligned and unnamed) to observe with vr data.
+%NOTE: will need to pick a new scanstart and scanstop for abf iterations
+
+%3/13/2021 - changed the scaling for ROE to velocity as The scaling used
+%was to calculate displacement. LINE 89 now divides by dt as well
+
+
+%added lickVoltage. altered the values for teleportation indicies for HRZ
+%during alignment.
+
+%NOTE: assigning values at teleportation points takes whichever position
+%has more iterations during this frame of cellular activity. I.E. if they
+%spent 3 points at y = 180 and 2 at y = 0 during the time in which this
+%frame of celular data was recorded, y would be assined to 180.
+
+%does this as well with trial num to ensure the first trial num is 0 and
+%not 30 for the new rewlocation
+
+%lines 248 added a check to ensure that trial num did not have a random
+%extra index with an imaginary trial i.e. the vector should not have ...26 26
+%26 26 26 27 0 0 0 0 0... but just ...26 26 26 26 0 0 0 0 0 0...
+
+clear all;
+[filename,path]=uigetfile('*.mat','pick your behavior file');
+cd (path); %set path
+fullfilename=[path char(filename)];
+load(fullfilename);
+
+imageSync = [];
 
 %Find start and stop of imaging using VR
-imageSync = VR.imageSync;
+
+
+if isfield(VR,'imageSync') %makes sure VR has an imageSync variable, if not uses abf, BUT still uses VR variables later
+    imageSync = VR.imageSync;
+else
+    [abffilename,abfpath] = uigetfile('*.abf','pick your abf file');
+    abffullfilename = [abfpath char(abffilename)];
+    data = abfload(abffullfilename);
+    imageSync = data(:,8);
+    
+end
 
 inds=find((abs(diff(imageSync))>0.3*max(abs(diff(imageSync))))==1);
 meaninds=mean(diff(inds));
@@ -14,17 +56,19 @@ figure;subplot(2,1,1);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(
 % subplot(2,1,1); hold on; scatter(1000*(VR.time),zeros(1,length(VR.time)),20,'y','filled');
 subplot(2,1,2);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
 xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
-%xlim([770 780])
-[uscanstart,y]=ginput(1);
-uscanstart=round(uscanstart);
+% xlim([560 780])
+[uscanstart,y]=ginput(1)
+uscanstart=round(uscanstart)
 
 figure;subplot(2,1,1);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
 subplot(2,1,2);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
 xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
 [uscanstop,y]=ginput(1)
-uscanstop=round(uscanstop);
+uscanstop=round(uscanstop)
 disp(['Length of scan is ', num2str(uscanstop-uscanstart)])
 disp(['Time of scan is ', num2str((VR.time(uscanstop)-VR.time(uscanstart)))])
+
+
 
 close all;
 if ~isfield(VR,'imageSync') %if there was no VR.imagesync, rewrites scanstart and scanstop to be in VR iteration indices
@@ -42,6 +86,7 @@ else
     
 end
 
+
 %cuts all of the variables from VR
 urewards=VR.reward(scanstart:scanstop); 
 uimageSync=imageSync(scanstart:scanstop); 
@@ -55,21 +100,90 @@ uchangeRewLoc(1) = VR.changeRewLoc(1);
 ulicks = VR.lick(scanstart:scanstop);
 ulickVoltage = VR.lickVoltage(scanstart:scanstop);
 
+%% for loading abf data as well
+
+addabf = input('Would you like to add abf data? (0-no,1-yes)'); %note this adds abf data as "abfdata," to your F files, cut at the imaging points but not aligned or named for generalization purposes 
+if addabf
+    [abffilename,abfpath] = uigetfile('*.abf','pick your abf file');
+    abffullfilename = [abfpath char(abffilename)];
+    data = abfload(abffullfilename);  
+    imagingchannel = input('Which channel is the imaging channel?');
+    inds=find((abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,5)))))==1);
+    meaninds=mean(diff(inds));
+    figure;subplot(2,1,1);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,5)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
+    subplot(2,1,2);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
+    xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
+    [abfscanstart,y] = ginput(1)
+    abfscanstart = round(abfscanstart)
+
+    
+    figure;subplot(2,1,1);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
+    subplot(2,1,2);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,5)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
+    xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
+    [abfscanstop,y]= ginput(1)
+    abfscanstop = round(abfscanstop)
+    disp(['Length of scan is ', num2str(abfscanstop-abfscanstart)])
+    disp(['Time of scan is ', num2str((abfscanstop-abfscanstart)/1000)])
+     abfdata = data(abfscastart:abfscanstop,:);
+    close all;
+end
+
+%Find start and stop of imaging
+
+% rewards_th=1*rewards>(0.1*max(rewards));
+%  rewards=double(rewards_th);
+% rewards_df=diff(rewards_th);
+% rewards=[rewards_df(1); rewards_df']>=1;
+
+%bin and average both forwardvel and rotationvel
+%raw data need smoothing or binning to see well on compressed x scale.
+%     velbinsize=200;   %  # of frames to bin.  50 looks ok.
+%     binforwardvel=reshape(forwardvel,velbinsize,(numframes/velbinsize));    %gets 50 frames and puts into column.
+%                                                                             %should have (numframes/50) columns
+%     meanbinforwardvel=mean(binforwardvel);  %mean of each column(bin) and turns into vector of bins
+%     binrotationvel=reshape(rotationvel,velbinsize,(numframes/velbinsize));    %for rotation
+%     meanbinrotationvel=mean(binrotationvel);
+%     timebinx=((velbinsize/2):velbinsize:(numframes-(velbinsize/2)));    %gives x(time) value of center of bin for plotting.
+%
+%     figure;
+%     hold on;
+%     plot(ybinned);
+%     plot(rewards*600,'r');
+
+%%
+numfiles=input('Number of planes: ');
+Ffile{numfiles}=0;
+Ffilepath{numfiles}=0;
+%%
+for n=1:numfiles
+    [Ffile{n},Ffilepath{n}]=uigetfile('*.mat',['pick the F file for plane ' num2str(n)]);
+end
+
 %% aligns structure so size is the same GM
 
-load(fullfile(fmatfl(1).folder, fmatfl(1).name));
-utimedFF = linspace(0,(VR.time(scanstop)-VR.time(scanstart)),(numfiles*max(size(F,1),size(F,2)))); %changed from "numfiles*length(F(:,1))" to
-% "numfiles*max(size(F,1),size(F,2)) 8/9/21 IMPORTANT NOTE: Assumes the recording is longer than the number of found cells
-
-clear ybinned rewards forwardvel licks changeRewLoc trialnum timedFF lickVoltage
-
-timedFF_ALL = utimedFF; % for all planes, do not necessarily need rn if just looking at behavior
-% data per plane
-for n=1:numfiles
-    load(fullfile(fmatfl(n).folder, fmatfl(n).name))
+%quick fix for suite2p making the first plane one frame longer
+% load([Ffilepath{2} Ffile{2}])
+% testlength = length(F(:,1));
+% load([Ffilepath{1} Ffile{1}])
+% if length(F(:,1))>testlength
+%     F(length(F(:,1)),:) = [];
+%     dFF(length(F(:,1)),:) = [];
+%     Fc(length(F(:,1)),:) = [];
+%     nF(length(F(:,1)),:) = [];
+%     save([Ffilepath{1} Ffile{1}],'F','dFF','Fc','nF')
+% end
+fullFfile = [Ffilepath{1} Ffile{1}];
+load(fullFfile);
+utimedFF = linspace(0,(VR.time(scanstop)-VR.time(scanstart)),(numfiles*length(F(1,:))));
+for n = 1:numfiles
+    fullFfile = [Ffilepath{n} Ffile{n}];
+    load(fullFfile);
+    
+    
     clear ybinned rewards forwardvel licks changeRewLoc trialnum timedFF lickVoltage
-    % IMPORTANT: 
-    timedFF = utimedFF(n:numfiles:end); % to allocate time appropriately per plane
+    
+    timedFF = utimedFF(n:numfiles:end);
+    
     for newindx = 1:length(timedFF)
         if newindx == 1
             after = mean([timedFF(newindx) timedFF(newindx+1)]);
@@ -122,65 +236,47 @@ for n=1:numfiles
                     dummytrialmax = max(utrialnum(find(uVRtimebinned>before & uVRtimebinned<=after)));
                     dummytrialmean = mean(utrialnum(find(uVRtimebinned>before & uVRtimebinned<=after)));
                     trialnum(newindx) = ((dummytrialmean/(dummytrialmax-dummytrialmin))<0.5)*dummytrialmin+((dummytrialmean/(dummytrialmax-dummytrialmin))>=0.5)*dummytrialmax; %sets the trial value in the case of teleporting to either the end or the beginning based on how many VR iterations it has at each
-    
+
                 else
                     ybinned(newindx) = mean(uybinned(find(uVRtimebinned>before & uVRtimebinned<=after)));
                     trialnum(newindx) = max(utrialnum(find(uVRtimebinned>before & uVRtimebinned<=after)));
                 end
                 forwardvel(newindx) = mean(uforwardvel(find(uVRtimebinned>before & uVRtimebinned<=after)));
                 changeRewLoc(newindx) = sum(uchangeRewLoc(find(uVRtimebinned>before & uVRtimebinned<=after)));
-    
+ 
             end
         end
     end
-        
-    %trial number patches 9/13
     
-    %sometimes trial number increases by 1 for 1 frame at the end of an epoch before
-    %going to probes. this removes those
-    trialchange = [0 diff(trialnum)]; 
-    % GM and ZD added to fix times when VR does not have data for the imaging
-    % frames; seems to happen randomly
-    artefact1 = find([0 0 trialchange(1:end-2)] == 1 & trialchange < 0);
-    trialnum(artefact1-1) = trialnum(artefact1);
-    
-    trialchange = [0 diff(trialnum)]; 
-    artefact = find([0 trialchange(1:end-1)] == 1 & trialchange < 0);
-    
+    %trial Index Check for Artefact
+    trialchange = [0 diff(trialnum)];
+    artefact = intersect(find([0 trialchange] == 1),find(trialchange < 0));
     if ~isempty(artefact)
         trialnum(artefact-1) = trialnum(artefact-2);
     end
-    %this ensures that all trial number changes happen on when the
-    %yposition goes back to the start, not 1 frame before or after
-    ypos = ybinned;
-    % trialsplit = find(diff(trialnum));
-    ypossplit = find(diff(ypos)<-50);
-    % ZD commented out because it was setting trialnum to a constant as
-    % previously debugged by GM and ZD above
-    % for t = 1:length(trialsplit)
-    %     try % accounts for different lenghts, ok to bypass?
-    %         if trialsplit(t) < ypossplit(t)
-    %             trialnum(trialsplit(t):ypossplit(t)) = trialnum(trialsplit(t)-1);
-    %         elseif trialsplit(t) > ypossplit(t)
-    %             trialnum(ypossplit(t)+1:trialsplit(t)) = trialnum(trialsplit(t)+1);
-    %         end
-    %     end
-    % end
+    %
     
-    %doing the same thing but with changerewloc
-    rewlocsplit = find(changeRewLoc);
-    for c = 2:length(rewlocsplit) %2 because the first is always the first index
-        if ~ismember(rewlocsplit(c)-1,ypossplit)
-            [~,minidx] = min(abs(ypossplit+1-rewlocsplit(c)));
-            changeRewLoc(ypossplit(minidx)+1) = changeRewLoc(rewlocsplit(c));
-            changeRewLoc(rewlocsplit(c)) = 0;
-            
-        end
-    end
-        
+    fullFfile=[Ffilepath{n} Ffile{n}]
      pause(1);
-      % ZD saved additional vars to make rerunning easier  
-      save(fullfile(fmatfl(n).folder, fmatfl(n).name),'ybinned','rewards','forwardvel','licks','changeRewLoc', ...
-          'trialnum','timedFF','lickVoltage','scanstart','scanstop','VR','timedFF_ALL','-append'); 
+      save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','lickVoltage', ...
+          'VR', '-append');
+      if addabf
+          save(fullFfile,'abfdata','-append');
+      end
 end
-end
+
+%%
+% for n=1:numfiles
+%     fullFfile=[Ffilepath{n} Ffile{n}]
+%     %     load(fullFfile);
+%     %save(fullFfile,'ybinned','numframes','rewards','angle','forwardvel','rotationvel','velbinsize','meanbinforwardvel','meanbinrotationvel','timebinx','-append');
+%     pause(1);
+%     
+%     
+%     save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','-append'); %131018 added galvobinned
+%     %     if size(data,2)>7%131018
+%     %         save(fullFfile,'ch8binned','-append');
+%     %     end
+% end
+
+
