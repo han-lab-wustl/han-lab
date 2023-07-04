@@ -5,8 +5,14 @@ clc
 COMbytrial = figure;
 variance = figure;
 mice_names= [{'e200'} {'e201'}];
-days_per_mouse = {[65:76,78:82], [55:73,75:80]};
+days_per_mouse = {[65:76,78:93], [55:73,75:80, 82:92]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
 conditions = {'ep2', 'ep3', 'control'};
+cond_days = {{[65    68    71    74    78    81    84    87    90 93], ...
+    [66    69    72    75    79    82    85    88 91], ....
+    [67    70    73    76    80    83    86    89 92]}, ....
+    {[55    58    61    64    67    70    73    77    80    83    86 88 91 92], ....
+    [56    59    62    65    68    71    75    78    82    84    87 89], ....
+    [57    60    63    66    69    72    76    79    85]}}; % animal x condition
 srcs = ["Y:\sstcre_imaging", "Z:\sstcre_imaging"];
 %iterate through conditions
 
@@ -18,7 +24,8 @@ meanFar2closeByTrial = [];
 meanFirstRewEpoch = [];
 
 for mice=1:size(mice_names,2)
-    clearvars -except conditions condind mice_names variance COMbytrial mice meanClose2farByTrial meanFar2closeByTrial meanFirstRewEpoch days_per_mouse srcs
+    clearvars -except conditions condind mice_names variance COMbytrial mice meanClose2farByTrial meanFar2closeByTrial days_per_mouse ...
+        meanFirstRewEpoch cond_days srcs
     variab = 2;  % set to 2 for reward location absolute distance (1,2,3) , to 3 for relative distance (first rew loc, far to close, close to far)
     
     % files = dir('*).mat');
@@ -35,12 +42,12 @@ for mice=1:size(mice_names,2)
     b=1;
     c=1;
     
-    for i=condind:3:length(files)
+    for i=cell2mat(cond_days{mice}(condind))
             
         %zd added
-        daypth = dir(fullfile(src, mouse_name, string(days(i)), "behavior", "vr\*.mat"));
+        daypth = dir(fullfile(src, mouse_name, string(i), "behavior", "vr\*.mat"));
         disp(mouse_name)
-        disp(days(i))
+        disp(i)
         file=fullfile(daypth.folder,daypth.name);
         eval(['load ' file]); %load eac VR structure
         
@@ -129,49 +136,50 @@ end
 save(sprintf('Y:\\sstcre_analysis\\hrz\\lick_analysis\\%s_COMsplit_condition_%s', ...
     mouse_name, conditions{condind}), 'COM', 'meanCOMsplit')
 
-end
-end
-
 %% final plot 
 
 %color pick@ https://learnui.design/tools/data-color-picker.html#palette
-% 
-% str = '#505c57';
-% color1 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
-% 
-% str = '#789c50';
-% color2 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
-% 
-% str = '#ffc414';
-% color3 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
-% 
-% x = 1:22;
-% N = length(x);
-% y1 = nanmean(meanFirstRewEpoch,1);
-% y2 = nanmean(meanClose2farByTrial,1);
-% y3 = nanmean(meanFar2closeByTrial,1);
-% 
-% b1 = nanstd(meanFirstRewEpoch,1);
-% b2 = nanstd(meanClose2farByTrial,1);
-% b3 = nanstd(meanFar2closeByTrial,1);
-% 
-% 
-% ba= figure;
-% hold on
-% boundedline(x, y1, b1,'cmap', color1, 'alpha');
-% boundedline(x, y2, b2,'cmap',  color2, 'alpha');
-% boundedline(x, y3, b3,'cmap',  color3, 'alpha');
-% hold off
-% 
-% htitle = title('Lick accuracy');
-% set(htitle,'FontSize',14);
-% xlabel('Trial number');
-% ylabel('Cm to Reward Zone');
-% yticks([-50 -25 -7.5]);
-% ylim([-59,-7.5])
-% xlim([1,22])
-% set(gca,'FontSize',12);
-% set(gca,'Color', 'none');
-% grid on 
-% a = legendflex({'First Epoch' 'Far to Close' 'Close to Far'},'buffer', [0 -20],'color','none');
+
+str = '#003f5c';
+color1 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
+
+str = '#58508d';
+color2 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
+
+str = '#bc5090';
+color3 = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
+
+x = 1:22;
+N = length(x);
+y1 = nanmean(meanFirstRewEpoch,1);
+y2 = nanmean(meanClose2farByTrial,1);
+y3 = nanmean(meanFar2closeByTrial,1);
+
+b1 = nanstd(meanFirstRewEpoch,1);
+b2 = nanstd(meanClose2farByTrial,1);
+b3 = nanstd(meanFar2closeByTrial,1);
+
+
+ba= figure;
+hold on
+boundedline(x, y1, b1,'cmap', color1, 'alpha');
+boundedline(x, y2, b2,'cmap',  color2, 'alpha');
+boundedline(x, y3, b3,'cmap',  color3, 'alpha');
+hold off
+
+htitle = title(sprintf('Lick accuracy \n %s, condition %s', mouse_name, ...
+    conditions{condind}));
+set(htitle,'FontSize',14);
+xlabel('Trial number');
+ylabel('Cm to Reward Zone');
+yticks([-50 -25 -7.5]);
+ylim([-59,-7.5])
+xlim([1,22])
+set(gca,'FontSize',12);
+set(gca,'Color', 'none');
+legend('First Epoch','', 'Far to Close', '','Close to Far');
+
+end
+end
+
 
