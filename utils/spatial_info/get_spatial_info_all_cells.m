@@ -1,6 +1,6 @@
 
 
-function cell_info = get_spatial_info_all_cells2(Fc3,position,Fs,nBins,track_length)
+function cell_info = get_spatial_info_all_cells(Fc3,position,Fs,nBins,track_length)
 %% Fc3 = dFF of all cells in N X T format where N - number of cells and T - time  
 % position - position of animal on track 
 % Fs - Frame rate of acquisition
@@ -11,7 +11,7 @@ function cell_info = get_spatial_info_all_cells2(Fc3,position,Fs,nBins,track_len
 
 nCells = size(Fc3,1); % zd fixed the order because the description did not match the input order of the matrix, 7/4/23
 for cell = 1:nCells
-    cell_info(cell) = get_spatial_info_per_cell2(Fc3(cell,:),position,Fs,nBins,track_length);
+    cell_info(cell) = get_spatial_info_per_cell(Fc3(cell,:),position,Fs,nBins,track_length);
 end
 
 

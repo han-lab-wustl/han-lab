@@ -14,6 +14,7 @@ for d=1:length(days)
     clearvars -except srcdir animal grayColor days d opto_means opto_comp_means
     fmatfl = dir(fullfile(srcdir, animal, string(days(d)), "**\Fall.mat")); 
     load(fullfile(fmatfl.folder,fmatfl.name));
+    
     eps = find(changeRewLoc);
     % ep 2
     eprng = eps(2):eps(3);
@@ -52,11 +53,18 @@ for d=1:length(days)
     % only get cells > y pix of 100
 
     dff = all.dff(~logical(topbordercells),:);
+    % #1 find spatial info and add to Fall
+    % 10 cm bins
+    bin = 10; % cm t
+    track_length = 270;
+    spatial_info = get_spatial_info_all_cells2(dff,ybinned,31.25, ...
+        ceil(track_length/bin),track_length);
+    save(fullfile(fmatfl.folder,fmatfl.name),'spatial_info','-append')
     neural_data = dff(:,eprng);
     t = timedFF(eprng);  
     mask = (trialnum(eprng)>=3) & (trialnum(eprng)<8);
     opto = neural_data(:,mask);
-    topto = t(mask);
+    
     mask = trialnum(eprng_comp)>=8; %
 %     comparison mask for first 5 trials or rest of ep
     opto_comp = dff(:, eprng_comp);
