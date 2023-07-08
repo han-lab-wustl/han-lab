@@ -8,21 +8,18 @@ for d=1:length(days)
     Fall = load(fullfile(fmatfl.folder,fmatfl.name)); % to avoid iscell conflitcts
     
     eps = find(changeRewLoc);
+    eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
     % ep 2
     if ep==2
         eprng = eps(2):eps(3);
-    elseif ep==3
-        try
-            eprng = eps(3):eps(4);
-        catch
-            eprng = eps(3):length(changeRewLoc);
-        end
+    elseif ep==3        
+        eprng = eps(3):eps(4);        
     end
 
 %     eprng_comp_m = ones(1,length(changeRewLoc));%eps(1):eps(2);
 %     eprng_comp_m(eprng) = 0; % remove opto ep but keep the rest
 %     rng = [1:length(changeRewLoc)];
-    eprng_comp = eps(2):eps(3);%rng(logical(eprng_comp_m));
+    eprng_comp = eprng;%rng(logical(eprng_comp_m));
 
     % get xy axis
     stat_iscell = stat(logical(Fall.iscell(:,1)));
@@ -78,11 +75,11 @@ for d=1:length(days)
         data_ = smoothdata(mean(dff,1,'omitnan'), 'gaussian',20);
         figure;plot(data_,'k'); hold on;
         for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-            rectangle('position',[eps(mm) min(data_) length(find(trialnum(eps(mm):eps(mm+1)-1)<3)) quantile(data_,0.8)], ...
+            rectangle('position',[eps(mm) min(data_) length(find(trialnum(eps(mm):eps(mm+1)-1)<3)) max(data_)-min(data_)], ... % just picked max for visualization
                 'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
         end
         optoep = eprng;
-        rectangle('position',[min(optoep(trialnum(optoep)>=3)) min(data_) length(optoep((trialnum(optoep)>=3) & (trialnum(optoep)<8))) quantile(data_,0.8)], ...
+        rectangle('position',[min(optoep(trialnum(optoep)>=3)) min(data_) length(optoep((trialnum(optoep)>=3) & (trialnum(optoep)<8))) max(data_)-min(data_)], ...
                 'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3])        
         title(sprintf('animal = %s, day = %i, ep = %i', animal,days(d),ep))
     end

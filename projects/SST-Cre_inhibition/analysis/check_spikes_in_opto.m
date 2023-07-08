@@ -2,7 +2,7 @@
 % ep 2 days
 % there is a bug in trialnum from VRalign/startend - ask Gerardo
 % above bug is fixed in commit from 6/12/23
-clear all
+clear all; clear all;
 % srcdir = 'Y:\sstcre_imaging';
 % animal = 'e200';
 srcdir = 'Z:\sstcre_imaging';
