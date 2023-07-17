@@ -115,26 +115,15 @@ end
 
 %%
 % align to reward
-animal = 'E135';
-srcdir = 'G:\\%s\\Day%i';
 animal = 'E136';
-srcdir = 'F:\\%s\\D%i';
-days = [1:4]; % compile across all days
-days = [2:7];
-binnedPerirewards_d = {};
+days = [5]; % compile across all days
 for d=days
-    Fmat  = dir(fullfile(sprintf(srcdir, animal, d), '**', 'plane*', 'Fall.mat')); %'G:\\%s\\Day%i
+    Fmat  = dir(fullfile(sprintf('F:\\%s\\D%i', animal, d), '**', 'plane*', 'Fall.mat')); %'G:\\%s\\Day%i
     binnedPerirewards = {};
     for plane=1:length(Fmat)
         load(fullfile(Fmat(plane).folder, Fmat(plane).name))
-        [binnedPerireward,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dFF_iscell',rewards,timedFF,7,0.1);        
-        normmeanrewdFFs{plane} = normmeanrewdFF;
+        [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dFF_iscell',rewards,timedFF,5,0.1);
+        binnedPerirewards{plane} = binnedPerireward;
     end
-    daycells_rewbin = [normmeanrewdFFs{1} normmeanrewdFFs{2} normmeanrewdFFs{3}]';
-    figure; imagesc(daycells_rewbin); colorbar
-    xline(median(1:140),'w-',{'Reward'});
-    title(sprintf('animal = %s, day = %i', animal, d))
-    binnedPerirewards_d{d} = binnedPerirewards;    
+    
 end
-binnedPerirewards_d = binnedPerirewards_d(~cellfun('isempty',binnedPerirewards_d));
-allcells_rewbin = cell2mat(cellfun(@(x) [x{1}; x{2}; x{3}]', binnedPerirewards_d, 'UniformOutput', false));

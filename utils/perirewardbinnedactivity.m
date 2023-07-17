@@ -1,4 +1,4 @@
-function [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dFF,rewards,timedFF,range,binsize)
+function [binnedPerireward,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dFF,rewards,timedFF,range,binsize)
 Rewindx = find(rewards);
 % binsize = 0.1; %half a second bins
 % range = 6; %seconds back and forward in time
@@ -11,14 +11,14 @@ for rr = 1:length(Rewindx)
     
     for bin = 1:ceil(range*2/binsize)
         testbin(bin) = round(-range+bin*binsize-binsize,13); %round to nearest 13 so 0 = 0 and not 3.576e-16
-        currentidxt = find(timedFF>rewtime-range+bin*binsize-binsize& timedFF<=rewtime-range+bin*binsize);
+        currentidxt = find(timedFF>rewtime-range+bin*binsize-binsize & timedFF<=rewtime-range+bin*binsize);
         checks = consecutive_stretch(currentidxt);
         if ~isempty(checks{1})
             currentidxlogical = cellfun(@(x) max(ismember(x,currentrewcheckscell{currentrewardlogical})),checks);
             if sum(currentidxlogical)>0
                 checkidx = checks{currentidxlogical};
                 
-                rewdFF(bin,:,rr) = nanmean(dFF(checkidx,:),1);
+                rewdFF(bin,:,rr) = mean(dFF(checkidx,:),1,'omitnan');
             else
                 rewdFF(bin,:,rr) = NaN;
             end
@@ -29,17 +29,10 @@ for rr = 1:length(Rewindx)
     
 end
 
-meanrewdFF = nanmean(rewdFF,3);
-% figure()
+meanrewdFF = mean(rewdFF,3,'omitnan');
+
 y = 1:1:size(dFF,2);
 x = -1*range:binsize:range-binsize;
-% subplot(2,1,1)
-% imagesc(x,y,meanrewdFF')
-% subplot(2,1,2)
-% plot(x,mean(meanrewdFF,2),'b')
-% hold on
-% plot(x,mean(meanrewdFF,2)-(std(meanrewdFF,0,2)/sqrt(size(meanrewdFF,2))),'b:')
-% plot(x,mean(meanrewdFF,2)+(std(meanrewdFF,0,2)/sqrt(size(meanrewdFF,2))),'b:')
 
 for n = 1:size(dFF,2)
     normmeanrewdFF(:,n) = rescale(meanrewdFF(:,n),0,1);
