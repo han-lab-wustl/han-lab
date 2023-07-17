@@ -1,9 +1,10 @@
-function [diff_opto_ep2_ep1] = collect_neural_data_opto(days,srcdir,animal,ep)
+function [dffs,diff_opto,spatial_info] = collect_neural_data_opto(days,srcdir,animal,ep)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 for d=1:length(days)
     fmatfl = dir(fullfile(srcdir, animal, string(days(d)), "**\Fall.mat")); 
     load(fullfile(fmatfl.folder,fmatfl.name));
+    Fall = load(fullfile(fmatfl.folder,fmatfl.name)); % to avoid iscell conflitcts
     
     eps = find(changeRewLoc);
     % ep 2
@@ -23,7 +24,7 @@ for d=1:length(days)
     eprng_comp = eps(2):eps(3);%rng(logical(eprng_comp_m));
 
     % get xy axis
-    stat_iscell = stat(logical(iscell(:,1)));
+    stat_iscell = stat(logical(Fall.iscell(:,1)));
     if ~(size(stat_iscell,2)==size(all.dff,1)) % check if same size as all.dff (sometimes cells are not removed) 
         if exist('cell2remove', 'var') % check if cell2remove var exists
             stat_cell2remove = stat_iscell(~logical(cell2remove)&(~logical(remove_iscell)));
@@ -51,12 +52,12 @@ for d=1:length(days)
 %     end
     % only get cells > y pix of 100
 
-    dff = all.dff(~logical(topbordercells),:);
+    dff = all.dff(~logical(topbordercells),:); dffs{d} = dff;
     % #1 find spatial info and add to Fall
     % 10 cm bins
     bin = 10; % cm t
     track_length = 270;
-    spatial_info = get_spatial_info_all_cells2(dff,ybinned,31.25, ...
+    spatial_info{d} = get_spatial_info_all_cells(dff',ybinned,31.25, ...
         ceil(track_length/bin),track_length);
     save(fullfile(fmatfl.folder,fmatfl.name),'spatial_info','-append')
     neural_data = dff(:,eprng);
@@ -71,7 +72,19 @@ for d=1:length(days)
     opto_comp_mean = mean(opto_comp, 2);
     opto_means{d} = opto_mean;
     opto_comp_means{d} = opto_comp_mean;
-     
+    % vars for plotting
+
+    if plot_mean_dff == 1
+        data_ = smoothdata(mean(dff,1,'omitnan'), 'gaussian',20);
+        figure;plot(data_,'k'); hold on;
+        for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+            rectangle('position',[eps(mm) min(data_) length(find(trialnum(eps(mm):eps(mm+1)-1)<3)) quantile(data_,0.8)], ...
+                'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+        end
+        optoep = [eps(ep):eps(ep+1)];
+        rectangle('position',[min(optoep(trialnum(optoep)>3)) min(data_) length((optoep(trialnum(optoep))>=3) & (optoep(trialnum(optoep)<8))) quantile(data_,0.8)], ...
+                'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3])        
+    end
 end
 
 diff_opto = diff([cell2mat(cellfun(@(x) x', opto_means, 'UniformOutput', false)); ...

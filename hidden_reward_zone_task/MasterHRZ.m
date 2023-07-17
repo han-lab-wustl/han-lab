@@ -16,20 +16,20 @@ do_quality_control = true; % sometimes Suite2p finds cells with F = 0 that are d
                             
 %% MAIN SETTINGS ----------------------------------------------------------
 
-Settings.paths = dir("Z:\sstcre_imaging\e201\**\*Fall.mat"); % you can set a specific day by substituting D* with D1 for example
+Settings.paths = dir("Z:\sstcre_imaging\e201\**\plane*\*Fall.mat"); % you can set a specific day by substituting D* with D1 for example
 % formatting for zahra's path
 for i=1:length(Settings.paths)
     [parent,nm,~] = fileparts(fileparts(fileparts(fileparts(Settings.paths(i).folder))));
     dy{i} = str2num(nm);
 end 
 dys = cell2mat(dy);
-Settings.hrz_days = [81:92];%[55:73,75:80];%[62:74, 76, 78:81]; % get days after this day; ZD added for her folder structure
+Settings.hrz_days = [99];%[55:73,75:80];%[62:74, 76, 78:81]; % get days after this day; ZD added for her folder structure
 Settings.paths = Settings.paths(ismember(dys,Settings.hrz_days)); % only certain days
 Settings.Fs = 32; % Hz
 Settings.level_mouse_name = 3; % at which level of the folder .path is the mouse name contained, 
 % e.g. Z:\sstcre_imaging\e201, mouse name would be level 3
 Settings.level_day = 4; % at which level of the folder .path is the day N contained
-Settings.gainVR = 0.66; % which gain was used in these recordings
+Settings.gainVR = 1;%0.66; % which gain was used in these recordings
 Settings.bin_size = 5 * Settings.gainVR; % cm
 Settings.UL_track = 180; % Upper Limit of the track
 Settings.numIterations = 1000; % how many iterations for shuffled distribution
