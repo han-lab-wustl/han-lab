@@ -3,6 +3,8 @@ function [dffs,diff_opto,spatial_info] = collect_neural_data_opto(days,srcdir,an
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 for d=1:length(days)
+    disp(days(d))
+    clearvars -except days srcdir animal ep num_trials plot_dff d
     fmatfl = dir(fullfile(srcdir, animal, string(days(d)), "**\Fall.mat")); 
     load(fullfile(fmatfl.folder,fmatfl.name));
     Fall = load(fullfile(fmatfl.folder,fmatfl.name)); % to avoid iscell conflitcts
@@ -17,7 +19,12 @@ for d=1:length(days)
     elseif ep==3        
         eprng = eps(3):eps(4);        
     end
-
+    rewloc = changeRewLoc(changeRewLoc>0); % reward location
+    rewlocopto = rewloc(ep);
+    prevrewlocopto = rewloc(ep-1);
+    % set reward zone
+    rewzoneopto = find_reward_zone(rewlocopto);
+    prevrewzoneopto = find_reward_zone(prevrewlocopto);
 %     eprng_comp_m = ones(1,length(changeRewLoc));%eps(1):eps(2);
 %     eprng_comp_m(eprng) = 0; % remove opto ep but keep the rest
 %     rng = [1:length(changeRewLoc)];
@@ -101,7 +108,8 @@ for d=1:length(days)
             rectangle('position',[eps(mm) min(data_) length(find(trialnum(eps(mm):eps(mm+1)-1)<3)) max(data_)-min(data_)], ... % just picked max for visualization
                 'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
         end
-        sgtitle(sprintf('animal = %s, day = %i, ep = %i', animal,days(d),ep))
+        sgtitle(sprintf('animal = %s, day = %i, ep = %i \n rewzone = %i to %i', animal,days(d), ...
+            ep, prevrewzoneopto, rewzoneopto))
     end
 end
 
