@@ -12,13 +12,17 @@ eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoche
 eprngopto = eps(2):eps(3);
 eprngbefore = eps(1):eps(2);
 optomask = (trialnum(eprngopto)<15);
-beforemask = (trialnum(eprngbefore)>=max(trialnum(eprngbefore))-5);
+beforemask = (trialnum(eprngbefore)>=max(trialnum(eprngbefore))-10);
 rng = [eprngbefore(beforemask) eprngopto(optomask)];
 dff = remove_border_cells(stat, Fall.iscell, F, ...
     cell2remove, remove_iscell, all);
 dff = skewness_filter(dff);
 cells = 100;
-
+% add window of ypos for averaging activity around reward
+rewloc = changeRewLoc(changeRewLoc>0); % reward location
+rewlocopto = rewloc(2);
+% rng = rng((ybinned(rng)>=rewlocopto-10)&(ybinned(rng)<=rewlocopto+5));
+%%
 figure;
 plotrng = length(rng);
 subplot(4,1,1)
@@ -32,6 +36,8 @@ rectangle('position',[min(find((trialnum(rng)>=3)&(trialnum(rng)<8))) 0 ...
             length(find((trialnum(rng)>=3)&(trialnum(rng)<8))) cells], ...
                 'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3]) 
 subplot(4,1,2)
+% plot(dff(randi([0 size(dff,1)],1),rng),'g'); xlim([0 plotrng]);hold on;
+% plot(mean(dff(:,rng),1),'g'); xlim([0 plotrng]);hold on;
 plot(mean(dff(:,rng),1),'g'); xlim([0 plotrng]);hold on;
 %probes
 rectangle('position',[find(trialnum(rng)<3, 1) min(mean(dff(:,rng),1)) ...
@@ -66,6 +72,7 @@ rectangle('position',[min(find((trialnum(rng)>=3)&(trialnum(rng)<8))) min(ybinne
             length(find((trialnum(rng)>=3)&(trialnum(rng)<8))) max(ybinned(rng))-min(ybinned(rng))], ...
                 'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3]) 
 sgtitle(sprintf('opto, e201, day %i', d))
+%%
 end
 %%
 clear all; clear all; 
@@ -88,6 +95,10 @@ dff = remove_border_cells(stat, Fall.iscell, F, ...
     cell2remove, remove_iscell, all);
 dff = skewness_filter(dff);
 cells = 100;
+% add window of ypos for averaging activity around reward
+rewloc = changeRewLoc(changeRewLoc>0); % reward location
+rewlocopto = rewloc(2);
+rng = rng((ybinned(rng)>rewlocopto-10)&(ybinned(rng)<=rewlocopto+5));
 
 figure;
 plotrng = length(rng);

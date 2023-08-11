@@ -16,12 +16,18 @@ beforemask = (trialnum(eprngbefore)>=max(trialnum(eprngbefore))-5);
 rng = [eprngbefore(beforemask) eprngopto(optomask)];
 dff = remove_border_cells(stat, Fall.iscell, F, ...
     cell2remove, remove_iscell, all);
-cells = 300;
+dff = skewness_filter(dff);
+cells = 100;
+% add window of ypos for averaging activity
+rewloc = changeRewLoc(changeRewLoc>0); % reward location
+rewlocopto = rewloc(2);
+rewrng = rng((ybinned(rng)>rewlocopto-10))
+
 
 figure;
 plotrng = length(rng);
 subplot(4,1,1)
-imagesc(dff(1:cells,rng));hold on;
+imagesc(dff(1:cells,rng)); hold on;
 %probes
 rectangle('position',[find(trialnum(rng)<3, 1) 0 ...
     length(find(trialnum(rng)<3)) cells], ... % just picked max for visualization
@@ -85,27 +91,54 @@ beforemask = (trialnum(eprngbefore)>=max(trialnum(eprngbefore))-5);
 rng = [eprngbefore(beforemask) eprngopto(optomask)];
 dff = remove_border_cells(stat, Fall.iscell, F, ...
     cell2remove, remove_iscell, all);
+dff = skewness_filter(dff);
+cells = 100;
 
 figure;
 plotrng = length(rng);
 subplot(4,1,1)
-imagesc(dff(1:300,rng))
-xline(find(trialnum(rng)<3),'Alpha',0.01)
-xline(find((trialnum(rng)>=3)&(trialnum(rng)<8)),'Alpha',0.01,'Color','r')
+imagesc(dff(1:cells,rng));hold on;
+%probes
+rectangle('position',[find(trialnum(rng)<3, 1) 0 ...
+    length(find(trialnum(rng)<3)) cells], ... % just picked max for visualization
+                'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%opto period
+rectangle('position',[min(find((trialnum(rng)>=3)&(trialnum(rng)<8))) 0 ...
+            length(find((trialnum(rng)>=3)&(trialnum(rng)<8))) cells], ...
+                'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3]) 
 subplot(4,1,2)
-plot(mean(dff(:,rng),1),'g'); xlim([0 plotrng])
-xline(find(trialnum(rng)<3),'Alpha',0.01)
-xline(find((trialnum(rng)>=3)&(trialnum(rng)<8)),'Alpha',0.01,'Color','r')
-
+plot(mean(dff(:,rng),1),'g'); xlim([0 plotrng]);hold on;
+%probes
+rectangle('position',[find(trialnum(rng)<3, 1) min(mean(dff(:,rng),1)) ...
+    length(find(trialnum(rng)<3)) max(mean(dff(:,rng),1))-min(mean(dff(:,rng),1))], ... % just picked max for visualization
+                'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%opto period
+rectangle('position',[min(find((trialnum(rng)>=3)&(trialnum(rng)<8))) min(mean(dff(:,rng),1)) ...
+            length(find((trialnum(rng)>=3)&(trialnum(rng)<8))) max(mean(dff(:,rng),1))-min(mean(dff(:,rng),1))], ...
+                'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3]) 
 subplot(4,1,3)
-plot(forwardvel(rng), 'b'); xlim([0 plotrng])
-xline(find(trialnum(rng)<3),'Alpha',0.01)
+plot(forwardvel(rng), 'b'); xlim([0 plotrng]); hold on;
+%probes
+rectangle('position',[find(trialnum(rng)<3, 1) min(forwardvel(rng)) ...
+    length(find(trialnum(rng)<3)) max(forwardvel(rng))-min(forwardvel(rng))], ... % just picked max for visualization
+                'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%opto period
+rectangle('position',[min(find((trialnum(rng)>=3)&(trialnum(rng)<8))) min(forwardvel(rng)) ...
+            length(find((trialnum(rng)>=3)&(trialnum(rng)<8))) max(forwardvel(rng))-min(forwardvel(rng))], ...
+                'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3]) 
 subplot(4,1,4); 
 plot(ybinned(rng), 'k'); xlim([0 plotrng])
 hold on; 
 ybin = ybinned(rng);
 plot(find(rewards(rng)==1), ybin(rewards(rng)==1), 'go')
 plot(find(licks(rng)), ybin(licks(rng)), 'r.')
-xline(find(trialnum(rng)<3),'Alpha',0.01)
-sgtitle('ctrl, e201')
+%probes
+rectangle('position',[find(trialnum(rng)<3, 1) min(ybinned(rng)) ...
+    length(find(trialnum(rng)<3)) max(ybinned(rng))-min(ybinned(rng))], ... % just picked max for visualization
+                'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%opto period
+rectangle('position',[min(find((trialnum(rng)>=3)&(trialnum(rng)<8))) min(ybinned(rng)) ...
+            length(find((trialnum(rng)>=3)&(trialnum(rng)<8))) max(ybinned(rng))-min(ybinned(rng))], ...
+                'EdgeColor',[0 0 0 0],'FaceColor',[1 0 0 0.3]) 
+sgtitle(sprintf('ctrl, e201, day %i', d))
 end
