@@ -65,7 +65,7 @@ def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
         frames=20000
         nplanes=3
     elif dtype == 'pyramidal':
-        frames=40000
+        frames=45000
         nplanes=1
     split = int(zplns/nplanes) # 3000 planes as normal
     if len(tifs)<ceil(frames/zplns): # if no tifs exists 

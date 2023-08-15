@@ -12,16 +12,16 @@ import glob
 
 matplotlib.use('TkAgg') #might need for gui
 
-# days = [67,70,73,76,80,83,86,89]
+days = [67,70,73,76,80,83,86,89]
 # days = np.arange(1,9)
-days = [4,5,6,7]#
-# src = r'Y:\sstcre_imaging\e200'
+# days = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12]#
+src = r'Y:\sstcre_imaging\e200'
 # src = r'Z:\cellreg1month_Fmats\E186'
-src = r'F:\E145'
+# src = r'F:\E145'
 mat = []
 for day in days:
-#        mat.append(glob.glob(os.path.join(src, f'{day}', '**', '*Fall.mat'), recursive = True)[0])
-    mat.append(glob.glob(os.path.join(src, f'Day{day}', '**', 'plane*', '*Fall.mat'), recursive = True))
+       mat.append(glob.glob(os.path.join(src, f'{day}', '**', '*Fall.mat'), recursive = True)[0])
+#     mat.append(glob.glob(os.path.join(src, f'Day{day}', '**', 'plane*', '*Fall.mat'), recursive = True))
 mat = np.ravel(mat) # include planes as a separate session
 dst = r'Y:\sstcre_analysis\hrz\cebra\saved_models'
 
@@ -70,8 +70,8 @@ for i in np.arange(0,len(mat),planes):
                         # epstart = 0; epend = len(np.squeeze(changeRewLoc))
                         mask = np.arange(epstart, epend) # only specified epoch
                         pos = np.squeeze(ybinned)[mask] 
-                        pos_ = pos[pos>3] # only position after dark time
-                        mask = mask[pos>3]
+                        pos_ = pos[pos>1] # only position after dark time
+                        mask = mask[pos>1]
                         trials_ = trials[mask]
                         rews_ = np.squeeze(rews)[mask]
                         success_trials = [] # does not matter if only looking at probes
@@ -107,19 +107,19 @@ multi_cebra_model  = cebra.CEBRA(batch_size=512,
                                  temperature_mode="auto",
                                  max_adapt_iterations=500)
 multi_cebra_model.fit(dataz, posz)
-multi_cebra_model.save(os.path.join(dst, f'dim3_e145_day4_rewzone3_last8trials_successtrials_before_rewloc.pt'))
+multi_cebra_model.save(os.path.join(dst, f'dim3_e145_day4-12_rewzone3_last8trials_successtrials_before_rewloc.pt'))
 
 # for session in range(len(mat)):
 # multi_cebra_model = cebra.CEBRA.load(os.path.join(dst, f'dim3_e145_days1-12_rewzone3_last8trials_successtrials_before_rewloc.pt'))
-session = 0
+for session in range(len(dataz)):
 # import data for this model (rerun top part)
-embedding = multi_cebra_model.transform(dataz[session], session_id=session)
-pos = posz[session]
-cebra.plot_embedding(embedding, pos, cmap = plt.cm.cool, markersize=5)
-norm = matplotlib.colors.Normalize(min(pos), max(pos))
-cbar = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=plt.cm.cool))
-cbar.set_label('ybinned', rotation=270)
-plt.title(f"Day {session}")#, epoch = {eps[session]}")
-plt.ion()
+        embedding = multi_cebra_model.transform(dataz[session], session_id=session)
+        pos = posz[session]
+        cebra.plot_embedding(embedding, pos, cmap = plt.cm.cool, markersize=5)
+        norm = matplotlib.colors.Normalize(min(pos), max(pos))
+        cbar = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=plt.cm.cool))
+        cbar.set_label('ybinned', rotation=270)
+        plt.title(f"Day {session}")#, epoch = {eps[session]}")
+        plt.ion()
 
-cebra.plot_loss(multi_cebra_model)
+        cebra.plot_loss(multi_cebra_model)

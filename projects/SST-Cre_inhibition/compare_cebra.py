@@ -8,12 +8,14 @@ import matplotlib
 import cebra
 from cebra import CEBRA
 import glob
+matplotlib.use('TkAgg') #might need for gui
 
 srcdir = r'Y:\sstcre_analysis\hrz\cebra\saved_models\multisession\control'
 models = ['dim3_e186_days1-8_ep2_last8trials_successtrials_before_rewloc.pt', 
           'dim3_e200_ctrluntilday89_ep2_last8trials_successtrials_before_rewloc.pt',
-          'dim3_e201_ctrluntilday85_ep2_last8trials_successtrials_before_rewloc.pt']
-animals = ['e186', 'e200', 'e201']
+          'dim3_e201_ctrluntilday85_ep2_last8trials_successtrials_before_rewloc.pt',
+          'dim3_e145_day4-12_rewzone3_last8trials_successtrials_before_rewloc.pt']
+animals = ['e186', 'e200', 'e201', 'e145']
         
 dataz = []; posz = []
 embeddings = [];
@@ -37,9 +39,12 @@ for j,animal in enumerate(animals):
         mat = []
         for day in days:
             mat.append(glob.glob(os.path.join(src, f'{day}', '**', '*Fall.mat'), recursive = True)[0])
-             
+    elif animal == 'e145':        
+        src = r'X:\pyramidal_cell_data\e145'
+        mat = [os.path.join(src, xx) for xx in os.listdir(src)]
+        
 
-    i = 4 # only test for session 4 in each multisession embedding
+    i = 0 # only test for session 4 in each multisession embedding
 
     neural_data = cebra.load_data(file=mat[i], 
                 key="spks")
@@ -57,7 +62,7 @@ for j,animal in enumerate(animals):
     # epoch 1 only
     neural_data = neural_data[iscell[:,0].astype(bool)]
     rewloc = changeRewLoc[changeRewLoc>0]
-    ep = np.where(rewloc<=86)[0][0]+1 # pick epoch with reward location 3
+    ep = np.where(rewloc>=135)[0][0]+1 # pick epoch with reward location 3
     #rewzones
     #rewloc>=135 = 3
     #(rewloc>100) & (rewloc<121) = 2
@@ -107,9 +112,9 @@ for j,animal in enumerate(animals):
     cebra_model = cebra.CEBRA.load(os.path.join(srcdir, models[j]))
     embeddings.append(cebra_model.transform(data, session_id=i))#, pos_)) 
        
-    
 
-# Between-datasets, by aligning on the labels
+
+# Between-datasets, by ali gning on the labels
 (scores_datasets,
     pairs_datasets,
     datasets_datasets) = cebra.sklearn.metrics.consistency_score(embeddings=embeddings,
@@ -120,5 +125,14 @@ plt.figure(figsize=(10,4))
 
 cebra.plot_consistency(scores_datasets, pairs_datasets, datasets_datasets, 
     vmin=0, vmax=100, title="Between-subjects consistencies")
-plt.xticks(range(3), animals)
-plt.yticks(range(3), animals)
+plt.xticks(range(len(dataz)), animals)
+plt.yticks(range(len(dataz)), animals)
+
+for k,embedding in enumerate(embeddings):
+    cebra.plot_embedding(embedding, posz[k], cmap = plt.cm.cool, markersize=5)
+    norm = matplotlib.colors.Normalize(min(pos_), max(pos_))
+    cbar = plt.colorbar(cm.ScalarMappable(norm=norm, 
+            cmap=plt.cm.cool))
+    cbar.set_label('ybinned', rotation=270)
+    plt.title(f"{animals[k]}")
+    plt.ion()
