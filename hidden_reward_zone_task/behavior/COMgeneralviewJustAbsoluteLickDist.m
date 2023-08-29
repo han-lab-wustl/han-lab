@@ -253,7 +253,7 @@ for dy=1:length(days)
         else %requires a function mtit
         mtit(plottitle,'fontsize',14,'interpreter','none') %name of the file you are analising as main title
         end
-        scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
+        scatter(time_min,ypos,1,'o','MarkerEdgeColor',[0.6 0.6 0.6])
         hold on
         scatter(islickX,islickYpos,10,'r','filled')
         scatter(rewX,rewYpos,10,'b','filled')
