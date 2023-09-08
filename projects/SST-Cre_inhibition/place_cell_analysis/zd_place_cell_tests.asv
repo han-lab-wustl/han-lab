@@ -35,12 +35,13 @@ for i = 1:size(fc3_mov,1)
 end 
 nshuffles = 5000;
 spatial_info_shuf = zeros([nshuffles size(spatial_info,2)]);
-for j = 1:nshuffles
-     disp(['Shuffle number ', num2str(j)]) 
-    clearvars shuffled_place_cells
-    for i = 1:size(fc3_mov,1)
-        shuffledbins_forcell{i} = shuffle(bins2shuffle_forcell{i}); 
-        shuffled_cells_activity(i,:) = fc3_mov(i,cell2mat(shuffledbins_forcell{i}));
+parfor j = 1:nshuffles
+    disp(['Shuffle number ', num2str(j)]) 
+    parfor i = 1:size(fc3_mov,1)
+        sshuffle(bins2shuffle_forcell{i})
+        shuffledbins_forcell{i} = s; 
+        sca = fc3_mov(i,cell2mat(shuffledbins_forcell{i}));
+        shuffled_cells_activity(i,:) = sca;
     end 
     spatial_info_shuf(j,:) = get_spatial_info_all_cells(shuffled_cells_activity',ypos_mov,31.25, ...
     ceil(track_length/bin),track_length);

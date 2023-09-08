@@ -5,9 +5,8 @@ clear all;
 % we want to keep all these cells
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e201';
-weeknms = [4 7 8 9 10 11];
-weeknm = 47891011;
-weekfld = sprintf('week%i', weeknm);
+weeknms = [12 13 14 15];
+weekfld = 'week12-15';
 weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
@@ -66,7 +65,7 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=26; %total number of days imaged (e.g. included in dataset)
+sessions_total=21; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks
