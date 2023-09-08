@@ -27,11 +27,12 @@ def preprocess(step,vrdir, dlcfls,columns=False,
         bigdf = []
         with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp)
-        for i,row in mouse_df.iterrows():
+        for i,row in mouse_df[:50].iterrows():
             vrfl_p = os.path.join(dlcfls,row["VR"][:16]+"_vr_dlc_align.p")    
             if os.path.exists(vrfl_p):
                 print(row["mouse"], row["VR"])
-                bigdf.append(collect_clustering_vars(os.path.join(dlcfls,row["DLC"]),vrfl_p))                    
+                bigdf.append(collect_clustering_vars(os.path.join(dlcfls,
+                        row["DLC"]),vrfl_p))                    
 
         big_df = pd.concat(bigdf)
         big_df.to_pickle(os.path.join(dlcfls,'all_mice_dlc_vr_df.p'))
@@ -83,7 +84,8 @@ if __name__ == "__main__":
     preprocess(1,vrdir,dlcfls)
     # gets clustering vars
     dfs = preprocess(2,vrdir,dlcfls)
-    columns = ['tongue', 'nose', 'paw', 'whiskerUpper', 'ybinned', 'licks']
+    columns = ['tongue', 'nose', 'paw', 
+               'whiskerUpper', 'whiskerLower']
         # , 'forwardvelocity']#, 'whiskerUpper',
     #    'whiskerLower', 'ybinned', 'licks',
        #'lickVoltage']
@@ -109,13 +111,13 @@ for experiment in experiments:
     pca_2_result_bl=pca_2_result[dfkmeans['grooms']]
     plt.scatter(pca_2_result_bl[:, 0] , pca_2_result_bl[: , 1] , color='k', 
                 marker='o', facecolors='none')
-    # pca_2_result_sn=pca_2_result[dfkmeans['eye_centroid_ylbl']]
+    # pca_2_result_sn=pca_2_result[dfkmeans['tongue_lbl']]
     # plt.scatter(pca_2_result_sn[:, 0] , pca_2_result_sn[: , 1] , 
-    #             color='k', marker='o')
-    # pca_2_result_lk=pca_2_result[dfkmeans['whisking']]
-    # plt.scatter(pca_2_result_lk[:, 0] , pca_2_result_lk[: , 1] , 
-    #             color='k', marker='o', facecolors='none')
-    # pca_2_result_mo=pca_2_result[dfkmeans['mouth_mov']]
+    #             color='k', marker='x')
+    pca_2_result_lk=pca_2_result[dfkmeans['sniff_lbl']]
+    plt.scatter(pca_2_result_lk[:, 0] , pca_2_result_lk[: , 1] , 
+                color='k', marker='*', facecolors='none')
+    # pca_2_result_mo=pca_2_result[dfkmeans['sniff_lbl']]
     # plt.scatter(pca_2_result_mo[:, 0] , pca_2_result_mo[: , 1] , 
     #             color='k', marker='d', facecolors='none')
     # pca_2_result_fast=pca_2_result[dfkmeans['fastruns']]
@@ -128,7 +130,7 @@ for experiment in experiments:
     # plt.legend(['Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4'
     #             ])
     plt.legend(['Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4',
-                'paw'])
+                'paw', 'sniff'])
     plt.xlabel("PC1")
     plt.ylabel("PC2")
     plt.title(f"K-means, n = {len(dfkmeans.animal.unique())}, experiment: \n{dfkmeans.experiment.unique()[0]}")

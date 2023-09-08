@@ -95,8 +95,8 @@ save(fullfile(weekdst.folder, ...
 fls = dir(fullfile(src, "fmats",animal, 'days\*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
-    day = fls(fl);
-    days{fl} = load(fullfile(day.folder,day.name));
+    dy = fls(fl);
+    days{fl} = load(fullfile(dy.folder,dy.name));
 end
 
 %%
@@ -109,14 +109,14 @@ cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
 ctab = hsv(length(cc));
 
-cells_to_plot = 124;
+cells_to_plot = [321];
 for i=[cells_to_plot]
     %multi plot of cell mask across all 5 days
     figure(i); 
-    axes=cell(1,sessions_total);
+    axs=cell(1,sessions_total);
     for ss=1:sessions_total        
         day=days(ss);day=day{1};
-        axes{ss}=subplot(6,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+        axs{ss}=subplot(5,5,ss); % 2 rows, 3 column, 1 pos; 20 days
         imagesc(day.ops.meanImg) %meanImg or max_proj
         colormap('gray')
         hold on;
@@ -127,7 +127,7 @@ for i=[cells_to_plot]
         title(sprintf('day %i', ss)) %sprintf('day %i', ss)
         %title(axes{ss},sprintf('Cell %0d4', i))
     end
-    linkaxes([axes{:}], 'xy')
+    linkaxes([axs{:}], 'xy')
     %savefig(sprintf("Z:\\suite2pconcat1month_commoncellmasks\\cell_%03d.fig",i+250)) %changed to reflect subset of cells plotted
 end
 %%
@@ -160,27 +160,26 @@ linkaxes(axesnm, 'xy')
 %calculate dff
 % TODO: find a way to add to fall.mat
 % dff from master hrz only on 'selected' cells
-dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff"); %load from old weekrun
-dff=dff.dff;
-for i=length(dff)+1:length(days)
-    day=days(i);day=day{1};
-    dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
-    disp(i)
-end
-save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
+% dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff"); %load from old weekrun
+% dff=dff.dff;
+% for i=length(dff)+1:length(days)
+%     day=days(i);day=day{1};
+%     dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
+%     disp(i)
+% end
+% save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
 % dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff");
 % dff=dff.dff;
 %%
 % plot F (and ideally dff) over ypos
 
-days_to_plot=[14,15,17]; %plot 5 days at a time
-cellno=randi([1 length(cc)],1,1);
+days_to_plot=[1 4 7 10 13 16]; %plot 5 days at a time
+cellno=321;%randi([1 length(cc)],1,1);
 grayColor = [.7 .7 .7];
-sessions_total=3;
 fig=figure;
 subplot_j=1;
 for dayplt=days_to_plot
-    ax1=subplot(3,1,subplot_j);
+    ax1=subplot(6,1,subplot_j);
     day=days(dayplt);day=day{1};
     plot(day.ybinned, 'Color', grayColor); hold on; 
     plot(day.changeRewLoc, 'b')
@@ -190,7 +189,7 @@ for dayplt=days_to_plot
         'MarkerSize',10); 
     yyaxis right
     try
-        plot(dff{dayplt}(cc(cellno,dayplt),:),'g') % 2 in the first position is cell no
+        plot(day.all.dff(cc(cellno,dayplt),:),'g') % 2 in the first position is cell no
     end
     title(sprintf('day %i', dayplt))
     axs{dayplt}=ax1;

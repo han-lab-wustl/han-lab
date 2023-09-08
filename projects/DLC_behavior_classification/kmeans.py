@@ -152,8 +152,8 @@ def run_pca(dfkmeans,columns):
     # PCA and kmeans
     #https://towardsdatascience.com/understanding-k-means-clustering-in-machine-learning-6a6e67336aa1
     #things to feed into kmeasn
-    
-    dfkmeans[columns] = dfkmeans[columns].astype(float)
+    strcol = ['animal','data','experiment']
+    dfkmeans[[xx for xx in dfkmeans.columns if xx not in strcol]] = dfkmeans[[xx for xx in dfkmeans.columns if xx not in strcol]].astype(float)
     # drops a few last frames with na fron vr??
     dfkmeans = dfkmeans.dropna()
     #classify blinks, sniffs, licks?
@@ -161,7 +161,7 @@ def run_pca(dfkmeans,columns):
     dfkmeans['eye_area'] = dfkmeans['eye_area']>dfkmeans["eye_area"].mean()+dfkmeans["eye_area"].std()*3
     dfkmeans['eye_centroid_xlbl'] = dfkmeans['eye_centroid_x']>dfkmeans["eye_centroid_x"].mean()+dfkmeans["eye_centroid_x"].std()*3
     dfkmeans['eye_centroid_ylbl'] = dfkmeans['eye_centroid_y']>dfkmeans["eye_centroid_y"].mean()+dfkmeans["eye_centroid_y"].std()*3
-    dfkmeans['sniff_lbl'] =  dfkmeans['nose']>dfkmeans["nose"].mean()+dfkmeans["nose"].std()*3
+    dfkmeans['sniff_lbl'] =  dfkmeans['nose']>dfkmeans["nose"].mean()+dfkmeans["nose"].std()*1 # changed from 3 to 1
     dfkmeans['tongue_lbl'] =  dfkmeans['tongue']>0
     dfkmeans['grooms'] = dfkmeans['paw']>0
     dfkmeans['whisking'] = dfkmeans['whiskerUpper']<dfkmeans["whiskerUpper"].mean()-dfkmeans["whiskerUpper"].std()*3
