@@ -109,7 +109,7 @@ cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
 ctab = hsv(length(cc));
 
-cells_to_plot = [321];
+cells_to_plot = [812];
 for i=[cells_to_plot]
     %multi plot of cell mask across all 5 days
     figure(i); 
@@ -134,13 +134,13 @@ end
 % align all cells across all days in 1 fig
 % colormap to iterate thru
 cc=cellmap2dayacrossweeks;
-sessions_total=18;
+sessions_total=21;
 ctab = hsv(length(cc));
 figure;
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
     day=days(ss);day=day{1};
-    axesnm(ss)=subplot(4,5,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    axesnm(ss)=subplot(5,5,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;
@@ -162,19 +162,18 @@ linkaxes(axesnm, 'xy')
 % dff from master hrz only on 'selected' cells
 % dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff"); %load from old weekrun
 % dff=dff.dff;
-% for i=length(dff)+1:length(days)
-%     day=days(i);day=day{1};
-%     dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
-%     disp(i)
-% end
-% save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
+for i=1:length(days)
+    day=days(i);day=day{1};
+    dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
+    disp(i)
+end
+save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
 % dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff");
 % dff=dff.dff;
 %%
 % plot F (and ideally dff) over ypos
-
 days_to_plot=[1 4 7 10 13 16]; %plot 5 days at a time
-cellno=321;%randi([1 length(cc)],1,1);
+cellno=812;%randi([1 length(cc)],1,1);
 grayColor = [.7 .7 .7];
 fig=figure;
 subplot_j=1;
@@ -189,7 +188,7 @@ for dayplt=days_to_plot
         'MarkerSize',10); 
     yyaxis right
     try
-        plot(day.all.dff(cc(cellno,dayplt),:),'g') % 2 in the first position is cell no
+        plot(day.F(cc(cellno,dayplt),:),'g') % 2 in the first position is cell no
     end
     title(sprintf('day %i', dayplt))
     axs{dayplt}=ax1;
