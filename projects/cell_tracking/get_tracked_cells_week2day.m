@@ -95,6 +95,7 @@ save(fullfile(weekdst.folder, ...
 fls = dir(fullfile(src, "fmats",animal, 'days\*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
+    disp(fl);
     dy = fls(fl);
     days{fl} = load(fullfile(dy.folder,dy.name));
 end
@@ -109,7 +110,7 @@ cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
 ctab = hsv(length(cc));
 
-cells_to_plot = [812];
+cells_to_plot = [129];
 for i=[cells_to_plot]
     %multi plot of cell mask across all 5 days
     figure(i); 
@@ -162,18 +163,18 @@ linkaxes(axesnm, 'xy')
 % dff from master hrz only on 'selected' cells
 % dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff"); %load from old weekrun
 % dff=dff.dff;
-for i=1:length(days)
-    day=days(i);day=day{1};
-    dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
-    disp(i)
-end
-save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
+% for i=1:length(days)
+%     day=days(i);day=day{1};
+%     dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
+%     disp(i)
+% end
+% save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
 % dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff");
 % dff=dff.dff;
 %%
 % plot F (and ideally dff) over ypos
-days_to_plot=[1 4 7 10 13 16]; %plot 5 days at a time
-cellno=812;%randi([1 length(cc)],1,1);
+days_to_plot=1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
+cellno=randi([1 length(cc)],1,1);
 grayColor = [.7 .7 .7];
 fig=figure;
 subplot_j=1;
@@ -188,7 +189,7 @@ for dayplt=days_to_plot
         'MarkerSize',10); 
     yyaxis right
     try
-        plot(day.F(cc(cellno,dayplt),:),'g') % 2 in the first position is cell no
+        plot(day.dFF(:,cc(cellno,dayplt)),'g') % 2 in the first position is cell no
     end
     title(sprintf('day %i', dayplt))
     axs{dayplt}=ax1;
@@ -232,20 +233,29 @@ sgtitle(sprintf('Cell no. %03d', cellno));
 % cc(cc==0)=1;
 % align to behavior (rewards and solenoid) for each cell?
 % per day, get this data...
-range=5;
+range=20;
 bin=0.2;
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
-daysrewards = 1:sessions_total;
+% daysrewards = [1 4 7 10 16 19]; % opto ep 2
+daysrewards = [3 6 9 12 15 18 20]; % control
 ccbinnedPerireward=cell(1,length(daysrewards));
 ccrewdFF=cell(1,length(daysrewards));
 for d=daysrewards
     day=days(d);day=day{1};
     rewardsonly=day.rewards==1;
     cs=day.rewards==0.5;
+    % filter by epoch optoed
+    eps = find(day.changeRewLoc);
+    eps = [eps length(day.changeRewLoc)]; % includes end of recording as end of a epoch
+    % ep 2
+    eprng = eps(2):eps(3);
+%     mask = (day.trialnum(eprng)>=3) & (day.trialnum(eprng)<8); % only first 5 trials
+    mask = day.trialnum(eprng)>=8; % non opto trials
+    rng = eprng(mask);
     % runs for all cells
-    [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dff{d}', ...
-        cs,day.timedFF,range,bin); %rewardsonly if mapping to reward
+    [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(day.dFF(rng, :), ...
+        rewardsonly(rng),day.timedFF(rng),range,bin); %rewardsonly if mapping to reward
     % now extract ids only of the common cells
     ccbinnedPerireward{d}=binnedPerireward;
     ccrewdFF{d}=rewdFF;
@@ -254,10 +264,11 @@ end
 % plot
 % if cell is missing from 1 day, take mean dff of others days from that
 % cell??? NOT implemented yet
-pavlovian=[1:5];
-hrz = [6:18];
-cells_to_plot = 1:50;%randi([1 20],1,5);
-for cellno=cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number of cells
+% pavlovian=[1:5];
+cells_to_plot = randi([1 1317],1,100);
+cells_to_plot = [7 13 15 19 32 43 44 59 77 135];
+%[161 157 152 140 135 106 93 77 59 58 53 52 48 47 44 43 42 41 33 32 27 19 15 13 12 8 7 6 4];%[1:200];
+for cellno=cells_to_plot
     dd=1; %for legend
     figure;
     clear legg;
@@ -265,8 +276,8 @@ for cellno=cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number o
         clear pltrew;
         pltrew=ccbinnedPerireward{d}; %temp hack that excludes cell #1
         try %if cell exists on that day, otherwise day is dropped...
-            if ismember(d,pavlovian)
-                plot(pltrew(cc(cellno,d),:)','r')            
+            if ismember(d,opto)
+                plot(pltrew(cc(cellno,d),:)','k')            
             else
                 plot(pltrew(cc(cellno,d),:)','k')            
             end
@@ -278,11 +289,51 @@ for cellno=cells_to_plot%randi([1 size(cc,1)],1,cells_to_plot ) %random number o
         hold on;        
     end   
      % plot reward location as line
-    xticks([1:5:50, 50])
-    x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}
-    xticklabels([allbins(1:5:end) range]);
+%     xticks([1:5:50, 50])
+%     x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}
+%     xticklabels([allbins(1:5:end) range]);
     xlabel('seconds')
     ylabel('dF/F')
     legend(char(legg))
     title(sprintf('Cell no. %04d', cellno))
+end
+
+%%
+% plot dff of certain cells across opto epoch (ep2)
+cells_plot = [7 13 15 19 32 43 44 59 77 135];
+% cells_plot = randi([1 length(cc)],1,20);
+opto = [1 4 7 10 13 16 19]; % ep 2
+opto = [3 6 9 12 15 18 20]; % ctrl
+
+clear legg;
+for cellno=cells_plot
+    dd=1; %for legend
+    figure;
+    clear legg;
+    for d=opto
+        day=days(d);day=day{1};
+        eps = find(day.changeRewLoc);
+        eps = [eps length(day.changeRewLoc)]; % includes end of recording as end of a epoch
+        % ep 2
+        eprng = eps(2):eps(3);
+    %     mask = (day.trialnum(eprng)>=3) & (day.trialnum(eprng)<8); % only first 5 trials
+        mask = day.trialnum(eprng)>=8; % non opto trials
+        rng = eprng(mask);
+        try %if cell exists on that day, otherwise day is dropped...
+            plot(day.dFF(rng,cc(cellno,d)))                        
+%             else
+%               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
+%             end
+            legg{dd}=sprintf('day %d',d); dd=dd+1;           
+        end
+        hold on;        
+    end   
+     % plot reward location as line
+%     xticks([1:5:50, 50])
+%     x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}
+%     xticklabels([allbins(1:5:end) range]);
+    xlabel('seconds')
+    ylabel('dF/F')
+    legend(char(legg))
+    title(sprintf('Control day, Cell no. %04d', cellno))
 end

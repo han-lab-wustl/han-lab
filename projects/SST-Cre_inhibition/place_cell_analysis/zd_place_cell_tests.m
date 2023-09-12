@@ -1,13 +1,13 @@
- load('Z:\sstcre_imaging\e201\57\230504_ZD_000_001\suite2p\plane0\Fall.mat')
-% eps = find(changeRewLoc);
-% eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
-% ep = 1;    
-% eprng = eps(1):eps(2);
+load('Y:\sstcre_analysis\fmats\e201\days\day63_Fall.mat')
+eps = find(changeRewLoc);
+eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
+ep = 1;    
+eprng = eps(1):eps(2);
 % mask = trialnum(eprng)>=3; % skip probes
-ypos = ybinned;%(eprng);
+ypos = ybinned(eprng);
 ypos = ceil(ypos*(3/2)); % gain factor for zahra mice
 [time_moving ,time_stop] = vr_stop_and_moving_time(ypos);
-fc3 = all.Fc3;%(:,eprng);
+fc3 = Fc3(eprng,:)';
 % fc3 = fc3(:,mask);
 % rewloc = changeRewLoc(changeRewLoc>0); % reward location
 % rewlocopto = rewloc(ep)*(3/2);
