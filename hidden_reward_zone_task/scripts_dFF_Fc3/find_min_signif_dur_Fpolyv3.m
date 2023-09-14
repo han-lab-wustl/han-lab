@@ -40,7 +40,8 @@ for i=1:numfiles
     %define baseline, find start, duration and max std amplitude of
     %transients in both positive and neg. direction.
     for i=1:numtraces
-        upperbase(i)=2*std(Fc2(:,i)); % noise threshold %% EB i was '1'
+        upperbase(i)=3*std(Fc2(:,i)); % noise threshold %% EB i was '1'
+        % ZD changed to 3 to match calc_Fc3v3
         baselineind=find(Fc2(:,i)<upperbase(i)); %indxes for baseline
         baseline=Fc2(baselineind,i); % grab all the baseline values for statistics
         basemedian=median(baseline);

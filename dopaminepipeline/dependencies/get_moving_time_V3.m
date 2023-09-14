@@ -4,6 +4,7 @@ function [moving_middle stop] = get_moving_time_V3(velocity,thres,Fs,ftol)
 % position - position on track
 % thres - Threshold speed in cm/s
 % Fs - number of frames length minimum to be considered stopped.
+% ftol - 10 frames 
 %%
 vr_speed = velocity;
 vr_thresh = thres;

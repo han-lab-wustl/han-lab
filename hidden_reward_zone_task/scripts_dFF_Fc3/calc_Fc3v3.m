@@ -4,7 +4,7 @@ function Fc3_DF=calc_Fc3v3(Fc2,std_sig_dur_min_day)
 %transients in both positive and neg. direction.
 numtraces = size(std_sig_dur_min_day,1);
 for i=1:numtraces
-    upperbase(i)=3*std(Fc2(:,i)); % noise threshold %% EB i was '1'
+    upperbase(i)=3*std(Fc2(:,i)); % noise threshold %% EB i was '1' % original paper had 2
     baselineind=find(Fc2(:,i)<upperbase(i)); % get baseline indeces
     baseline=Fc2(baselineind,i); % get the actual values
     basemedian=median(baseline);
