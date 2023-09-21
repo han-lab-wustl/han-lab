@@ -31,11 +31,13 @@ for week=weeknms % for e201, excluded week 1
     [counts, bins] = hist(r,1:size(r,1));
     sessions=size(week2day.cell_registered_struct.cell_to_index_map,2);% specify no of sessions, exclude week
     cindex = bins(counts>=2); % finding cells across only 1 session + the week 
+    % week has to have an index becuase it is a ref
     commoncells=zeros(length(cindex),sessions);
     for ci=1:length(cindex)
         commoncells(ci,:)=week2day.cell_registered_struct.cell_to_index_map(cindex(ci),:);
     end    
     % make sure cells map across weeks
+    % uses suite2p indices
     mask = ismember(commoncells(:,sessions),commoncells_4weeks(:,wkcount));
     commoncells_mapped = commoncells(mask,:);
     save(fullfile(week2daynm.folder, 'commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat'),'commoncells_mapped')
@@ -75,13 +77,17 @@ for w=1:length(week1cells_to_map)
         tweek=week_maps{wk};
         dayscell=tweek(find(tweek(:,end)==cell_across_weeks(wk)),1:end-1); % exclude last column which is 
         % the week
-        if isempty(dayscell)
+        if isempty(dayscell) % if that cell is not tracked that week, add 0's to all days
             daysweekcell{wk}=zeros(1,size(dayscell,2));
         else
             daysweekcell{wk}=dayscell;
         end
     end
     cellmap2dayacrossweeks(w,:) = [daysweekcell{:}];
+    % this matrix is typically larger than the week2day ones!!! because it
+    % includes cells that were tracked across weeks but not tracked to days
+    in %
+    % adds back those cells that i removed previously! but ok
 end
 
 %save
@@ -237,8 +243,8 @@ range=20;
 bin=0.2;
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
-% daysrewards = [1 4 7 10 16 19]; % opto ep 2
-daysrewards = [3 6 9 12 15 18 20]; % control
+daysrewards = [1 4 7 10 16 19]; % opto ep 2
+% daysrewards = [3 6 9 12 15 18 20]; % control
 ccbinnedPerireward=cell(1,length(daysrewards));
 ccrewdFF=cell(1,length(daysrewards));
 for d=daysrewards
@@ -346,8 +352,8 @@ addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
 daysrewards = [1 4 7 10 16 19]; % opto ep 2
 % daysrewards = [3 6 9 12 15 18 20]; % control
-ccbinnedPerireward=cell(1,length(daysrewards));
-ccrewdFF=cell(1,length(daysrewards));
+ccbinnedPerivelocity=cell(1,length(daysrewards));
+ccveldFF=cell(1,length(daysrewards));
 for d=daysrewards
     day=days(d);day=day{1};    
     rewardsonly=day.rewards==1;
@@ -381,17 +387,18 @@ for cellno=cells_to_plot
     for d=daysrewards
         clear pltrew;
         pltvel=ccbinnedPerivelocity{d};
-        pltvel=ccbinnedPerivelocity{d};%temp hack that excludes cell #1
+        pltrew=ccbinnedPerireward{d};%temp hack that excludes cell #1
         try %if cell exists on that day, otherwise day is dropped...
 %             if ismember(d,opto)
-                plot(pltrew(cc(cellno,d),:)','k')            
+                plot(pltvel(cc(cellno,d),:)','k'); hold on;
+                plot(pltrew(cc(cellno,d),:)','g')            
 %             else
 %                 plot(pltrew(cc(cellno,d),:)','k')            
 %             end
 %             else
 %               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
 %             end
-            legg{dd}=sprintf('day %d',d); dd=dd+1;           
+                legg{dd}=sprintf('day %d',d); dd=dd+1;           
         end
         hold on;        
     end   

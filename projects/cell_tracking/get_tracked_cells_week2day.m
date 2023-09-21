@@ -31,11 +31,13 @@ for week=weeknms % for e201, excluded week 1
     [counts, bins] = hist(r,1:size(r,1));
     sessions=size(week2day.cell_registered_struct.cell_to_index_map,2);% specify no of sessions, exclude week
     cindex = bins(counts>=2); % finding cells across only 1 session + the week 
+    % week has to have an index becuase it is a ref
     commoncells=zeros(length(cindex),sessions);
     for ci=1:length(cindex)
         commoncells(ci,:)=week2day.cell_registered_struct.cell_to_index_map(cindex(ci),:);
     end    
     % make sure cells map across weeks
+    % uses suite2p indices
     mask = ismember(commoncells(:,sessions),commoncells_4weeks(:,wkcount));
     commoncells_mapped = commoncells(mask,:);
     save(fullfile(week2daynm.folder, 'commoncells_in_more_than_onedayofweek_mapped_across_weeks.mat'),'commoncells_mapped')
@@ -75,13 +77,17 @@ for w=1:length(week1cells_to_map)
         tweek=week_maps{wk};
         dayscell=tweek(find(tweek(:,end)==cell_across_weeks(wk)),1:end-1); % exclude last column which is 
         % the week
-        if isempty(dayscell)
+        if isempty(dayscell) % if that cell is not tracked that week, add 0's to all days
             daysweekcell{wk}=zeros(1,size(dayscell,2));
         else
             daysweekcell{wk}=dayscell;
         end
     end
     cellmap2dayacrossweeks(w,:) = [daysweekcell{:}];
+    % this matrix is typically larger than the week2day ones!!! because it
+    % includes cells that were tracked across weeks but not tracked to days
+    % in one of the weeks
+    % adds back those cells that i removed previously! but ok
 end
 
 %save
