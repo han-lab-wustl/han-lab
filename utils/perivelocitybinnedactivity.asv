@@ -3,14 +3,12 @@ function [binnedPerivelocity,allbins,rewvel] = perivelocitybinnedactivity(veloci
 %%%
 % dff aligned to stops
 %%%
-[moving_middle stop] = get_moving_time_V3(velocity,2,10,30);
+[moving_middle stop] = get_moving_time_V3(velocity,2,10,10);
 % params for moving_time
 % velocity - forwardvel
-% thres - Threshold speed in cm/s below which something is considered a
-% stop
+% thres - Threshold speed in cm/s
 % Fs - number of frames length minimum to be considered stopped.
-% ftol - max number of frames between 2 'stops' to be considered as one
-% stop instead
+% ftol - 10 frames ??
 stop_idx = moving_middle(find(diff(moving_middle)>1)+1);
 % find stops without reward
 frame_rate=31.25/numplanes;
@@ -25,19 +23,18 @@ for r = 1:length(rew_idx)
         rew_stop_idx(r) = NaN;
     end
 end
-rew_stop_idx = rew_stop_idx(~isnan(rew_stop_idx));
 non_rew_stops = setxor(rew_stop_idx,stop_idx);
 non_rew_stops = non_rew_stops(~isnan(non_rew_stops));
-figure; plot(velocity); hold on; plot(rew_stop_idx, velocity(rew_stop_idx), 'r*'); 
-plot(find(rewards),velocity(rewards),'y*'); plot(non_rew_stops, velocity(non_rew_stops), 'b*')
+figure; plot(velocity); hold on; plot(stop_idx, velocity(stop_idx), 'r*'); 
+plot(find(rew>0.5),velocity(rew>0.5),'y*'); plot(non_rew_stops, velocity(non_rew_stops), 'b*')
 % binsize = 0.1; %half a second bins
 % range = 6; %seconds back and forward in time
-rewvel = zeros(ceil(range*2/binsize),size(dff,2),length(non_rew_stops));
-for rr = 1:length(non_rew_stops)
-    rewtime = timedFF(non_rew_stops(rr));
+rewvel = zeros(ceil(range*2/binsize),size(dff,2),length(stop_idx));
+for rr = 1:length(stop_idx)
+    rewtime = timedFF(stop_idx(rr));
     currentrewchecks = find(timedFF>rewtime-range & timedFF<=rewtime+range);
     currentrewcheckscell = consecutive_stretch(currentrewchecks);
-    currentrewardlogical = cellfun(@(x) ismember(non_rew_stops(rr),x),currentrewcheckscell);
+    currentrewardlogical = cellfun(@(x) ismember(stop_idx(rr),x),currentrewcheckscell);
     
     for bin = 1:ceil(range*2/binsize)
         testbin(bin) = round(-range+bin*binsize-binsize,13); %round to nearest 13 so 0 = 0 and not 3.576e-16

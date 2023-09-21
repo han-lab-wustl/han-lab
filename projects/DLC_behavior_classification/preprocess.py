@@ -114,9 +114,12 @@ for experiment in experiments:
     # pca_2_result_sn=pca_2_result[dfkmeans['tongue_lbl']]
     # plt.scatter(pca_2_result_sn[:, 0] , pca_2_result_sn[: , 1] , 
     #             color='k', marker='x')
-    pca_2_result_lk=pca_2_result[dfkmeans['sniff_lbl']]
-    plt.scatter(pca_2_result_lk[:, 0] , pca_2_result_lk[: , 1] , 
-                color='k', marker='*', facecolors='none')
+    # pca_2_result_lk=pca_2_result[dfkmeans['sniff_lbl']]
+    # plt.scatter(pca_2_result_lk[:, 0] , pca_2_result_lk[: , 1] , 
+    #             color='k', marker='*', facecolors='none')
+    
+    dfkmeans['whisking_l'] = dfkmeans['whiskerLower']<dfkmeans["whiskerLower"].mean()-dfkmeans["whiskerUpper"].std()*3
+
     # pca_2_result_mo=pca_2_result[dfkmeans['sniff_lbl']]
     # plt.scatter(pca_2_result_mo[:, 0] , pca_2_result_mo[: , 1] , 
     #             color='k', marker='d', facecolors='none')
