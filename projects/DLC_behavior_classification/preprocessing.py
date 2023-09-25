@@ -236,23 +236,29 @@ def VRalign(vrfl, dlccsv, only_add_experiment=False):
             # sometimes trial number increases by 1 for 1 frame at the end of an epoch before
             # going to probes. this removes those
             trialchange = np.concatenate(([0], np.diff(np.squeeze(trialnum))))
+            # GM and ZD added to fix times when VR does not have data for the imaging
+            # frames; seems to happen randomly
+            artefact1 = np.where(np.concatenate(([0, 0], trialchange[:-2])) == 1 & (trialchange < 0))[0]
+            trialnum[artefact1-1] = trialnum[artefact1];
             artefact = np.where(np.concatenate(([0], trialchange[:-1])) == 1 & (trialchange < 0))[0]
             if artefact.size != 0:
                 trialnum[artefact-1] = trialnum[artefact-2]
-                
+                            
             # this ensures that all trial number changes happen on when the
             # yposition goes back to the start, not 1 frame before or after
             ypos = ybinned.copy()
             trialsplit = np.where(np.diff(np.squeeze(trialnum)))[0]
             ypossplit = np.where(np.diff(np.squeeze(ypos)) < -50)[0]
-            for t in range(len(trialsplit)):
-                try: # accounts for different lengths, ok to bypass?
-                    if trialsplit[t] < ypossplit[t]:
-                        trialnum[trialsplit[t]:ypossplit[t]+1] = trialnum[trialsplit[t]-1]
-                    elif trialsplit[t] > ypossplit[t]:
-                        trialnum[ypossplit[t]+1:trialsplit[t]] = trialnum[trialsplit[t]+1]
-                except IndexError:
-                    pass
+            #ZD commented out because it was setting trialnum to a constant as
+            # previously debugged by GM and ZD above
+            # for t in range(len(trialsplit)):
+            #     try: # accounts for different lengths, ok to bypass?
+            #         if trialsplit[t] < ypossplit[t]:
+            #             trialnum[trialsplit[t]:ypossplit[t]+1] = trialnum[trialsplit[t]-1]
+            #         elif trialsplit[t] > ypossplit[t]:
+            #             trialnum[ypossplit[t]+1:trialsplit[t]] = trialnum[trialsplit[t]+1]
+            #     except IndexError:
+            #         pass
                 
             # doing the same thing but with changerewloc
             rewlocsplit = np.where(changeRewLoc)[0]
