@@ -41,12 +41,18 @@ for i,row in mouse_df.iterrows():
         df['PawBottom_x'][df['PawBottom_likelihood'].astype('float32') < 0.9] = 0
         df['PawBottom_y'][df['PawBottom_likelihood'].astype('float32') < 0.9] = 0
         paw = df[['PawTop_y','PawBottom_y','PawMiddle_y']].astype('float32').mean(axis=1)
+        # if there is any grooming
         if sum(paw.values)>0:
-            plt.figure(); plt.scatter(np.where(paw>0)[0], mat['ybinned'][paw>0],c='y', marker = 'D', label='paw'); 
-            plt.scatter(np.where(mat['rewards']>0.5)[0], mat['ybinned'][mat['rewards']>0.5],c='g', marker = '*',s=10**2,
-                        label='reward'); 
-            plt.scatter(np.where(mat['licks'])[0], mat['ybinned'][mat['licks']>0],c='r',s=4, label = 'lick'); 
-            plt.plot(mat['ybinned'],
-                        label='ypos')
-            plt.title(f'mouse = {row.mouse}, date = {row.date}')
-            plt.legend()
+            diffs = np.diff((paw.values>0).astype(int),axis=0)
+            starts = np.argwhere(diffs == 1)
+            stops = np.argwhere(diffs == -1)
+            start_stop = stops-starts
+            start_stop = start_stop[start_stop>2]
+            groom = len(start_stop) # measures number of grooming bouts
+            for ep in eps-1:
+                  rng = np.arange(eps[ep],eps[ep+1])
+                  rew = mat['rewards'][rng]
+                  trials = mat['trialnum'][rng]
+                  
+            grooms.append(groom)
+            mice.append(row)

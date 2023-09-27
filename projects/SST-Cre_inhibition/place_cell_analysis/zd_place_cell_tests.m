@@ -1,10 +1,12 @@
 clear all; clear all;
-days = [55:75];
+days = [56:3:75];
 for dd=days
     putative_pcs = {};
     pth=sprintf('Y:\\sstcre_analysis\\fmats\\e201\\days\\day%i_Fall.mat',dd);
     fprintf('\n day = % i\n', dd)
     load(pth)
+    [~,bordercells] = remove_border_cells_all_cells(stat);    
+    fc3 = Fc3(:,~bordercells); % remove border cells from shuffle;
     eps = find(changeRewLoc);
     eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
     for ep=1:length(eps)-1 % find putative place cell per epoch
@@ -15,7 +17,7 @@ for dd=days
         % get place cells only
         putative_pcs{ep} = putative_pc;       
     end
-    save(pth, 'putative_pcs', '-append')
+    save(pth, 'putative_pcs', 'bordercells', '-append') % save border cells for further analysis
 end
 %%
 % generate tuning curve
