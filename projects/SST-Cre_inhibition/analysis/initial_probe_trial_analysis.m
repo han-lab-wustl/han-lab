@@ -1,54 +1,75 @@
 % look at probes the day after
 % days = [60:74 76 78:90]; % e200
-days = [50:80,82:94]; % e201
+% days = [50:80,82:94]; % e201
 % days = [1 4:7 9:12]; % e145
 % days = [67 70 73 76 80 83 86 89]; % only ctrl days after opto ep3 for e200
 % days = [57 60 63 66 69 72 76 79 85 90 94];% only ctrl days after opto ep3 for e200
-fld = "Z:\sstcre_imaging\e201";
+% fld = "Z:\sstcre_imaging\e201";
 % fld = "H:\E145";
-fld = "Y:\sstcre_imaging\e200";
-grayColor = [.7 .7 .7];
-close all;
+% fld = "Y:\sstcre_imaging\e200";
+clear all;close all;
+grayColor = [.7 .7 .7]; 
+
+fld = "D:\adina_vr_files\VR_data_ZD_memory_probes";
+dirs = dir(fld);
 COMlick_rewlocprev={}; lickpos = {}; rewloc_prevs={};
-for dd=2:length(days)
-    clearvars -except days grayColor dd COMlick_rewlocprev lickpos fld rewloc_prevs
-    behfl = dir(fullfile(fld, string(days(dd)), "behavior", "vr\*.mat"));
+for d=1:length(dirs)
+    clearvars -except days grayColor d COMlick_rewlocprev lickpos fld dirs rewloc_prevs    
+    if contains(dirs(d).name, ").mat") && (dirs(d).name(1)=='e' || dirs(d).name(1)=='E') && ...
+            dirs(d).name(5)=='_'% real mat files
+        behfl = fullfile(dirs(d).folder, dirs(d).name);        
+        load(behfl)
+    
 %     % for 
 %     behfl = dir(fullfile(fld, sprintf("Day%i",days(dd)), "E145*.mat"));
-    load(fullfile(behfl.folder, behfl.name))
+%     load(fullfile(behfl.folder, behfl.name))
     % check if probes in the beginning of the day
-    % plot only first probes
-    eps = find(VR.changeRewLoc);
-    eps = [find(VR.changeRewLoc) length(VR.ypos)];
-    eprng = eps(1):eps(2); trialnum = VR.trialNum;
-    % check if initial probes exist
-    if length(eprng(trialnum(eprng)<3))>10
-        disp(days(dd))
-        % plot
-%         figure;
-%         plot(VR.ypos, 'Color', grayColor); hold on; 
-%         plot(VR.changeRewLoc, 'b')
-%         plot(find(VR.lick),VR.ypos(find(VR.lick)),'r.')     
-%         rew = VR.reward>0.5; % codes for single or double rewards
-%             
-%         rectangle('position',[min(eprng(trialnum(eprng)<3)) 0 ...
-%                 length(eprng((trialnum(eprng)<3))) 180], ...
-%                     'EdgeColor',[0 0 0 0],'FaceColor',[0 0 1 0.3])
-%         title(sprintf("day %i", days(dd)))
-        % calc COM lick
-        pos = VR.ypos(eprng); % include scale factor
-        trialnumep = trialnum(eprng);
-        lick = VR.lick(eprng);
-        COMlick = mean(pos(lick>0));
-        lickpos{dd} = pos(lick>0);
-        % get prev day rewloc
-        behfl = dir(fullfile(fld, string(days(dd-1)), "behavior", "vr\*.mat"));
-%         behfl = dir(fullfile(fld, sprintf("Day%i",days(dd-1)), "E145*.mat"));
-        VR_prev = load(fullfile(behfl.folder, behfl.name));
-        rewloc_prev = VR.changeRewLoc(VR.changeRewLoc>0); % all epochs
-        COMlick_rewlocprev{dd} = COMlick - rewloc_prev;
-        rewloc_prevs{dd} = rewloc_prev;
-    end    
+    % plot only first probes    
+    if isfield(VR, 'settings') && isfield(VR.settings, 'name') && contains(VR.settings.name, 'HRZ') % only hrz
+        eps = find(VR.changeRewLoc);
+        eps = [find(VR.changeRewLoc) length(VR.ypos)];
+        eprng = eps(1):eps(2); trialnum = VR.trialNum;
+        % check if initial probes exist
+        if length(eprng(trialnum(eprng)<3))>10 && length(unique(trialnum(eprng)))>10 % atleast 10 trials ep 1 of the day of probes
+            % calc COM lick
+            proberng = eprng(trialnum(eprng)<3); %range for initial probes
+            pos = VR.ypos(proberng); % include scale factor
+            trialnumep = trialnum(proberng);
+            lick = VR.lick(proberng);
+            COMlick = mean(pos(lick>0));            
+            % get prev day rewloc
+            s = dirs(d).name(6:16);
+            t = datetime(s,'InputFormat','dd_MMM_yyyy');
+            t.Format = 'dd_MMM_yyyy'; % format
+            prev = strcat(dirs(d).name(1:5), string(t-1), '*');
+            prev_fls = dir(fullfile(dirs(d).folder, prev));
+            % if there are multiple files, take last one (likely started
+            % and restarted)
+            if length(prev_fls)>0
+                prev_fl = prev_fls(end);
+        %         behfl = dir(fullfile(fld, sprintf("Day%i",days(dd-1)), "E145*.mat"));
+                VR_prev = load(fullfile(prev_fl.folder, prev_fl.name));
+                rewloc_prev = VR.changeRewLoc(VR.changeRewLoc>0); % all epochs
+                if length(rewloc_prev)>3 %previous day should have at least 3 ep
+                    COMlick_rewlocprev{d} = COMlick - rewloc_prev;
+                    rewloc_prevs{d} = rewloc_prev;
+                    lickpos{d} = pos(lick>0);
+                    % plot
+                    figure;
+                    plot(VR.ypos, 'Color', grayColor); hold on; 
+                    plot(VR.changeRewLoc, 'b')
+                    plot(find(VR.lick),VR.ypos(find(VR.lick)),'r.')     
+                    rew = VR.reward>0.5; % codes for single or double rewards
+                        
+                    rectangle('position',[min(eprng(trialnum(eprng)<3)) 0 ...
+                            length(eprng((trialnum(eprng)<3))) 180], ...
+                                'EdgeColor',[0 0 0 0],'FaceColor',[0 0 1 0.3])
+                    title(sprintf("%s", dirs(d).name))
+                end
+            end
+        end
+    end
+    end
 end
 %%
 % histogram of lick pos
@@ -68,6 +89,7 @@ figure; plot(ep1,'k*'); hold on; plot(ep2,"b*"); plot(ep3,"r*")
 legend('ep1','ep2','ep3')
 %%
 % check similarity to ep 1,2,3
+grayColor2 = [.4 .4 .4];
 COMlick_rewlocprev = COMlick_rewlocprev(~cellfun('isempty',COMlick_rewlocprev));
 figure; 
 plot(1, cell2mat(cellfun(@(x) x(1), COMlick_rewlocprev, 'UniformOutput',false)), 'ko', ...
