@@ -1,12 +1,20 @@
 clear all; clear all;
-days = [56:3:75];
+days = [55:3:75];
+cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+cc = cc.cellmap2dayacrossweeks;
+ddn = 1; % counter for days that align to tracked mat file
 for dd=days
     putative_pcs = {};
-    pth=sprintf('Y:\\sstcre_analysis\\fmats\\e201\\days\\day%i_Fall.mat',dd);
+    pth=sprintf('Y:\\sstcre_analysis\\fmats\\e201\\days\\day%i_Fall.mat',dd);    
     fprintf('\n day = % i\n', dd)
     load(pth)
+    cellindt = cc(:,1);
+    cellindt = cellindt(cellindt>1);
+    cellindbc = [1:size(Fc3,2)];
     [~,bordercells] = remove_border_cells_all_cells(stat);    
-    fc3 = Fc3(:,~bordercells); % remove border cells from shuffle;
+    cellindwithoutbc = cellindbc(~bordercells);    
+    cellind=intersect(cellindt,cellindwithoutbc); %only tracked cells that are not border cells
+    fc3 = Fc3(:,cellind); % remove border cells from shuffle;
     eps = find(changeRewLoc);
     eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
     for ep=1:length(eps)-1 % find putative place cell per epoch
@@ -17,7 +25,8 @@ for dd=days
         % get place cells only
         putative_pcs{ep} = putative_pc;       
     end
-    save(pth, 'putative_pcs', 'bordercells', '-append') % save border cells for further analysis
+    save(pth, 'cc', 'putative_pcs_tracked', 'bordercells', '-append') % save border cells for further analysis
+    ddn=ddn+1;
 end
 %%
 % generate tuning curve
