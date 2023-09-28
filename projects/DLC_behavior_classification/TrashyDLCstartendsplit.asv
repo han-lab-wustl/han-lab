@@ -250,21 +250,13 @@ for n = 1:numfiles
     end
     fullFfile=[Ffilepath{n} Ffile{n}];
     experiment = VR.settings.name;
-    % saving and downsampling 
-    savepth = strcat(fullFfile(1:end-4), 'vr_vars_aligned.mat') % save as mat file    
-    arr = 1:height(T)/2;
-    arr2 = repmat(arr,2,1);
-    arr3 = reshape(arr2, 1, []);
-    T_ = T{1:end-1,:};
-    T_downsample = groupsummary(T_,arr3', 'mean');
-    vars  = T.Properties.VariableNames;
+    savepth = strcat(fullFfile(1:end-4), '.mat')    
+    for i=1:2:height(T)-1
+        T_downsample(i) = mean(T{1,:}, T{2,:});
+    end
     pause(1);
     save(savepth,'ybinned','rewards','forwardvel','licks', ...
         'changeRewLoc','trialnum','timedFF','lickVoltage', 'experiment');
-    T_save = strcat(fullFfile(1:end-4), '_dlc_downsampled.mat') ;
-    save(T_save,'T_downsample');
-    colsave = strcat(fullFfile(1:end-4), '_col_names.mat') ;
-    save(colsave,'vars');
 %       if addabf
 %           save(fullFfile,'abfdata','-append');
 %       end

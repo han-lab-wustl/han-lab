@@ -12,11 +12,11 @@ grayColor = [.7 .7 .7];
 
 fld = "D:\adina_vr_files\VR_data_ZD_memory_probes";
 dirs = dir(fld);
-COMlick_rewlocprev={}; lickpos = {}; rewloc_prevs={};
+COMlick_rewlocprev={}; lickpos = {}; rewloc_prevs={}; fls = {};
 for d=1:length(dirs)
-    clearvars -except days grayColor d COMlick_rewlocprev lickpos fld dirs rewloc_prevs    
+    clearvars -except days grayColor d COMlick_rewlocprev lickpos fld dirs rewloc_prevs fls    
     if contains(dirs(d).name, ").mat") && (dirs(d).name(1)=='e' || dirs(d).name(1)=='E') && ...
-            dirs(d).name(5)=='_'% real mat files
+            dirs(d).name(30)=='_'% real mat files
         behfl = fullfile(dirs(d).folder, dirs(d).name);        
         load(behfl)
     
@@ -36,6 +36,8 @@ for d=1:length(dirs)
             pos = VR.ypos(proberng); % include scale factor
             trialnumep = trialnum(proberng);
             lick = VR.lick(proberng);
+            % at least 5 licks
+            if sum(lick)>5
             COMlick = mean(pos(lick>0));            
             % get prev day rewloc
             s = dirs(d).name(6:16);
@@ -54,6 +56,7 @@ for d=1:length(dirs)
                     COMlick_rewlocprev{d} = COMlick - rewloc_prev;
                     rewloc_prevs{d} = rewloc_prev;
                     lickpos{d} = pos(lick>0);
+                    fls{d} = behfl;
                     % plot
                     figure;
                     plot(VR.ypos, 'Color', grayColor); hold on; 
@@ -66,6 +69,7 @@ for d=1:length(dirs)
                                 'EdgeColor',[0 0 0 0],'FaceColor',[0 0 1 0.3])
                     title(sprintf("%s", dirs(d).name))
                 end
+            end
             end
         end
     end
