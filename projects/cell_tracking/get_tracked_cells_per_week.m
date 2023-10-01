@@ -3,15 +3,15 @@
 
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';
-weekfld = 'week47891011';
+animal = 'e200';
+weekfld = 'week09-14';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
 sessions=length(cell_registered_struct.centroid_locations_corrected);% specify no of sessions
-cindex = bins(counts==sessions); % finding cells AT LEAST 2 SESSIONS???
+cindex = bins(counts>=sessions); % finding cells AT LEAST 2 SESSIONS???
 commoncells=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
@@ -23,16 +23,16 @@ for i=1:length(p_same_mat)
     mean_Psame{i}=mean(mean(p_same_mat{i,1},'omitnan'),'omitnan');
 end
 mean_Psame_mat = cell2mat(mean_Psame)';
+cc=commoncells;
 % calculate average p-same for validation of probabilistic model
 
 % load mats from all weeks
-fls = dir(fullfile(src, 'fmats', animal, sprintf('%s_week*',animal))); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));
+fls = dir(fullfile(src, 'fmats', animal, sprintf('week*.mat',animal))); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));
 days = cell(1, length(fls));
 for fl=1:length(fls)
     day = fls(fl);
     days{fl} = load(fullfile(day.folder,day.name));
 end
-cc=commoncells;
 % colormap to iterate thru
 ctab = hsv(length(cc));
 
@@ -47,7 +47,7 @@ ctab = hsv(length(cc));
 % align all cells across all days in 1 fig
 figure;
 axes=zeros(1,sessions);
-cells_to_plot = [470];
+cells_to_plot = [1:size(cc,1)];
 for ss=1:sessions
     day=days(ss);day=day{1};
     axes(ss)=subplot(2,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days

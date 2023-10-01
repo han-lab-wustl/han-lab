@@ -44,17 +44,17 @@ def preprocess(step,vrdir, dlcfls,columns=False,
                 df = pickle.load(fp)
         cluster_output = {}
         #novr
-        X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment=='no_Random_Rewards_no_VR_Sol2_CS'],
-                                    columns)
-        pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
-        cluster_output['novr'] = [pca,lbl,df_kmeans]
-        #pavlovian
-        tasks = ['Random_Rewards_no_VR_Sol2_CS', 
-                 'Random_Rewards_no_VR_Sol2_CS_Omit_Experiments']
-        X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment.isin(tasks)], 
-                                    columns)
-        pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
-        cluster_output['pavlovian'] = [pca,lbl,df_kmeans]
+        # X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment=='no_Random_Rewards_no_VR_Sol2_CS'],
+        #                             columns)
+        # pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
+        # cluster_output['novr'] = [pca,lbl,df_kmeans]
+        # #pavlovian
+        # tasks = ['Random_Rewards_no_VR_Sol2_CS', 
+        #          'Random_Rewards_no_VR_Sol2_CS_Omit_Experiments']
+        # X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment.isin(tasks)], 
+        #                             columns)
+        # pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
+        # cluster_output['pavlovian'] = [pca,lbl,df_kmeans]
         #hrz
         tasks = ['M3_M4_altered_dim_HRZ_norewards__MM_sol2', 
                  'M3_M4_altered_dim_HRZ_double_probe_middle_5cmRL_GM_sol2']
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # gets clustering vars
     dfs = preprocess(2,vrdir,dlcfls)
     columns = ['tongue', 'nose', 'paw', 
-               'whiskerUpper', 'whiskerLower']
+               'forwardvelocity']
         # , 'forwardvelocity']#, 'whiskerUpper',
     #    'whiskerLower', 'ybinned', 'licks',
        #'lickVoltage']

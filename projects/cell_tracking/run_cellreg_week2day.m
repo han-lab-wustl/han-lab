@@ -42,9 +42,9 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 12;
-animal = 'e201';
-results_directory= fullfile(pth,sprintf('%s_week%i_to_days', animal, week), 'Results') ;
+week = 11;
+animal = 'e200';
+results_directory= fullfile(pth,sprintf('%s_week%02d_to_days', animal, week), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -55,7 +55,7 @@ figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
 
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\week%i\\converted_*.mat", animal, week))); % make sure week folder exists 
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\week%02d\\converted_*.mat", animal, week))); % make sure week folder exists 
 % and week spatial footprints are in it
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);

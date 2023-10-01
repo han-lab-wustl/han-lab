@@ -1,5 +1,5 @@
 clear all; clear all;
-days = [55:3:75];
+days = [59:3:75];
 cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 cc = cc.cellmap2dayacrossweeks;
 ddn = 1; % counter for days that align to tracked mat file
@@ -20,12 +20,12 @@ for dd=days
     for ep=1:length(eps)-1 % find putative place cell per epoch
         fprintf("\n Epoch %i \n", ep)
         bin = 3; track_length = 270; gainf = 3/2;
-        [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,Fc3,changeRewLoc, ...
+        [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,fc3,changeRewLoc, ...
         bin,track_length,gainf);
         % get place cells only
         putative_pcs{ep} = putative_pc;       
     end
-    save(pth, 'cc', 'putative_pcs_tracked', 'bordercells', '-append') % save border cells for further analysis
+    save(pth, 'cc', 'putative_pcs', 'bordercells', '-append') % save border cells for further analysis
     ddn=ddn+1;
 end
 %%

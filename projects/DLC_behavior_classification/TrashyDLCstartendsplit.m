@@ -30,11 +30,13 @@
 % cd (path); %set path
 % fullfilename=[path char(filename)];
 % load(fullfilename);
-
+clear all; clear all;
 imageSync = [];
 
 %Find start and stop of imaging using VR
-
+% read VR file
+[vrfilename, vrfilepath] = uigetfile('*.mat','pick your VR file');
+load([vrfilepath vrfilename])
 
 if isfield(VR,'imageSync') %makes sure VR has an imageSync variable, if not uses abf, BUT still uses VR variables later
     imageSync = VR.imageSync;
@@ -96,34 +98,6 @@ uchangeRewLoc(1) = VR.changeRewLoc(1);
 ulicks = VR.lick(scanstart:scanstop);
 ulickVoltage = VR.lickVoltage(scanstart:scanstop);
 
-%% for loading abf data as well
-
-addabf = input('Would you like to add abf data? (0-no,1-yes)'); %note this adds abf data as "abfdata," to your F files, cut at the imaging points but not aligned or named for generalization purposes 
-if addabf
-    [abffilename,abfpath] = uigetfile('*.abf','pick your abf file');
-    abffullfilename = [abfpath char(abffilename)];
-    data = abfload(abffullfilename);  
-    imagingchannel = input('Which channel is the imaging channel?');
-    inds=find((abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,5)))))==1);
-    meaninds=mean(diff(inds));
-    figure;subplot(2,1,1);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,5)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
-    subplot(2,1,2);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
-    xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
-    [abfscanstart,y] = ginput(1)
-    abfscanstart = round(abfscanstart)
-
-    
-    figure;subplot(2,1,1);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
-    subplot(2,1,2);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,5)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
-    xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
-    [abfscanstop,y]= ginput(1)
-    abfscanstop = round(abfscanstop)
-    disp(['Length of scan is ', num2str(abfscanstop-abfscanstart)])
-    disp(['Time of scan is ', num2str((abfscanstop-abfscanstart)/1000)])
-     abfdata = data(abfscastart:abfscanstop,:);
-    close all;
-end
-
 %Find start and stop of imaging
 
 % rewards_th=1*rewards>(0.1*max(rewards));
@@ -173,7 +147,7 @@ T = readtable([Ffilepath{1},Ffile{1}],'NumHeaderLines',1);
 % end
 % fullFfile = [Ffilepath{1} Ffile{1}];
 % load(fullFfile);
-utimedFF = linspace(0,(VR.time(scanstop)-VR.time(scanstart)),(numfiles*(length(T.bodyparts(:,1))-1)/2));
+utimedFF = linspace(0,(VR.time(scanstop)-VR.time(scanstart)),(numfiles*(height(T)-1)/2));
 % ZD added to downsample video DLC output by half, and align VR variables
 % to it - 9/28/2023
 for n = 1:numfiles
@@ -257,12 +231,13 @@ for n = 1:numfiles
     arr3 = reshape(arr2, 1, []);
     T_ = T{1:end-1,:};
     T_downsample = groupsummary(T_,arr3', 'mean');
-    vars  = T.Properties.VariableNames;
+    vars = T.Properties.VariableNames;
+    T_downsample = array2table(T_downsample, 'VariableNames', vars);
     pause(1);
     save(savepth,'ybinned','rewards','forwardvel','licks', ...
         'changeRewLoc','trialnum','timedFF','lickVoltage', 'experiment');
-    T_save = strcat(fullFfile(1:end-4), '_dlc_downsampled.mat') ;
-    save(T_save,'T_downsample');
+    T_save = strcat( fullFfile(1:end-4), '_dlc_downsampled.csv') ;
+    writematrix(T_downsample,T_save);
     colsave = strcat(fullFfile(1:end-4), '_col_names.mat') ;
     save(colsave,'vars');
 %       if addabf
