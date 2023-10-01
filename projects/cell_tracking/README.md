@@ -10,7 +10,7 @@ Procedure:
 - suite2p params are set in `run_suite2p_celltrack.py` as a threshold of 0.5 and max_iter of 200 (see suite2p docs for details). These are more permissive than the normal params, and worked well for my data with sparser and dimmer labeling. I would suggest doing a parameter sweep if you are not happy with the results for these params
 - `run_suite2p_celltrack.py` relies on a folder structure of scanbox folder > scanbox sbx and tif. It finds the tif assuming this hierarchy. If you have a different folder structure, I would suggest modifying it to this so you don't have to change the paths in the source code. 
 
-4. Use day and week `Fall.mat` output to run CellReg
+2. Use day and week `Fall.mat` output to run CellReg
 
 Relies on installation of [CellReg](https://github.com/zivlab/CellReg)
 
