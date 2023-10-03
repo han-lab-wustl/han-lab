@@ -42,8 +42,8 @@ pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e200'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_week09-14',animal), 'Results') ; % CHANGE WEEK NO
+animal = 'e145'; % CHANGE
+results_directory= fullfile(pth,sprintf('%s_week01-02_plane1',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,11 +53,14 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\converted_week*.mat", animal)));
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\plane1\\converted*week*.mat", animal)));
 %dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
 % dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
+reference_session_index=number_of_sessions; 
+% CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
+% multiple weeks = number_of_sessions-2
 
 for it = 1:number_of_sessions
     file_names{it} = fullfile(fls(it).folder, fls(it).name); %to account for dates of sessions in my trial data
@@ -103,7 +106,6 @@ alignment_type='Non-rigid'; % either 'Translations', 'Translations and Rotations
 use_parallel_processing=true; % either true or false
 maximal_rotation=30; % in degrees - only relevant if 'Translations and Rotations' is used
 transformation_smoothness=2; % levels of non-rigid FOV transformation smoothness (range 0.5-3)
-reference_session_index=number_of_sessions-2; % CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
 
 % Preparing the data for alignment:
 disp('Stage 2 - Aligning sessions')

@@ -126,7 +126,7 @@ Ffile{numfiles}=0;
 Ffilepath{numfiles}=0;
 [Ffile{1},Ffilepath{1}]=uigetfile('*.csv','pick the DLC file corresponding to VR behavior');
 % load csv file
-T = readtable([Ffilepath{1},Ffile{1}],'NumHeaderLines',1);
+T = readtable([Ffilepath{1},Ffile{1}]);
 %%
 % for n=1:numfiles
 %     [Ffile{n},Ffilepath{n}]=uigetfile('*.mat',['pick the F file for plane ' num2str(n)]);
@@ -237,9 +237,9 @@ for n = 1:numfiles
     save(savepth,'ybinned','rewards','forwardvel','licks', ...
         'changeRewLoc','trialnum','timedFF','lickVoltage', 'experiment');
     T_save = strcat( fullFfile(1:end-4), '_dlc_downsampled.csv') ;
-    writematrix(T_downsample,T_save);
-    colsave = strcat(fullFfile(1:end-4), '_col_names.mat') ;
-    save(colsave,'vars');
+    writetable(T_downsample,T_save);
+%     colsave = strcat(fullFfile(1:end-4), '_col_names.mat') ;
+%     save(colsave,'vars');
 %       if addabf
 %           save(fullFfile,'abfdata','-append');
 %       end

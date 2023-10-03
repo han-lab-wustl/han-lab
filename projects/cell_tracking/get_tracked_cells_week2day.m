@@ -4,9 +4,9 @@ clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';
-weeknms = [12 13 14 15];
-weekfld = 'week12-15';
+animal = 'e200';
+weeknms = [09 10 11 13 14];
+weekfld = 'week09-14';
 weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
@@ -67,7 +67,7 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=21; %total number of days imaged (e.g. included in dataset)
+sessions_total=23; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks
@@ -105,6 +105,8 @@ for fl=1:length(fls)
     dy = fls(fl);
     days{fl} = load(fullfile(dy.folder,dy.name));
 end
+cc=cellmap2dayacrossweeks;
+sessions_total=length(days);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%% figures for validation %%%%%%%%%%%%%%%%%%%%%%
@@ -112,8 +114,6 @@ end
 % align each common cells across all days with an individual mask
 % remember this is the cell index, so you have to find the cell in the
 % original F mat
-cc=cellmap2dayacrossweeks;
-sessions_total=length(days);
 ctab = hsv(length(cc));
 
 cells_to_plot = [129];
@@ -141,7 +141,6 @@ end
 % align all cells across all days in 1 fig
 % colormap to iterate thru
 cc=cellmap2dayacrossweeks;
-sessions_total=21;
 ctab = hsv(length(cc));
 figure;
 axesnm=zeros(1,sessions_total);
@@ -179,7 +178,7 @@ linkaxes(axesnm, 'xy')
 % dff=dff.dff;
 %%
 % plot F (and ideally dff) over ypos
-days_to_plot=1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
+days_to_plot=[1 4 7 10 13 16];%1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
 cellno=randi([1 length(cc)],1,1);
 grayColor = [.7 .7 .7];
 fig=figure;
@@ -214,24 +213,25 @@ sgtitle(sprintf('Cell no. %03d', cellno));
 %%
 % plot traces across all days
 
-% days_to_plot=[1,6,10,14,18]; %plot 5 days at a time
+days_to_plot=[1,6,10,14,18]; %plot 5 days at a time
 % cellno=78;
-% for cellno=100:150 %no. of common cells
-% grayColor = [.7 .7 .7];
-% fig=figure;
-% for dayplt=1:sessions_total
-%     ax1=subplot(sessions_total,1,dayplt);
-%     day=days(dayplt);day=day{1};
-%     try
-%         plot(dff{dayplt}(cc(cellno,dayplt),:),'k') % 2 in the first position is cell no
-%     end
-%     axs{dayplt}=ax1;
-%     set(gca,'XTick',[], 'YTick', [])
-%     set(gca,'visible','off')
-% end
-% % linkaxes([axs{:}],'xy')
-% copygraphics(gcf, 'BackgroundColor', 'none');
-% title(sprintf('Cell no. %03d', cellno));
+for cellno=1:50 %no. of common cells
+grayColor = [.7 .7 .7];
+fig=figure;
+for dayplt=1:sessions_total
+    ax1=subplot(sessions_total,1,dayplt);
+    day=days(dayplt);day=day{1};
+    try
+        plot(day.dFF(:,cc(cellno,dayplt)),'k') % 2 in the first position is cell no
+    end
+    axs{dayplt}=ax1;
+    set(gca,'XTick',[], 'YTick', [])
+    set(gca,'visible','off')
+end
+end
+% linkaxes([axs{:}],'xy')
+copygraphics(gcf, 'BackgroundColor', 'none');
+title(sprintf('Cell no. %03d', cellno));
 
 %%
 % peri reward analysis
@@ -243,7 +243,7 @@ range=20;
 bin=0.2;
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
-daysrewards = [1 4 7 10 16 19]; % opto ep 2
+daysrewards = 1:length(days);%[1 4 7 10 16 19]; % opto ep 2
 % daysrewards = [3 6 9 12 15 18 20]; % control
 ccbinnedPerireward=cell(1,length(daysrewards));
 ccrewdFF=cell(1,length(daysrewards));
@@ -271,8 +271,8 @@ end
 % if cell is missing from 1 day, take mean dff of others days from that
 % cell??? NOT implemented yet
 % pavlovian=[1:5];
-cells_to_plot = randi([1 1317],1,100);
-cells_to_plot = [7 13 15 19 32 43 44 59 77 135];
+cells_to_plot = randi([1 length(cc)],1,20);
+% cells_to_plot = [7 13 15 19 32 43 44 59 77 135];
 %[161 157 152 140 135 106 93 77 59 58 53 52 48 47 44 43 42 41 33 32 27 19 15 13 12 8 7 6 4];%[1:200];
 for cellno=cells_to_plot
     dd=1; %for legend
@@ -282,11 +282,11 @@ for cellno=cells_to_plot
         clear pltrew;
         pltrew=ccbinnedPerireward{d}; %temp hack that excludes cell #1
         try %if cell exists on that day, otherwise day is dropped...
-            if ismember(d,opto)
-                plot(pltrew(cc(cellno,d),:)','k')            
-            else
-                plot(pltrew(cc(cellno,d),:)','k')            
-            end
+%             if ismember(d,opto)
+%                 plot(pltrew(cc(cellno,d),:)','k')            
+%         else
+                plot(pltrew(cc(cellno,d),:)')            
+%             end
 %             else
 %               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
 %             end

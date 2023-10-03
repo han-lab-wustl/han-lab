@@ -1,5 +1,5 @@
 %% Converting the outputs from CNMF-e or Suite2p to the required input format for CellReg
-
+clear all
 input_format='Suite2p'; % could be either 'CNMF-e' or 'Suite2p'
 
 %% Choosing the files for conversion:

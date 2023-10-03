@@ -15,6 +15,21 @@ for day=days
     disp(savepthfmat)
 end
 %% 
+% for aligned fmats
+
+clear all;
+mouse_name = "e200";
+days = [62:70,72:74,76,81:90];
+src = "Y:\sstcre_imaging";
+fmatsrc = "Y:\sstcre_analysis\fmats";
+for day=days
+    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
+%     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+    fmatfl = dir(fullfile(fmatsrc, mouse_name, "days", sprintf('%s_day%03d*.mat',mouse_name, day))); 
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name), fmatfl, length(fmatfl));
+    disp(savepthfmat)
+end
+%%
 % for old data
 mouse_name = "E145";
 days = [4:7,9:12];

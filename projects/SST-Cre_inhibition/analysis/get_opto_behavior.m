@@ -25,7 +25,7 @@ for kk = 1:length(changeRewLoc)-1
         rewzone{kk} = 3;
     end
 end
-
+rewloc = VR.changeRewLoc(VR.changeRewLoc>0);
 ep2rng = eps(2):eps(3);
 ep3rng = eps(3):eps(4)-1; % to account for the different size of speed variable
 
@@ -33,6 +33,8 @@ if strcmp(condition,'ep2')
     % opto epoch
     mask = VR.trialNum(ep2rng)>=3 & VR.trialNum(ep2rng)<8; % skip probes = 0,1,2 
     trialnum = VR.trialNum(ep2rng); rew = VR.reward(ep2rng);
+    %rewarded vs. unrewarded licks
+    rewarded = find((VR.ypos>=rewloc(2)) & (VR.ypos<rewloc(2)+10)); % indices
     lick = VR.lick(ep2rng);
     lick_rate{1} = sum(lick(mask))/size(unique(trialnum(mask)),2);
     speed_ = speed(ep2rng);
