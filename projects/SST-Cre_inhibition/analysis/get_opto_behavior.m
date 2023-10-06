@@ -1,5 +1,6 @@
 function [speed_5trialsep, speed_ep, speed_5trialsep1, speed_ep1, speed_5trialsep2, ...s
-    speed_ep2, speed_5trialsep3, speed_ep3, s,f,t, lick_rate, rewzone] = get_opto_behavior(vrfl, condition)
+    speed_ep2, speed_5trialsep3, speed_ep3, s,f,t, ur_lick_rate, ...
+    r_lick_rate, rewzone] = get_opto_behavior(vrfl, condition)
 %only relies on vr file
 %   custom conditions
 % s f t ordered by conditions
@@ -34,16 +35,20 @@ if strcmp(condition,'ep2')
     mask = VR.trialNum(ep2rng)>=3 & VR.trialNum(ep2rng)<8; % skip probes = 0,1,2 
     trialnum = VR.trialNum(ep2rng); rew = VR.reward(ep2rng);
     %rewarded vs. unrewarded licks
-    rewarded = find((VR.ypos>=rewloc(2)) & (VR.ypos<rewloc(2)+10)); % indices
-    lick = VR.lick(ep2rng);
-    lick_rate{1} = sum(lick(mask))/size(unique(trialnum(mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep2rng, ...
+    mask, rewloc, 2);
+    ur_lick_rate{1} = ur_lr;
+    r_lick_rate{1} = r_lr;
     speed_ = speed(ep2rng);
     speed_5trialsep = mean(speed_(mask));
     [s{1},f{1},t{1}] = get_success_failure_trials(trialnum(mask),rew(mask));
 
     speed_ep = mean(speed_(~mask));
-    [s{2},f{2},t{2}] = get_success_failure_trials(trialnum(~mask),rew(~mask));    
-    lick_rate{2} = sum(lick(~mask))/size(unique(trialnum(~mask)),2);
+    [s{2},f{2},t{2}] = get_success_failure_trials(trialnum(~mask),rew(~mask));  
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep2rng, ...
+    ~mask, rewloc, 2);
+    ur_lick_rate{2} = ur_lr;
+    r_lick_rate{2} = r_lr;
     % compute time spent in epoch (first 5 trials vs. rest of epoch)
 
     % ep2 - set NaN
@@ -51,54 +56,69 @@ if strcmp(condition,'ep2')
     speed_ep2 = NaN;       
     s{5} = NaN; f{5} = NaN; t{5} = NaN;
     s{6} = NaN; f{6} = NaN; t{6} = NaN;
-    lick_rate{5} = NaN; lick_rate{6} = NaN;
+    ur_lick_rate{5} = NaN; ur_lick_rate{6} = NaN;
+    r_lick_rate{5} = NaN; r_lick_rate{6} = NaN;
     % ep3
     mask = VR.trialNum(ep3rng)>=3 & VR.trialNum(ep3rng)<8; % -1 for speed vector
     trialnum = VR.trialNum(ep3rng); rew = VR.reward(ep3rng);
-    lick = VR.lick(ep3rng);
-    [s{7},f{7},t{7}] = get_success_failure_trials(trialnum(mask),rew(mask));
-    lick_rate{7} = sum(lick(mask))/size(unique(trialnum(mask)),2);
+    [s{7},f{7},t{7}] = get_success_failure_trials(trialnum(~mask),rew(~mask));   
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep3rng, ...
+    mask, rewloc, 3);
+    ur_lick_rate{7} = ur_lr;
+    r_lick_rate{7} = r_lr;
     speed_ = speed(ep3rng);
     speed_5trialsep3 = mean(speed_(mask));
 
     speed_ep3 = mean(speed_(~mask));
     [s{8},f{8},t{8}] = get_success_failure_trials(trialnum(~mask),rew(~mask));            
-    lick_rate{8} = sum(lick(~mask))/size(unique(trialnum(~mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep3rng, ...
+    ~mask, rewloc, 3);
+    ur_lick_rate{8} = ur_lr;
+    r_lick_rate{8} = r_lr;
             
 
 elseif strcmp(condition,'ep3')
     % opto epoch
     mask = VR.trialNum(ep3rng)>=3 & VR.trialNum(ep3rng)<8; % skip probes
     trialnum = VR.trialNum(ep3rng); rew = VR.reward(ep3rng);
-    lick = VR.lick(ep3rng);
     [s{1},f{1},t{1}] = get_success_failure_trials(trialnum(mask),rew(mask));
-    lick_rate{1} = sum(VR.lick(mask))/size(unique(trialnum(mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep3rng, ...
+    mask, rewloc, 3);
+    ur_lick_rate{1} = ur_lr;
+    r_lick_rate{1} = r_lr;
     speed_ = speed(ep3rng); 
-    speed_5trialsep = mean(speed_(mask));
-    
+    speed_5trialsep = mean(speed_(mask));   
 
     speed_ep = mean(speed_(~mask)); 
     [s{2},f{2},t{2}] = get_success_failure_trials(trialnum(~mask),rew(~mask));    
-    lick_rate{2} = sum(lick(~mask))/size(unique(trialnum(~mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep3rng, ...
+    ~mask, rewloc, 3);
+    ur_lick_rate{2} = ur_lr;
+    r_lick_rate{2} = r_lr;
     % ep2
     mask = VR.trialNum(ep2rng)>=3 & VR.trialNum(ep2rng)<8;
     trialnum = VR.trialNum(ep2rng); rew = VR.reward(ep2rng);
-    lick = VR.lick(ep2rng);
-    lick_rate{5} = sum(lick(mask))/size(unique(trialnum(mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep2rng, ...
+    mask, rewloc, 2);
+    ur_lick_rate{5} = ur_lr;
+    r_lick_rate{5} = r_lr;
     [s{5},f{5},t{5}] = get_success_failure_trials(trialnum(mask),rew(mask));
     speed_ = speed(ep2rng); 
     speed_5trialsep2 = mean(speed_(mask));
 
     speed_ep2 = mean(speed_(~mask));
     [s{6},f{6},t{6}] = get_success_failure_trials(trialnum(~mask),rew(~mask));    
-    
-    lick_rate{6} = sum(lick(~mask))/size(unique(trialnum(~mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep2rng, ...
+    ~mask, rewloc, 2);
+    ur_lick_rate{6} = ur_lr;
+    r_lick_rate{6} = r_lr;
     % ep3 - set NaN
     speed_5trialsep3 = NaN;
     speed_ep3 = NaN;
     s{7} = NaN; f{7} = NaN; t{7} = NaN;
     s{8} = NaN; f{8} = NaN; t{8} = NaN;
-    lick_rate{7} = NaN; lick_rate{8} = NaN;   
+    ur_lick_rate{7} = NaN; ur_lick_rate{8} = NaN;   
+    r_lick_rate{7} = NaN; r_lick_rate{8} = NaN;   
 
 elseif strcmp(condition,'control')
     % NaNs for opto epochs
@@ -106,47 +126,63 @@ elseif strcmp(condition,'control')
     speed_ep = NaN;
     s{1} = NaN; f{1} = NaN; t{1} = NaN;
     s{2} = NaN; f{2} = NaN; t{2} = NaN;
-    lick_rate{1} = NaN; lick_rate{2} = NaN;
+    r_lick_rate{1} = NaN; r_lick_rate{2} = NaN;
+    ur_lick_rate{1} = NaN; ur_lick_rate{2} = NaN;   
     % ep2
     mask = VR.trialNum(ep2rng)>=3 & VR.trialNum(ep2rng)<8;
     trialnum = VR.trialNum(ep2rng); rew = VR.reward(ep2rng);
-    lick = VR.lick(ep2rng);
-    lick_rate{5} = sum(lick(mask))/size(unique(trialnum(mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep2rng, ...
+    mask, rewloc, 2);
+    ur_lick_rate{5} = ur_lr;
+    r_lick_rate{5} = r_lr;
     [s{5},f{5},t{5}] =get_success_failure_trials(trialnum(mask),rew(mask));
     speed_= speed(ep2rng); 
     speed_5trialsep2 = mean(speed_(mask));
 
     speed_ep2 = mean(speed_(~mask));
     [s{6},f{6},t{6}] = get_success_failure_trials(trialnum(~mask),rew(~mask));    
-    
-    lick_rate{6} = sum(lick(~mask))/size(unique(trialnum(~mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep2rng, ...
+    ~mask, rewloc, 2);
+    ur_lick_rate{6} = ur_lr;
+    r_lick_rate{6} = r_lr;
     % ep3
     mask = VR.trialNum(ep3rng)>=3 & VR.trialNum(ep3rng)<8;
     trialnum = VR.trialNum(ep3rng); rew = VR.reward(ep3rng);
-    lick = VR.lick(ep3rng);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep3rng, ...
+    mask, rewloc, 3);
 
     [s{7},f{7},t{7}] = get_success_failure_trials(trialnum(mask),rew(mask));
-    lick_rate{7} = sum(lick(mask))/size(unique(trialnum(mask)),2);
+    ur_lick_rate{7} = ur_lr;
+    r_lick_rate{7} = r_lr;
     speed_ = speed(ep3rng); 
     speed_5trialsep3 = mean(speed_(mask));
 
     speed_ep3 = mean(speed_(~mask));
     [s{8},f{8},t{8}] = get_success_failure_trials(trialnum(~mask),rew(~mask)); 
-    eplicks = VR.lick(ep3rng);
-    lick_rate{8} = sum(eplicks(~mask))/size(unique(trialnum(~mask)),2);
+    [ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep3rng, ...
+    ~mask, rewloc, 3);
+    ur_lick_rate{8} = ur_lr;
+    r_lick_rate{8} = r_lr;
 end
 
 %ep1 - same in all conditions
 mask = VR.trialNum(eps(1):eps(2))>=3 & VR.trialNum(eps(1):eps(2))<8;
 trialnum = VR.trialNum(eps(1):eps(2)); rew = VR.reward(eps(1):eps(2));
-lick = VR.lick(eps(1):eps(2));
+ep1rng = eps(1):eps(2);
 [s{3},f{3},t{3}] = get_success_failure_trials(trialnum(mask),rew(mask));
-lick_rate{3} = sum(lick(mask))/size(unique(trialnum(mask)),2);
+[ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep1rng, ...
+    mask, rewloc, 1);
+ur_lick_rate{3} = ur_lr;
+r_lick_rate{3} = r_lr;
 speed_ = speed(eps(1):eps(2)); 
 speed_5trialsep1 = mean(speed_(mask));
 
 speed_ep1 = mean(speed_(~mask));
-[s{4},f{4},t{4}] = get_success_failure_trials(trialnum(~mask),rew(~mask));    
-lick_rate{4} = sum(lick(~mask))/size(unique(trialnum(~mask)),2);
+[s{4},f{4},t{4}] = get_success_failure_trials(trialnum(~mask),rew(~mask));   
+[ur_lr, r_lr] = get_rewarded_and_unrewarded_licks(VR, ep1rng, ...
+   ~mask, rewloc, 1);
+
+ur_lick_rate{4} = ur_lr;
+r_lick_rate{4} = r_lr;
 
 end

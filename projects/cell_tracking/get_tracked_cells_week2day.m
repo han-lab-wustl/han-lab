@@ -4,10 +4,11 @@ clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e200';
-weeknms = [09 10 11 13 14];
-weekfld = 'week09-14';
-weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
+animal = 'e145';%e200';
+plane = 1; % if necessary
+weeknms = [01 02]; %[09 10 11 13 14];
+weekfld = 'week01-02';
+weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld, '_plane%i'], plane), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
 [r,c] = find(weeks.cell_registered_struct.cell_to_index_map~=0); % exclude week 1
@@ -23,7 +24,8 @@ end
 % % find those cells that map to atleast 1 day 
 wkcount = 1;
 for week=weeknms % for e201, excluded week 1
-    week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week%02d_to_days'], week), ...
+    week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', ...
+        'week%02d_plane%i_to_days'], week, plane), ...
         "Results\*cellRegistered*"));
     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
     % find cells in all sessions
@@ -52,7 +54,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_to_days'])));
+weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_plane%i_to_days'], plane)));
 week_maps = cell(1,length(weeknms));
 wkcount = 1;
 for i=weeknms
@@ -67,7 +69,7 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=23; %total number of days imaged (e.g. included in dataset)
+sessions_total=8; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks

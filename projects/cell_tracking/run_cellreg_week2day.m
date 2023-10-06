@@ -44,7 +44,7 @@ pth = 'Y:\sstcre_analysis\celltrack';
 % Defining the results_directory and creating the figures_directory:
 week = 2;
 animal = 'e145';
-plane = 2;
+plane = 1;
 results_directory= fullfile(pth,sprintf('%s_week%02d_plane%i_to_days', animal, week, plane), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');
@@ -63,6 +63,7 @@ number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
 for it = 1:number_of_sessions
+    disp(fullfile(fls(it).folder, fls(it).name))
     file_names{it} = fullfile(fls(it).folder, fls(it).name); %to account for dates of sessions in my trial data
 end
 

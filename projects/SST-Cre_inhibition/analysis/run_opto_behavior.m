@@ -6,20 +6,20 @@ animals = {'e200', 'e201'};
 drives = {'Y:\sstcre_imaging', 'Z:\sstcre_imaging'};
 days = {[65:76,78:93], [55:73,75:80, 82:92]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
 conditions = {'ep2', 'ep3', 'control'};
-cond_days = {{[65    68    71    74    78    81    84    87    90 93], ...
-    [66    69    72    75    79    82    85    88 91], ....
-    [67    70    73    76    80    83    86    89 92]}, ....
-    {[55    58    61    64    67    70    73    77    80    83    86 88 91 92], ....
-    [56    59    62    65    68    71    75    78    82    84    87 89], ....
-    [57    60    63    66    69    72    76    79    85]}}; % animal x condition
+cond_days = {{[65    68    71    74    78 81 84], ...
+    [66    69    72    75    79 82 85], ....
+    [67    70    73    80 83 86]}, ....
+    {[55    58    61    64    67 70 73], ....
+    [56    59    62    65    68 71 75], ....
+    [57    60    63    66    69 72 76]}}; % animal x condition
 colors = {'b' 'r' 'k' 'g' 'm' 'c' };
 
 % only works on VR files
 addpath(fullfile(pwd, "hidden_reward_zone_task\behavior"));
-lrs = {}; scs = {};
+ur_lrs = {}; r_lrs = {}; scs = {};
 for i=1:length(animals)
-    successes = {}; fails = {};speeds = {}; totals = {}; lick_rates = {}; 
-    rewzones = {};
+    successes = {}; fails = {};speeds = {}; totals = {}; ur_lick_rates = {}; 
+    r_lick_rates = {}; rewzones = {};
     for d=1:length(days{i})
         fmatfl = dir(fullfile(drives{i}, animals{i}, string(days{i}(d)), "behavior", "vr\*.mat")); 
         % find condition of day
@@ -30,18 +30,21 @@ for i=1:length(animals)
             end
         end
         [speed_5trialsep, speed_ep, speed_5trialsep1, speed_ep1, speed_5trialsep2, speed_ep2, ...
-            speed_5trialsep3, speed_ep3, s, f, t, lick_rate, rewzone] = get_opto_behavior(fullfile(fmatfl.folder,fmatfl.name), ...
+            speed_5trialsep3, speed_ep3, s, f, t, ur_lick_rate, r_lick_rate, ...
+            rewzone] = get_opto_behavior(fullfile(fmatfl.folder,fmatfl.name), ...
             conditions{condind});
         successes{d} = s;
         srs{d} = cell2mat(s)./cell2mat(t);
         fails{d} = f;     
         totals{d} = t;
-        lick_rates{d} = lick_rate;
+        ur_lick_rates{d} = ur_lick_rate;
+        r_lick_rates{d} = r_lick_rate;
         speeds{d} = [speed_5trialsep, speed_ep, speed_5trialsep1, speed_ep1, ...
             speed_5trialsep2, speed_ep2, speed_5trialsep3, speed_ep3];
         rewzones{d} = rewzone;
     end
-    lrs{i} = lick_rates;
+    ur_lrs{i} = ur_lick_rates;
+    r_lrs{i} = r_lick_rates;
     scs{i} = srs; % success rates
     
     % import interlick intervals
@@ -52,7 +55,7 @@ for i=1:length(animals)
         conddays = cond_days{i}; % per animal
         mask = ismember(days{i},conddays{j});
         sp = speeds(mask); sc = successes(mask); fl = fails(mask); tr = totals(mask);
-        lr = lick_rates(mask);
+        ur_lr = ur_lick_rates(mask); r_lr = r_lick_rates(mask);
         % init
         optotrials = {}; restofep = {}; spep1 = {}; spep2 = {}; spep3 = {}; spep25trials = {};
         spep35trails = {}; spep15trails = {};
@@ -154,28 +157,28 @@ for i=1:length(animals)
         % plot lick rate
         figure;
         % automatically segments diff (opto) conditions
-        bar([mean(cell2mat(cellfun(@(x) x{1}(1), lr, 'UniformOutput', false)), 'omitnan'); ... %this unravels the cellarray
-        mean(cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) x{3}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) x{4}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) x{5}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) x{6}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) x{7}(1), lr, 'UniformOutput', false)), 'omitnan'); ...
-        mean(cell2mat(cellfun(@(x) x{8}(1), lr, 'UniformOutput', false)), 'omitnan')]','grouped','FaceColor','flat');
+        bar([mean(cell2mat(cellfun(@(x) x{1}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ... %this unravels the cellarray
+        mean(cell2mat(cellfun(@(x) x{2}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{3}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{4}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{5}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{6}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{7}(1), ur_lr, 'UniformOutput', false)), 'omitnan'); ...
+        mean(cell2mat(cellfun(@(x) x{8}(1), ur_lr, 'UniformOutput', false)), 'omitnan')]','grouped','FaceColor','flat');
         hold on
-        plot(1,cell2mat(cellfun(@(x) x{1}(1), lr, 'UniformOutput', false)),'ok')
-        plot(2,cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false)),'ok')
-        plot(3,cell2mat(cellfun(@(x) x{3}(1), lr, 'UniformOutput', false)),'ok')
-        plot(4,cell2mat(cellfun(@(x) x{4}(1), lr, 'UniformOutput', false)),'ok')
-        plot(5,cell2mat(cellfun(@(x) x{5}(1), lr, 'UniformOutput', false)),'ok')
-        plot(6, cell2mat(cellfun(@(x) x{6}(1), lr, 'UniformOutput', false)), 'ok')
-        plot(7, cell2mat(cellfun(@(x) x{7}(1), lr, 'UniformOutput', false)), 'ok')
-        plot(8, cell2mat(cellfun(@(x) x{8}(1), lr, 'UniformOutput', false)), 'ok')
+        plot(1,cell2mat(cellfun(@(x) x{1}(1), ur_lr, 'UniformOutput', false)),'ok')
+        plot(2,cell2mat(cellfun(@(x) x{2}(1), ur_lr, 'UniformOutput', false)),'ok')
+        plot(3,cell2mat(cellfun(@(x) x{3}(1), ur_lr, 'UniformOutput', false)),'ok')
+        plot(4,cell2mat(cellfun(@(x) x{4}(1), ur_lr, 'UniformOutput', false)),'ok')
+        plot(5,cell2mat(cellfun(@(x) x{5}(1), ur_lr, 'UniformOutput', false)),'ok')
+        plot(6, cell2mat(cellfun(@(x) x{6}(1), ur_lr, 'UniformOutput', false)), 'ok')
+        plot(7, cell2mat(cellfun(@(x) x{7}(1), ur_lr, 'UniformOutput', false)), 'ok')
+        plot(8, cell2mat(cellfun(@(x) x{8}(1), ur_lr, 'UniformOutput', false)), 'ok')
         
         xticklabels(["optotrials", "rest of opto epoch", "1st 5 trials epoch 1", ...
             "rest of epoch 1", "1st 5 trials epoch 2", "rest of epoch 2", "1st 5 trials epoch 3", ...
             "rest of epoch 3"])
-        ylabel("licks/num trials")
+        ylabel("unrewarded licks/num trials")
         title(sprintf("animal %s, %s", animals{i}, conditions{j}))
         
         % plot mean speed
@@ -209,7 +212,7 @@ end
 % ep2
 ep2restofopto = {};ep2restofcontrol = {}; % across animals
 for an=1:length(animals)
-lick_rates = lrs{an}; j=1; % condition 1
+lick_rates = ur_lrs{an}; j=1; % condition 1
 lr = lick_rates(ismember(days{an},cell2mat(cond_days{an}(j))));
 ep2restofopto{an} = cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false));
 j=3;
@@ -221,7 +224,7 @@ end
 % ep3
 ep3restofopto = {};ep3restofcontrol = {};
 for an=1:length(animals)
-lick_rates = lrs{an}; j=2; % condition 2
+lick_rates = ur_lrs{an}; j=2; % condition 2
 lr = lick_rates(ismember(days{an},cell2mat(cond_days{an}(j))));
 ep3restofopto{an} = cell2mat(cellfun(@(x) x{2}(1), lr, 'UniformOutput', false));
 j=3;
@@ -261,7 +264,7 @@ end
 % for each condition, COM is split by rew zones
 % always limited to 3 rew zones
 ep2restofopto = {};ep2restofcontrol = {};
-trials_to_test = 8;
+trials_to_test = 5;
 
 % ep2
 for comi=1:length(com_an)

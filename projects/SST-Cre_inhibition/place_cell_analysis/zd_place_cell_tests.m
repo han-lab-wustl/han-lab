@@ -1,5 +1,5 @@
 clear all; clear all;
-days = [55:3:75];
+days = [57:3:75];
 cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 cc = cc.cellmap2dayacrossweeks;
 ddn = 1; % counter for days that align to tracked mat file

@@ -38,16 +38,6 @@ imageSync = [];
 [vrfilename, vrfilepath] = uigetfile('*.mat','pick your VR file');
 load([vrfilepath vrfilename])
 
-if isfield(VR,'imageSync') %makes sure VR has an imageSync variable, if not uses abf, BUT still uses VR variables later
-    imageSync = VR.imageSync;
-else
-    [abffilename,abfpath] = uigetfile('*.abf','pick your abf file');
-    abffullfilename = [abfpath char(abffilename)];
-    data = abfload(abffullfilename);
-    imageSync = data(:,8);
-    
-end
-
 inds=find((abs(diff(imageSync))>0.3*max(abs(diff(imageSync))))==1);
 meaninds=mean(diff(inds));
 figure;subplot(2,1,1);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
@@ -65,8 +55,6 @@ xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
 uscanstop=round(uscanstop)
 disp(['Length of scan is ', num2str(uscanstop-uscanstart)])
 disp(['Time of scan is ', num2str((VR.time(uscanstop)-VR.time(uscanstart)))])
-
-
 
 close all;
 if ~isfield(VR,'imageSync') %if there was no VR.imagesync, rewrites scanstart and scanstop to be in VR iteration indices
@@ -124,7 +112,9 @@ ulickVoltage = VR.lickVoltage(scanstart:scanstop);
 numfiles=1;
 Ffile{numfiles}=0;
 Ffilepath{numfiles}=0;
-[Ffile{1},Ffilepath{1}]=uigetfile('*.csv','pick the DLC file corresponding to VR behavior');
+% make sure dlc file has fixed columns (fixcols tag from running fixcsvcols
+% in python)
+[Ffile{1},Ffilepath{1}]=uigetfile('*.csv','pick the DLC file (with fixed cols) corresponding to VR behavior');
 % load csv file
 T = readtable([Ffilepath{1},Ffile{1}]);
 %%
