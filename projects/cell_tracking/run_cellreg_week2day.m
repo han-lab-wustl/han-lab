@@ -32,7 +32,7 @@
 % much slower for smaller (1P) datasets but allows you to run many 2P
 % datasets through pipeline without running out of memory
 
-clear all
+clear all; close all;
 memory_efficient_run = 1;
 
 %% Setting paths for the cell registration procedure:
@@ -44,7 +44,7 @@ pth = 'Y:\sstcre_analysis\celltrack';
 % Defining the results_directory and creating the figures_directory:
 week = 2;
 animal = 'e145';
-plane = 1;
+plane = 2;
 results_directory= fullfile(pth,sprintf('%s_week%02d_plane%i_to_days', animal, week, plane), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');

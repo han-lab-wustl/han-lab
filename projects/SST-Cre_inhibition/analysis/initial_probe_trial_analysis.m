@@ -10,13 +10,14 @@
 clear all;close all;
 grayColor = [.7 .7 .7]; 
 
-fld = "D:\adina_vr_files\VR_data_ZD_memory_probes";
+fld = "Y:\DLC\VR_data\VR_data";
 dirs = dir(fld);
 COMlick_rewlocprev={}; lickpos = {}; rewloc_prevs={}; fls = {};
 for d=1:length(dirs)
-    clearvars -except days grayColor d COMlick_rewlocprev lickpos fld dirs rewloc_prevs fls    
+    clearvars -except days grayColor d COMlick_rewlocprev lickpos fld dirs rewloc_prevs fls ...
+        COMlick
     if contains(dirs(d).name, ").mat") && (dirs(d).name(1)=='e' || dirs(d).name(1)=='E') && ...
-            dirs(d).name(30)=='_'% real mat files
+            dirs(d).name(5)=='_'% real mat files
         behfl = fullfile(dirs(d).folder, dirs(d).name);        
         load(behfl)
     

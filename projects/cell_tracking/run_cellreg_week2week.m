@@ -43,7 +43,8 @@ pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 
 % Defining the results_directory and creating the figures_directory:
 animal = 'e145'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_week01-02_plane1',animal), 'Results') ; % CHANGE WEEK NO
+plane = 2;
+results_directory= fullfile(pth,sprintf('%s_week01-02_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,7 +54,7 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\plane1\\converted*week*.mat", animal)));
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\plane%i\\converted*week*.mat", animal, plane)));
 %dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
 % dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
