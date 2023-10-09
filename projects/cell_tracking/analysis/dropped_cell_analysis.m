@@ -12,8 +12,8 @@ for fl=1:length(fls)
 end
 cc=days{1}.cc;
 sessions_total=length(days);
-
-wkfl = dir(fullfile('Y:\sstcre_analysis\fmats\e201\week12', 'week*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+weeknm = 12;
+wkfl = dir(fullfile('Y:\sstcre_analysis\fmats\e201', sprintf('week%i', weeknm), 'week*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 wk = load(fullfile(wkfl.folder,wkfl.name), 'stat', 'ops');
 weeks=load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\cellRegistered_20230815_192855.mat');
 [r,c] = find(weeks.cell_registered_struct.cell_to_index_map~=0); % exclude week 1
@@ -30,7 +30,7 @@ r = 50;
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
     day=days(ss);day=day{1};    
-    r = 30; % radius to look around cell
+    r = 50; % radius to look around cell
     missing_cell_ind = find(cc(:,ss)==0);
     missing_cell_in_week = commoncells_4weeks(missing_cell_ind,1);
     axesnm(ss)=subplot(3,2,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
@@ -53,35 +53,13 @@ for ss=1:sessions_total
             end
         end
 %         plot(wk.stat{1,missing_cell_in_week(ii)}.xpix, wk.stat{1,missing_cell_in_week(ii)}.ypix, 'g');
-        if sum(xybool)>2 % if there are 5 cells around it
+        if sum(xybool)>20% if there are 5 cells around it
             plot(wk.stat{1,missing_cell_in_week(ii)}.xpix, wk.stat{1,missing_cell_in_week(ii)}.ypix, 'y');
         else
             plot(wk.stat{1,missing_cell_in_week(ii)}.xpix, wk.stat{1,missing_cell_in_week(ii)}.ypix, 'r');
         end
     end
-%     for i=1:length(cc)
-%         cc_y = day.stat{1,cc(i,ss)}.ypix;
-%         cc_x = day.stat{1,cc(i,ss)}.xpix;
-%         th = 0:pi/50:2*pi;
-%         xunit = ceil(r * cos(th) + mean(cc_x));
-%         yunit = ceil(r * sin(th) + mean(cc_y));
-%         try
-%         for j=1:length(cc)
-%             try
-%             ybool(j) = sum(ismember(yunit, day.stat{1,cc(j,ss)}.ypix));
-%             xbool(j) = sum(ismember(xunit, day.stat{1,cc(j,ss)}.xpix));
-%             end
-%         end            
-%         if sum(ybool)>0 && sum(xbool)>0 % there are cells around it
-%             plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'y');
-%         else
-%             plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'r');
-%         end
-%         end
-%         
-%         
-%         
-%     end
+
     axis off
 %     [daynm,~] = fileparts(day.ops.data_path);
 %     [~,daynm] = fileparts(daynm);
