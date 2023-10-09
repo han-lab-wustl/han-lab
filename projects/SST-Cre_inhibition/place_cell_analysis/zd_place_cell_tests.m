@@ -1,15 +1,15 @@
 clear all; clear all;
-days = [57:3:75];
-cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+days = [62:70, 72:74, 76, 81:90];
+cc = load('Y:\sstcre_analysis\celltrack\e200_week09-14\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 cc = cc.cellmap2dayacrossweeks;
 ddn = 1; % counter for days that align to tracked mat file
 for dd=days
     putative_pcs = {};
-    pth=sprintf('Y:\\sstcre_analysis\\fmats\\e201\\days\\day%i_Fall.mat',dd);    
+    pth=dir(fullfile('Y:\\sstcre_analysis\\fmats\\e200\\days\\', sprintf('*day%03d_Fall.mat',dd)));    
     fprintf('\n day = % i\n', dd)
-    load(pth)
-    cellindt = cc(:,1);
-    cellindt = cellindt(cellindt>1);
+    load(fullfile(pth.folder, pth.name), 'Fc3', 'stat', 'changeRewLoc', 'ybinned')
+    cellindt = cc(:,ddn);
+    cellindt = cellindt(cellindt>1); % remove dropped cells
     cellindbc = [1:size(Fc3,2)];
     [~,bordercells] = remove_border_cells_all_cells(stat);    
     cellindwithoutbc = cellindbc(~bordercells);    
