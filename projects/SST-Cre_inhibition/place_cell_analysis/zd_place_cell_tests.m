@@ -1,13 +1,17 @@
 clear all; clear all;
-days = [62:70, 72:74, 76, 81:90];
-cc = load('Y:\sstcre_analysis\celltrack\e200_week09-14\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+% days = [63:70, 72:74, 76, 81:90];
+days = [57:75];
+cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+% cc = load('Y:\sstcre_analysis\celltrack\e200_week09-14\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 cc = cc.cellmap2dayacrossweeks;
 ddn = 1; % counter for days that align to tracked mat file
 for dd=days
     putative_pcs = {};
-    pth=dir(fullfile('Y:\\sstcre_analysis\\fmats\\e200\\days\\', sprintf('*day%03d_Fall.mat',dd)));    
+    pth=dir(fullfile('Y:\\sstcre_analysis\\fmats\\e201\\days\\', sprintf('day%02d_Fall.mat',dd)));    
+%     pth=dir(fullfile('Y:\\sstcre_analysis\\fmats\\e200\\days\\', sprintf('*day%03d_Fall.mat',dd)));    
+    savepth = fullfile(pth.folder, pth.name);
     fprintf('\n day = % i\n', dd)
-    load(fullfile(pth.folder, pth.name), 'Fc3', 'stat', 'changeRewLoc', 'ybinned')
+    load(savepth, 'Fc3', 'stat', 'changeRewLoc', 'ybinned')
     cellindt = cc(:,ddn);
     cellindt = cellindt(cellindt>1); % remove dropped cells
     cellindbc = [1:size(Fc3,2)];
@@ -15,17 +19,19 @@ for dd=days
     cellindwithoutbc = cellindbc(~bordercells);    
     cellind=intersect(cellindt,cellindwithoutbc); %only tracked cells that are not border cells
     fc3 = Fc3(:,cellind); % remove border cells from shuffle;
-    eps = find(changeRewLoc);
-    eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
-    for ep=1:length(eps)-1 % find putative place cell per epoch
-        fprintf("\n Epoch %i \n", ep)
-        bin = 3; track_length = 270; gainf = 3/2;
-        [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,fc3,changeRewLoc, ...
-        bin,track_length,gainf);
-        % get place cells only
-        putative_pcs{ep} = putative_pc;       
+    if ~isempty(fc3)
+        eps = find(changeRewLoc);
+        eps = [eps length(changeRewLoc)]; % includes end of recording as end of a epoch
+        for ep=1:length(eps)-1 % find putative place cell per epoch
+            fprintf("\n Epoch %i \n", ep)
+            bin = 3; track_length = 270; gainf = 3/2;
+            [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,fc3,changeRewLoc, ...
+            bin,track_length,gainf);
+            % get place cells only
+            putative_pcs{ep} = putative_pc;       
+        end
+        save(savepth, 'cc', 'putative_pcs', 'bordercells', '-append') % save border cells for further analysis        
     end
-    save(pth, 'cc', 'putative_pcs', 'bordercells', '-append') % save border cells for further analysis
     ddn=ddn+1;
 end
 %%
