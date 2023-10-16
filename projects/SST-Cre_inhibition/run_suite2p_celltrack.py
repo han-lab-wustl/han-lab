@@ -143,13 +143,15 @@ def main(**args):
             imagingflnm=os.path.join(params["datadir"], params["mouse_name"], day, 
                                     imagingfl)
             
-            if len(imagingfl)!=0:           
-                print(imagingfl)
-                if params["crop_opto"]:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
-                else:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
-                print(imagingflnm)
+            if not params["cell_detect_only"]: 
+                # if cell detect only not specified, make tifs, else skip
+                if len(imagingfl)!=0:           
+                    print(imagingfl)
+                    if params["crop_opto"]:
+                        imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                    else:
+                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
+                    print(imagingflnm)
 
             #do suite2p after tifs are made
             # set your options for running
@@ -187,7 +189,7 @@ def main(**args):
 
 def fill_params(mouse_name, day, days, datadir, reg_tif, nplanes, delete_bin,
                 move_bin, stepid, save_mat, crop_opto,
-                days_of_week, week):
+                days_of_week, week, cell_detect_only):
 
     params = {}
 
@@ -214,6 +216,7 @@ def fill_params(mouse_name, day, days, datadir, reg_tif, nplanes, delete_bin,
     params["move_bin"]      = move_bin
     params["save_mat"]      = save_mat
     params["crop_opto"]     = crop_opto
+    params["cell_detect_only"] = cell_detect_only
         
     return params
 
@@ -259,6 +262,8 @@ if __name__ == "__main__":
                         help="Save Fall.mat (needed for cell tracking)")    
     parser.add_argument("--crop_opto", default=False,
                         help="Crop top band of opto to not mess up cell detection")    
+    parser.add_argument("--cell_detect_only", default=False,
+                        help="Skip making tifs and reg, only run cell detect")    
     
     
     args = parser.parse_args()
