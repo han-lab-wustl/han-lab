@@ -2,8 +2,8 @@
 % 1) blue if there are cells around it
 % 2) red if there are no cells within a 100 pix radius
 clear all
-weeknm = 15;
-wknml = 4;  % which number in seq
+weeknm = 12;
+wknml = 1;  % which number in seq
 fls = dir(fullfile('Y:\sstcre_analysis\fmats\e201', sprintf('week%02d', weeknm),'day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
@@ -15,10 +15,10 @@ end
 %%
 sessions_total=length(days);
 wkfl = dir(fullfile('Y:\sstcre_analysis\fmats\e201', sprintf('week%02d', weeknm), 'week*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
-wk = load(fullfile(wkfl.folder,wkfl.name), 'stat', 'ops');
+wk = load(fullfile(wkfl.folder,wkfl.name), 'stat', 'ops', 'daynm_of_total_tracked');
 % IMPORTANT
-daynm_of_total_tracked = [17 18 19 20 21]; % out of total days
-save(fullfile(wkfl.folder,wkfl.name), 'daynm_of_total_tracked', '-append')
+% daynm_of_total_tracked = [17 18 19 20 21]; % out of total days
+% save(fullfile(wkfl.folder,wkfl.name), 'daynm_of_total_tracked', '-append')
 
 weeks=load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\cellRegistered_20230815_192855.mat');
 cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
@@ -37,7 +37,7 @@ r = 50; % radius to look around cell
 num_cells = 20; % if there are x cells around it
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
-    ss_tr = daynm_of_total_tracked(ss);
+    ss_tr = wk.daynm_of_total_tracked(ss);
     day=days(ss);day=day{1};    
     missing_cell_ind = find(cc(:,ss_tr)==0);
     missing_cell_in_week = commoncells_4weeks(missing_cell_ind,wknml);
@@ -68,8 +68,9 @@ for ss=1:sessions_total
     end
 
     axis off
-    [daynm,~] = fileparts(day.ops.data_path);
-    [~,daynm] = fileparts(daynm);
-    title(sprintf('day %s', daynm))
+%     [daynm,~] = fileparts(day.ops.data_path);
+%     [~,daynm] = fileparts(daynm);
+%     title(sprintf('day %s', daynm))
+    title(sprintf('day %i', ss))
 end
 linkaxes(axesnm, 'xy')

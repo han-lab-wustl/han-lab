@@ -91,7 +91,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
     for i in days:     
         print(i)   
         pth = os.path.join(src, str(i))
-        imgfl = [os.path.join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+        imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
         mat = os.path.join(imgfl, "suite2p", "plane0", "Fall.mat") 
         if os.path.exists(mat):
             copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_Fall.mat")

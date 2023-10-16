@@ -5,9 +5,10 @@ clear all;
 % we want to keep all these cells
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e201';%e200';
-weeknms = [12 13 14 15]; %[09 10 11 13 14];
-weekfld = 'week12-15';
-weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
+plane = 2; % if necessary
+weeknms = [01 02]; %[09 10 11 13 14];
+weekfld = 'week01-02';
+weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld, '_plane%i'], plane), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
 [r,c] = find(weeks.cell_registered_struct.cell_to_index_map~=0); % exclude week 1
@@ -24,7 +25,7 @@ end
 wkcount = 1;
 for week=weeknms % for e201, excluded week 1
     week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', ...
-        'week%02d_to_days'], week), ...
+        'week%02d_plane%i_to_days'], week, plane), ...
         "Results\*cellRegistered*"));
     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
     % find cells in all sessions
@@ -53,7 +54,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_to_days'])));
+weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_plane%i_to_days'], plane)));
 week_maps = cell(1,length(weeknms));
 wkcount = 1;
 for i=weeknms
@@ -68,7 +69,7 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=21; %total number of days imaged (e.g. included in dataset)
+sessions_total=7; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks
@@ -99,12 +100,12 @@ save(fullfile(weekdst.folder, ...
 %%
 
 % load mats from all days
-fls = dir(fullfile(src, "fmats",animal, 'days', '*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+fls = dir(fullfile(src, "fmats",animal, 'days', sprintf('plane%i',plane), '*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
     dy = fls(fl);
-    days{fl} = load(fullfile(dy.folder,dy.name), 'ops', 'stat');
+    days{fl} = load(fullfile(dy.folder,dy.name));
 end
 cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
@@ -117,7 +118,7 @@ sessions_total=length(days);
 % original F mat
 ctab = hsv(length(cc));
 
-cells_to_plot = [456];
+cells_to_plot = [129];
 for i=[cells_to_plot]
     %multi plot of cell mask across all 5 days
     figure(i); 
@@ -129,7 +130,7 @@ for i=[cells_to_plot]
         colormap('gray')
         hold on;
         try
-            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 1]);
+            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.3]);
         end
         axis off
         title(sprintf('day %i', ss)) %sprintf('day %i', ss)
@@ -147,20 +148,19 @@ figure;
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
     day=days(ss);day=day{1};
-    axesnm(ss)=subplot(5,5,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    axesnm(ss)=subplot(3,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;
     for i=1:length(cc)
         try
-            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.1]);
+            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.3]);
         end
     end
     axis off
     [daynm,~] = fileparts(day.ops.data_path);
     [~,daynm] = fileparts(daynm);
-%     title(sprintf('day %s', daynm))
-    title(sprintf('day %i', ss))
+    title(sprintf('day %s', daynm))
 end
 linkaxes(axesnm, 'xy')
 % savefig(fullfile(weekdst.folder, "cellmasks.pdf"))

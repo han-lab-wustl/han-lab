@@ -49,6 +49,8 @@ def main(**args):
         #edit ops if needed, based on user input
         ops["reg_tif"]=params["reg_tif"] 
         ops["nplanes"]=params["nplanes"] 
+        ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
+        ops['tau']=0.7 # gerardo set?
         ops["delete_bin"]=params["delete_bin"] #False
         ops["move_bin"]=params["move_bin"]
         ops["save_mat"]=params["save_mat"]
@@ -101,6 +103,8 @@ def main(**args):
         #edit ops if needed, based on user input
         ops["reg_tif"]=False # currently default is not to save reg_tif for weekly videos 
         ops["nplanes"]=params["nplanes"] 
+        ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
+        ops['tau']=0.7 # gerardo set?
         ops["delete_bin"]=params["delete_bin"] #False
         ops["move_bin"]=params["move_bin"]
         ops["save_mat"]=params["save_mat"]
@@ -125,11 +129,63 @@ def main(**args):
         save_params(params, weekdir)
 
     elif args["stepid"] == 3:
-        #####################RUN WEEKLY CONCATENATED SUITE2P THRU CELL REG#####################
+        #####################RUN DAY CELL DETECTION IN A LOOP#####################
+        
+        ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
+        #args should be the info you need to specify the params
+        # for a given experiment, but only params should be used below        
+        print(params["days"])
+        for day in params['days']: 
+            # make sure fl exists on this day
+            print(f"\n ************Processing day {day}************")
+            imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"], 
+                    params["mouse_name"], day)) if "000" in xx][0]
+            imagingflnm=os.path.join(params["datadir"], params["mouse_name"], day, 
+                                    imagingfl)
+            
+            if len(imagingfl)!=0:           
+                print(imagingfl)
+                if params["crop_opto"]:
+                    imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                else:
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
+                print(imagingflnm)
+
+            #do suite2p after tifs are made
+            # set your options for running
+            import suite2p
+            ops = suite2p.default_ops() # populates ops with the default options
+            #edit ops if needed, based on user input
+            ops["reg_tif"]=params["reg_tif"] 
+            ops["nplanes"]=params["nplanes"] 
+            ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
+            ops['tau']=0.7 # gerardo set?
+            ops["delete_bin"]=params["delete_bin"] #False
+            ops["move_bin"]=params["move_bin"]
+            ops["save_mat"]=params["save_mat"]
+            ops["threshold_scaling"]=0.5 #TODO: make modular
+            ops["max_iterations"]=200
+
+            # provide an h5 path in 'h5py' or a tiff path in 'data_path'
+            # db overwrites any ops (allows for experiment specific settings)
+            db = {
+                'h5py': [], # a single h5 file path
+                'h5py_key': 'data',
+                'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
+                'data_path': [imagingflnm], # a list of folders with tiffs 
+                                                        # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
+                                                    
+                'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
+                # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
+                }
+
+            # run one experiment
+            opsEnd = suite2p.run_s2p(ops=ops, db=db)
+            save_params(params, imagingflnm)
         return False
         #save_params(params, )
 
-def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
+def fill_params(mouse_name, day, days, datadir, reg_tif, nplanes, delete_bin,
                 move_bin, stepid, save_mat, crop_opto,
                 days_of_week, week):
 
@@ -146,6 +202,10 @@ def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
         params["days_of_week"]  = days_of_week[0]   #days to put together for analysis of that week
     except:
         print("\n No days of week specified...\n")
+    try: #TODO: fix error
+        params["days"]  = days[0]   #days to put together for analysis of that week
+    except:
+        print("\n Multiple days not specified...\n")
     params["week"]          = week              #week np.
     #suite2p params
     params["reg_tif"]       = ast.literal_eval(reg_tif)
@@ -153,7 +213,7 @@ def fill_params(mouse_name, day, datadir, reg_tif, nplanes, delete_bin,
     params["delete_bin"]    = delete_bin
     params["move_bin"]      = move_bin
     params["save_mat"]      = save_mat
-    params["crop_opto"]      = crop_opto
+    params["crop_opto"]     = crop_opto
         
     return params
 
@@ -178,6 +238,9 @@ if __name__ == "__main__":
                         help="Main directory with mouse names and days")
     parser.add_argument("--day", type=str, default = '1',
                         help="day of imaging")
+    parser.add_argument("--days", nargs="+", action = "append",
+                        help="For step1, if you want to run registration in a loop \n\
+                            e.g. 1 2 3")
     parser.add_argument("--days_of_week",  nargs="+", action = "append",
                         help="For step 2, if running weekly concatenated videos, \n\
                             specify days of the week (integers) \n\

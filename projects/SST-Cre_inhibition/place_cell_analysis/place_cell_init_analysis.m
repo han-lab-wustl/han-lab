@@ -1,8 +1,11 @@
 clear all;
-dy = 55;
+dy = 62;
 an = 'e201';
 load(fullfile('Y:\sstcre_analysis\fmats\e201\days', sprintf('day%02d_Fall.mat', dy)), 'dFF', ...
-    'Fc3', 'putative_pcs', 'ybinned', 'changeRewLoc', 'forwardvel', 'licks', 'trialnum')     
+    'Fc3', 'putative_pcs', 'ybinned', 'changeRewLoc', 'forwardvel', 'licks', 'trialnum')  
+cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+cc = cc.cellmap2dayacrossweeks;
+ddt = dy-54;
 % generate tuning curve
 %%
 bin_size = 3;
@@ -11,15 +14,18 @@ nbins = track_length/bin_size;
 eps = find(changeRewLoc>0);
 eps = [eps length(changeRewLoc)];
 rewlocs = changeRewLoc(changeRewLoc>0)*(3/2);
-% opto period
-mask = trn>=3 & trn<8;
-% no probes
-% mask = trn>=8;
+
 for ep=[1 2 3]
     % per ep    
     eprng = eps(ep):eps(ep+1);
     trn = trialnum(eprng);    
+    % opto period
+    mask = trn>=3 & trn<8;
+    % no probes
+%     mask = trn>=8;
+%     mask = trn<3;
     eprng = eprng(mask);
+    
     ypos = ybinned(eprng);
     ypos = ceil(ypos*(3/2)); % gain factor for zahra mice
     [time_moving,time_stop] = vr_stop_and_moving_time(ypos);
@@ -29,7 +35,11 @@ for ep=[1 2 3]
     end 
     
     % make bins via suyash method
-    pc = putative_pcs{2};
+%     pc = putative_pcs{1};
+    weeklut = 1:length(cc(:,ddt));
+    cellind = cc(:, ddt);    
+    pc = cellind(cellind>0);
+    weeklutind = weeklut(cellind>0);
     rewloc = rewlocs(ep);
     fc3_ep = Fc3(eprng,:);
     moving_cells_activity = fc3_ep(time_moving,pc);
@@ -75,34 +85,38 @@ for ep=[1 2 3]
     end
     cell_activity(isnan(cell_activity)) = 0;
     
-    % sort by max value
-    peak = zeros(1, size(cell_activity,2));
-    for c=1:size(cell_activity,2)
-        f = cell_activity(:,c);
-        if sum(f)>0
-            [peakval,peakbin] = max(f);
-            peak(c) = peakbin;
-        else
-            peak(c) = 1;
+    if ep == 1 % sort by ep 1
+        % sort by max value
+        peak = zeros(1, size(cell_activity,2));
+        for c=1:size(cell_activity,2)
+            f = cell_activity(:,c);
+            if sum(f)>0
+                [peakval,peakbin] = max(f);
+                peak(c) = peakbin;
+            else
+                peak(c) = 1;
+            end
         end
+        
+        [~,sorted_idx] = sort(peak);
     end
-    
-    [~,sorted_idx] = sort(peak);
     %%
-    figure;
-    subplot(2,1,1)
+    figure('Renderer', 'painters', 'Position', [10 10 350 800])
+%     subplot(2,1,1)
     imagesc(normalize(cell_activity(:,sorted_idx))'); 
     colormap jet 
     xticks([0:90])
     xticklabels([0:3:270])
-    subplot(2,1,2)
-    plot(vel, 'k');
-    yyaxis right
-    plot(lk, 'r'); ylim([0 0.5])
-    hold on 
-    rectangle('Position',[(rewloc-5)/3 0 10/3 max(lk)+1], ... % just picked max for visualization
-          'FaceColor',[0 .5 .5 0.3])
-    xticks([0:90])
-    xticklabels([0:3:270])
+    yticks(1:length(weeklutind))
+    yticklabels(weeklutind(sorted_idx));
+%     subplot(2,1,2)
+%     plot(vel, 'k');
+%     yyaxis right
+%     plot(lk, 'r'); ylim([0 0.5])
+%     hold on 
+%     rectangle('Position',[(rewloc-5)/3 0 10/3 max(lk)+1], ... % just picked max for visualization
+%           'FaceColor',[0 .5 .5 0.3])
+%     xticks([0:90])
+%     xticklabels([0:3:270])
     sgtitle(sprintf('animal %s, day %i, epoch %i', an, dy, ep))
 end
