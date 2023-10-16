@@ -1,33 +1,70 @@
+% making tuning curves etc from tracked cells
 clear all;
-dy = 62;
+dys = [55:75];
 an = 'e201';
-load(fullfile('Y:\sstcre_analysis\fmats\e201\days', sprintf('day%02d_Fall.mat', dy)), 'dFF', ...
-    'Fc3', 'putative_pcs', 'ybinned', 'changeRewLoc', 'forwardvel', 'licks', 'trialnum')  
-cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
-cc = cc.cellmap2dayacrossweeks;
-ddt = dy-54;
-% generate tuning curve
+for dy=dys
+% dy = 62;
+    
+    load(fullfile('Y:\sstcre_analysis\fmats\e201\days', sprintf('day%02d_Fall.mat', dy)), 'dFF', ...
+        'Fc3', 'ybinned', 'changeRewLoc', 'forwardvel', 'licks', 'trialnum', 'rewards')  
+    cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+    cc = cc.cellmap2dayacrossweeks;
+    ddt = dy-54; % based on where you started tracking cells from
+    % generate tuning curve
+    % save all dffs and fc3 of tracked cells in one struct
+    weeklut = 1:length(cc(:,ddt));
+    cellind = cc(:, ddt);    
+    pc = cellind(cellind>0);
+    weeklutind = weeklut(cellind>0);
+    Fc3_t = Fc3(:,pc);
+    dFF_t = dFF(:,pc);
+    Fc3_tracked{ddt} = Fc3_t;
+    dFF_tracked{ddt} = dFF_t;
+    ybinned_tracked{ddt} = ybinned;
+    changeRewLoc_tracked{ddt} = changeRewLoc;
+    forwardvel_tracked{ddt} = forwardvel;
+    licks_tracked{ddt} = licks;
+    trialnum_tracked{ddt} = trialnum;
+    rewards_tracked{ddt} = rewards;
+end   
+save('Y:\sstcre_analysis\e201_tracked_cells.mat', 'Fc3_tracked', 'dFF_tracked', "rewards_tracked", ...
+    "ybinned_tracked", "changeRewLoc_tracked", "forwardvel_tracked", "licks", ...
+    "trialnum_tracked","cc", "-v7.3")
 %%
 bin_size = 3;
 track_length = 270;
+gainf = 3/2;
 nbins = track_length/bin_size;
 eps = find(changeRewLoc>0);
 eps = [eps length(changeRewLoc)];
-rewlocs = changeRewLoc(changeRewLoc>0)*(3/2);
-
+rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
+figure('Renderer', 'painters', 'Position', [10 10 1050 800])
+tuning_curves = {};
 for ep=[1 2 3]
     % per ep    
     eprng = eps(ep):eps(ep+1);
-    trn = trialnum(eprng);    
+    trn = trialnum(eprng);  
+    rew = rewards(eprng)>0.5;
     % opto period
-    mask = trn>=3 & trn<8;
+%     mask = trn>=3 & trn<8;
     % no probes
-%     mask = trn>=8;
+%     mask1 = trn>=8;
+    strials = ones(1, length(unique(trn)))*NaN; % only get successful trials
+    for trial=unique(trn)
+    if trial>=3 % trial < 3, probe trial
+        if sum(rew(trn==trial)==1)>0 % if reward was found in the trial
+            strials(trial)=trial;        
+        end
+    end
+    end
+    strials = strials(~isnan(strials));
+    mask = ismember(trn, strials);
+    
 %     mask = trn<3;
     eprng = eprng(mask);
     
     ypos = ybinned(eprng);
-    ypos = ceil(ypos*(3/2)); % gain factor for zahra mice
+    ypos = ceil(ypos*(gainf)); % gain factor for zahra mice
     [time_moving,time_stop] = vr_stop_and_moving_time(ypos);
     ypos_mov = ypos(time_moving);
     for i = 1:nbins    
@@ -100,10 +137,11 @@ for ep=[1 2 3]
         
         [~,sorted_idx] = sort(peak);
     end
+    tuning_curves{ep} = cell_activity(:,sorted_idx);
     %%
-    figure('Renderer', 'painters', 'Position', [10 10 350 800])
-%     subplot(2,1,1)
-    imagesc(normalize(cell_activity(:,sorted_idx))'); 
+    
+    subplot(1,3,ep)
+    imagesc(normalize(tuning_curves{ep},1)'); 
     colormap jet 
     xticks([0:90])
     xticklabels([0:3:270])
@@ -118,5 +156,10 @@ for ep=[1 2 3]
 %           'FaceColor',[0 .5 .5 0.3])
 %     xticks([0:90])
 %     xticklabels([0:3:270])
-    sgtitle(sprintf('animal %s, day %i, epoch %i', an, dy, ep))
+    title(sprintf('epoch %i', ep))
 end
+sgtitle(sprintf('animal %s, day %i', an, dy))
+
+tuning_curves_tracked_cells = tuning_curves;
+save(fullfile('Y:\sstcre_analysis\fmats\e201\days', ...
+sprintf('day%02d_Fall.mat', dy)), 'tuning_curves_tracked_cells', '-append')

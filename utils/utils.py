@@ -65,7 +65,7 @@ def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
 
 
 def copyfmats(src, dst, animal, overwrite=False, days=False, 
-              weeks=False, weekdir=False):
+              weeks=False, weekdir=False, planes=[0]):
     """useful for cell tracking, copies Fall to another location for each day in animal folder
     if you align to behavior can also use for further analysis 
     (run runVRalign.m in MATLAB, in projects > SST-cre inhibition)
@@ -92,14 +92,15 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         print(i)   
         pth = os.path.join(src, str(i))
         imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
-        mat = os.path.join(imgfl, "suite2p", "plane0", "Fall.mat") 
-        if os.path.exists(mat):
-            copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_Fall.mat")
-            if os.path.exists(copypth) and overwrite==False:
-                print(f"*********Fall for day {i} already exists in {dst}*********")    
-            else:
-                shutil.copy(mat, copypth)            
-                print(f"*********Copied day {i} Fall to {dst}*********")
+        for plane in planes:
+            mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
+            if os.path.exists(mat):
+                copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
+                if os.path.exists(copypth) and overwrite==False:
+                    print(f"*********Fall for day {i} already exists in {dst}*********")    
+                else:
+                    shutil.copy(mat, copypth)            
+                    print(f"*********Copied day {i} Fall to {dst}*********")
 
     if weeks:
         for w in weeks:            
@@ -107,13 +108,14 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
                 imgfl = os.path.join(src, str(w))
             else:
                 imgfl = os.path.join(weekdir, str(w))
-            mat = os.path.join(imgfl, "suite2p", "plane0", "Fall.mat") 
-            copypth = os.path.join(dst, f"{animal}_week{int(w[4:5]):02d}_Fall.mat")
-            if os.path.exists(copypth) and overwrite==False:
-                print(f"*********Fall for day {i} already exists in {dst}*********")    
-            else:
-                shutil.copy(mat, copypth)        
-                print(f"*********Copied {w} Fall to {dst}*********")
+            for plane in planes:
+                mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
+                copypth = os.path.join(dst, f"{animal}_week{int(w[4:5]):02d}_plane{plane}_Fall.mat")
+                if os.path.exists(copypth) and overwrite==False:
+                    print(f"*********Fall for day {i} already exists in {dst}*********")    
+                else:
+                    shutil.copy(mat, copypth)        
+                    print(f"*********Copied {w} Fall to {dst}*********")
     return 
 
 def deleteregtif(src,fls=False,keyword='reg_tif'):

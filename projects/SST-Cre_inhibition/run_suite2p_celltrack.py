@@ -33,29 +33,22 @@ def main(**args):
                                         params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], 
                                  imagingfl)
-        
-        if len(imagingfl)!=0:           
-            print(imagingfl)
-            if params["crop_opto"]:
-                imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
-            else:
-                imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
-            print(imagingflnm)
+        if not params["cell_detect_only"]: 
+            # if cell detect only not specified, make tifs, else skip
+            if len(imagingfl)!=0:           
+                print(imagingfl)
+                if params["crop_opto"]:
+                    imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                else:
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
+                print(imagingflnm)
 
         #do suite2p after tifs are made
         # set your options for running
         import suite2p
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
-        ops["reg_tif"]=params["reg_tif"] 
-        ops["nplanes"]=params["nplanes"] 
-        ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
-        ops['tau']=0.7 # gerardo set?
-        ops["delete_bin"]=params["delete_bin"] #False
-        ops["move_bin"]=params["move_bin"]
-        ops["save_mat"]=params["save_mat"]
-        ops["threshold_scaling"]=0.5 #TODO: make modular
-        ops["max_iterations"]=200
+        ops = preprocessing.fillops(ops, params)
 
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
@@ -79,16 +72,18 @@ def main(**args):
         ########################WEEKLY CONCATENATED SUTIE2P RUN########################
         dayflds = [os.path.join(params["datadir"],params["mouse_name"], str(day)) for day in params["days_of_week"]]
         imgpths = [os.path.join(dayfld, xx) for dayfld in dayflds for xx in os.listdir(dayfld) if "000" in xx]
-        for imgpth in imgpths:
-            #assumes that these tifs have already been made in step 1
-            tifspth = [os.path.join(imgpth, xx) for xx in os.listdir(imgpth) if ".tif" in xx]
-            if len(tifspth)==0:
-                print("\n writing tifs....")     
-                if params["crop_opto"]:
-                    preprocessing.maketifs(imgpth,89,512,89,718)
-                else:
-                    preprocessing.maketifs(imgpth,0,512,89,718)
-                print(imgpth)
+        if not params["cell_detect_only"]: 
+                # if cell detect only not specified, make tifs, else skip
+            for imgpth in imgpths:
+                #assumes that these tifs have already been made in step 1
+                tifspth = [os.path.join(imgpth, xx) for xx in os.listdir(imgpth) if ".tif" in xx]
+                if len(tifspth)==0:
+                    print("\n writing tifs....")     
+                    if params["crop_opto"]:
+                        preprocessing.maketifs(imgpth,89,512,89,718)
+                    else:
+                        preprocessing.maketifs(imgpth,0,512,89,718)
+                    print(imgpth)
         # otherwise concat all tifs
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
         tifspths.sort(); print(tifspths)
@@ -101,15 +96,7 @@ def main(**args):
         import suite2p
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
-        ops["reg_tif"]=False # currently default is not to save reg_tif for weekly videos 
-        ops["nplanes"]=params["nplanes"] 
-        ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
-        ops['tau']=0.7 # gerardo set?
-        ops["delete_bin"]=params["delete_bin"] #False
-        ops["move_bin"]=params["move_bin"]
-        ops["save_mat"]=params["save_mat"]
-        ops["threshold_scaling"]=0.5 #TODO: make modular
-        ops["max_iterations"]=200
+        ops = preprocessing.fillops(ops, params)
 
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
@@ -158,15 +145,7 @@ def main(**args):
             import suite2p
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
-            ops["reg_tif"]=params["reg_tif"] 
-            ops["nplanes"]=params["nplanes"] 
-            ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
-            ops['tau']=0.7 # gerardo set?
-            ops["delete_bin"]=params["delete_bin"] #False
-            ops["move_bin"]=params["move_bin"]
-            ops["save_mat"]=params["save_mat"]
-            ops["threshold_scaling"]=0.5 #TODO: make modular
-            ops["max_iterations"]=200
+            ops = preprocessing.fillops(ops, params)
 
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
             # db overwrites any ops (allows for experiment specific settings)

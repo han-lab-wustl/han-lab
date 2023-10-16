@@ -85,3 +85,22 @@ def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
         print("\n ******Tifs exists! Run suite2p... ******\n")
 
     return imagingflnm
+
+def fillops(ops, params):
+    """makes ops dict for suite2p processing
+    hardcode s2p params! optimized for zahra's cell tracking pipelin
+    Args:
+        ops (_type_): default s2p ops
+        params (_type_): params dict from run suite2p file (command line args)
+    """
+    ops["reg_tif"]=params["reg_tif"] # see default settings in params
+    ops["nplanes"]=params["nplanes"] 
+    ops['fs']=31.25/params["nplanes"] # fs of han lab 2p
+    ops['tau']=0.7 # gerardo set?
+    ops["delete_bin"]=params["delete_bin"] #False
+    ops["move_bin"]=params["move_bin"]
+    ops["save_mat"]=params["save_mat"]
+    ops["threshold_scaling"]=0.5 #TODO: make modular
+    ops["max_iterations"]=200
+
+    return ops
