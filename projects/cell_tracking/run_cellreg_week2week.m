@@ -42,9 +42,11 @@ pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e145'; % CHANGE
-plane = 2;
-results_directory= fullfile(pth,sprintf('%s_week01-02_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
+animal = 'e200'; % CHANGE
+planes = [0]; % CHANGE
+for plane=planes
+% plane = 0;
+results_directory= fullfile(pth,sprintf('%s_week09-14_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -54,7 +56,8 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\plane%i\\converted*week*.mat", animal, plane)));
+% CHANGE
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\converted*week*plane%i_Fall.mat", animal, plane)));
 %dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
 % dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
@@ -280,7 +283,8 @@ disp('Done')
 % optimized threshold of either spatial correlations or centroid distances.
 
 % Defining the parameters for initial registration:
-initial_registration_type=best_model_string; % either 'Spatial correlation', 'Centroid distance', or 'best_model_string';
+initial_registration_type='best_model_string'; % either 'Spatial correlation', 'Centroid distance', or 'best_model_string';
+%ZD changed for e200
 % The threshold that corresponds to p_same=0.5 is automatically chosen.
 % if a specific distance/correlation threshold is to be used - change the
 % initial threshold manually in the next few lines.
@@ -441,4 +445,5 @@ disp('End of cell registration procedure')
 
 if memory_efficient_run
     rmdir(temp_dir,'s');
+end
 end

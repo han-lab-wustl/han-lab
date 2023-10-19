@@ -42,9 +42,11 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 2;
-animal = 'e145';
-plane = 2;
+week = 15;
+animal = 'e201';
+planes = [0];
+for plane=planes
+% plane = 2;
 results_directory= fullfile(pth,sprintf('%s_week%02d_plane%i_to_days', animal, week, plane), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');
@@ -428,4 +430,5 @@ disp('End of cell registration procedure')
 
 if memory_efficient_run
     rmdir(temp_dir,'s');
+end
 end

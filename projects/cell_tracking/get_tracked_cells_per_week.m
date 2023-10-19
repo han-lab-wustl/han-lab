@@ -3,8 +3,8 @@
 
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e200';
-weekfld = 'week09-14';
+animal = 'e201';
+weekfld = 'week12-15_plane0';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
@@ -27,7 +27,7 @@ cc=commoncells;
 % calculate average p-same for validation of probabilistic model
 
 % load mats from all weeks
-fls = dir(fullfile(src, 'fmats', animal, sprintf('week*.mat',animal))); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));
+fls = dir(fullfile(src, 'fmats', animal, sprintf('%s_week*_plane0*.mat',animal))); %dir(fullfile(src, 'fmats', sprintf('%s\\%s_week*.mat', animal,animal)));
 days = cell(1, length(fls));
 for fl=1:length(fls)
     day = fls(fl);

@@ -81,38 +81,37 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
     dst = os.path.join(dst, animal) #dst='Y:\\sstcre_analysis\\fmats'
     if weekdir: weekdir = os.path.join(weekdir, animal)
     # get only days, not week fmats
-    if not days:
-        days = [int(xx) for xx in os.listdir(src) if  "week" not in xx and "ref" not in xx]
     #dont copy weeks if not specified
     # if not weeks:
     #     weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
-    days.sort()
-    # move all converted fmats to separate folder
-    for i in days:     
-        print(i)   
-        pth = os.path.join(src, str(i))
-        imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
-        for plane in planes:
-            mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
-            if os.path.exists(mat):
-                copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
-                if os.path.exists(copypth) and overwrite==False:
-                    print(f"*********Fall for day {i} already exists in {dst}*********")    
-                else:
-                    shutil.copy(mat, copypth)            
-                    print(f"*********Copied day {i} Fall to {dst}*********")
+    if days:
+        days.sort()
+        # move all converted fmats to separate folder
+        for i in days:     
+            print(i)   
+            pth = os.path.join(src, str(i))
+            imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+            for plane in planes:
+                mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
+                if os.path.exists(mat):
+                    copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
+                    if os.path.exists(copypth) and overwrite==False:
+                        print(f"*********Fall for day {i} already exists in {dst}*********")    
+                    else:
+                        shutil.copy(mat, copypth)            
+                        print(f"*********Copied day {i} Fall to {dst}*********")
 
     if weeks:
         for w in weeks:            
             if not weekdir: 
-                imgfl = os.path.join(src, str(w))
+                imgfl = os.path.join(src, f'week{w:02d}')
             else:
-                imgfl = os.path.join(weekdir, str(w))
+                imgfl = os.path.join(weekdir, f'week{w:02d}')
             for plane in planes:
                 mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
-                copypth = os.path.join(dst, f"{animal}_week{int(w[4:5]):02d}_plane{plane}_Fall.mat")
+                copypth = os.path.join(dst, f"{animal}_week{w:02d}_plane{plane}_Fall.mat")
                 if os.path.exists(copypth) and overwrite==False:
-                    print(f"*********Fall for day {i} already exists in {dst}*********")    
+                    print(f"*********Fall for week {w} already exists in {dst}*********")    
                 else:
                     shutil.copy(mat, copypth)        
                     print(f"*********Copied {w} Fall to {dst}*********")

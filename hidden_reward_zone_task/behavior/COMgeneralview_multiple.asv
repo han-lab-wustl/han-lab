@@ -82,7 +82,7 @@ for day_number = 1:length(filename)
     if mod(day_number,24) == 0
          subplot(min(ceil(length(filename)/4),6),4,24)
     else
-        subplot(min(ceil(length(filename)/4),6),4,mod(day_number,24))
+    subplot(min(ceil(length(filename)/4),6),4,mod(day_number,24))
     end
     file = fullfile(filepath, filename{day_number});
     load(file) %load it

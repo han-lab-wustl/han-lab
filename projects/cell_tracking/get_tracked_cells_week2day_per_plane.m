@@ -5,9 +5,9 @@ clear all;
 % we want to keep all these cells
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e201';%e200';
-plane = 2; % if necessary
-weeknms = [01 02]; %[09 10 11 13 14];
-weekfld = 'week01-02';
+plane = 0; % if necessary
+weeknms = [12 13 14 15]; %[09 10 11 13 14];
+weekfld = 'week12-15';
 weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld, '_plane%i'], plane), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
@@ -19,7 +19,7 @@ commoncells_4weeks=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells_4weeks(ci,:)=weeks.cell_registered_struct.cell_to_index_map(cindex(ci),:);
 end
-% 
+ 
 % % for each of these cells, if this cell maps to day 1, or day 1,2,3, etc...
 % % find those cells that map to atleast 1 day 
 wkcount = 1;
@@ -69,7 +69,7 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=7; %total number of days imaged (e.g. included in dataset)
+sessions_total=21; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks
@@ -100,12 +100,12 @@ save(fullfile(weekdst.folder, ...
 %%
 
 % load mats from all days
-fls = dir(fullfile(src, "fmats",animal, 'days', sprintf('plane%i',plane), '*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+fls = dir(fullfile(src, "fmats",animal, 'days', sprintf('*day*_plane%i_Fall.mat', plane)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
     dy = fls(fl);
-    days{fl} = load(fullfile(dy.folder,dy.name));
+    days{fl} = load(fullfile(dy.folder,dy.name), 'stat', 'ops');
 end
 cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
@@ -116,40 +116,40 @@ sessions_total=length(days);
 % align each common cells across all days with an individual mask
 % remember this is the cell index, so you have to find the cell in the
 % original F mat
-ctab = hsv(length(cc));
-
-cells_to_plot = [129];
-for i=[cells_to_plot]
-    %multi plot of cell mask across all 5 days
-    figure(i); 
-    axs=cell(1,sessions_total);
-    for ss=1:sessions_total        
-        day=days(ss);day=day{1};
-        axs{ss}=subplot(5,5,ss); % 2 rows, 3 column, 1 pos; 20 days
-        imagesc(day.ops.meanImg) %meanImg or max_proj
-        colormap('gray')
-        hold on;
-        try
-            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.3]);
-        end
-        axis off
-        title(sprintf('day %i', ss)) %sprintf('day %i', ss)
-        %title(axes{ss},sprintf('Cell %0d4', i))
-    end
-    linkaxes([axs{:}], 'xy')
-    %savefig(sprintf("Z:\\suite2pconcat1month_commoncellmasks\\cell_%03d.fig",i+250)) %changed to reflect subset of cells plotted
-end
+% ctab = hsv(length(cc));
+% 
+% cells_to_plot = [129];
+% for i=[cells_to_plot]
+%     %multi plot of cell mask across all 5 days
+%     figure(i); 
+%     axs=cell(1,sessions_total);
+%     for ss=1:sessions_total        
+%         day=days(ss);day=day{1};
+%         axs{ss}=subplot(5,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+%         imagesc(day.ops.meanImg) %meanImg or max_proj
+%         colormap('gray')
+%         hold on;
+%         try
+%             plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.3]);
+%         end
+%         axis off
+%         title(sprintf('day %i', ss)) %sprintf('day %i', ss)
+%         %title(axes{ss},sprintf('Cell %0d4', i))
+%     end
+%     linkaxes([axs{:}], 'xy')
+%     %savefig(sprintf("Z:\\suite2pconcat1month_commoncellmasks\\cell_%03d.fig",i+250)) %changed to reflect subset of cells plotted
+% end
 %%
 % align all cells across all days in 1 fig
 % colormap to iterate thru
-cc=cellmap2dayacrossweeks;
+
 ctab = hsv(length(cc));
 figure;
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
     day=days(ss);day=day{1};
-    axesnm(ss)=subplot(3,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
-    imagesc(day.ops.meanImg)
+    axesnm(ss)=subplot(5,5,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    imagesc(day.ops.meanImg*5)
     colormap('gray')
     hold on;
     for i=1:length(cc)
@@ -158,7 +158,7 @@ for ss=1:sessions_total
         end
     end
     axis off
-    [daynm,~] = fileparts(day.ops.data_path);
+    [daynm,y] = fileparts(day.ops.data_path);
     [~,daynm] = fileparts(daynm);
     title(sprintf('day %s', daynm))
 end
@@ -166,18 +166,7 @@ linkaxes(axesnm, 'xy')
 % savefig(fullfile(weekdst.folder, "cellmasks.pdf"))
 %%
 %calculate dff
-% TODO: find a way to add to fall.mat
-% dff from master hrz only on 'selected' cells
-% dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff"); %load from old weekrun
-% dff=dff.dff;
-% for i=1:length(days)
-%     day=days(i);day=day{1};
-%     dff{i}=redo_dFF(day.F, 31.25, 20, day.Fneu);
-%     disp(i)
-% end
-% save(fullfile(weekdst.folder, "dff_per_day.mat"), "dff", "-v7.3")
-% dff=load(fullfile(weekdst.folder, "dff_per_day.mat"), "dff");
-% dff=dff.dff;
+% use run_dff_Fc3 function
 %%
 % plot F (and ideally dff) over ypos
 days_to_plot=[1 4 7 10 13 16];%1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
