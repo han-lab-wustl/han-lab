@@ -323,8 +323,8 @@ disp('Done')
 % correlations.
 
 % Defining the parameters for final registration:
-registration_approach='Probabilistic'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD WHYYY
-model_type=best_model_string; % either 'Spatial correlation' or 'Centroid distance'
+registration_approach='Simple threshold'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD WHYYY
+model_type='Centroid distance'; % either 'Spatial correlation' or 'Centroid distance'
 p_same_threshold=0.5; % only relevant if probabilistic approach is used
 
 % Deciding on the registration threshold:

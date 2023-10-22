@@ -34,11 +34,12 @@ end
 mouse_name = "E145";
 days = [4:7,9:12];
 src = "F:\";
+fmatsrc = 'Y:\sstcre_analysis\fmats';
 % add function path
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('Day%i',day), sprintf("%s*.mat", mouse_name)));    
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('Day%i',day), '**\plane*\Fall.mat'));     % finds all params files
+    fmatfl = dir(fullfile(fmatsrc, mouse_name, sprintf('%s_day%03d_plane*',animal,day, plane));     % finds all params files
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name), fmatfl, length(fmatfl));
     disp(savepthfmat)
 end

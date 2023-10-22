@@ -49,6 +49,9 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
+        # # temp
+        # ops["threshold_scaling"]=0.9 #TODO: make modular
+        # ops["max_iterations"]=30
 
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
@@ -97,7 +100,7 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-
+        ops['nimg_init'] = 1000
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
