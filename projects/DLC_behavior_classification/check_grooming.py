@@ -15,13 +15,13 @@ dlcfls = r'Y:\DLC\dlc_mixedmodel2\for_analysis'
 
 with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
-grooms = []
+
+groom_start_stops = []
 mice = []
-groom_starts = []
-hrz_summary = False
-d = datetime.datetime(2023, 4, 14)
+hrz_summary = True
+d = datetime.datetime(2023, 5, 1)
 for i,row in mouse_df.iterrows():
-    if row.mouse == 'E201': # if only analyzing particular mouse       
+    # if row.mouse == 'E201': # if only analyzing particular mouse       
         datetime_str = row.date
         # filter by date of behavior
         datetime_object = datetime.datetime.strptime(datetime_str, '%Y-%m-%d')
@@ -56,16 +56,15 @@ for i,row in mouse_df.iterrows():
                 paw_x = df[['PawTop_x','PawBottom_x','PawMiddle_x']].astype('float32').mean(axis=1)
                 # if there is any grooming
                 if sum(paw_y.values)>0:
-                    paw_gf = scipy.ndimage.gaussian_filter(paw_y.values,10)
-                    paw_gf_x = scipy.ndimage.gaussian_filter(paw_x.values,10)
+                    paw_gf = scipy.ndimage.gaussian_filter(paw_y.values,3)
+                    paw_gf_x = scipy.ndimage.gaussian_filter(paw_x.values,3)
                     diffs = np.diff((paw_gf>0).astype(int),axis=0)
                     starts = np.argwhere(diffs == 1).T[0]    
                     stops = np.argwhere(diffs == -1).T[0]
+                    paw_sx = []
+                    paw_sy = []
                     plt.figure()
-                    for i,ss in enumerate(starts):
-                        plt.plot(paw_gf_x[starts[i]:stops[i]],paw_gf[starts[i]:stops[i]],label=i)
-                    plt.legend()
-                    plt.title(os.path.basename(matfl))
+                    
                     if len(stops)<len(starts):
                         stops_ = np.zeros(len(stops)+1)
                         stops_[:-1] = stops
@@ -73,9 +72,19 @@ for i,row in mouse_df.iterrows():
                     else:
                         stops_ = stops
                     start_stop = stops_-starts
-                    
-                    long_groom = len(start_stop) # measures number of grooming bouts            
-                    
+                    # plot long grooms
+                    # for ii,ss in enumerate(starts):
+                    #     if start_stop[ii]>100:
+                    #         plt.figure()
+                    #         plt.plot(paw_gf_x[starts[ii]:stops[ii]],paw_gf[starts[ii]:stops[ii]],label=ii)
+                    #         # paw_sx.append(paw_gf_x[starts[ii]:stops[ii]])                        
+                    #         # paw_sy.append(paw_gf[starts[ii]:stops[ii]])
+                    #         plt.title(os.path.basename(matfl))
+                    # plt.legend()
+                    # filter by long grooms
+                    starts = starts[start_stop>100]
+                    stops_ = stops_[start_stop>100]
+
                     licks = mat['lickVoltage']<-0.07
                     ybin_paw = mat['ybinned'][:-1] # remove 1 for diff
                     rewz = mat['changeRewLoc'][mat['changeRewLoc']>0]
@@ -101,7 +110,7 @@ for i,row in mouse_df.iterrows():
                         rewzrng = np.arange(rewz[ep]-5, rewz[ep]+6)
                         rewzgr = [xx in rewzrng for xx in yposgr]
                         rewzgrs.append(gr_[rewzgr])
-                        darktimegrs.append(gr_[[xx<=3.0 for xx in yposgr]])
+                        darktimegrs.append(gr_[[xx<3 for xx in yposgr]])
                         beforerewgrs.append(gr_[yposgr<min(rewzrng)])
                         afterrewgrs.append(gr_[yposgr>max(rewzrng)])
                     beforerewgrs = np.hstack(beforerewgrs)
@@ -115,19 +124,19 @@ for i,row in mouse_df.iterrows():
                         plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], mat['ybinned'][mat['rewards']==0.5], color='b', marker='o')
                         plt.scatter(np.argwhere(licks).T[0], mat['ybinned'][licks], color='r', marker='o',
                                     s = 2**2)
-                        plt.scatter(starts, ybin_paw[diffs == 1], color='y', marker='*',
+                        plt.scatter(starts, ybin_paw[starts], color='y', marker='*',
                                     s = 20**2)
                         plt.title(os.path.basename(matfl))
                         
                         fig, ax = plt.subplots()
                         cat = ['dark time', 'before rew', 'after rew', 'rew zone']
-                        counts = [len(beforerewgrs), len(afterrewgrs), len(darktimegrs),
+                        counts = [len(darktimegrs), len(beforerewgrs), len(afterrewgrs),
                                 len(rewzgrs)]
                         ax.bar(cat, counts)
                         ax.set_title(os.path.basename(matfl))
                         ax.set_ylabel('number of grooming bouts')
                         plt.show()
 
-                    grooms.append(long_groom)
-                    groom_starts.append(starts)
+                    groom_start_stops.append((starts,stops_))
+                    
                     mice.append(row)
