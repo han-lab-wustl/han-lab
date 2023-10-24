@@ -42,8 +42,8 @@ pth = 'Y:\sstcre_analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 15;
-animal = 'e201';
+week = 09;
+animal = 'e200';
 planes = [0];
 for plane=planes
 % plane = 2;

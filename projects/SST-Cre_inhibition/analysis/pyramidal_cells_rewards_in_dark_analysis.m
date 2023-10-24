@@ -3,24 +3,42 @@
 % SST cre experiment
 % want to plot and see if there is any activity of cells during CS/US
 clear all
-load('Y:\sstcre_imaging\e200\')
+
+load('Y:\sstcre_imaging\e200\32\230329_ZD_000_000\suite2p\plane0\Fall.mat')
 %%
 % dff = redo_dFF(F, 31.25, 20, Fneu);
 % save('Y:\sstcre_imaging\e200\20\230315_ZD_000_000\suite2p\plane0\Fall.mat', 'dFF', '-append')
 dFF = dFF';
 dFF = dFF(logical(iscell(:,1)),:);
 range=10;
-bin=0.2;
+bin=0.1;
 rewardsonly=rewards>=1;
 cs=rewards==0.5;
-F = F(logical(iscell(:,1)),:);
+% F = F(logical(iscell(:,1)),:);
 % runs for all cells
-[binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(F',cs,timedFF,range,bin); %rewardsonly if mapping to reward
+[binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dFF',cs,timedFF,range,bin); %rewardsonly if mapping to reward
 [vbinnedPerireward,vallbins,vrewdFF] = perirewardbinnedactivity(forwardvel',cs,timedFF,range,bin); %rewardsonly if mapping to reward
+[lbinnedPerireward,~,~] = perirewardbinnedactivity(licks',cs,timedFF,range,bin); %rewardsonly if mapping to reward
 figure; imagesc(normalize(binnedPerireward,2)); hold on;
-xline(51, 'w--', 'CS', 'LineWidth',3)
+xline(100, 'w--', 'CS', 'LineWidth',3)
 yyaxis right
-plot(vbinnedPerireward, 'k', 'LineWidth',2)
+plot(vbinnedPerireward, 'k', 'LineWidth',2); hold on
+plot(lbinnedPerireward*50, 'ro')
+
+%%
+figure; plot(mean(binnedPerireward,1),'LineWidth',4); hold on;
+xline(100, 'g--', 'CS', 'LineWidth',3)
+yyaxis right
+plot(vbinnedPerireward, 'k', 'LineWidth',2); hold on
+plot(lbinnedPerireward*100, 'ro')
+%%
+for i=1:30%size(binnedPerireward,1)
+    figure; plot(binnedPerireward(i,:),'LineWidth',4); hold on;
+    xline(100, 'g--', 'CS', 'LineWidth',3)
+    yyaxis right
+    plot(vbinnedPerireward, 'k', 'LineWidth',2); hold on
+    plot(lbinnedPerireward*100, 'ro')
+end
 %%
 % plot all cells aligned to rewards
 figure;

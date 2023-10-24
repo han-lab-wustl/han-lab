@@ -46,7 +46,7 @@ animal = 'e200'; % CHANGE
 planes = [0]; % CHANGE
 for plane=planes
 % plane = 0;
-results_directory= fullfile(pth,sprintf('%s_week09-14_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
+results_directory= fullfile(pth,sprintf('%s_week09-12_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7

@@ -4,14 +4,14 @@
 clear all
 src = 'Y:\sstcre_analysis\'; % main folder for analysis
 animal = 'e200';
-weekfld = 'week09-14_plane0';
+weekfld = 'week09-12_plane0';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
 sessions=length(cell_registered_struct.centroid_locations_corrected);% specify no of sessions
-cindex = bins(counts>=sessions-1); % finding cells AT LEAST 2 SESSIONS???
+cindex = bins(counts>=sessions); % finding cells AT LEAST 2 SESSIONS???
 commoncells=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
@@ -50,7 +50,7 @@ axes=zeros(1,sessions);
 cells_to_plot = [1:size(cc,1)];
 for ss=1:sessions
     day=days(ss);day=day{1};
-    axes(ss)=subplot(2,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    axes(ss)=subplot(2,2,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;

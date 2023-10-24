@@ -4,14 +4,18 @@ import preprocessing
 from kmeans import collect_clustering_vars, run_pca, run_kmeans
 from preprocessing import fixcsvcols
 #analyze videos and copy vr files before this step
-import matplotlib
-matplotlib.use('TkAgg')
+import matplotlib as mpl
+mpl.use('TkAgg')
+mpl.rcParams["pdf.fonttype"] = 42
+mpl.rcParams["ps.fonttype"] = 42
+mpl.rcParams["xtick.major.size"] = 6
+mpl.rcParams["ytick.major.size"] = 6
 import matplotlib.pyplot as plt
 from math import ceil 
 import datetime
 
 vrdir =  r'Y:\DLC\VR_data\dlc' # copy of vr data, curated to remove badly labeled files
-dlcfls = r'Y:\DLC\dlc_mixedmodel2\for_analysis'
+dlcfls = r'Y:\DLC\dlc_mixedmodel2'#\for_analysis'
 
 with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
@@ -19,13 +23,13 @@ with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
 groom_start_stops = []
 mice = []
 hrz_summary = True
-d = datetime.datetime(2023, 5, 1)
+# d = datetime.datetime(2023, 5, 1)
 for i,row in mouse_df.iterrows():
     # if row.mouse == 'E201': # if only analyzing particular mouse       
         datetime_str = row.date
         # filter by date of behavior
         datetime_object = datetime.datetime.strptime(datetime_str, '%Y-%m-%d')
-        if datetime_object>d: # only late hrz days
+        if True: #datetime_object>d: # only late hrz days
             dfpth = os.path.join(dlcfls, row['DLC']) #.values[0]
             matfl = os.path.join(dlcfls,row["VR"][:16]+"_vr_dlc_align.p")    
             
@@ -60,83 +64,74 @@ for i,row in mouse_df.iterrows():
                     paw_gf_x = scipy.ndimage.gaussian_filter(paw_x.values,3)
                     diffs = np.diff((paw_gf>0).astype(int),axis=0)
                     starts = np.argwhere(diffs == 1).T[0]    
-                    stops = np.argwhere(diffs == -1).T[0]
-                    paw_sx = []
-                    paw_sy = []
-                    plt.figure()
+                    stops = np.argwhere(diffs == -1).T[0]                   
                     
                     if len(stops)<len(starts):
                         stops_ = np.zeros(len(stops)+1)
                         stops_[:-1] = stops
-                        stops_[-1] = len(paw_gf.values)
+                        stops_[-1] = len(paw_gf)
                     else:
                         stops_ = stops
                     start_stop = stops_-starts
-                    # plot long grooms
-                    # for ii,ss in enumerate(starts):
-                    #     if start_stop[ii]>100:
-                    #         plt.figure()
-                    #         plt.plot(paw_gf_x[starts[ii]:stops[ii]],paw_gf[starts[ii]:stops[ii]],label=ii)
-                    #         # paw_sx.append(paw_gf_x[starts[ii]:stops[ii]])                        
-                    #         # paw_sy.append(paw_gf[starts[ii]:stops[ii]])
-                    #         plt.title(os.path.basename(matfl))
-                    # plt.legend()
                     # filter by long grooms
-                    starts = starts[start_stop>100]
-                    stops_ = stops_[start_stop>100]
+                    starts = starts[start_stop>75]
+                    stops_ = stops_[start_stop>75]
+                    if len(starts)>0:
+                        licks = mat['lickVoltage']<-0.07
+                        ybin_paw = mat['ybinned'][:-1] # remove 1 for diff
+                        rewz = mat['changeRewLoc'][mat['changeRewLoc']>0]
+                        # categories for periods of grooming
+                        rewzgrs = []; darktimegrs = []
+                        beforerewgrs = []; afterrewgrs = []
+                        for ep in range(len(eps)-1):
+                            rng = np.arange(eps[ep],eps[ep+1])
+                            trialnumep = np.hstack(mat['trialnum'][rng])
+                            rng = rng[trialnumep>3] # no probes
+                            trialnumep = trialnumep[trialnumep>3]
+                            rewep = (mat['rewards']==1)[rng]
+                            # only successful trials
+                            s_tr = []
+                            for tr in np.unique(trialnumep[trialnumep>3]):
+                                if sum(rewep[trialnumep==tr])>0:
+                                    s_tr.append(tr)
+                            trm = np.isin(trialnumep,s_tr)    
+                            # categorize by ypos
+                            gr_ = [xx in rng for xx in starts]
+                            gr_ = starts[gr_]
+                            yposgr = [ceil(xx) for xx in mat['ybinned'][gr_]]
+                            rewzrng = np.arange(rewz[ep]-5, rewz[ep]+6)
+                            rewzgr = [xx in rewzrng for xx in yposgr]
+                            if len(yposgr)>0:
+                                rewzgrs.append(gr_[rewzgr])
+                                darktimegrs.append(gr_[[xx<3 for xx in yposgr]])
+                                beforerewgrs.append(gr_[(yposgr<min(rewzrng)) & [xx>=3 for xx in yposgr]])
+                                afterrewgrs.append(gr_[yposgr>max(rewzrng)])
+                        beforerewgrs = np.hstack(beforerewgrs)
+                        afterrewgrs = np.hstack(afterrewgrs)
+                        darktimegrs = np.hstack(darktimegrs)
+                        rewzgrs = np.hstack(rewzgrs)
+                        if hrz_summary:    
+                            # plots hrz behavior with grooms
+                            plt.figure()
+                            plt.plot(mat['ybinned'], color='slategray',
+                                    linewidth=0.5)
+                            plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], mat['ybinned'][mat['rewards']==0.5], color='b', marker='o')
+                            plt.scatter(np.argwhere(licks).T[0], mat['ybinned'][licks], color='r', marker='o',
+                                        s = 2**2)
+                            plt.scatter(starts, ybin_paw[starts], color='y', marker='*',
+                                        s = 20**2)
+                            plt.title(os.path.basename(matfl))
+                            plt.savefig(rf'Y:\DLC\dlc_mixedmodel2\figures\{os.path.basename(matfl)}_grooming_beh.pdf')
+                            
+                            fig, ax = plt.subplots()
+                            cat = ['dark time', 'before rew', 'after rew', 'rew zone']
+                            counts = [len(darktimegrs), len(beforerewgrs), len(afterrewgrs),
+                                    len(rewzgrs)]
+                            ax.bar(cat, counts)
+                            ax.set_title(os.path.basename(matfl))
+                            ax.set_ylabel('number of grooming bouts')
+                            plt.savefig(rf'Y:\DLC\dlc_mixedmodel2\figures\{os.path.basename(matfl)}_grooming_beh_quant.pdf')
 
-                    licks = mat['lickVoltage']<-0.07
-                    ybin_paw = mat['ybinned'][:-1] # remove 1 for diff
-                    rewz = mat['changeRewLoc'][mat['changeRewLoc']>0]
-                    # categories for periods of grooming
-                    rewzgrs = []; darktimegrs = []
-                    beforerewgrs = []; afterrewgrs = []
-                    for ep in range(len(eps)-1):
-                        rng = np.arange(eps[ep],eps[ep+1])
-                        trialnumep = np.hstack(mat['trialnum'][rng])
-                        rng = rng[trialnumep>3] # no probes
-                        trialnumep = trialnumep[trialnumep>3]
-                        rewep = (mat['rewards']==1)[rng]
-                        # only successful trials
-                        s_tr = []
-                        for tr in np.unique(trialnumep[trialnumep>3]):
-                             if sum(rewep[trialnumep==tr])>0:
-                                  s_tr.append(tr)
-                        trm = np.isin(trialnumep,s_tr)    
+                        groom_start_stops.append((starts,stops_))
                         
-                        gr_ = [xx in rng for xx in starts]
-                        gr_ = starts[gr_]
-                        yposgr = [ceil(xx) for xx in mat['ybinned'][gr_]]
-                        rewzrng = np.arange(rewz[ep]-5, rewz[ep]+6)
-                        rewzgr = [xx in rewzrng for xx in yposgr]
-                        rewzgrs.append(gr_[rewzgr])
-                        darktimegrs.append(gr_[[xx<3 for xx in yposgr]])
-                        beforerewgrs.append(gr_[yposgr<min(rewzrng)])
-                        afterrewgrs.append(gr_[yposgr>max(rewzrng)])
-                    beforerewgrs = np.hstack(beforerewgrs)
-                    afterrewgrs = np.hstack(afterrewgrs)
-                    darktimegrs = np.hstack(darktimegrs)
-                    rewzgrs = np.hstack(rewzgrs)
-                    if hrz_summary:    
-                        # plots hrz behavior with grooms
-                        plt.figure()
-                        plt.plot(mat['ybinned'], color='slategray')
-                        plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], mat['ybinned'][mat['rewards']==0.5], color='b', marker='o')
-                        plt.scatter(np.argwhere(licks).T[0], mat['ybinned'][licks], color='r', marker='o',
-                                    s = 2**2)
-                        plt.scatter(starts, ybin_paw[starts], color='y', marker='*',
-                                    s = 20**2)
-                        plt.title(os.path.basename(matfl))
-                        
-                        fig, ax = plt.subplots()
-                        cat = ['dark time', 'before rew', 'after rew', 'rew zone']
-                        counts = [len(darktimegrs), len(beforerewgrs), len(afterrewgrs),
-                                len(rewzgrs)]
-                        ax.bar(cat, counts)
-                        ax.set_title(os.path.basename(matfl))
-                        ax.set_ylabel('number of grooming bouts')
-                        plt.show()
-
-                    groom_start_stops.append((starts,stops_))
-                    
-                    mice.append(row)
+                        mice.append(row)

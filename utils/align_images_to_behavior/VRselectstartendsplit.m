@@ -250,9 +250,33 @@ for n = 1:numfiles
     
     %trial Index Check for Artefact
     trialchange = [0 diff(trialnum)];
-    artefact = intersect(find([0 trialchange] == 1),find(trialchange < 0));
+    % GM and ZD added to fix times when VR does not have data for the imaging
+    % frames; seems to happen randomly
+    artefact1 = find([0 0 trialchange(1:end-2)] == 1 & trialchange < 0);
+    trialnum(artefact1-1) = trialnum(artefact1);
+    
+    trialchange = [0 diff(trialnum)]; 
+    artefact = find([0 trialchange(1:end-1)] == 1 & trialchange < 0);
+    
     if ~isempty(artefact)
         trialnum(artefact-1) = trialnum(artefact-2);
+    end
+
+    %this ensures that all trial number changes happen on when the
+    %yposition goes back to the start, not 1 frame before or after
+    ypos = ybinned;
+    % trialsplit = find(diff(trialnum));
+    ypossplit = find(diff(ypos)<-50);
+
+    %doing the same thing but with changerewloc
+    rewlocsplit = find(changeRewLoc);
+    for c = 2:length(rewlocsplit) %2 because the first is always the first index
+        if ~ismember(rewlocsplit(c)-1,ypossplit)
+            [~,minidx] = min(abs(ypossplit+1-rewlocsplit(c)));
+            changeRewLoc(ypossplit(minidx)+1) = changeRewLoc(rewlocsplit(c));
+            changeRewLoc(rewlocsplit(c)) = 0;
+            
+        end
     end
     %
     
