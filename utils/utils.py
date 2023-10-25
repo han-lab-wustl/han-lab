@@ -194,9 +194,10 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
             makedir(os.path.join(src, animal, f'week{week:02d}_plane{plane}'))
 
     return os.path.join(src, animal)
+
 if __name__ == "__main__":
-    usb = r'G:\2023_ZD_VR'
-    drives = [r'Y:\sstcre_imaging', r'Z:\sstcre_imaging']
-    animals = ['e200', 'e201']
+    usb = r'H:\2023_ZD_VR'
+    drives = [r'X:\vipcre']
+    animals = ['e218']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])
