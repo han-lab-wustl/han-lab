@@ -3,10 +3,10 @@
 % SST cre experiment
 % want to plot and see if there is any activity of cells during CS/US
 clear all
-days = [8:27];
+dys = [8:27];
 mouse_name = "e200";
 cnt = 1; %counter for days
-for dy=days
+for dy=dys
     src = "Y:\sstcre_imaging";
     fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',dy), '**\Fall.mat'));
     load(fullfile(fmatfl.folder, fmatfl.name))
@@ -123,7 +123,7 @@ avcorr = {};
 for day=1:length(perirew)
     poscorr = cell2mat(corrs{day})>0.7;
     negcorr = cell2mat(corrs{day})<-0.7;
-    notcorr = (cell2mat(corrs{day})>-0.7 & cell2mat(corrs{day})<0.7);
+    notcorr = (cell2mat(corrs{day})>-0.5 & cell2mat(corrs{day})<0.5);
     ccorr = perirew{day}(notcorr,:);
     cpos = perirew{day}(poscorr,:);
     cneg = perirew{day}(negcorr,:);
@@ -169,77 +169,3 @@ colormap(ax3,jet)
 title('binned average dff')
 ylabel('days')
 sgtitle('cs triggered averages')
-%%
-
-figure; imagesc(normalize(binnedPerireward,2)); hold on;
-xline(100, 'w--', 'CS', 'LineWidth',3)
-yyaxis right
-plot(vbinnedPerireward, 'k', 'LineWidth',2); hold on
-plot(lbinnedPerireward*50, 'ro')
-
-%%
-figure; plot(mean(binnedPerireward,1),'LineWidth',4); hold on;
-xline(100, 'g--', 'CS', 'LineWidth',3)
-yyaxis right
-plot(vbinnedPerireward, 'k', 'LineWidth',2); hold on
-plot(lbinnedPerireward*100, 'ro')
-%%
-for i=1:30%size(binnedPerireward,1)
-    figure; plot(binnedPerireward(i,:),'LineWidth',4); hold on;
-    xline(100, 'g--', 'CS', 'LineWidth',3)
-    yyaxis right
-    plot(vbinnedPerireward, 'k', 'LineWidth',2); hold on
-    plot(lbinnedPerireward*100, 'ro')
-end
-%%
-% plot all cells aligned to rewards
-figure;
-grayColor = [.7 .7 .7];    
-
-for cellno=160:200 % plot each cell
-    plot(binnedPerireward(cellno,:), 'Color', grayColor) %important distinction
-    hold on;        
-    % plot reward location as line
-    xticks([1:5:200, 200])
-    x1=xline(median([1:5:200, 200]),'-.b','CS'); %{'Conditioned', 'stimulus'}
-    xticklabels([allbins(1:5:end) range]);
-    xlabel('seconds')
-    ylabel('dF/F')        
-end
-
-%%
-% plot all cell traces
-
-fig=figure;
-cells2plot=60; %size(F,1);
-for cellno=40:cells2plot
-    ax1=subplot(20,1,cellno-39);
-    plot(spks(cellno,:),'k') % 2 in the first position is cell no
-    hold on;
-    set(gca,'XTick',[], 'YTick', [])
-    set(gca,'visible','off')
-end
-% linkaxes([axs{:}],'xy')
-copygraphics(gcf, 'BackgroundColor', 'none');
-title(sprintf('Cell no. %03d', cellno));
-
-%% 
-% plot cell traces with behavior
-
-for cellno=1:20
-    figure;
-    subplot(2,1,1)
-    sp = F(cellno,:);
-    plot(sp,'g') % 2 in the first position is cell no    
-    hold on;
-    plot(find(rewards==0.5), sp(rewards==0.5), 'bo', 'MarkerSize',7)
-    plot(find(licks), sp(licks), 'ro', 'MarkerSize',3)
-    subplot(2,1,2)    
-    plot(forwardvel, 'k'); hold on
-    plot(find(rewards==0.5), forwardvel(rewards==0.5), 'bo', 'MarkerSize',7)
-    plot(find(licks), forwardvel(licks), 'ro', 'MarkerSize',3)  
-end
-% linkaxes([axs{:}],'xy')
-copygraphics(gcf, 'BackgroundColor', 'none');
-title(sprintf('Cell no. %03d', cellno));
-
