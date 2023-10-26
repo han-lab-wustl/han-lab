@@ -18,10 +18,11 @@ end
 % for aligned fmats
 
 clear all;
-mouse_name = "e201";
-% days = [62:70,72:74,76,81:90];
-days = [55:75];
-src = "Z:\sstcre_imaging";
+mouse_name = "e200";
+days = [62:70,72:74,76,81:85];
+% days = [55:75];
+% src = "Z:\sstcre_imaging";
+src = "Y:\sstcre_imaging";
 fmatsrc = "Y:\sstcre_analysis\fmats";
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));

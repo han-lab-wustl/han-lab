@@ -33,27 +33,27 @@ save('Y:\sstcre_analysis\e201_tracked_cells.mat', 'Fc3_tracked', 'dFF_tracked', 
     "trialnum_tracked","cc", "-v7.3")
 %%
 clear all; close all;
-% cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15_plane0\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
-cc = load('Y:\sstcre_analysis\celltrack\e145_week01-02_plane2\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15_plane0\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
+% cc = load('Y:\sstcre_analysis\celltrack\e145_week01-02_plane2\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 cc = cc.cellmap2dayacrossweeks;
-% an = 'e201';
-an = 'e145';
+an = 'e201';
+% an = 'e145';
 % individual        day analysis
-% dys = [55:75];
-dys = [4:7, 9:11];
+dys = [55:73, 75];
+% dys = [4:7, 9:11];
 for dy=dys
     clearvars -except dys an cc dy
-    load(fullfile('Y:\sstcre_analysis\fmats', an, 'days', sprintf('%s_day%03d_plane2_Fall.mat',an, dy)), 'dFF', ...
+    load(fullfile('Y:\sstcre_analysis\fmats', an, 'days', sprintf('%s_day%03d_plane0_Fall.mat',an, dy)), 'dFF', ...
             'Fc3', 'ybinned', 'changeRewLoc', 'forwardvel', 'licks', 'trialnum', 'rewards')  
         
     %e145
-    if dy<9
-        ddt = dy-3;%dy-3; % based on where you started tracking cells from
-    else
-        ddt=dy-4;
-    end
-    %e201
-%     ddt = dy-54;
+%     if dy<9
+%         ddt = dy-3;%dy-3; % based on where you started tracking cells from
+%     else
+%         ddt=dy-4;
+%     end
+%     %e201
+    ddt = dy-54;
     % generate tuning curve
     % save all dffs and fc3 of tracked cells in one struct
     
@@ -87,7 +87,7 @@ for dy=dys
         
     %     mask = trn<3;
         eprng = eprng(mask);
-        
+        if ~isempty(eprng)
         ypos = ybinned(eprng);
         ypos = ceil(ypos*(gainf)); % gain factor for zahra mice
         [time_moving,time_stop] = vr_stop_and_moving_time(ypos);
@@ -165,7 +165,10 @@ for dy=dys
     %         [~,sorted_idx] = sort(peak);
             [~,sorted_idx] = sort(com);
         end
-        tuning_curves{ep} = cell_activity;  
+        tuning_curves{ep} = cell_activity;
+        else
+            tuning_curves{ep} = cell_activity; % it just overwrites with the previous ep
+        end
     end
     
     comparisons = {[1 2], [1 3], [2 3]};
