@@ -1,5 +1,5 @@
 clear all;
-src = 'Y:\DLC\VR_data\dlc';
+src = 'Y:\DLC\VR_data\dlc\convert';
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)

@@ -17,6 +17,6 @@ def fixcsvcols(csv):
 
 if __name__ == "__main__":
     # path to csv from dlc
-    csv = r'Y:\DLC\dlc_mixedmodel2\230505_E190DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
+    csv = r'Y:\\DLC\\dlc_mixedmodel2\\230824_T10DLC_resnet50_MixedModel_trial_2Mar27shuffle1_1000000.csv'
     # run function
     df = fixcsvcols(csv)

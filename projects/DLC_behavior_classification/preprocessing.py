@@ -1,6 +1,6 @@
 import os, sys, shutil, tifffile, numpy as np, pandas as pd
 from datetime import datetime
-import scipy.io as sio, matplotlib.pyplot as plt
+import scipy.io as sio, matplotlib.pyplot as plt, re
 import h5py, pickle
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
@@ -15,26 +15,35 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
         print(csvfl)        
         date = os.path.basename(csvfl)[:6]
         datetime_object = datetime.strptime(date, '%y%m%d')
-        if not os.path.basename(csvfl)[7:11] in mouse_data.keys(): # allows for adding multiple dates
-            mouse_data[os.path.basename(csvfl)[7:11]] = [str(datetime_object.date())]
+        nm = os.path.basename(csvfl)[7:11]
+        s = os.path.basename(csvfl)[7]
+        # except for non 'e' leading mice
+        if s.upper()!='E': nm = os.path.basename(csvfl)[7:10]
+        if not nm in mouse_data.keys(): # allows for adding multiple dates
+            mouse_data[nm] = [str(datetime_object.date())]
         else:
-            mouse_data[os.path.basename(csvfl)[7:11]].append(str(datetime_object.date()))
-        mouse_dlc.append([os.path.basename(csvfl)[7:11],csvfl,str(datetime_object.date())])
+            mouse_data[nm].append(str(datetime_object.date()))
+        mouse_dlc.append([nm,csvfl,str(datetime_object.date())])
     
     mice = list(np.unique(np.array(mouse_data.keys()))[0]) #make to simple list
+    
     mouse_vr = []
     for mouse in mice:
         print(mouse)
         mouse = mouse.upper()
         vrfls = [xx for xx in listdir(vrdir, ifstring='.mat') if mouse in os.path.basename(xx)[:4].upper()]
         vrfls.sort()
-        dates = mouse_data[mouse] # if a mouse has multiple dates
+        dates = mouse_data[mouse] # if a mouse has multiple dates        
         for xx in vrfls:
-            if 'test'.lower() not in xx and 'test'.upper() not in xx and str(datetime.strptime(os.path.basename(xx)[5:16], 
-                '%d_%b_%Y').date()) in dates:
+            if mouse[0].upper() != 'E': dt = str(datetime.strptime(os.path.basename(xx)[4:15], 
+                '%d_%b_%Y').date())
+            else:
+                dt = str(datetime.strptime(os.path.basename(xx)[5:16], 
+                '%d_%b_%Y').date())
+            if 'test'.lower() not in xx and 'test'.upper() not in xx and dt in dates:
                 shutil.copy(xx,dlcfls)
-                mouse_vr.append([mouse, xx, str(datetime.strptime(os.path.basename(xx)[5:16], 
-                '%d_%b_%Y').date())])
+                mouse_vr.append([mouse, xx, dt])
+                 # TODO: need to switch to regex                
         print(f"\n********* copied vr files to dlc pose data for {mouse} *********")
     
     # pair dlc files with vr
@@ -50,6 +59,8 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
 def fixcsvcols(csv):
     if type(csv) == str:
         df = pd.read_csv(csv)
+        savecsv = csv[:-4]+'_original.csv' # saves a copy of original
+        df.to_csv(savecsv, index=None)
         cols=[[xx+"_x",xx+"_y",xx+"_likelihood"] for xx in pd.unique(df.iloc[0]) if xx!="bodyparts"]
         cols = [yy for xx in cols for yy in xx]; cols.insert(0, 'bodyparts')
         df.columns = cols

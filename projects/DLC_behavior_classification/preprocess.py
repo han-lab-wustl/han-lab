@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 def preprocess(step,vrdir, dlcfls,columns=False,
                only_add_experiment=False):
-    if step == 0:
+    if step == 0: # copy vr files from  usb matching dlc data
     #vrdir =  r'I:\VR_data' # copy of vr data, curated to remove badly labeled files
     #dlcfls = r'G:\dlc_mixedmodel2' # h5 and csv files from dlc
         mouse_df = preprocessing.copyvr_dlc(vrdir, dlcfls)          
@@ -17,13 +17,13 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 
         return mouse_df
 
-    if step == 1: # copy vr files from  usb matching dlc data
+    if step == 1: # align to vr
         with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
             df = pickle.load(fp)
         [preprocessing.VRalign(os.path.join(dlcfls,row["VR"]), 
                     os.path.join(dlcfls,row["DLC"]),only_add_experiment=only_add_experiment) for i,row in df.iterrows()]
             
-    if step == 2: # align to vr
+    if step == 2: # collect clustering vars
         bigdf = []
         with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp)
