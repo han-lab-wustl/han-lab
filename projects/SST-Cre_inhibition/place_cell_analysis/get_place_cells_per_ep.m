@@ -1,4 +1,4 @@
-function [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,Fc3, changeRewLoc, ...
+function [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,Fc3,changeRewLoc, ...
     bin,track_length,gainf)
 % bin = 3; % cm t
 % track_length = 270;
@@ -21,14 +21,14 @@ rewlocopto = rewloc(ep)*(gainf);
 %     title(sprintf('cell no . %i', randi([1 size(fc3,1)],1)))
 %% 
 % calculate spatial info
-% only during moving time?
+% moving time
 fc3_mov = fc3(:,time_moving);
 ypos_mov = ypos(:,time_moving);
 
 spatial_info = get_spatial_info_all_cells(fc3',ypos,31.25, ...
     ceil(track_length/bin),track_length);    
 % shuffle params
-%shuffle transients and not fc3 values themselves = use bwlabel    
+%shuffle transients and not fc3 values themselves
 for i = 1:size(fc3,1)   
     bins2shuffle_forcell{i} = shuffling_bins(fc3(i,:));   
 end 
