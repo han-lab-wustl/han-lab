@@ -2,6 +2,8 @@
 
 Project-specific and general scripts from Han Lab @ WUSTL
 
+**For a lot of analysis scripts involving pyramidal cells, you will need to add the entire directory to path in MATLAB**
+
 ## behavior_analysis
 
 General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
@@ -83,6 +85,7 @@ Munni's original code that aligns behavioral events to dFF. Modifications for la
 `pre_post_diff_anat_darkreward_single_rew.m`
 
 Plots a heatmap of CS-triggered averages across days in the Pavlovian task.
+
 ### projects > dopamine > axonal-GCamp
 
 How to run preprocessing and motion correction on axonal-GCamp images from two-photon
@@ -114,6 +117,7 @@ X:\dopamine_imaging = drive containing mouse folder and imaging day subfolders w
 6 = day (optional argument); this is what the folder will be named
 
 I suggest having a lookup table of day folder to experiment, imaging notes, camera acquisition etc. in a separate spreadsheet
+
 ## utils
 
 `runVideosTiff_EH_new_sbx_2channel.m`, `loadVideoTiffNoSplit_EH2_new_sbx_2channel.m`
@@ -129,7 +133,6 @@ Converts tiffs to avi in ImageJ. Useful for converting behavior videos into avis
 `output` = directory to store avis
 `name` = regex to filter by animal
 
-To avoid the ImageJ saving
 ### utils > utils.py
 
 Contains functions helpful to navigate thru directories, copy `Fall.mat` en masse, and copy VR files
