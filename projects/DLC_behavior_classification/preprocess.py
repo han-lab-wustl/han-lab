@@ -65,7 +65,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 
         return cluster_output
 
-
+#%%
 if __name__ == "__main__":
     vrdir =  r'Y:\DLC\VR_data\dlc' # copy of vr data, curated to remove badly labeled files
     dlcfls = r'Y:\DLC\dlc_mixedmodel2' # h5 and csv files from dlc

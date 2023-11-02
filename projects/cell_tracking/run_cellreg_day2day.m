@@ -37,13 +37,13 @@ memory_efficient_run = 1;
 
 %% Setting paths for the cell registration procedure:
 
-% we need to find the path up-two levels
+% we need to find the path up-two levels - that is where fmats will be
 pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
 animal = 'e201'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_week5-6',animal), 'Results') ; % CHANGE WEEK NO
+results_directory= fullfile(pth,sprintf('%s_daily_tracking',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -53,7 +53,7 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\*.mat", animal))); %format to your folder structure
+fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\*.mat", animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
@@ -300,7 +300,7 @@ disp('Done')
 % correlations.
 
 % Defining the parameters for final registration:
-registration_approach='Simple threshold'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD
+registration_approach='Probabilistic'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD
 model_type=best_model_string; % either 'Spatial correlation' or 'Centroid distance'
 p_same_threshold=0.5; % only relevant if probabilistic approach is used
 

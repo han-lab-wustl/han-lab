@@ -2,7 +2,6 @@
 """
 @author: zahra
 """
-
 import os, sys, pickle, pandas as pd, numpy as np, scipy
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 #analyze videos and copy vr files before this step
@@ -49,14 +48,14 @@ an_nms_unique = np.unique(np.array(an_nms))
 an_session = Counter(an_nms)
 
 # categories quant
-counts_groom = np.array(list(counts_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
-cat = ['dark time', 'before rew', 'after rew', 'rew zone']
-counts_groom = np.array([np.array(xx) for xx in counts_groom])
-bar = np.sum(counts_groom,0)
-fig, ax = plt.subplots()                                        
-ax.bar(cat, bar)
-ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
-ax.set_ylabel('number of grooming bouts')
+# counts_groom = np.array(list(counts_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
+# cat = ['dark time', 'before rew', 'after rew', 'rew zone']
+# counts_groom = np.array([np.array(xx) for xx in counts_groom])
+# bar = np.sum(counts_groom,0)
+# fig, ax = plt.subplots()                                        
+# ax.bar(cat, bar)
+# ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
+# ax.set_ylabel('number of grooming bouts')
 
 # positive relative to reward quant
 rel_ypos_groom_s = np.array(list(yposgrs_dct_s.values()))[~np.isnan(ans_binary)][ans_binary_]
@@ -69,6 +68,8 @@ ax.hist(rel_ypos_groom_f, bins = 20, label = 'failed trials')
 # ax.set_xlim([-1, 1])
 ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
 ax.set_ylabel('number of long grooming bouts')
-ax.set_xlabel('distance relative to reward')
+ax.set_xlabel('distance relative to reward (cm)')
 ax.legend()
-# ax.set_ylabel('number of grooming bouts')
+# count number of sessions per animal
+print(Counter(an_nms))
+
