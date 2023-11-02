@@ -2,6 +2,8 @@
 
 Project-specific and general scripts from Han Lab @ WUSTL
 
+**For a lot of analysis scripts involving pyramidal cells, you will need to add the entire directory as well as the directory of 'han-lab-archive' to path in MATLAB. This is being updated to allow depreciation of han-lab-archive scripts**
+
 ## behavior_analysis
 
 General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
@@ -14,7 +16,7 @@ Eleonora's HRZ (and remapping) analysis
 
 Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
 
-### hidden_reward_zone_task > behavior
+### behavior_analysis
 
 Primarily Gerardo's scripts for HRZ analysis
 
@@ -33,6 +35,14 @@ Primarily Gerardo's scripts for HRZ analysis
 `COMsmallversion`: (note! uses specific days I know are good to test out, can select others but will post those if you want to use the same) attempts all the different versions and shows how the statistical tests compare accross each day, skips behavior plots
  
 `mtit`: if you have matlab earlier than 2018(?) will use this function to put a title on a subplotted figure
+
+## suite2p_processing_pipeline
+
+Zahra's wrappers around suite2p to make tifs, run motion corr, get ROIs, and make concatenated weekly videos
+
+## place_cell_pipeline
+
+Zahra's scripts to get place cells in HRZ, based off Suyash and Tank lab code 
 
 ## projects > cell_tracking
 
@@ -83,6 +93,7 @@ Munni's original code that aligns behavioral events to dFF. Modifications for la
 `pre_post_diff_anat_darkreward_single_rew.m`
 
 Plots a heatmap of CS-triggered averages across days in the Pavlovian task.
+
 ### projects > dopamine > axonal-GCamp
 
 How to run preprocessing and motion correction on axonal-GCamp images from two-photon
@@ -114,6 +125,7 @@ X:\dopamine_imaging = drive containing mouse folder and imaging day subfolders w
 6 = day (optional argument); this is what the folder will be named
 
 I suggest having a lookup table of day folder to experiment, imaging notes, camera acquisition etc. in a separate spreadsheet
+
 ## utils
 
 `runVideosTiff_EH_new_sbx_2channel.m`, `loadVideoTiffNoSplit_EH2_new_sbx_2channel.m`
@@ -129,7 +141,6 @@ Converts tiffs to avi in ImageJ. Useful for converting behavior videos into avis
 `output` = directory to store avis
 `name` = regex to filter by animal
 
-To avoid the ImageJ saving
 ### utils > utils.py
 
 Contains functions helpful to navigate thru directories, copy `Fall.mat` en masse, and copy VR files
