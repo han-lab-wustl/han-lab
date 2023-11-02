@@ -17,7 +17,8 @@ commoncells=zeros(length(cindex),sessions);
 for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
 end
- 
+% save
+save(fullfile(src,animal,'commoncells.mat'),'commoncells') 
 fprintf('number of common cells: %i', size(commoncells,1)))
 
 % load mats from all days
