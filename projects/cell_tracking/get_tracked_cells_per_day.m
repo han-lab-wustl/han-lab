@@ -21,7 +21,7 @@ end
 fprintf('number of common cells: %i', size(commoncells,1)))
 
 % load mats from all days
-fls = dir(fullfile(src, 'fmats', sprintf('%s\\*.mat', animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+fls = dir(fullfile(src, sprintf('%s\\*.mat', animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
     day = fls(fl);

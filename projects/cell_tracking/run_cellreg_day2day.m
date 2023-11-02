@@ -53,7 +53,7 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\*.mat", animal))); %format to your folder structure
+fls = dir(fullfile(fileroot, sprintf("%s\\*.mat", animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
