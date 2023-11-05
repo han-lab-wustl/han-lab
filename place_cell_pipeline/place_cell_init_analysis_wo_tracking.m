@@ -1,3 +1,6 @@
+% Zahra
+% makes tuning curves WITHOUT velocity filter
+% uses suyash's binning method
 clear all;
 
 pptx    = exportToPPTX('', ...

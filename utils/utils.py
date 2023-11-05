@@ -29,7 +29,7 @@ def listdir(pth, ifstring=None):
     return lst
     
 
-def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
+def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for clampex
     """copy vr files in bulk to internal drive
     assumes usb is plugged in!!
     but theoretically can copy from any drive to any another drive
@@ -41,8 +41,9 @@ def copyvr(usb, drive, animal): #TODO: find a way to do the same for clampex
         drive (str): path to internal drive (e.g. Z:\sstcre_imaging)
         animal (str): animal name (e.g. e200)
     """
-    days = listdir(os.path.join(drive, animal.lower())) # assumes drive > per animal folder structure
-    days = [xx for xx in days if "week" not in xx and ".mat" not in xx] #excludes weeks
+    if not days:
+        days = listdir(os.path.join(drive, animal.lower())) # assumes drive > per animal folder structure
+        days = [xx for xx in days if "week" not in xx and ".mat" not in xx] #excludes weeks        
     dates = [];
     for day in days:
         print(day)
@@ -196,7 +197,7 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
     return os.path.join(src, animal)
 
 if __name__ == "__main__":
-    usb = r'G:\VRDATA'
+    usb = r'H:\2023_ZD_VR'
     drives = [r'X:\vipcre']
     animals = ['e218']
     for i,drive in enumerate(drives):

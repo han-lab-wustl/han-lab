@@ -23,7 +23,8 @@ dlcfls = r'Y:\DLC\dlc_mixedmodel2'#\for_analysis'
 with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
 
-hrz_summary = False
+# TODO: comparison with hrz and random reward 
+hrz_summary = True
 groom_binary_dct = {}; counts_dct = {}; yposgrs_dct_s = {};  yposgrs_dct_f = {}
 for i,row in mouse_df.iterrows():
     groom, starts, stops, counts_s, counts_f, yposgrs_s, yposgrs_f = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls,row,hrz_summary = True)
@@ -72,4 +73,4 @@ ax.set_xlabel('distance relative to reward (cm)')
 ax.legend()
 # count number of sessions per animal
 print(Counter(an_nms))
-
+plt.savefig(r'Y:\DLC\dlc_mixedmodel2\figures\yppos_grooming_relative_to_rew.pdf')

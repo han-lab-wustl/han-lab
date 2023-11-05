@@ -88,10 +88,11 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
             if hrz_summary:    
                     # plots hrz behavior
                     plt.figure()
-                    plt.plot(mat['ybinned'], color='slategray',
+                    ypos = mat['ybinned']*gainf
+                    plt.plot(ypos, color='slategray',
                             linewidth=0.5)
-                    plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], mat['ybinned'][mat['rewards']==0.5], color='b', marker='o')
-                    plt.scatter(np.argwhere(licks).T[0], mat['ybinned'][licks], color='r', marker='o',
+                    plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], ypos[mat['rewards']==0.5], color='b', marker='o')
+                    plt.scatter(np.argwhere(licks).T[0], ypos[licks], color='r', marker='o',
                                 s = 2**2)                    
                     plt.title(os.path.basename(matfl))
                     plt.savefig(os.path.join(savedst, f'{os.path.basename(matfl)}_beh.pdf'))
@@ -203,13 +204,14 @@ def convert_to_hstack(arr):
     return arr
     
 def make_hrz_summary_fig(mat, licks, matfl, ybin_paw, starts, cat, 
-    save=False):
+    save=False,gainf=3/2):
     # plots hrz behavior with grooms
     plt.figure()
-    plt.plot(mat['ybinned'], color='slategray',
+    ypos = mat['ybinned']*gainf
+    plt.plot(ypos, color='slategray',
             linewidth=0.5)
-    plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], mat['ybinned'][mat['rewards']==0.5], color='b', marker='o')
-    plt.scatter(np.argwhere(licks).T[0], mat['ybinned'][licks], color='r', marker='o',
+    plt.scatter(np.argwhere(mat['rewards']==0.5).T[0], ypos[mat['rewards']==0.5], color='b', marker='o')
+    plt.scatter(np.argwhere(licks).T[0], ypos[licks], color='r', marker='o',
                 s = 2**2)
     plt.scatter(starts, ybin_paw[starts], color='y', marker='*',
                 s = 20**2)
