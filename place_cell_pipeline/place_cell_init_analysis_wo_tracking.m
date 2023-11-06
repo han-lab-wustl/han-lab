@@ -1,6 +1,7 @@
 % Zahra
-% makes tuning curves WITHOUT velocity filter
+% makes tuning curves with velocity filter
 % uses suyash's binning method
+% per day analysis using iscell 
 clear all;
 
 pptx    = exportToPPTX('', ...
@@ -13,13 +14,23 @@ pptx    = exportToPPTX('', ...
 % an = 'e200';
 an = 'e201';
 % an = 'e145';
-% individual        day analysis
+% an = 'e218';
+% individual day analysis
+% dys = [15,16];
 dys = [55:73, 75];
 % dys = [62:67,69:70,72:74,76,81:85];
 % dys = [4:7, 9:11];
+savedst = 'Y:\sstcre_analysis\figures'; % for figures
+% src = 'X:\vipcre'; % folder where fall is 
+src = 'Y:\sstcre_analysis\fmats';
 for dy=dys
-    clearvars -except dys an cc dy pptx
-    load(fullfile('Y:\sstcre_analysis\fmats', an, 'days', sprintf('%s_day%03d_plane0_Fall.mat',an, dy)), 'dFF', ...
+    clearvars -except dys an cc dy pptx src savedst
+%     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+%     load(fullfile(pth.folder,pth.name), 'dFF', ...
+%             'Fc3', 'iscell', 'ybinned', 'changeRewLoc', ...
+%             'forwardvel', 'licks', 'trialnum', 'rewards')              
+      % for copied falls
+    load(fullfile(src, an, 'days', sprintf('%s_day%03d_plane0_Fall.mat',an, dy)), 'dFF', ...
             'Fc3', 'iscell', 'ybinned', 'changeRewLoc', ...
             'forwardvel', 'licks', 'trialnum', 'rewards')              
     
@@ -69,33 +80,7 @@ for dy=dys
         fc3_ep = Fc3(eprng,:);
         moving_cells_activity = fc3_ep(time_moving,:);
         fc3_pc = fc3_ep(:,pc);
-%         % mean length of transients
-%         tr_len = zeros(1,size(fc3_pc,2));
-%         for c=1:size(fc3_pc,2)
-%             cell_fc3 = fc3_pc(:,c);
-%             diffs = diff(cell_fc3>0);        
-%             starts = find(diffs==1);
-%             stops = find(diffs==-1);
-%             if size(starts,1)>size(stops,1) % to account for parts of transients being cut off from trialnum chunkin
-%                 stops(end+1) = size(cell_fc3,1);                
-%             end
-%             starts_ = starts;
-%             if size(starts,1)<size(stops,1)
-%                 starts_ = zeros(size(stops,1),1);
-%                 starts_(2:end) = starts;
-%                 starts_(1) = 0;
-%             end       
-%             if size(stops,2)==size(starts_,1)
-%                 stops = stops';
-%             end
-%             start_stop = stops-starts_;
-%             
-%             tr_len(c) = mean(start_stop, 'omitnan');
-%         end
-%         tr_len = tr_len(tr_len>0); % removes negative lengths for now
-        % may want to deal with this later as it it basically because of
-        % lingering transients in the beginning and end of time period
-        % maybe smaller in 
+        % mean length of transients         
         cell_activity = zeros(nbins, size(fc3_pc,2));
         for i = 1:size(fc3_pc,2)
             for bin = 1:nbins
@@ -146,19 +131,17 @@ for dy=dys
     fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
     for ep=[1 2 3]        
         subplot(1,3,ep)
-        imagesc(normalize(tuning_curves{ep}(:,sorted_idx),1)'); 
+        plt = tuning_curves{ep}';
+        imagesc(normalize(plt(sorted_idx,:),2)); 
+        hold on;
+        % plot rectangle of rew loc
+        % everything divided by 3 (bins of 3cm)
+        rectangle('position',[ceil(rewlocs(ep)/3)-7 0 ...
+        5 size(cell_activity,2)], ... % just picked max for visualization
+                    'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
         colormap jet 
         xticks([0:3:90])
         xticklabels([0:9:270])
-        %     subplot(2,1,2)
-        %     plot(vel, 'k');
-        %     yyaxis right
-        %     plot(lk, 'r'); ylim([0 0.5])
-        %     hold on 
-        %     rectangle('Position',[(rewloc-5)/3 0 10/3 max(lk)+1], ... % just picked max for visualization
-        %           'FaceColor',[0 .5 .5 0.3])
-        %     xticks([0:90])
-        %     xticklabels([0:3:270])
         title(sprintf('epoch %i', ep))
     end
     
@@ -166,9 +149,9 @@ for dy=dys
             'ep1 vs ep2 = %d \n ep1 vs ep3 = %d \n ep2 vs ep3 = %d'], an, dy, pvals))
     pptx.addPicture(fig);
     pptx.addTextbox(sprintf('%s_day%i',an,dy));
-    pptx.addNote(sprintf('Notes data: slide number %d',slideId));
+    pptx.addNote(sprintf('slide number %d',slideId));
     
-    savefig(fullfile('Y:\sstcre_analysis\figures',sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
+    savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     close(fig)
 end
 % save ppt
