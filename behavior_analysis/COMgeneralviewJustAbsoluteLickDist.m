@@ -73,7 +73,8 @@ else
 %     days = [4:7,9:11];
     days = [62:67,69:70,72:74,76,81:85];
 %     src = "Z:\sstcre_imaging";
-    src = "X:\pyramidal_cell_data";
+%     src = "X:\pyramidal_cell_data";
+    src = "Y:\sstcre_imaging";
 end
 for dy=1:length(days)        
     if fltype == 'select'
@@ -81,8 +82,8 @@ for dy=1:length(days)
         file = fullfile(filepath,filename{dy});
     else        
         clearvars -except mouse_name days src dy fltype pptx % Zahra added for for loop
-%         daypth = dir(fullfile(src, mouse_name, string(days(dy)), "behavior", "vr\*.mat"));
-        daypth = dir(fullfile(src, mouse_name, string(days(dy)), "*.mat"));
+        daypth = dir(fullfile(src, mouse_name, string(days(dy)), "behavior", "vr\*.mat"));
+%         daypth = dir(fullfile(src, mouse_name, string(days(dy)), "*.mat"));
         filename{dy} = daypth.name;
         filepath{dy} = daypth.folder;
         file=fullfile(filepath{dy},filename{dy});

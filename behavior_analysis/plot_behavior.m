@@ -19,13 +19,13 @@ for day=days
     fail_prop{ind} = f/tr;
     disp(day); disp(mouse.VR.lickThreshold)
     figure;
+    ypos = mouse.VR.ypos*(3/2);
     velocity = mouse.VR.ROE(2:end)*-0.013./diff(mouse.VR.time);
-    plot(mouse.VR.ypos, 'Color', grayColor); hold on; 
-    plot(mouse.VR.changeRewLoc, 'k', 'LineWidth',4)
-    plot(find(mouse.VR.lick),mouse.VR.ypos(find(mouse.VR.lick)),'r.') 
-    plot(find(mouse.VR.reward==0.5),mouse.VR.ypos(find(mouse.VR.reward==0.5)),'b*', ...
-        'MarkerSize',5)
-    plot(find(mouse.VR.reward==1),mouse.VR.ypos(find(mouse.VR.reward==1)),'b.', ...
+    plot(ypos, 'Marker', '.', 'MarkerSize',2, 'Color', grayColor); hold on; 
+    plot(mouse.VR.changeRewLoc*(3/2), 'k', 'LineWidth',3)
+    plot(find(mouse.VR.lick),ypos(find(mouse.VR.lick)), ...
+        'r.', 'MarkerSize',5) 
+    plot(find(mouse.VR.reward==0.5),ypos(find(mouse.VR.reward==0.5)),'b*', ...
         'MarkerSize',10)
     ylabel("track length (cm)")
     xlabel("frames")

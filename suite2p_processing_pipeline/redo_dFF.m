@@ -1,12 +1,12 @@
 function [dFF]=redo_dFF(F,Fs,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% ZD's version 10/23
-% yields transients that decrease with time (due to photobleaching
+% different version of dff compared to ZD's, 10/23
+% yields transients that do not decrease with time (due to photobleaching
 % or other reasons like quiescence later in experiment)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if nargin>2
     time=varargin{1};
-else, time=900;
+else, time=30;
 end
 if nargin>3
     nF=varargin{2};
@@ -20,10 +20,10 @@ end
 
 % F=mouse(3).F0{14}.raw{4};
 dFF=zeros(size(F));
-for j=1:size(F,2)
-    if ~isempty(nF)
-%     correctedF=(F(:,j)-.8*nF(:,j));
-        correctedF=F(:,j)-.8*demean(nF(:,j));
+parfor j=1:size(F,2)
+    if ~isempty(nF) && size(nF,2) == size(F,2)
+        correctedF=(F(:,j)-.8*nF(:,j));
+%         correctedF=F(:,j)-.8*demean(nF(:,j));
         if min(correctedF)<0
             correctedF=F(:,j);
         end
