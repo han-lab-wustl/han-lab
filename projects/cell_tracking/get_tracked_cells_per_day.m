@@ -2,10 +2,10 @@
 % get cells detected in cellreg and do analysis
 
 clear all
-src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';
+src = 'D:\katherine_fall_daily_tracking'; % main folder for analysis
+animal = 'e145';
 fld = sprintf('%s_daily_tracking',animal);
-pth = dir(fullfile(src, "celltrack", fld, "Results\*cellRegistered*"));
+pth = dir(fullfile(src, fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
@@ -18,11 +18,11 @@ for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
 end
 % save
-save(fullfile(src,animal,'commoncells.mat'),'commoncells') 
-fprintf('number of common cells: %i', size(commoncells,1)))
+save(fullfile(pth.folder,'commoncells.mat'),'commoncells') 
+fprintf('\n *************number of common cells: %i************* \n', size(commoncells,1))
 
 % load mats from all days
-fls = dir(fullfile(src, sprintf('%s\\*.mat', animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+fls = dir(fullfile(src, sprintf('%s\\%s*.mat', animal, animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
     day = fls(fl);
@@ -58,4 +58,4 @@ for ss=1:sessions
     title(sprintf('day %i', ss))
 end
 linkaxes(axes, 'xy')
-savefig(fullfile(src, animal, 'cells_aligned_with_mean_image.fig'))
+savefig(fullfile(pth.folder, 'cells_aligned_with_mean_image.fig'))
