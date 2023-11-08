@@ -17,7 +17,7 @@ an = 'e201';
 % an = 'e218';
 % individual day analysis
 % dys = [15,16];
-dys = [55:73, 75];
+dys = [50:52,54]%:73, 75];
 % dys = [62:67,69:70,72:74,76,81:85];
 % dys = [4:7, 9:11];
 savedst = 'Y:\sstcre_analysis\figures'; % for figures
@@ -94,7 +94,7 @@ for dy=dys
             lk(bin) = mean(lick(time_in_bin{bin}));     
         end
         cell_activity(isnan(cell_activity)) = 0;
-        
+                
         if ep == 1 % sort by ep 1
     %         % sort by max value
     %         peak = zeros(1, size(cell_activity,2));
@@ -114,7 +114,9 @@ for dy=dys
             [~,sorted_idx] = sort(com);
         end
         end
-        tuning_curves{ep} = cell_activity;        
+        % overwrite ep with previous ep if eprng does not exist
+        tuning_curves{ep} = cell_activity;  
+        coms{ep} = calc_COM_EH(cell_activity',bin_size);
         
     end
 
@@ -125,6 +127,20 @@ for dy=dys
             tuning_curves{comparison(2)}');
         pvals(i) = p;
         disp(p)
+        slideId = pptx.addSlide();
+        fprintf('Added slide %d\n',slideId);
+        fig = figure('Renderer', 'painters');
+        plot(coms{comparison(1)}, coms{comparison(2)}, 'ko'); hold on;
+        xline(rewlocs(comparison(1)), 'r', 'LineWidth', 3);
+        yline(rewlocs(comparison(2)), 'r', 'LineWidth', 3)
+        plot([0:270],[0:270], 'k', 'LineWidth',2)
+        xlim([0 270]); ylim([0 270])
+        xlabel(sprintf('ep%i', comparison(1)));
+        ylabel((sprintf('ep%i', comparison(2))))
+        title('COM (median)')
+        pptx.addPicture(fig);
+        pptx.addTextbox(sprintf('%s_day%i, comparison ep: %s',an,dy,string(comparison)));
+        pptx.addNote(sprintf('slide number %d',slideId));
     end
     slideId = pptx.addSlide();
     fprintf('Added slide %d\n',slideId);
@@ -155,4 +171,5 @@ for dy=dys
     close(fig)
 end
 % save ppt
-fl = pptx.save(fullfile('Y:\sstcre_analysis',sprintf('%s_tuning_curves_w_ranksum',an)));
+fl = pptx.save(fullfile('Y:\sstcre_analysis',sprintf('%s_tuning_curves_w_ranksum_somedays',an)));
+% fl = pptx.save(fullfile('Y:\sstcre_analysis',sprintf('%s_tuning_curves_w_ranksum',an)));

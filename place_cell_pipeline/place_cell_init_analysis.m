@@ -1,37 +1,6 @@
 % making tuning curves etc from tracked cells
 % e201
-clear all;
-dys = [55:63];
-an = 'e201';
-for dy=dys
-% dy = 62;
-    pth = dir(fullfile('Y:\sstcre_analysis\fmats\e201\days', sprintf('*day%03d*.mat', dy)));
-    load(fullfile(pth.folder, pth.name), 'dFF', ...
-        'Fc3', 'ybinned', 'changeRewLoc', 'forwardvel', 'licks', 'trialnum', 'rewards')  
-    cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15_plane0\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
-    cc = cc.cellmap2dayacrossweeks;
-    ddt = dy-54; % based on where you started tracking cells from
-    % generate tuning curve
-    % save all dffs and fc3 of tracked cells in one struct
-    weeklut = 1:length(cc(:,ddt));
-    cellind = cc(:, ddt);    
-    pc = cellind(cellind>0);
-    weeklutind = weeklut(cellind>0);
-    Fc3_t = Fc3(:,pc);
-    dFF_t = dFF(:,pc);
-    Fc3_tracked{ddt} = Fc3_t;
-    dFF_tracked{ddt} = dFF_t;
-    ybinned_tracked{ddt} = ybinned;
-    changeRewLoc_tracked{ddt} = changeRewLoc;
-    forwardvel_tracked{ddt} = forwardvel;
-    licks_tracked{ddt} = licks;
-    trialnum_tracked{ddt} = trialnum;
-    rewards_tracked{ddt} = rewards;
-end   
-save('Y:\sstcre_analysis\e201_tracked_cells.mat', 'Fc3_tracked', 'dFF_tracked', "rewards_tracked", ...
-    "ybinned_tracked", "changeRewLoc_tracked", "forwardvel_tracked", "licks", ...
-    "trialnum_tracked","cc", "-v7.3")
-%%
+
 clear all; close all;
 cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15_plane0\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 % cc = load('Y:\sstcre_analysis\celltrack\e145_week01-02_plane2\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');

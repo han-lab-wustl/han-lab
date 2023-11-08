@@ -71,7 +71,7 @@ def fixcsvcols(csv):
         print("\n ******** please pass path to csv ********")
     return df
 
-def VRalign(vrfl, dlccsv, only_add_experiment=False):
+def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
     """zahra's implementation for VRstandendsplit for python dlc pipeline
     TODO: does not care about planes, figure out what to do with this
     NOTE: subsamples to half of video (imaging frames) - should I not do this???
@@ -83,8 +83,7 @@ def VRalign(vrfl, dlccsv, only_add_experiment=False):
     if only_add_experiment:
         f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
         VR = f['VR']
-        dst = os.path.join(os.path.dirname(vrfl),
-            os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
+        dst = os.path.join(savedst, os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
         with open(dst, "rb") as fp: #unpickle
             vralign = pickle.load(fp)
         # fix string to int conversion when importing mat
@@ -95,8 +94,7 @@ def VRalign(vrfl, dlccsv, only_add_experiment=False):
         print(f"\n ********* saved to {dst} *********")
     else:
         # modified VRstartendsplit
-        dst = os.path.join(os.path.dirname(vrfl),
-                os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
+        dst = os.path.join(savedst, os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
         print(dst)
         if not os.path.exists(dst): # if pickle is made already
             f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
@@ -134,19 +132,10 @@ def VRalign(vrfl, dlccsv, only_add_experiment=False):
             print(f'Time of scan is {VR["time"][:][uscanstop] - VR["time"][:][uscanstart]}')
 
             plt.close('all')
-            if 'imageSync' not in VR:  # if there was no VR.imagesync, rewrites scanstart and scanstop to be in VR iteration indices
-                # buffer = diff(data[:,4])
-                VRlastlick = np.where(VR['lick'][:] > 0)[0][-1]
-                abflicks = np.where(np.diff(VR['data'][:, 2]) > 0)[0]
-                buffer = abflicks[-1] / 1000 - VR['time'][:][0][VRlastlick]
-                check_imaging_start_before = uscanstart / 1000 - buffer  # there is a chance to recover imaging data from before you started VR (if you made an error) in this case so checking for that
-                scanstart = np.argmin(np.abs(VR['time'][:][0] - (uscanstart / 1000 - buffer)))
-                scanstop = np.argmin(np.abs(VR['time'][:][0] - (uscanstop / 1000 - buffer)))
-            else:
-                scanstart = uscanstart
-                scanstop = uscanstop
-                check_imaging_start_before = 0  # there is no chance to recover 
-                #imaging data from before you started VR so sets to 0
+            scanstart = uscanstart
+            scanstop = uscanstop
+            check_imaging_start_before = 0  # there is no chance to recover 
+            #imaging data from before you started VR so sets to 0
 
             # cuts all of the variables from VR
             urewards = np.squeeze(VR['reward'][scanstart:scanstop])
@@ -161,12 +150,16 @@ def VRalign(vrfl, dlccsv, only_add_experiment=False):
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
             ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])
             
-            # aligns structure so size is the same GM
+            # aligns structure so size is the same
             dlcdf = pd.read_csv(dlccsv)
             if 'bodyparts' not in dlcdf.columns.to_list(): #fixes messed up cols
                 dlcdf = fixcsvcols(dlccsv) #saves over df
+            # bin every other row
+            idx = len(dlcdf) - 1 if len(dlcdf) % 2 else len(dlcdf)
+            dlcdf = dlcdf[:idx].groupby(dlcdf.index[:idx] // 2).mean()
+            colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
             utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), 
-                        round((len(dlcdf)/2))) #subsample - then why are we doing this freq
+                        len(dlcdf)) #subsample - then why are we doing this freq
             timedFF = utimedFF
             #initialize
             rewards = np.zeros_like(timedFF)
@@ -290,9 +283,12 @@ def VRalign(vrfl, dlccsv, only_add_experiment=False):
             vralign['changeRewLoc']=changeRewLoc
             vralign['trialnum']=trialnum
             vralign['timedFF']=timedFF
-            vralign['lickVoltage']=lickVoltage    
+            vralign['lickVoltage']=lickVoltage  
+            # saves dlc variables into pickle as well  
+            for col in colssave:
+                vralign[col] = dlcdf[col].values
             with open(dst, "wb") as fp:   #Pickling
-                pickle.dump(vralign, fp)
+                pickle.dump(vralign, fp)            
             print(f"\n ********* saved to {dst} *********")
 
     return 
