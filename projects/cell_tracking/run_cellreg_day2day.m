@@ -38,11 +38,11 @@ memory_efficient_run = 1;
 %% Setting paths for the cell registration procedure:
 
 % we need to find the path up-two levels - that is where fmats will be
-pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
+pth = 'D:\katherine_fall_daily_tracking'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e201'; % CHANGE
+animal = 'e186'; % CHANGE
 results_directory= fullfile(pth,sprintf('%s_daily_tracking',animal), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
@@ -53,7 +53,7 @@ end
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
 % define path of sample data
-fls = dir(fullfile(fileroot, sprintf("%s\\*.mat", animal))); %format to your folder structure
+fls = dir(fullfile(pth, sprintf("%s\\converted*.mat", animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
@@ -101,7 +101,7 @@ alignment_type='Non-rigid'; % either 'Translations', 'Translations and Rotations
 use_parallel_processing=true; % either true or false
 maximal_rotation=30; % in degrees - only relevant if 'Translations and Rotations' is used
 transformation_smoothness=2; % levels of non-rigid FOV transformation smoothness (range 0.5-3)
-reference_session_index=number_of_sessions; % CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
+reference_session_index=number_of_sessions-3; % CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
 
 % Preparing the data for alignment:
 disp('Stage 2 - Aligning sessions')
