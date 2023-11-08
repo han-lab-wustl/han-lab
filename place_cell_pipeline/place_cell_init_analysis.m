@@ -168,6 +168,8 @@ for dy=dys
         %     xticklabels([0:3:270])
         title(sprintf('epoch %i', ep))
     end
+%     linkaxes(axes, 'x')
+
     sgtitle(sprintf(['animal %s, day %i \n ' ...
         'ep1 vs ep2 = %d, ep1 vs ep3 = %d, ep2 vs ep3 = %d'], an, dy, pvals))
     savefig(fullfile('Y:\sstcre_analysis',sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))

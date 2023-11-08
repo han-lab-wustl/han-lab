@@ -1,6 +1,6 @@
 import os, sys, shutil, tifffile, numpy as np, pandas as pd
 from datetime import datetime
-import scipy.io as sio, matplotlib.pyplot as plt, re
+import scipy, matplotlib.pyplot as plt, re
 import h5py, pickle
 import matplotlib
 matplotlib.use('TkAgg')
@@ -23,17 +23,36 @@ if __name__ == "__main__":
     # you have to do this weird thing in matplotlib to make the plots pop out
     matplotlib.use('TkAgg')
     %matplotlib inline
-    # plot hrz behavior with paw
-    fig, axs = plt.subplots()
+    # plot hrz behavior with paw    
     # reformatting
     ypos = np.hstack(vralign['ybinned'])
     licks = np.hstack(vralign['licks'])
+    # plots whisker and nose
+    # converts low likelihood points to nans
+    vralign['WhiskerUpper_y'][vralign['WhiskerUpper_likelihood'].astype('float32')<0.99]=np.nan
+    vralign['NoseTip_y'][vralign['NoseTip_likelihood'].astype('float32')<0.99]=np.nan
+    vralign['NoseTip_y'][vralign['NoseTip_likelihood'].astype('float32')<0.99]=np.nan
+    vralign['PawTop_x'][vralign['PawTop_likelihood'].astype('float32') < 0.99] = 0
+    vralign['PawTop_y'][vralign['PawTop_likelihood'].astype('float32') < 0.99] = 0
+    vralign['PawMiddle_x'][vralign['PawMiddle_likelihood'].astype('float32') < 0.99] = np.nan
+    vralign['PawMiddle_y'][vralign['PawMiddle_likelihood'].astype('float32') < 0.99] = np.nan
+    vralign['PawBottom_x'][vralign['PawBottom_likelihood'].astype('float32') < 0.99] = np.nan
+    vralign['PawBottom_y'][vralign['PawBottom_likelihood'].astype('float32') < 0.99] = np.nan
+    paw_y = np.nanmean(np.array([vralign['PawTop_y'],vralign['PawBottom_y'],
+                     vralign['PawMiddle_y']]).astype('float32'), axis=0)
+    paw_x = np.nanmean(np.array([vralign['PawTop_x'],vralign['PawBottom_x'],
+                     vralign['PawMiddle_x']]).astype('float32'), axis=0)
+
     whisker = vralign['WhiskerUpper_y']#[vralign['WhiskerUpper_likelihood'].astype('float32')>0.99]
     nose = vralign['NoseTip_y']#[vralign['NoseTip_likelihood'].astype('float32')>0.99]
+    fig, axs = plt.subplots()
     axs.plot(ypos, color='slategray',
             linewidth=0.5)
     axs.scatter(np.argwhere(licks>0).T[0], ypos[licks>0], color='r', marker='.')
-    axs.plot(whisker/3)
-    axs.plot(nose/5)
-    
-    plt.title(os.path.basename(matfl))
+    axs.plot(scipy.ndimage.gaussian_filter(whisker/3,1), label = 'whisker')
+    axs.plot(scipy.ndimage.gaussian_filter(nose/5,1), label = 'nose')
+
+    axs.plot(scipy.ndimage.gaussian_filter(paw_y,1), label = 'paw_y')
+    axs.plot(scipy.ndimage.gaussian_filter(paw_x,1), label = 'paw_x')
+    axs.legend()
+    axs.set_title(os.path.basename(pdst))
