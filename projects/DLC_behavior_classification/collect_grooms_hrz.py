@@ -59,10 +59,14 @@ an_session = Counter(an_nms)
 # ax.set_ylabel('number of grooming bouts')
 
 # positive relative to reward quant
+import math
 rel_ypos_groom_s = np.array(list(yposgrs_dct_s.values()))[~np.isnan(ans_binary)][ans_binary_]
 rel_ypos_groom_s = np.hstack(rel_ypos_groom_s)
 rel_ypos_groom_f = np.array(list(yposgrs_dct_f.values()))[~np.isnan(ans_binary)][ans_binary_]
 rel_ypos_groom_f = np.hstack(rel_ypos_groom_f)
+b = np.array([math.isinf(xx) for xx in rel_ypos_groom_f])
+a = ~b
+rel_ypos_groom_f = rel_ypos_groom_f[a]
 fig, ax = plt.subplots()                                        
 ax.hist(rel_ypos_groom_s, bins = 20, label = 'successful trials')
 ax.hist(rel_ypos_groom_f, bins = 20, label = 'failed trials')

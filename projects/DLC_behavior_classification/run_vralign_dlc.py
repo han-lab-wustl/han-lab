@@ -52,7 +52,7 @@ if __name__ == "__main__":
     axs.plot(scipy.ndimage.gaussian_filter(whisker/3,1), label = 'whisker')
     axs.plot(scipy.ndimage.gaussian_filter(nose/5,1), label = 'nose')
 
-    axs.plot(scipy.ndimage.gaussian_filter(paw_y,1), label = 'paw_y')
-    axs.plot(scipy.ndimage.gaussian_filter(paw_x,1), label = 'paw_x')
+    axs.plot(scipy.ndimage.gaussian_filter(paw_y/2,1), color = 'olive', 
+             label = 'paw_y', alpha=0.5)
     axs.legend()
     axs.set_title(os.path.basename(pdst))

@@ -5,7 +5,7 @@
 import os, sys, pickle, pandas as pd, numpy as np, scipy
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 import preprocessing
-from kmeans import collect_clustering_vars, run_pca, run_kmeans
+from clustering.kmeans import collect_clustering_vars, run_pca, run_kmeans
 from preprocessing import fixcsvcols
 #analyze videos and copy vr files before this step
 import matplotlib as mpl
@@ -24,7 +24,7 @@ dlcfls = r'Y:\DLC\dlc_mixedmodel2'#\for_analysis'
 with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
 
-row = mouse_df[44:45]
+row = mouse_df.iloc[196]
 ################################
 def get_long_grooms_per_ep(dlcfls,row,hrz_summary = False,
 savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
@@ -125,15 +125,18 @@ def categorize_grooming(eps, mat, starts, rewz, success=True, gainf=3/2):
         # categorize by ypos
         if success:
             gr_ = [xx in rng_s for xx in starts]
+            tr_ = s_tr # for normalization later
         else:
             gr_ = [xx in rng_f for xx in starts]
+            tr_ = f_tr
         gr_ = starts[gr_]        
         yend = 180*gainf
         # ypos rel to reward
         # yposgr_rel_rew = (yposgr-rewz[ep])/rewz[ep]
         # gm addition
         yrew = rewz[ep]-5 # approximate start of rew zone
-        yposgr = [(ceil(xx)*gainf)-yrew for xx in mat['ybinned'][gr_]]
+        # relative to no. of trials
+        yposgr = [((ceil(xx)*gainf)-yrew)/len(tr_) for xx in mat['ybinned'][gr_]]
         condition = yrew-yposgr>=0        
         yposgr_rel_rew = (((yend*condition)-yposgr-((condition-0.5*2)*yrew))/((yend*condition)-(condition-0.5*2)*yrew))-(condition-1)
         rewzrng = np.arange(rewz[ep]-5, rewz[ep]+6)

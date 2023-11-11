@@ -148,26 +148,7 @@ for dy=dys
         pvals(i) = p;
         disp(p)
     end
-    figure('Renderer', 'painters', 'Position', [10 10 1050 800])
-    for ep=[1 2 3]
-        subplot(1,3,ep)
-        imagesc(normalize(tuning_curves{ep}(:,sorted_idx),1)'); 
-        colormap jet 
-        xticks([0:90])
-        xticklabels([0:3:270])
-        yticks(1:length(weeklutind))
-        yticklabels(weeklutind(sorted_idx));
-        %     subplot(2,1,2)
-        %     plot(vel, 'k');
-        %     yyaxis right
-        %     plot(lk, 'r'); ylim([0 0.5])
-        %     hold on 
-        %     rectangle('Position',[(rewloc-5)/3 0 10/3 max(lk)+1], ... % just picked max for visualization
-        %           'FaceColor',[0 .5 .5 0.3])
-        %     xticks([0:90])
-        %     xticklabels([0:3:270])
-        title(sprintf('epoch %i', ep))
-    end
+
 %     linkaxes(axes, 'x')
 
     sgtitle(sprintf(['animal %s, day %i \n ' ...
