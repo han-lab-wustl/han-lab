@@ -48,15 +48,14 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
     eps = np.where(mat['changeRewLoc']>0)[0]    
     eps = np.hstack([list(eps), len(mat['changeRewLoc'])])    
     # default return
-    groom, starts, stops, counts_s, counts_f, yposgrs_s, yposgrs_f = [np.nan]*7
+    groom, starts, stops, counts_s, counts_f, yposgrs_s, yposgrs_f, \
+    yposgrs_p, len_grooms = [np.nan]*9
     # at least 2 epochs, rewarded hrz
     if 'HRZ' in mat['experiment'] and sum(mat['rewards']>0) and len(eps)>2: # only for hrz
         dfpth = os.path.join(dlcfls, row['DLC']) #.values[0]
         df = pd.read_csv(dfpth)
-        try:  
+        if 'bodyparts' not in df.columns:  # format csv
             df = fixcsvcols(dfpth)
-        except Exception as e:
-            pass
         if "Unnamed: 0" in df.columns:
             df = df.drop(columns = ["Unnamed: 0"])
         # downsample to neural data
@@ -64,26 +63,29 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
         df = df[:idx].groupby(df.index[:idx] // 2).mean()
         #paw
         paw_x, paw_y = filter_paw(df)
-        licks = mat['lickVoltage']<-0.07
+        licks = mat['lickVoltage']<-0.07 # HARD CODED, MIGHT BE DIFF
         ybin_paw = mat['ybinned'][:-1]*gainf# remove 1 for diff
         rewz = mat['changeRewLoc'][mat['changeRewLoc']>0]*gainf
         # if there is any grooming        
         if sum(paw_y.values)>0:
-            starts, stops_ = get_starts_stops_grooming(paw_x,paw_y)
+            starts, stops_ = get_starts_stops_grooming(paw_x,paw_y,
+                            frame_thres=31)
+            len_grooms = stops_-starts # in frames
             if len(starts)>0:                
                 # categories for periods of grooming
                 # successful trials
-                beforerewgrs, afterrewgrs, darktimegrs, rewzgrs, yposgrs_s = categorize_grooming(eps, mat,starts,rewz, success=True)
+                beforerewgrs, afterrewgrs, darktimegrs, rewzgrs, yposgrs_s, yposgrs_p = categorize_grooming(eps, mat,starts,rewz, success=True)
                 counts_s = [len(darktimegrs), len(beforerewgrs), len(afterrewgrs),
                             len(rewzgrs)]
                 # failed trials
-                beforerewgrs, afterrewgrs, darktimegrs, rewzgrs, yposgrs_f = categorize_grooming(eps, mat,starts,rewz, success=False)
+                beforerewgrs, afterrewgrs, darktimegrs, rewzgrs, yposgrs_f, yposgrs_p = categorize_grooming(eps, mat,starts,rewz, success=False)
                 counts_f = [len(darktimegrs), len(beforerewgrs), len(afterrewgrs),
                             len(rewzgrs)]
                 if hrz_summary:    
                     make_hrz_summary_fig(mat, licks, matfl, ybin_paw, starts, cat, 
                     save=savedst)
                 groom = 1           
+
         else:
             if hrz_summary:    
                     # plots hrz behavior
@@ -98,22 +100,24 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
                     plt.savefig(os.path.join(savedst, f'{os.path.basename(matfl)}_beh.pdf'))
             groom = 0
     
-    return groom, starts, stops, counts_s, counts_f, yposgrs_s, yposgrs_f
+    return groom, starts, stops, counts_s, counts_f, \
+        yposgrs_s, yposgrs_f, yposgrs_p, len_grooms
                             
 
 def categorize_grooming(eps, mat, starts, rewz, success=True, gainf=3/2):
     # categories for periods of grooming
     rewzgrs = []; darktimegrs = []
     beforerewgrs = []; afterrewgrs = []; yposgrs = []
+    yposgrs_p = []
     for ep in range(len(eps)-1):
         rng = np.arange(eps[ep],eps[ep+1])
         trialnumep = np.hstack(mat['trialnum'][rng])
-        rng = rng[trialnumep>3] # no probes
-        trialnumep = trialnumep[trialnumep>3]
+        # rng = rng[trialnumep] # > 3 no probes
+        # trialnumep = trialnumep[trialnumep]
         rewep = (mat['rewards']==1)[rng]
         # types of trials, success vs. fail
         s_tr = []; f_tr = []
-        for tr in np.unique(trialnumep[trialnumep>3]):
+        for tr in np.unique(trialnumep[trialnumep>=3]):
             if sum(rewep[trialnumep==tr])>0:
                 s_tr.append(tr)
             else:
@@ -122,23 +126,29 @@ def categorize_grooming(eps, mat, starts, rewz, success=True, gainf=3/2):
         trm = np.isin(trialnumep,s_tr)   
         rng_s = rng[trm] 
         rng_f = rng[trm_f] 
+        rng_p = rng[trialnumep<3]
         # categorize by ypos
         if success:
             gr_ = [xx in rng_s for xx in starts]
-            tr_ = s_tr # for normalization later
         else:
             gr_ = [xx in rng_f for xx in starts]
-            tr_ = f_tr
+        # grooms during probes
+        gr_p = [xx in rng_p for xx in starts]; gr_p = starts[gr_p]
         gr_ = starts[gr_]        
         yend = 180*gainf
         # ypos rel to reward
         # yposgr_rel_rew = (yposgr-rewz[ep])/rewz[ep]
         # gm addition
         yrew = rewz[ep]-5 # approximate start of rew zone
+        if ep==0: # set relative value for probes
+             yrew_p = yrew
+        else:
+             yrew_p = rewz[ep]-5
         # relative to no. of trials
-        yposgr = [((ceil(xx)*gainf)-yrew)/len(tr_) for xx in mat['ybinned'][gr_]]
-        condition = yrew-yposgr>=0        
-        yposgr_rel_rew = (((yend*condition)-yposgr-((condition-0.5*2)*yrew))/((yend*condition)-(condition-0.5*2)*yrew))-(condition-1)
+        yposgr_p = [((ceil(xx)*gainf)-yrew_p) for xx in mat['ybinned'][gr_p]]
+        yposgr = [((ceil(xx)*gainf)-yrew) for xx in mat['ybinned'][gr_]]
+        # condition = yrew-yposgr>=0        
+        # yposgr_rel_rew = (((yend*condition)-yposgr-((condition-0.5*2)*yrew))/((yend*condition)-(condition-0.5*2)*yrew))-(condition-1)
         rewzrng = np.arange(rewz[ep]-5, rewz[ep]+6)
         rewzgr = [xx in rewzrng for xx in yposgr]
         if len(yposgr)>0:
@@ -147,14 +157,17 @@ def categorize_grooming(eps, mat, starts, rewz, success=True, gainf=3/2):
             beforerewgrs.append(gr_[(yposgr<min(rewzrng)) & [xx>=3 for xx in yposgr]])
             afterrewgrs.append(gr_[yposgr>max(rewzrng)])
             yposgrs.append(yposgr)
+        if len(yposgr_p)>0:
+             yposgrs_p.append(yposgr_p)
 
     beforerewgrs = convert_to_hstack(beforerewgrs)
     afterrewgrs = convert_to_hstack(afterrewgrs)
     darktimegrs = convert_to_hstack(darktimegrs)
     rewzgrs = convert_to_hstack(rewzgrs)
     yposgrs = convert_to_hstack(yposgrs)
+    yposgrs_p = convert_to_hstack(yposgrs_p)
 
-    return beforerewgrs, afterrewgrs, darktimegrs, rewzgrs, yposgrs
+    return beforerewgrs, afterrewgrs, darktimegrs, rewzgrs, yposgrs, yposgrs_p
 
 def filter_paw(df, threshold=0.99):
     """

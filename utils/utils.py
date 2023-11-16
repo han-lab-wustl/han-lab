@@ -10,7 +10,7 @@ from datetime import datetime
 
 def makedir(dr):
     if not os.path.exists(dr): os.mkdir(dr)
-    return 
+    return dr
 
 def listdir(pth, ifstring=None):
     """prints out complete path of list in directory
@@ -79,7 +79,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         weeks (list of strings): specify list of weeks(string, e.g. 'week4') corresponding to fld name
     """
     src = os.path.join(src, animal) #src="X:\sstcre_imaging"
-    dst = os.path.join(dst, animal) #dst='Y:\\sstcre_analysis\\fmats'
+    dst = makedir(os.path.join(dst, animal)) #dst='Y:\\sstcre_analysis\\fmats'
     if weekdir: weekdir = os.path.join(weekdir, animal)
     # get only days, not week fmats
     #dont copy weeks if not specified
@@ -90,8 +90,10 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         # move all converted fmats to separate folder
         for i in days:     
             print(i)   
-            pth = os.path.join(src, str(i))
-            imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+            # pth = os.path.join(src, str(i))
+            pth = os.path.join(src, 'D'+str(i))
+            # imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+            imgfl = pth
             for plane in planes:
                 mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
                 if os.path.exists(mat):
@@ -197,7 +199,7 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
     return os.path.join(src, animal)
 
 if __name__ == "__main__":
-    usb = r'H:\2023_ZD_VR'
+    usb = r'I:\2023_ZD_VR'
     drives = [r'X:\vipcre']
     animals = ['e218']
     for i,drive in enumerate(drives):

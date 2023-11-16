@@ -6,7 +6,16 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
 
 def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
-    
+    """copies vr files for existing dlc csvs
+    essentially do not put a csv into this folder if you don't want it analysed
+
+    Args:
+        vrdir (_type_): _description_
+        dlcfls (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     csvs = [xx for xx in listdir(dlcfls) if '.csv' in xx]
     csvs.sort()
     mouse_data = {}
@@ -283,7 +292,8 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             vralign['changeRewLoc']=changeRewLoc
             vralign['trialnum']=trialnum
             vralign['timedFF']=timedFF
-            vralign['lickVoltage']=lickVoltage  
+            vralign['lickVoltage']=lickVoltage
+            # vralign['VR']=VR fails because h5py do not pickle apparently -_- 
             # saves dlc variables into pickle as well  
             for col in colssave:
                 vralign[col] = dlcdf[col].values

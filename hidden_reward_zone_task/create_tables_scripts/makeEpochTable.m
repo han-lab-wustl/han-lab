@@ -258,7 +258,7 @@ for this_day = 1:size(Settings.paths,1)
                         [P,H,STATS] = ranksum(real_distribution,reshape(shuffled_distribution,[1, numel(shuffled_distribution)]));
                         catch
                             Placekeyboard
-                        end
+                        end 
                         RankSumP(this_comparison,1) = P;
                         RankSumH(this_comparison,1) = H;
                         RankSumSTATS{this_comparison,1} = STATS;

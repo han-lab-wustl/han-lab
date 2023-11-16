@@ -1,7 +1,7 @@
 import os, sys, pickle, pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 import preprocessing
-from kmeans import collect_clustering_vars, run_pca, run_kmeans
+from clustering.kmeans import collect_clustering_vars, run_pca, run_kmeans
 #analyze videos and copy vr files before this step
 import matplotlib
 matplotlib.use('TkAgg')

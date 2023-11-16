@@ -54,7 +54,7 @@
 %% ------------------------------------------------------------------------
 clear all %clean up the environment
 close all;
-mouse_name = "e200";
+mouse_name = "e218";
 % params to export to ppt
 pptx    = exportToPPTX('', ...
     'Dimensions',[12 6], ...
@@ -71,10 +71,12 @@ else
     % ZD added for loop for multiple days    
 %     days = [55:75];
 %     days = [4:7,9:11];
-    days = [62:67,69:70,72:74,76,81:85];
+%     days = [62:67,69:70,72:74,76,81:85];
+      days = [20,21,22,23,24,25];
 %     src = "Z:\sstcre_imaging";
 %     src = "X:\pyramidal_cell_data";
-    src = "Y:\sstcre_imaging";
+%     src = "Y:\sstcre_imaging";
+      src = 'X:\vipcre';
 end
 for dy=1:length(days)        
     if fltype == 'select'
@@ -95,7 +97,6 @@ for dy=1:length(days)
     catch 
         cd (filepath); 
     end
-    addpath('C:\Users\Han\Documents\MATLAB\han-lab\hidden_reward_zone_task\behavior'); % ZD code path
     COMgeneralanalysis
         
          %% lick dist plot

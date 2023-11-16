@@ -24,16 +24,21 @@ with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
 
 # TODO: comparison with hrz and random reward 
-hrz_summary = True
+hrz_summary = False
 groom_binary_dct = {}; counts_dct = {}; yposgrs_dct_s = {};  yposgrs_dct_f = {}
+yposgrs_dct_p = {}; len_grooms_dct = {}
 for i,row in mouse_df.iterrows():
-    groom, starts, stops, counts_s, counts_f, yposgrs_s, yposgrs_f = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls,row,hrz_summary = True)
+    groom, starts, stops, counts_s, counts_f, \
+        yposgrs_s, yposgrs_f, yposgrs_p, len_grooms = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls, \
+                    row,hrz_summary = True)
     nm = row['VR']
     groom_binary_dct[nm] = groom
     counts_dct[nm] = counts_s
     yposgrs_dct_s[nm] = yposgrs_s
     yposgrs_dct_f[nm] = yposgrs_f
-    print(nm)
+    yposgrs_dct_p[nm] = yposgrs_p 
+    len_grooms_dct[nm] = len_grooms
+    if i%20==0: print(f'{i}/{len(mouse_df)}')   # counter
 
 # make figs of compiled data
 ans_binary = np.array(list(groom_binary_dct.values()))
@@ -59,17 +64,19 @@ an_session = Counter(an_nms)
 # ax.set_ylabel('number of grooming bouts')
 
 # positive relative to reward quant
+%matplotlib inline
+mpl.use('TkAgg')
 import math
 rel_ypos_groom_s = np.array(list(yposgrs_dct_s.values()))[~np.isnan(ans_binary)][ans_binary_]
 rel_ypos_groom_s = np.hstack(rel_ypos_groom_s)
 rel_ypos_groom_f = np.array(list(yposgrs_dct_f.values()))[~np.isnan(ans_binary)][ans_binary_]
 rel_ypos_groom_f = np.hstack(rel_ypos_groom_f)
-b = np.array([math.isinf(xx) for xx in rel_ypos_groom_f])
-a = ~b
-rel_ypos_groom_f = rel_ypos_groom_f[a]
+rel_ypos_groom_p = np.array(list(yposgrs_dct_p.values()))[~np.isnan(ans_binary)][ans_binary_]
+rel_ypos_groom_p = np.hstack(rel_ypos_groom_p)
 fig, ax = plt.subplots()                                        
 ax.hist(rel_ypos_groom_s, bins = 20, label = 'successful trials')
 ax.hist(rel_ypos_groom_f, bins = 20, label = 'failed trials')
+ax.hist(rel_ypos_groom_p, bins = 20, label = 'probe trials (rel. to prev. rew zone)')
 # ax.set_xlim([-1, 1])
 ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
 ax.set_ylabel('number of long grooming bouts')
@@ -77,4 +84,13 @@ ax.set_xlabel('distance relative to reward (cm)')
 ax.legend()
 # count number of sessions per animal
 print(Counter(an_nms))
-plt.savefig(r'Y:\DLC\dlc_mixedmodel2\figures\yppos_grooming_relative_to_rew.pdf')
+plt.savefig(r'Y:\DLC\dlc_mixedmodel2\figures\yppos_grooming_relative_to_rew_30f_thres.pdf')
+
+# average time of long grooms
+len_grooms_ = np.array(list(len_grooms_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
+len_grooms_ = np.hstack(len_grooms_)
+fig, ax = plt.subplots()                                        
+ax.hist(len_grooms_/31.25, bins = 20)
+ax.set_ylabel('frequency')
+ax.set_xlabel('duration of grooming bout (s)')
+plt.savefig(r'Y:\DLC\dlc_mixedmodel2\figures\grooming_duration_over_30f_thres.pdf')

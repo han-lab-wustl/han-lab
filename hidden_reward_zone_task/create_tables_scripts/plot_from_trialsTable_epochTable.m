@@ -11,8 +11,8 @@ load(fullfile(Settings.saving_path, 'CS_table_all_trials\CS_trial_by_trial_probe
 
 splitted_epochstructure_name = split(epochstructure,'_');
 
-UL_track = 180;
-bin_size = 3.3; %cm remember to adjust for gain
+UL_track = Settings.UL_track;
+bin_size = Settings.bin_size; %cm remember to adjust for gain
 %==========================================================================
 
 for this_comparison = 1: height(cs_table)

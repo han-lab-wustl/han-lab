@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e218";
-days = [17,18,20,21];
+days = [25];
 src = "X:\vipcre";
 
 for day=days
@@ -43,6 +43,22 @@ for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), sprintf("%s*.mat", mouse_name)));    
     fmatfl = dir(fullfile(fmatsrc, mouse_name, 'days', sprintf('%s_day%03d_plane*', ...
     mouse_name, day)));     % finds all params files
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name), fmatfl, length(fmatfl));
+    disp(savepthfmat)
+end
+
+%%
+% for old formatted data
+% by day or 'D' folders
+mouse_name = "E139";
+days = [7:10];
+src = "F:\";
+
+for day=days
+    daypth = dir(fullfile(src, mouse_name, sprintf('D%i',day), sprintf("%s*.mat", mouse_name)));    
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('D%i',day),'**\Fall.mat')) ;     % finds all params files
+    % ignore combined fall for behavior alignment
+    fmatfl = fmatfl(2:end);
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name), fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
