@@ -14,35 +14,41 @@ pptx    = exportToPPTX('', ...
 % an = 'e200';
 % an = 'e201';
 % an = 'e145';
-% an = 'e218';
-an = 'e139';
+an = 'e218';
+% an = 'e139';
 % individual day analysis
-dys = [1,2,3,5,6,7,8,9,10];
-% dys = [21,22,24,25];
+% dys = [1,2,3,5,6,7,8,9,10];
+dys = [20,21,22,23,24,25,26,27];
 % dys = [50:52,54]%:73, 75];
 % dys = [62:67,69:70,72:74,76,81:85];
 % dys = [4:7, 9:11];
 savedst = 'Y:\sstcre_analysis\figures'; % for figures
-% src = 'X:\vipcre'; % folder where fall is 
-src = 'Y:\sstcre_analysis\fmats';
+src = 'X:\vipcre'; % folder where fall is 
+% src = 'Y:\sstcre_analysis\fmats';
 for dy=dys
     clearvars -except dys an cc dy pptx src savedst
-%     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-%     % load vars
-%     load(fullfile(pth.folder,pth.name), 'dFF', ...
-%             'Fc3', 'iscell', 'ybinned', 'changeRewLoc', ...
-%             'forwardvel', 'licks', 'trialnum', 'rewards')              
-      % for copied falls
-    plns = [0,1,2,3];
-    for pln=plns
-    load(fullfile(src, an, 'days', sprintf('%s_day%03d_plane%i_Fall.mat',an, dy, pln)), ...
-        'dFF', 'Fc3', 'iscell', 'ybinned', 'changeRewLoc', ...
+    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    % load vars
+    load(fullfile(pth.folder,pth.name), 'dFF', ...
+            'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
             'forwardvel', 'licks', 'trialnum', 'rewards')              
+      % for copied falls
+    plns = [0];
+    for pln=plns        
+%     load(fullfile(src, an, 'days', sprintf('%s_day%03d_plane%i_Fall.mat',an, dy, pln)), ...
+%         'dFF', 'Fc3', 'iscell', 'ybinned', 'changeRewLoc', ...
+%             'forwardvel', 'licks', 'trialnum', 'rewards')              
     % vars to get com and tuning curves
-    bin_size = 3;
-    gainf = 1; % 3/2 VS. 1
-    track_length = 180*gainf; % 270, 180    
+    bin_size = 3; % cm
+    gainf = 3/2; % 3/2 VS. 1
+    track_length = 180*gainf; 
     rew_zone = 10; % cm
+    % zahra hard coded to be consistent with the dopamine pipeline
+    thres = 5; % 5 cm/s is the velocity filter, only get 
+    % frames when the animal is moving faster than that
+    ftol = 10; % number of frames length minimum to be considered stopped
+    Fs = 31.25; % need to divide by numplanes! doesn't matter for zahra
+    ntrials = 8; % e.g. last 8 trials to compare
     nbins = track_length/bin_size;
     eps = find(changeRewLoc>0);
     eps = [eps length(changeRewLoc)];
@@ -54,49 +60,52 @@ for dy=dys
         trn = trialnum(eprng);  
         rew = rewards(eprng)>0.5;
         % opto period
-    %     mask = trn>=3 & trn<8;
+        % trn>=3 & trn<8;
         % no probes
-    %     mask1 = trn>=8;
+        % mask1 = trn>=8;
         strials = ones(1, length(unique(trn)))*NaN; % only get successful trials
-        for trial=unique(trn)
-        % todo: may need a condition that get last few trials only, etc.
-        % && trial>=max(trn)-8 <- last 8 trials
-        if trial>=3 && trial>=max(trn)-8 % trial < 3, probe trial
-            if sum(rew(trn==trial)==1)>0 % if reward was found in the trial
-                strials(trial)=trial;        
+        for trial=unique(trn)            
+            if trial>=3 && trial>=max(trn)-ntrials % trial < 3, probe trial
+%                 if sum(rew(trn==trial)==1)>0 % if reward was found in the trial
+%                     strials(trial)=trial;        
+%                 end
+                strials(trial)=trial; % successful and fail trials
             end
-        end
         end
         strials = strials(~isnan(strials)); % only uses successful trials
         mask = ismember(trn, strials);
         
-    %     mask = trn<3;
         eprng = eprng(mask);
         if ~isempty(eprng)
         ypos = ybinned(eprng);
-        ypos = ceil(ypos*(gainf)); % gain factor for zahra mice
-        [time_moving,time_stop] = vr_stop_and_moving_time(ypos);
+        ypos = ceil(ypos*(gainf)); 
+        lick = licks(eprng);
+        fv = forwardvel(eprng);
+        % updated how we get moving time to be consistent with dop pipeline
+        [time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
         ypos_mov = ypos(time_moving);
         for i = 1:nbins    
-            time_in_bin{i} = time_moving(ypos_mov >= (i-1)*bin_size & ypos_mov < i*bin_size);
+            time_in_bin{i} = time_moving(ypos_mov >= (i-1)*bin_size & ...
+                ypos_mov < i*bin_size);
         end 
         
         % make bins via suyash method
     %     pc = putative_pcs{1};
         pc = logical(iscell(:,1));
         rewloc = rewlocs(ep);
-        fc3_ep = Fc3(eprng,:);
-        moving_cells_activity = fc3_ep(time_moving,:);
-        fc3_pc = fc3_ep(:,pc);
-        % mean length of transients         
+        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);
+%         moving_cells_activity = fc3_ep(time_moving,:);
+        bordercells_pc = bordercells(pc); % mask border cells
+        fc3_pc = Fc3(eprng,pc); % only iscell
+        fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
+        % activity binning
         cell_activity = zeros(nbins, size(fc3_pc,2));
         for i = 1:size(fc3_pc,2)
             for bin = 1:nbins
                 cell_activity(bin,i) = mean(fc3_pc(time_in_bin{bin},i)); 
             end
         end 
-        lick = licks(eprng);
-        fv = forwardvel(eprng);
+        % bin licks and velocity
         for bin = 1:nbins
             vel(bin) = mean(fv(time_in_bin{bin}));     
             lk(bin) = mean(lick(time_in_bin{bin}));     
@@ -128,15 +137,15 @@ for dy=dys
         
     end
 
-    % if less than 3 ep
-    if length(eps)> 3
+    % if greater than 3 ep, do 3 comparisons
+    if length(eps) > 3
         comparisons = {[1 2], [1 3], [2 3]};
     else
         comparisons = {[1 2]};
     end
     for i=1:length(comparisons)
         comparison = comparisons{i};
-        [p,h,stat] = do_tuning_curve_ranksum_test(tuning_curves{comparison(1)}', ...
+        [p,h,s] = do_tuning_curve_ranksum_test(tuning_curves{comparison(1)}', ...
             tuning_curves{comparison(2)}');
         pvals(i) = p;
         disp(p)

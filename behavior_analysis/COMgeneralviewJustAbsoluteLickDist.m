@@ -72,7 +72,7 @@ else
 %     days = [55:75];
 %     days = [4:7,9:11];
 %     days = [62:67,69:70,72:74,76,81:85];
-      days = [20,21,22,23,24,25];
+      days = [20,21,22,23,24,25,26,27];
 %     src = "Z:\sstcre_imaging";
 %     src = "X:\pyramidal_cell_data";
 %     src = "Y:\sstcre_imaging";

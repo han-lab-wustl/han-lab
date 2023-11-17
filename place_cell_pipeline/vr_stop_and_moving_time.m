@@ -3,7 +3,7 @@ function [moving, stop] = vr_stop_and_moving_time(position)
 %  vr_speed(1) = abs(f2(1,1)) ;
 vr_speed(2:length(position)) = abs(diff(position));
 vr_speed(1) = vr_speed(2);
-moving = find(vr_speed > 0.05);
+moving = find(vr_speed > 0.05); % cm/s?
 stop = find(vr_speed <= 0.05);
 % histogram(speed)
 % thresh = 0.3; 

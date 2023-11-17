@@ -5,7 +5,7 @@ function [moving_middle, stop] = get_moving_time_V3(velocity,thres,Fs,ftol)
 % thres - Threshold speed in cm/s
 % Fs - number of frames length minimum to be considered stopped.
 % ftol - 10 frames 
-% zd made edits to change direction of stop array to prevevelocity,thres,Fs,ftolnt crashing,
+% zd made edits to change direction of stop array to prevent crashing,
 % 9/14/2023
 %%
 vr_speed = velocity;

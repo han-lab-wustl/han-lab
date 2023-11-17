@@ -1,6 +1,7 @@
 
 
-function cell_activity = get_spatial_tuning_all_cells(Fc3,position,Fs,nBins,track_length)
+function cell_activity = get_spatial_tuning_all_cells(Fc3,velocity,position, ...
+    Fs,nBins,track_length)
 %% Fc3 = dFF of all cells in N X T format where N - number of cells and T - time  
 % position - position of animal on track 
 % Fs - Frame rate of acquisition
@@ -9,9 +10,10 @@ function cell_activity = get_spatial_tuning_all_cells(Fc3,position,Fs,nBins,trac
 
 %%
 
-nCells = size(Fc3,2);
+nCells = size(Fc3,1);
 for cell = 1:nCells
-    cell_activity(cell,:) = get_spatial_tuning_per_cell(Fc3(:,cell),position,Fs,nBins,track_length);
+    cell_activity(cell,:) = get_spatial_tuning_per_cell(Fc3(cell,:), ...
+        velocity, position,Fs,nBins,track_length);
 end
 
 
