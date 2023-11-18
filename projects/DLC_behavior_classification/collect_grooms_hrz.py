@@ -25,20 +25,22 @@ with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
 
 # TODO: comparison with hrz and random reward 
 hrz_summary = False
-groom_binary_dct = {}; counts_dct = {}; yposgrs_dct_s = {};  yposgrs_dct_f = {}
+groom_binary_dct = {}; trials_s = {}; yposgrs_dct_s = {};  yposgrs_dct_f = {}
 yposgrs_dct_p = {}; len_grooms_dct = {}
 for i,row in mouse_df.iterrows():
-    groom, starts, stops, counts_s, counts_f, \
-        yposgrs_s, yposgrs_f, yposgrs_p, len_grooms = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls, \
+    groom, starts, stops, \
+        yposgrs_s, yposgrs_f, yposgrs_p, tr_s, tr_f, \
+                len_grooms = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls, \
                     row,hrz_summary = True)
     nm = row['VR']
     groom_binary_dct[nm] = groom
-    counts_dct[nm] = counts_s
+    trials_s[nm] = (tr_s,tr_f)
     yposgrs_dct_s[nm] = yposgrs_s
     yposgrs_dct_f[nm] = yposgrs_f
     yposgrs_dct_p[nm] = yposgrs_p 
     len_grooms_dct[nm] = len_grooms
     if i%20==0: print(f'{i}/{len(mouse_df)}')   # counter
+
 
 # make figs of compiled data
 ans_binary = np.array(list(groom_binary_dct.values()))
@@ -65,18 +67,17 @@ an_session = Counter(an_nms)
 
 # positive relative to reward quant
 %matplotlib inline
-mpl.use('TkAgg')
 import math
 rel_ypos_groom_s = np.array(list(yposgrs_dct_s.values()))[~np.isnan(ans_binary)][ans_binary_]
 rel_ypos_groom_s = np.hstack(rel_ypos_groom_s)
 rel_ypos_groom_f = np.array(list(yposgrs_dct_f.values()))[~np.isnan(ans_binary)][ans_binary_]
 rel_ypos_groom_f = np.hstack(rel_ypos_groom_f)
-rel_ypos_groom_p = np.array(list(yposgrs_dct_p.values()))[~np.isnan(ans_binary)][ans_binary_]
-rel_ypos_groom_p = np.hstack(rel_ypos_groom_p)
+# rel_ypos_groom_p = np.array(list(yposgrs_dct_p.values()))[~np.isnan(ans_binary)][ans_binary_]
+# rel_ypos_groom_p = np.hstack(rel_ypos_groom_p)
 fig, ax = plt.subplots()                                        
 ax.hist(rel_ypos_groom_s, bins = 20, label = 'successful trials')
 ax.hist(rel_ypos_groom_f, bins = 20, label = 'failed trials')
-ax.hist(rel_ypos_groom_p, bins = 20, label = 'probe trials (rel. to prev. rew zone)')
+# ax.hist(rel_ypos_groom_p, bins = 20, label = 'probe trials (rel. to prev. rew zone)')
 # ax.set_xlim([-1, 1])
 ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
 ax.set_ylabel('number of long grooming bouts')
