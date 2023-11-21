@@ -13,7 +13,7 @@ an = 'e218';
 % an = 'e139';
 % individual day analysis
 % dys = [1,2,3,5,6,7,8,9,10];
-dys = [24:29];
+dys = [20:29];
 % dys = [50:52,54]%:73, 75];
 % dys = [62:67,69:70,72:74,76,81:85];
 % dys = [4:7, 9:11];
@@ -43,19 +43,29 @@ for dy=dys
     thres = 5; % 5 cm/s is the velocity filter, only get
     % frames when the animal is moving faster than that
     ftol = 10; % number of frames length minimum to be considered stopped
-    ntrials = 8; % e.g. last 8 trials to compare
-    nbins = track_length/bin_size;
+    ntrials = 8; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
     rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
+    rewzonenum = zeros(1,length(rewlocs)); % get rew zone identity too
+    for kk = 1:length(rewlocs)
+    if rewlocs(kk)<=86*gainf
+        rewzonenum(kk) = 1; % rew zone 1
+    elseif rewlocs(kk)<=120*gainf && rewlocs(kk)>=101*gainf
+        rewzonenum(kk) = 2;
+    elseif rewlocs(kk)>=135*gainf
+        rewzonenum(kk) = 3;
+    end
+    end
     % for copied falls
     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
     else
-        [tuning_curves, coms] = make_tuning_curves(changeRewLoc, trialnum, rewards, ybinned, ...
-            licks, forwardvel, thres, Fs, ftol, bin_size, stat, iscell, plns, Fc3);
+        [tuning_curves, coms] = make_tuning_curves(changeRewLoc, trialnum, rewards, ybinned, gainf, ntrials,...
+            licks, forwardvel, thres, Fs, ftol, bin_size, track_length, stat, iscell, plns, Fc3);
     end
     % if greater than 3 ep, do all comparisons
     comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
+    rewloccomp = zeros(length(comparisons),2); rewzonecomp = zeros(length(comparisons),2);
     for i=1:length(comparisons)
         comparison = comparisons(i,:);
         if exist('ep_comp_pval', 'var') == 1 % if pvals already calculated
@@ -119,6 +129,8 @@ for dy=dys
         pptx.addPicture(fig);
         pptx.addNote(sprintf('slide number %d',slideId));
         close(fig)
+        rewloccomp(i,:) = [rewlocs(comparison(1)) rewlocs(comparison(2))]';
+        rewzonecomp(i,:) = [rewzonenum(comparison(1)) rewzonenum(comparison(2))]';
     end
     slideId = pptx.addSlide();
     fprintf('Added slide %d\n',slideId);
@@ -152,7 +164,9 @@ for dy=dys
     close(fig)
 
     % also append fall with tables
-    ep_comp_pval = array2table([comparisons pvals'], 'VariableNames', {'ep_comparison1', 'ep_comparison2', 'cs_ranksum_pval'});
+    ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...
+        'VariableNames', {'ep_comparison1', 'ep_comparison2', 'cs_ranksum_pval', 'rewloc1', ...
+        'rewloc2', 'rewzone_ep1', 'rewzone_ep2'});
     save(fullfile(pth.folder,pth.name), 'ep_comp_pval', 'coms','tuning_curves', '-append')
 end
 % save ppt

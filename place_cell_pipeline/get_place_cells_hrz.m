@@ -1,6 +1,6 @@
 clear all; clear all;
 % days = [63:70, 72:74, 76, 81:90];
-days = [23:29];
+days = [25:29];
 % cc = load('Y:\sstcre_analysis\celltrack\e201_week12-15\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 % cc = load('Y:\sstcre_analysis\celltrack\e200_week09-14\Results\commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat');
 % cc = cc.cellmap2dayacrossweeks;
