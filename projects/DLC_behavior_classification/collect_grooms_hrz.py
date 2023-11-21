@@ -31,7 +31,7 @@ for i,row in mouse_df.iterrows():
     groom, starts, stops, \
         yposgrs_s, yposgrs_f, yposgrs_p, tr_s, tr_f, \
                 len_grooms = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls, \
-                    row,hrz_summary = True)
+                    row,hrz_summary = hrz_summary)
     nm = row['VR']
     groom_binary_dct[nm] = groom
     trials_s[nm] = (tr_s,tr_f)

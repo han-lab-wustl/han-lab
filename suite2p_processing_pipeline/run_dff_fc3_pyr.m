@@ -1,7 +1,7 @@
 % run dff and fc3 calc for all cells
 clear all;
 % days = [62:67,69:70,72:74,76,81:85];
-days = [27];
+days = [28];
 % falls = dir('Y:\sstcre_analysis\fmats\e200\days\*Fall.mat');
 src = 'X:\vipcre';
 % src = 'Z:\sstcre_imaging';

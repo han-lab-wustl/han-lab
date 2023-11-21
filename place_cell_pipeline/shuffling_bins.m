@@ -1,8 +1,6 @@
 
 function big_shuffbin = shuffling_bins(X)
-% for j = 1:size(mouse_data(6).post.allcells.Fc3_all,2)
-% X = mouse_data(6).post.allcells.Fc3_all(:,1);
-% timepts_zero = find(X == 0);
+
 timepts_nonzero = find(X~=0);
 timepts_zero = find(X == 0);
 

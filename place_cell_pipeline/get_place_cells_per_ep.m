@@ -1,55 +1,45 @@
-function [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,Fc3,changeRewLoc, ...
-    bin,track_length,gainf)
+function [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,fv,Fc3,changeRewLoc, ...
+    bin,track_length,gainf,Fs)
 % bin = 3; % cm t
 % track_length = 270;
 % gainf = 3/2
-
+thres = 5; % 5 cm/s is the velocity filter, only get
+% frames when the animal is moving faster than that
+ftol = 10; % number of frames length minimum to be considered stopped
 eprng = eps(ep):eps(ep+1);
 % mask = trialnum(eprng)>=3; % skip probes
 ypos = ybinned(eprng);
 ypos = ceil(ypos*(gainf)); % gain factor for zahra mice
-[time_moving ,time_stop] = vr_stop_and_moving_time(ypos);
-fc3 = Fc3(eprng,:)';
+fv = fv(eprng);
+[time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
+fc3 = Fc3(eprng,:);
 % fc3 = fc3(:,mask);
 rewloc = changeRewLoc(changeRewLoc>0); % reward location
-rewlocopto = rewloc(ep)*(gainf);
+rewlocep = rewloc(ep)*(gainf);
 
-% check to see if there are any negative transients in fc3
-%     figure; plot(fc3(randi([1 size(fc3,1)],1),:))
-%     xlabel('frames in ep1')
-%     ylabel('fc3')
-%     title(sprintf('cell no . %i', randi([1 size(fc3,1)],1)))
-%% 
-% calculate spatial info
-% moving time
-fc3_mov = fc3(:,time_moving);
-ypos_mov = ypos(:,time_moving);
-
-spatial_info = get_spatial_info_all_cells(fc3',ypos,31.25, ...
+spatial_info = get_spatial_info_all_cells(fc3, fv,thres, ftol, ypos,Fs,...
     ceil(track_length/bin),track_length);    
 % shuffle params
-%shuffle transients and not fc3 values themselves
-for i = 1:size(fc3,1)   
-    bins2shuffle_forcell{i} = shuffling_bins(fc3(i,:));   
+% shuffle transients and not fc3 values themselves
+bins2shuffle_forcell = {};
+for cshuf = 1:size(fc3,2)   
+    bins2shuffle_forcell{cshuf} = shuffling_bins(fc3(:,cshuf))';   
 end 
 nshuffles = 1000;
 spatial_info_shuf = zeros([nshuffles size(spatial_info,2)]);
-shuffledbins_forcell(1:size(fc3,1)) = {0};
-for j = 1:nshuffles
+shuffledbins_forcell(1:size(fc3,2)) = {0};
+parfor j = 1:nshuffles
     disp(['Shuffle number ', num2str(j)]) 
-    parfor i = 1:size(fc3_mov,1)
-        s = shuffle(bins2shuffle_forcell{i});
-        shuffledbins_forcell{i} = s; 
-        sca = fc3(i,cell2mat(shuffledbins_forcell{i}));
-        shuffled_cells_activity(i,:) = sca;
-    end 
-    spatial_info_shuf(j,:) = get_spatial_info_all_cells(shuffled_cells_activity',ypos,31.25, ...
-    ceil(track_length/bin),track_length);
+    shuffled_cells_activity = zeros(size(fc3));
+    shuffled_cells_activity = make_shuffled_Fc3_trace(bins2shuffle_forcell, ...
+    fc3, shuffledbins_forcell, shuffled_cells_activity)
+    spatial_info_shuf(j,:) = get_spatial_info_all_cells(shuffled_cells_activity, ...
+        fv,thres, ftol,ypos,Fs,ceil(track_length/bin),track_length);
 end
 % compare spatial info to shuffled distribution
-putative_pc = zeros(1,size(fc3,1)); % mask for pcs that pass shuffle crtieria
-pvals = zeros(1,size(fc3,1)); % mask for pcs that pass shuffle crtieria
-for cell=1:size(fc3,1)
+putative_pc = zeros(1,size(fc3,2)); % mask for pcs that pass shuffle crtieria
+pvals = zeros(1,size(fc3,2)); % mask for pcs that pass shuffle crtieria
+for cell=1:size(fc3,2)
     si = spatial_info(cell);
     si_shuf = sum(spatial_info_shuf(:,cell)>si)/nshuffles;
     pvals(cell) = si_shuf;

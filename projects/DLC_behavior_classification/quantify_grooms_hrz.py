@@ -42,8 +42,8 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
     eps = np.where(mat['changeRewLoc']>0)[0]    
     eps = np.hstack([list(eps), len(mat['changeRewLoc'])])    
     # default return
-    groom, starts, stops, counts_s, counts_f, yposgrs_s, yposgrs_f, \
-    yposgrs_p, len_grooms = [np.nan]*9
+    groom, starts, stops, tr_s, tr_f, \
+          yposgrs_s, yposgrs_f, yposgrs_p, len_grooms = [np.nan]*9
     # at least 2 epochs, rewarded hrz
     if 'HRZ' in mat['experiment'] and sum(mat['rewards']>0) and len(eps)>2: # only for hrz
         dfpth = os.path.join(dlcfls, row['DLC']) #.values[0]
@@ -95,6 +95,7 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
                             
 
 def categorize_grooming(eps, mat, starts, rewz, success=True, gainf=3/2):
+    yposgrs = []; yposgrs_p = []
     for ep in range(len(eps)-1):
         rng = np.arange(eps[ep],eps[ep+1])
         trialnumep = np.hstack(mat['trialnum'][rng])
@@ -140,7 +141,7 @@ def categorize_grooming(eps, mat, starts, rewz, success=True, gainf=3/2):
         if len(yposgr)>0:
             yposgrs.append(yposgr)
         if len(yposgr_p)>0:
-             yposgrs_p.append(yposgr_p)
+            yposgrs_p.append(yposgr_p)
 
     yposgrs = convert_to_hstack(yposgrs)
     yposgrs_p = convert_to_hstack(yposgrs_p)
