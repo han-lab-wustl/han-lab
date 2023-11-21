@@ -1,6 +1,7 @@
 function [tuning_curves, coms] = make_tuning_curves(eps, changeRewLoc, trialnum, rewards, ybinned, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, track_length, stat, iscell, plns, Fc3, putative_pcs)
 nbins = track_length/bin_size;
+% TODO: incorporate multi planes
 % for pln=plns
 rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
 pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
@@ -43,13 +44,11 @@ for ep=1:length(eps)-1
         % make bins via suyash method
         %     pc = putative_pcs{1};
         pc = logical(iscell(:,1));
-        rewloc = rewlocs(ep);
-        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);
-        %         moving_cells_activity = fc3_ep(time_moving,:);
+        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
         bordercells_pc = bordercells(pc); % mask border cells
         fc3_pc = Fc3(eprng,pc); % only iscell
         fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
-        fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter
+        fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         % activity binning
         cell_activity = zeros(nbins, size(fc3_pc,2));
         for i = 1:size(fc3_pc,2)
