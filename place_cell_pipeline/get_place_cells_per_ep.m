@@ -1,8 +1,6 @@
 function [putative_pc] = get_place_cells_per_ep(eps,ep,ybinned,fv,Fc3,changeRewLoc, ...
     bin,track_length,gainf,Fs)
-% bin = 3; % cm t
-% track_length = 270;
-% gainf = 3/2
+%%%%%%%% FC3 must be consistent in time x cell format %%%%%%%% 
 thres = 5; % 5 cm/s is the velocity filter, only get
 % frames when the animal is moving faster than that
 ftol = 10; % number of frames length minimum to be considered stopped
@@ -11,7 +9,6 @@ eprng = eps(ep):eps(ep+1);
 ypos = ybinned(eprng);
 ypos = ceil(ypos*(gainf)); % gain factor for zahra mice
 fv = fv(eprng);
-[time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
 fc3 = Fc3(eprng,:);
 % fc3 = fc3(:,mask);
 rewloc = changeRewLoc(changeRewLoc>0); % reward location
@@ -39,12 +36,12 @@ end
 % compare spatial info to shuffled distribution
 putative_pc = zeros(1,size(fc3,2)); % mask for pcs that pass shuffle crtieria
 pvals = zeros(1,size(fc3,2)); % mask for pcs that pass shuffle crtieria
-for cell=1:size(fc3,2)
-    si = spatial_info(cell);
-    si_shuf = sum(spatial_info_shuf(:,cell)>si)/nshuffles;
-    pvals(cell) = si_shuf;
+for cl=1:size(fc3,2)
+    si = spatial_info(cl);
+    si_shuf = sum(spatial_info_shuf(:,cl)>si)/nshuffles;
+    pvals(cl) = si_shuf;
     if si_shuf<0.01 % 99 cut off
-        putative_pc(cell) = 1;
+        putative_pc(cl) = 1;
     end
 end    
 putative_pc = logical(putative_pc);
