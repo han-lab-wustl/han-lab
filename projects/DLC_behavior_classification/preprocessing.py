@@ -297,6 +297,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             # saves dlc variables into pickle as well  
             for col in colssave:
                 vralign[col] = dlcdf[col].values
+            print(list(vralign.keys()))
             with open(dst, "wb") as fp:   #Pickling
                 pickle.dump(vralign, fp)            
             print(f"\n ********* saved to {dst} *********")
