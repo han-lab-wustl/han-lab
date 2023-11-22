@@ -1,5 +1,5 @@
 function [putative_pcs] = get_place_cells_all_ep(stat, Fc3, iscell, ...
-    changeRewLoc, ybinned,forwardvel,bin,track_length,gainf,Fs)
+    changeRewLoc, ybinned,forwardvel,bin,track_length,gainf,Fs,pth)
 %     cellindwithoutbc = cellindbc(~bordercells);    
 %     cellind=intersect(cellindt,cellindwithoutbc); %only tracked cells that are not border cells
 pc = logical(iscell(:,1));

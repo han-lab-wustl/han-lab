@@ -91,9 +91,9 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         for i in days:     
             print(i)   
             # pth = os.path.join(src, str(i))
-            pth = os.path.join(src, 'D'+str(i))
-            # imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
-            imgfl = pth
+            pth = os.path.join(src, str(i))
+            imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+            # imgfl = pth
             for plane in planes:
                 mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
                 if os.path.exists(mat):

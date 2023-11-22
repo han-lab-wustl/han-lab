@@ -1,11 +1,12 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas
+import numpy as np, pandas as pd
 import os, cv2, pickle
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 mpl.use('TkAgg')
 mpl.rcParams["pdf.fonttype"] = 42
@@ -13,6 +14,79 @@ mpl.rcParams["ps.fonttype"] = 42
 mpl.rcParams["xtick.major.size"] = 6
 mpl.rcParams["ytick.major.size"] = 6
 ################################FUNCTION DEFINITIONS################################
+def get_area_circumference_from_vralign(pdst, gainf, rewsize):
+    
+    # example on how to open the pickle file
+    # pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
+    with open(pdst, "rb") as fp: #unpickle
+            vralign = pickle.load(fp)
+    # edit name of eye points
+    eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
+            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
+
+    for e in eye:
+        vralign[e+'_x'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
+        vralign[e+'_y'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
+
+    #eye centroids, area, perimeter
+    centroids_x = []; centroids_y = []
+    areas = []; circumferences = []
+    for i in range(len(vralign['EyeNorthWest_y'])):
+        eye_x = np.array([vralign[xx+"_x"] for xx in eye])
+        eye_y = np.array([vralign[xx+"_y"] for xx in eye])
+        eye_coords = np.array([eye_x, eye_y]).astype(float)
+        centroid_x, centroid_y = centeroidnp(eye_coords)
+        area, circumference = get_eye_features([(vralign[xx+"_x"][i], 
+                                    vralign[xx+"_y"][i]) for xx in eye])
+        centroids_x.append(centroid_x)
+        centroids_y.append(centroid_y)
+        areas.append(area); circumferences.append(circumference)
+    areas = np.array(areas); circumferences = np.array(circumferences)
+    # run peri reward time
+    range_val = 5 #s
+    binsize = 0.1 #s
+    normmeanrew_t, meanrew, normrewall_t, \
+        rewall = perireward_binned_activity(np.array(circumferences), \
+                            (vralign['rewards']==0.5).astype(int), 
+                            vralign['timedFF'], range_val, binsize)
+
+    return areas, circumferences, normmeanrew_t, \
+            normrewall_t
+
+def get_pose_tuning_curve(vralign, pose, gainf, rewsize, \
+                          pose_name):
+     # get ep 1 all trials averaged (successes/fails?)
+    # essentially make a tuning curve    
+    eps_ = np.where(vralign['changeRewLoc']>0)[0]
+    eps = np.zeros(len(eps_)+1); eps[:-1] = eps_
+    eps[len(eps_)] = len(vralign['changeRewLoc'])    
+    color_traces = ['royalblue', 'navy', 
+                    'indigo', 'mediumorchid', 'k']
+    for i in range(len(eps)-1):
+        rangeep = np.arange(eps[i], eps[i+1]).astype(int)
+        pose_ = pose[rangeep.astype(int)]
+        ypos = vralign['ybinned'][rangeep]
+        ypos[ypos<3]=0
+        ypos=np.hstack((ypos*(gainf)).astype(int))  
+        df = pd.DataFrame(np.array([pose_, ypos]).T)
+        # takes median and normalizes
+        circ_ep = np.hstack(df.groupby(1).median().values)
+        rewloc = np.hstack(vralign['changeRewLoc'])[int(eps[i])]*(gainf)    
+        # Create a Rectangle patch
+        normcirc_ep = (circ_ep-np.min(circ_ep))/(np.max(circ_ep)-np.min(circ_ep))        
+        fig, ax = plt.subplots()
+        ax.plot(normcirc_ep, color=color_traces[i])
+        rect = patches.Rectangle((rewloc-rewsize/2, 0), rewsize, 1, linewidth=1, edgecolor='k', 
+                    facecolor=color_traces[i], alpha=0.3)
+        ax.add_patch(rect)
+        ax.set_ylim([0,1])
+        ax.set_xticks(np.arange(0,max(ypos)+5,90))
+        ax.set_xticklabels(np.arange(0,max(ypos)+5,90))
+        ax.set_xlabel('Track Position (cm)')
+        ax.set_ylabel(f'Normalized {pose_name}')
+
+    return
+
 def centeroidnp(arr):
     length = arr.shape[0]
     sum_x = np.sum(arr[:, 0])
@@ -96,34 +170,8 @@ def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize):
     normrewdFF = np.array([(xx-np.min(xx))/((np.max(xx)-np.min(xx))) for xx in rewdFF.T])
     return normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF
 ################################FUNCTION DEFINITIONS################################
-if __name__ == "__main__":
+if __name__ == "__main__":    
 
-    # example on how to open the pickle file
-    pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
-    with open(pdst, "rb") as fp: #unpickle
-            vralign = pickle.load(fp)
-    # edit name of eye points
-    eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
-            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
-
-    for e in eye:
-        vralign[e+'_x'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
-        vralign[e+'_y'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
-
-    #eye centroids, area, perimeter
-    centroids_x = []; centroids_y = []
-    areas = []; circumferences = []
-    for i in range(len(vralign['EyeNorthWest_y'])):
-        eye_x = np.array([vralign[xx+"_x"] for xx in eye])
-        eye_y = np.array([vralign[xx+"_y"] for xx in eye])
-        eye_coords = np.array([eye_x, eye_y]).astype(float)
-        centroid_x, centroid_y = centeroidnp(eye_coords)
-        area, circumference = get_eye_features([(vralign[xx+"_x"][i], 
-                                    vralign[xx+"_y"][i]) for xx in eye])
-        centroids_x.append(centroid_x)
-        centroids_y.append(centroid_y)
-        areas.append(area); circumferences.append(circumference)
-        
     # mpl.use('TkAgg')
     %matplotlib inline
     fig,axes = plt.subplots(3,1)    
@@ -168,14 +216,6 @@ if __name__ == "__main__":
     plt.savefig(r"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\pupil_in_session.svg", \
                     bbox_inches='tight', transparent=True)
 
-
-    # run peri reward time
-    range_val = 5 #s
-    binsize = 0.1 #s
-    normmeanrew, meanrew, normrewall, \
-        rewall = perireward_binned_activity(np.array(circumferences), \
-                            (vralign['rewards']==0.5).astype(int), 
-                            vralign['timedFF'], range_val, binsize)
     # plot perireward pupil
     # plot perireward pupil
     fig, ax = plt.subplots()
@@ -192,11 +232,11 @@ if __name__ == "__main__":
     plt.savefig(r"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil.svg", \
                 bbox_inches='tight',transparent=True)
 #%%
-         
-    # run peri reward LOCATION????????
-    range_val = 10 #cm
-    binsize = 1 #cm
-    normmeanrew, meanrew, rewall = perireward_binned_activity(np.array(circumferences), (vralign['rewards']==0.5).astype(int), 
-                            vralign['ybinned'], range_val, binsize)
+        
+# run peri reward LOCATION????????
+range_val = 10 #cm
+binsize = 1 #cm
+normmeanrew, meanrew, rewall = perireward_binned_activity(np.array(circumferences), (vralign['rewards']==0.5).astype(int), 
+                        vralign['ybinned'], range_val, binsize)
 
-                
+            

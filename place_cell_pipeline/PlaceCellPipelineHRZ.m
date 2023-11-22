@@ -12,12 +12,12 @@
 % add han-lab and han-lab-archive repos to path!
 clear all; close all;
 
-an = 'e218';
+an = 'e201';
 % individual day analysis
-dys = [30];
-src = 'X:\vipcre'; % folder where fall is
+dys = [27:30, 32:34,36,38,40:49];
+% src = 'X:\vipcre'; % folder where fall is
 savedst = 'Y:\sstcre_analysis'; % where to save ppt of figures
-% src = 'Y:\sstcre_analysis\fmats';
+src = 'Y:\sstcre_analysis\fmats';
 % pptx    = exportToPPTX(fullfile('Y:\sstcre_analysis',sprintf('%s_tuning_curves_w_ranksum',an)));
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
@@ -28,17 +28,18 @@ pptx    = exportToPPTX('', ... % make new file
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+%     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*', dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
         'forwardvel', 'licks', 'trialnum', 'rewards', 'tuning_curves', 'coms', ...
-        'putative_pcs')
+        'putative_pcs', 'VR')
     % vars to get com and tuning curves
     bin_size = 3; % cm
     gainf = 3/2; % 3/2 VS. 1; in this pipeline the gain is multiplied everywhere
     track_length = 180*gainf;
-    rew_zone = 10; % cm, TODO make dependent on VR.settings
+    rew_zone = VR.settings.rewardZone*gainf; % cm
     % zahra hard coded to be consistent with the dopamine pipeline
     thres = 5; % 5 cm/s is the velocity filter, only get
     % frames when the animal is moving faster than that
@@ -54,14 +55,15 @@ for dy=dys % for loop per day
     if exist('dFF', 'var')==1
     else % make dff and fc3
         fprintf('********calculating dFF and Fc3********\n')
-        create_dff_fc3(fullfile(pth.folder,pth.name), Fs)
+        [~, dFF, Fc3] = create_dff_fc3(fullfile(pth.folder,pth.name), Fs);
         fprintf('********made dFF and Fc3 since they did not exist in structure********')
     end
     if exist('putative_pcs', 'var')==1
     else % run place cell shuffle on only iscell and excludes bordercells
-        fprintf('********calculating place cells based on spatial  info shuffle, \n this may take a while...\n********')
+        fprintf('******** \n calculating place cells based on spatial  info shuffle, \n this may take a while...\n********')
         putative_pcs = get_place_cells_all_ep(stat, Fc3, iscell, ...
-            changeRewLoc, ybinned,forwardvel,bin_size,track_length,gainf,Fs);
+            changeRewLoc, ybinned,forwardvel,bin_size,track_length,gainf,Fs, ...
+            fullfile(pth.folder,pth.name));
         fprintf('********got place cells based on spatial info shuffle********\n')
     end
     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
@@ -175,4 +177,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksun',mouse_name)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_',an)));

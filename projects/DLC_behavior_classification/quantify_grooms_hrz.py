@@ -69,7 +69,7 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
                 # successful trials, gets ypos and total number of trials
                 yposgrs_s, yposgrs_p, tr_s = categorize_grooming(eps, mat,starts,rewz, success=True)
                 # failed trials
-                posgrs_f, yposgrs_p, tr_f = categorize_grooming(eps, mat,starts,rewz, success=False)
+                yposgrs_f, yposgrs_p, tr_f = categorize_grooming(eps, mat,starts,rewz, success=False)
 
                 if hrz_summary:    
                     make_hrz_summary_fig(mat, licks, matfl, ybin_paw, starts,

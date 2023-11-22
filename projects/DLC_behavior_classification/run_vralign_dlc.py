@@ -30,8 +30,10 @@ if __name__ == "__main__":
     # plots whisker and nose
     # converts low likelihood points to nans
     vralign['WhiskerUpper_y'][vralign['WhiskerUpper_likelihood'].astype('float32')<0.99]=np.nan
+    vralign['NoseTopPoint_y'][vralign['NoseTopPoint_likelihood'].astype('float32')<0.99]=np.nan
     vralign['NoseTip_y'][vralign['NoseTip_likelihood'].astype('float32')<0.99]=np.nan
     vralign['NoseTip_y'][vralign['NoseTip_likelihood'].astype('float32')<0.99]=np.nan
+    vralign['NoseBottomPoint_y'][vralign['NoseBottomPoint_likelihood'].astype('float32') < 0.99] = 0
     vralign['PawTop_x'][vralign['PawTop_likelihood'].astype('float32') < 0.99] = 0
     vralign['PawTop_y'][vralign['PawTop_likelihood'].astype('float32') < 0.99] = 0
     vralign['PawMiddle_x'][vralign['PawMiddle_likelihood'].astype('float32') < 0.99] = np.nan

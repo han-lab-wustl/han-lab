@@ -24,7 +24,7 @@ with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
 
 # TODO: comparison with hrz and random reward 
-hrz_summary = False
+hrz_summary = True
 groom_binary_dct = {}; trials_s = {}; yposgrs_dct_s = {};  yposgrs_dct_f = {}
 yposgrs_dct_p = {}; len_grooms_dct = {}
 for i,row in mouse_df.iterrows():
@@ -75,23 +75,27 @@ rel_ypos_groom_f = np.hstack(rel_ypos_groom_f)
 # rel_ypos_groom_p = np.array(list(yposgrs_dct_p.values()))[~np.isnan(ans_binary)][ans_binary_]
 # rel_ypos_groom_p = np.hstack(rel_ypos_groom_p)
 fig, ax = plt.subplots()                                        
-ax.hist(rel_ypos_groom_s, bins = 20, label = 'successful trials')
-ax.hist(rel_ypos_groom_f, bins = 20, label = 'failed trials')
+ax.hist(rel_ypos_groom_s, bins = 20, label = 'successful trials',
+        color = 'slategrey', edgecolor='black')
+ax.hist(rel_ypos_groom_f, bins = 20, label = 'failed trials', color = 'lightgray', 
+        alpha=0.5, edgecolor='black')
 # ax.hist(rel_ypos_groom_p, bins = 20, label = 'probe trials (rel. to prev. rew zone)')
 # ax.set_xlim([-1, 1])
 ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
-ax.set_ylabel('number of long grooming bouts')
-ax.set_xlabel('distance relative to reward (cm)')
+ax.set_ylabel('Number of long grooming bouts')
+ax.set_xlabel('Distance relative to reward (cm)')
 ax.legend()
 # count number of sessions per animal
 print(Counter(an_nms))
-plt.savefig(r'Y:\DLC\dlc_mixedmodel2\figures\yppos_grooming_relative_to_rew_30f_thres.pdf')
+plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\yppos_grooming_relative_to_rew.svg',
+            bbox_inches = 'tight', transparent = True)
 
 # average time of long grooms
 len_grooms_ = np.array(list(len_grooms_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
 len_grooms_ = np.hstack(len_grooms_)
 fig, ax = plt.subplots()                                        
-ax.hist(len_grooms_/31.25, bins = 20)
-ax.set_ylabel('frequency')
-ax.set_xlabel('duration of grooming bout (s)')
-plt.savefig(r'Y:\DLC\dlc_mixedmodel2\figures\grooming_duration_over_30f_thres.pdf')
+ax.hist(len_grooms_/31.25, bins = 20, color = 'slategrey', edgecolor='black')
+ax.set_ylabel('Frequency')
+ax.set_xlabel('Duration of grooming bout (s)')
+plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\grooming_duration.svg',
+            bbox_inches = 'tight', transparent = True)

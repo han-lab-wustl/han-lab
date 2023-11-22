@@ -80,7 +80,7 @@ if __name__ == "__main__":
     # (do not need to remake vr_align.p as you have just deleted some mice)
     with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
         df = pickle.load(fp)
-    # makes vr align pickle
+    # makes vr align picklesuite
     preprocess(1,vrdir,dlcfls) # savedst = dlcfls
     # gets clustering vars
     dfs = preprocess(2,vrdir,dlcfls)
