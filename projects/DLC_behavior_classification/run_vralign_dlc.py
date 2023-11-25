@@ -5,18 +5,24 @@ import h5py, pickle
 import matplotlib
 matplotlib.use('TkAgg')
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
-sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification.preprocessing import VRalign
 
 if __name__ == "__main__":
         # make sure you convert the behavior mat file first!!!
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
-        # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')
-        dlccsv = r"I:\eye_videos\231111_E218DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"
-        vrfl = r"D:\adina_vr_files\E218_11_Nov_2023_time(10_11_38).mat"
-        savedst = r"I:\eye_videos"
-        VRalign(vrfl, dlccsv, savedst)
+        # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
+        dlccsv = [r"I:\dlc_inference\230508_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\dlc_inference\230509_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\dlc_inference\230510_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\dlc_inference\230513_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
+        vrfl = [r"D:\adina_vr_files\VR_data\E200_08_May_2023_time(08_54_41).mat",
+                r"D:\adina_vr_files\VR_data\E200_09_May_2023_time(07_43_24).mat",
+                r"D:\adina_vr_files\VR_data\E200_10_May_2023_time(08_58_45).mat",
+                r"D:\adina_vr_files\VR_data\E200_13_May_2023_time(12_30_35).mat"]
+        savedst = r"I:\pupil_pickles"
+        for i in range(len(dlccsv)): # align beh with video data
+                VRalign(vrfl[i], dlccsv[i], savedst)
 
         # example on how to open the pickle file
         pdst = os.path.join(savedst, "E201_06_Apr_2023_vr_dlc_align.p")

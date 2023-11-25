@@ -104,8 +104,16 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
     else:
         # modified VRstartendsplit
         dst = os.path.join(savedst, os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
-        print(dst)
-        if not os.path.exists(dst): # if pickle is made already
+        print(dst)            # aligns structure so size is the same
+        dlcdf = pd.read_csv(dlccsv)
+        if 'bodyparts' not in dlcdf.columns.to_list(): #fixes messed up cols
+            dlcdf = fixcsvcols(dlccsv) #saves over df
+        # bin every other row
+        idx = len(dlcdf) - 1 if len(dlcdf) % 2 else len(dlcdf)
+        dlcdf = dlcdf[:idx].groupby(dlcdf.index[:idx] // 2).mean()
+        colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
+        print(colssave)
+        if not os.path.exists(dst) and len(colssave)>0: # if pickle is made already
             f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
             VR = f['VR']
             
@@ -158,15 +166,6 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
             ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])
-            
-            # aligns structure so size is the same
-            dlcdf = pd.read_csv(dlccsv)
-            if 'bodyparts' not in dlcdf.columns.to_list(): #fixes messed up cols
-                dlcdf = fixcsvcols(dlccsv) #saves over df
-            # bin every other row
-            idx = len(dlcdf) - 1 if len(dlcdf) % 2 else len(dlcdf)
-            dlcdf = dlcdf[:idx].groupby(dlcdf.index[:idx] // 2).mean()
-            colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
             utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), 
                         len(dlcdf)) #subsample - then why are we doing this freq
             timedFF = utimedFF
