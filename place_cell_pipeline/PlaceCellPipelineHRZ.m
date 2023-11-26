@@ -12,13 +12,16 @@
 % add han-lab and han-lab-archive repos to path!
 clear all; close all;
 
-an = 'e201';
+an = 'e186';
 % individual day analysis
-dys = [27:30, 32:34,36,38,40:49];
+% dys = [27:30, 32:34,36,38,40:75];
+% dys = [32,33];
+% dys = [4:7,9:11];
+dys = [1:51];
 % src = 'X:\vipcre'; % folder where fall is
-savedst = 'Y:\sstcre_analysis'; % where to save ppt of figures
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures
 src = 'Y:\sstcre_analysis\fmats';
-% pptx    = exportToPPTX(fullfile('Y:\sstcre_analysis',sprintf('%s_tuning_curves_w_ranksum',an)));
+% pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -29,7 +32,7 @@ pptx    = exportToPPTX('', ... % make new file
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
 %     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*', dy)));
+    pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*plane0*', dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -37,20 +40,24 @@ for dy=dys % for loop per day
         'putative_pcs', 'VR')
     % vars to get com and tuning curves
     bin_size = 3; % cm
-    gainf = 3/2; % 3/2 VS. 1; in this pipeline the gain is multiplied everywhere
+    try
+        gainf = 1/VR.scalingFACTOR;
+    catch
+        gainf = 3/2; % 3/2 VS. 1; in this pipeline the gain is multiplied everywhere
+    end
     track_length = 180*gainf;
-    rew_zone = VR.settings.rewardZone*gainf; % cm
+    try
+        rew_zone = VR.settings.rewardZone*gainf; % cm
+    catch
+        rew_zone = 15;
+    end
     % zahra hard coded to be consistent with the dopamine pipeline
     thres = 5; % 5 cm/s is the velocity filter, only get
     % frames when the animal is moving faster than that
     ftol = 10; % number of frames length minimum to be considered stopped
-    ntrials = 8; % e.g. last 8 trials to compare    
+    ntrials = 15; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
-    eps = find(changeRewLoc>0);
-    eps = [eps length(changeRewLoc)];    
-    rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
-    rewzonenum = get_rewzones(rewlocs, gainf); % get rew zone identity too:  a=[{67:86} {101:120} {135:154}];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if exist('dFF', 'var')==1
     else % make dff and fc3
@@ -58,6 +65,19 @@ for dy=dys % for loop per day
         [~, dFF, Fc3] = create_dff_fc3(fullfile(pth.folder,pth.name), Fs);
         fprintf('********made dFF and Fc3 since they did not exist in structure********')
     end
+    % check to see if changerewloc same length as fc3 (only a problem for old
+    % multiplane rec
+    if (size(Fc3,1)<size(changeRewLoc,2))
+        ybinned = ybinned(1:end-1);
+        changeRewLoc = changeRewLoc(1:end-1);
+        forwardvel = forwardvel(1:end-1);
+        trialnum = trialnum(1:end-1);
+        rewards = rewards(1:end-1);
+    end
+    eps = find(changeRewLoc>0);
+    eps = [eps length(changeRewLoc)];    
+    rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
+    rewzonenum = get_rewzones(rewlocs, gainf); % get rew zone identity too:  a=[{67:86} {101:120} {135:154}];
     if exist('putative_pcs', 'var')==1
     else % run place cell shuffle on only iscell and excludes bordercells
         fprintf('******** \n calculating place cells based on spatial  info shuffle, \n this may take a while...\n********')
@@ -66,19 +86,19 @@ for dy=dys % for loop per day
             fullfile(pth.folder,pth.name));
         fprintf('********got place cells based on spatial info shuffle********\n')
     end
-    if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
-    else
+%     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
+%     else
         [tuning_curves, coms] = make_tuning_curves(eps, changeRewLoc, trialnum, rewards, ...
-            ybinned, gainf, ntrials,...
+            ybinned, gainf, ntrials,... # makes tuning curves based on last n trials (successful only)
             licks, forwardvel, thres, Fs, ftol, bin_size, track_length, stat, ...
             iscell, plns, Fc3, putative_pcs);
         fprintf('********calculated tuning curves!********\n')
-    end
+%     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % do per ep comparison
     comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
-    rewloccomp = zeros(length(comparisons),2); rewzonecomp = zeros(length(comparisons),2);
-    for i=1:length(comparisons)
+    rewloccomp = zeros(size(comparisons,1),2); rewzonecomp = zeros(size(comparisons,1),2);
+    for i=1:size(comparisons,1)
         comparison = comparisons(i,:);
         if exist('ep_comp_pval', 'var') == 1 % if pvals already calculated
             pvals  = ep_comp_pval(:,3);
@@ -177,4 +197,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum',an)));

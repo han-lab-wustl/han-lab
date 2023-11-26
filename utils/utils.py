@@ -66,7 +66,7 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
 
 
 def copyfmats(src, dst, animal, overwrite=False, days=False, 
-              weeks=False, weekdir=False, planes=[0]):
+            weeks=False, weekdir=False, planes=[0]):
     """useful for cell tracking, copies Fall to another location for each day in animal folder
     if you align to behavior can also use for further analysis 
     (run runVRalign.m in MATLAB, in projects > SST-cre inhibition)

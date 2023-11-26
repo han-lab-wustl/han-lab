@@ -58,10 +58,15 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
             lickall, normmeanvel_t, meanvel, normvelall_t, \
             velall
 
-def get_pose_tuning_curve(vralign, pose, gainf, rewsize, \
-    pose_name):
+def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
+    pose_name, success=True):
     # get ep 1 all trials averaged (successes/fails?)
     # essentially make a tuning curve    
+    try:
+        licks = np.hstack(vralign['licks'])
+    except:
+        licks = vralign['licks']
+    vel = np.hstack(vralign['forwardvel'])
     eps_ = np.where(vralign['changeRewLoc']>0)[0]
     eps = np.zeros(len(eps_)+1); eps[:-1] = eps_
     eps[len(eps_)] = len(vralign['changeRewLoc'])    
@@ -69,26 +74,61 @@ def get_pose_tuning_curve(vralign, pose, gainf, rewsize, \
                     'indigo', 'mediumorchid', 'k']
     for i in range(len(eps)-1):
         rangeep = np.arange(eps[i], eps[i+1]).astype(int)
-        pose_ = pose[rangeep.astype(int)]
-        ypos = vralign['ybinned'][rangeep]
+        trialnum = vralign['trialnum'][rangeep]
+        rewards = vralign['rewards'][rangeep]
+        # types of trials, success vs. fail
+        s_tr = []; f_tr = []
+        for tr in np.unique(trialnum[trialnum>=3]):
+            if sum(rewards[trialnum==tr])>0:
+                s_tr.append(tr)
+            else:
+                f_tr.append(tr)
+        trm_f = np.isin(trialnum,f_tr)    
+        trm = np.isin(trialnum,s_tr)   
+        rng_s = rangeep[np.hstack(trm)] 
+        rng_f = rangeep[np.hstack(trm_f)] 
+        if success:
+            pose_ = pose[rng_s.astype(int)]
+            licks_ = licks[rng_s]
+            try:
+                ypos = np.hstack(vralign['ybinned'])[rng_s]
+            except:
+                ypos = vralign['ybinned'][rng_s]
+            vel_ = vel[rng_s]
+        else:
+            pose_ = pose[rng_f.astype(int)]
+            ypos = vralign['ybinned'][rng_f]
+            licks_ = np.hstack(licks[rng_f])
+            vel_ = vel[rng_f]
         ypos[ypos<3]=0
-        ypos=np.hstack((ypos*(gainf)).astype(int))  
-        df = pd.DataFrame(np.array([pose_, ypos]).T)
+        ypos=(ypos*(gainf)).astype(int)
+        df = pd.DataFrame(np.array([pose_, licks_, vel_, ypos]).T)
         # takes median and normalizes
-        circ_ep = np.hstack(df.groupby(1).median().values)
+        df_ = df.groupby(3).mean()
+        circ_ep = np.hstack(df_[0].values)
+        licks_ep = np.hstack(df_[1].values)
+        vel_ep = np.hstack(df_[2].values)
         rewloc = np.hstack(vralign['changeRewLoc'])[int(eps[i])]*(gainf)    
         # Create a Rectangle patch
-        normcirc_ep = (circ_ep-np.min(circ_ep))/(np.max(circ_ep)-np.min(circ_ep))        
+        normcirc_ep = gaussian_filter((circ_ep-np.min(circ_ep))/(np.max(circ_ep)-np.min(circ_ep)),1)        
         fig, ax = plt.subplots()
         ax.plot(normcirc_ep, color=color_traces[i])
         rect = patches.Rectangle((rewloc-rewsize/2, 0), rewsize, 1, linewidth=1, edgecolor='k', 
                     facecolor=color_traces[i], alpha=0.3)
         ax.add_patch(rect)
+        ax.plot(licks_ep, color='r', linestyle='dotted', label='Licks')        
+        vel_ep = gaussian_filter((vel_ep-np.min(vel_ep))/(np.max(vel_ep)-np.min(vel_ep)),1)        
+        ax.plot(vel_ep, color='slategray', linestyle='dashed', label = 'Velocity')        
         ax.set_ylim([0,1])
         ax.set_xticks(np.arange(0,max(ypos)+5,90))
         ax.set_xticklabels(np.arange(0,max(ypos)+5,90))
         ax.set_xlabel('Track Position (cm)')
         ax.set_ylabel(f'Normalized {pose_name}')
+        ax.set_title(f'Mouse: {pth}, epoch: {i+1}')
+        ax.legend()
+        plt.show()
+        fig.savefig(rf'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\{pth[:-2]}_pose_tuning_ep{i+1}.svg',
+            bbox_inches = 'tight', transparent = True)
 
     return
 
