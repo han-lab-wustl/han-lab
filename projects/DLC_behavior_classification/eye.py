@@ -9,6 +9,11 @@ import matplotlib as mpl
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 ################################FUNCTION DEFINITIONS################################
+
+def get_unrewarded_stops(vralign):
+    stops = vralign['forwardvel']==0 # 0 velocity
+    stop_ind = consecutive_stretch(stops)
+    
 def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     
     # example on how to open the pickle file
@@ -38,7 +43,7 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
         areas.append(area); circumferences.append(circumference)
     areas = np.array(areas); circumferences = np.array(circumferences)
     # run peri reward time
-    range_val = 5 #s
+    range_val = 10 #s
     binsize = 0.1 #s
     normmeanrew_t, meanrew, normrewall_t, \
         rewall = perireward_binned_activity(np.array(circumferences), \
@@ -49,10 +54,10 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
                         (vralign['rewards']==0.5).astype(int), 
                         vralign['timedFF'], range_val, binsize)
     normmeanvel_t, meanvel, normvelall_t, \
-    velall = perireward_binned_activity(vralign['licks'], \
+    velall = perireward_binned_activity(vralign['forwardvel'], \
                         (vralign['rewards']==0.5).astype(int), 
                         vralign['timedFF'], range_val, binsize)
-
+    # TODO: add to pickle structure
     return areas, circumferences, normmeanrew_t, \
             normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \
             lickall, normmeanvel_t, meanvel, normvelall_t, \
@@ -182,9 +187,9 @@ def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize):
         _type_: _description_
     """
     Rewindx = np.where(rewards)[0]
-    rewdFF = np.zeros((int(np.ceil(range_val * 2 / binsize)), len(Rewindx)))
+    rewdFF = np.ones((int(np.ceil(range_val * 2 / binsize)), len(Rewindx)))*np.nan
 
-    for rr in range(len(Rewindx)):
+    for rr in range(0,len(Rewindx)):
         rewtime = timedFF[Rewindx[rr]]
         currentrewchecks = np.where((timedFF > rewtime - range_val) & (timedFF <= rewtime + range_val))[0]
         currentrewcheckscell = consecutive_stretch(currentrewchecks) # gets consecutive stretch of reward ind
@@ -195,19 +200,17 @@ def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize):
         val = 0
         for bin_val in range(int(np.ceil(range_val * 2 / binsize))):
             val = bin_val+1
-            currentidxt = np.where((timedFF>(rewtime - range_val + (val * binsize) - binsize)) & \
-                                   (timedFF <= rewtime - range_val + val * binsize))[0]
-            checks = np.array(consecutive_stretch(currentidxt))
+            currentidxt = np.where((timedFF>(rewtime - range_val + (val * binsize) - binsize)) & (timedFF <= rewtime - range_val + val * binsize))[0]
+            checks = consecutive_stretch(currentidxt)
+            checks = [list(xx) for xx in checks]
             if len(checks[0]) > 0:
-                currentidxlogical = np.array([[np.isin(x, [xx[yy] for yy in currentrewardlogical for xx in currentrewcheckscell]) for x in check] for check in checks])
+                currentidxlogical = np.array([np.isin(x, currentrewcheckscell[currentrewardlogical][0]) \
+                                for x in checks])
                 for i,cidx in enumerate(currentidxlogical):
-                    if any(cidx):
-                        checkidx = checks[i][cidx]
+                    cidx = [bool(xx) for xx in cidx]
+                    if sum(cidx)>0:
+                        checkidx = np.array(np.array(checks)[i])[np.array(cidx)]
                         rewdFF[bin_val, rr] = np.nanmean(dFF[checkidx])
-                    else:
-                        rewdFF[bin_val, rr] = np.nan
-            else:
-                rewdFF[bin_val, rr] = np.nan
 
     meanrewdFF = np.nanmean(rewdFF, axis=1)    
     # allbins = np.array([round(-range_val + bin_val * binsize - binsize, 13) for bin_val in range(int(np.ceil(range_val * 2 / binsize)))])
