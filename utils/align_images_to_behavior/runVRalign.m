@@ -35,7 +35,7 @@ end
 % for old data
 clear all
 mouse_name = "e186";
-days = [1:51];
+days = [9:51];
 src = "Y:\sstcre_analysis\behavior";
 fmatsrc = 'Y:\sstcre_analysis\fmats';
 % add function path

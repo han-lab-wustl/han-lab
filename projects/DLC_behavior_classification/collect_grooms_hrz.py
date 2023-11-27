@@ -24,25 +24,27 @@ with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
 
 # TODO: comparison with hrz and random reward 
-hrz_summary = True
+hrz_summary = False
 groom_binary_dct = {}; trials_s = {}; yposgrs_dct_s = {};  yposgrs_dct_f = {}
-yposgrs_dct_p = {}; len_grooms_dct = {}
+yposgrs_dct_p = {}; len_grooms_dct = {}; starts_dct = {}; stops_dct = {}
 for i,row in mouse_df.iterrows():
-    try:
-        groom, starts, stops, \
-            yposgrs_s, yposgrs_f, yposgrs_p, tr_s, tr_f, \
-                    len_grooms = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls, \
-                        row,hrz_summary = hrz_summary)
-        nm = row['VR']
-        groom_binary_dct[nm] = groom
-        trials_s[nm] = (tr_s,tr_f)
-        yposgrs_dct_s[nm] = yposgrs_s
-        yposgrs_dct_f[nm] = yposgrs_f
-        yposgrs_dct_p[nm] = yposgrs_p 
-        len_grooms_dct[nm] = len_grooms
-    except Exception as e:
-            print(e)
-    if i%20==0: print(f'{i}/{len(mouse_df)}')   # counter
+        try:
+                groom, starts, stops, \
+                yposgrs_s, yposgrs_f, yposgrs_p, tr_s, tr_f, \
+                len_grooms = quantify_grooms_hrz.get_long_grooms_per_ep(dlcfls, \
+                                row,hrz_summary = hrz_summary)
+                nm = row['VR']
+                starts_dct[nm] = starts
+                stops_dct[nm] = stops
+                groom_binary_dct[nm] = groom
+                trials_s[nm] = (tr_s,tr_f)
+                yposgrs_dct_s[nm] = yposgrs_s
+                yposgrs_dct_f[nm] = yposgrs_f
+                yposgrs_dct_p[nm] = yposgrs_p 
+                len_grooms_dct[nm] = len_grooms
+        except Exception as e:
+                print(e)
+        if i%20==0: print(f'{i}/{len(mouse_df)}')   # counter
 
 
 # make figs of compiled data
@@ -97,8 +99,18 @@ plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\yppo
 len_grooms_ = np.array(list(len_grooms_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
 len_grooms_ = np.hstack(len_grooms_)
 fig, ax = plt.subplots()                                        
-ax.hist(len_grooms_/31.25, bins = 20, color = 'slategrey', edgecolor='black')
+ax.hist(np.round(len_grooms_/31.25,2), bins = 30, color = 'slategrey', edgecolor='black')
 ax.set_ylabel('Frequency')
 ax.set_xlabel('Duration of grooming bout (s)')
 plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\grooming_duration.svg',
             bbox_inches = 'tight', transparent = True)
+
+datadct = {}
+datadct['animals_groom'] = ans_groom
+datadct['ypos_rel_reward_successfultrials'] = rel_ypos_groom_s
+datadct['ypos_rel_reward_failedtrials'] = rel_ypos_groom_f
+datadct['length_groom_seconds'] = np.round(len_grooms_/31.25,2)
+datadct['session_per_animal'] = an_session
+savepth = r"Y:\DLC\dlc_mixedmodel2\grooming\grooming_data.p"
+with open(savepth, "wb") as fp:   #Pickling
+        pickle.dump(datadct, fp)

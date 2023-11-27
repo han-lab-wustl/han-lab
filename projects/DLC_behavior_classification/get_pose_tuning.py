@@ -13,12 +13,25 @@ pths = ['E201_05_May_2023_vr_dlc_align.p',
 for pth in pths:
     with open(os.path.join(src, pth),'rb') as fp: #unpickle
         vralign = pickle.load(fp)
+    
+    threshold = 0.99
     vralign['NoseTopPoint_y'][vralign['NoseTopPoint_likelihood'].astype('float32')<0.99]=np.nan
     vralign['NoseTip_y'][vralign['NoseTip_likelihood'].astype('float32')<0.99]=np.nan    
     vralign['NoseBottomPoint_y'][vralign['NoseBottomPoint_likelihood'].astype('float32') < 0.99] = 0
-    pose = np.nanmean(np.array([vralign['NoseTopPoint_y'],vralign['NoseTip_y'],
-                    vralign['NoseBottomPoint_y']]).astype('float32'), axis=0)
-    pose_name = 'Nose Y Position'
+    vralign['PawTop_x'][vralign['PawTop_likelihood'].astype('float32') < threshold] = 0
+    vralign['PawTop_y'][vralign['PawTop_likelihood'].astype('float32') < threshold] = 0
+    vralign['PawMiddle_x'][vralign['PawMiddle_likelihood'].astype('float32') < threshold] = 0
+    vralign['PawMiddle_y'][vralign['PawMiddle_likelihood'].astype('float32') < threshold] = 0
+    vralign['PawBottom_x'][vralign['PawBottom_likelihood'].astype('float32') < threshold] = 0
+    vralign['PawBottom_y'][vralign['PawBottom_likelihood'].astype('float32') < threshold] = 0
+    paw_y = np.nanmean(np.array([vralign['PawTop_y'],
+                    vralign['PawBottom_y'],vralign['PawMiddle_y']]),axis=0)
+
+
+    pose = paw_y
+    # np.nanmean(np.array([vralign['NoseTopPoint_y'],vralign['NoseTip_y'],
+    #                 vralign['NoseBottomPoint_y']]).astype('float32'), axis=0)
+    pose_name = 'Paw Y Position'
     # vralign['WhiskerUpper_x'][vralign['WhiskerUpper_likelihood'].astype('float32')<0.99]=np.nan
     # vralign['WhiskerUpper1_x'][vralign['WhiskerUpper1_likelihood'].astype('float32')<0.99]=np.nan
     # vralign['WhiskerUpper3_x'][vralign['WhiskerUpper3_likelihood'].astype('float32')<0.99]=np.nan
