@@ -19,7 +19,7 @@ dlcfls = r'Y:\DLC\dlc_mixedmodel2'#\for_analysis'
 with open(os.path.join(dlcfls,'mouse_df.p'),'rb') as fp: #unpickle
                 mouse_df = pickle.load(fp) 
 
-row = mouse_df.iloc[196]
+row = mouse_df.iloc[34]
 ################################
 def get_long_grooms_per_ep(dlcfls,row,hrz_summary = False,
 savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
@@ -43,7 +43,7 @@ savedst = r'Y:\DLC\dlc_mixedmodel2\figures',gainf=3/2):
     eps = np.hstack([list(eps), len(mat['changeRewLoc'])])    
     # default return
     groom, starts, stops, tr_s, tr_f, \
-          yposgrs_s, yposgrs_f, yposgrs_p, len_grooms = [np.nan]*9
+        yposgrs_s, yposgrs_f, yposgrs_p, len_grooms = [np.nan]*9
     # at least 2 epochs, rewarded hrz
     if 'HRZ' in mat['experiment'] and sum(mat['rewards']>0) and len(eps)>2: # only for hrz
         dfpth = os.path.join(dlcfls, row['DLC']) #.values[0]
@@ -174,8 +174,8 @@ def get_starts_stops_grooming(paw_x,paw_y,frame_thres=75):
     Returns:
         _type_: _description_
     """
-    paw_gf = scipy.ndimage.gaussian_filter(paw_y.values,3)
-    paw_gf_x = scipy.ndimage.gaussian_filter(paw_x.values,3)
+    paw_gf = scipy.ndimage.gaussian_filter(paw_y.values,30)
+    paw_gf_x = scipy.ndimage.gaussian_filter(paw_x.values,30)
     diffs = np.diff((paw_gf>0).astype(int),axis=0)
     starts = np.argwhere(diffs == 1).T[0]    
     stops = np.argwhere(diffs == -1).T[0]                   
@@ -217,3 +217,68 @@ def make_hrz_summary_fig(mat, licks, matfl, ybin_paw, starts,
     plt.close('all')
 
     return
+
+def consecutive_stretch(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+
+    if len(break_point) == 0:
+        return [x]
+
+    y = [x[:break_point[0]]]
+    for i in range(1, len(break_point)):
+        y.append(x[break_point[i - 1] + 1:break_point[i]])
+    y.append(x[break_point[-1] + 1:])
+    
+    return y
+
+def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize, 
+                            rewind = False):
+    """adaptation of gerardo's code to align IN BOTH TIME AND POSITION, dff or pose data to 
+    rewards within a certain window
+
+    Args:
+        dFF (_type_): _description_
+        rewards (_type_): _description_
+        timedFF (_type_): _description_
+        range_val (_type_): _description_
+        binsize (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if rewind:
+        Rewindx = rewards
+    else:
+        Rewindx = np.where(rewards)[0]
+    rewdFF = np.ones((int(np.ceil(range_val * 2 / binsize)), len(Rewindx)))*np.nan
+
+    for rr in range(0,len(Rewindx)):
+        rewtime = timedFF[Rewindx[rr]]
+        currentrewchecks = np.where((timedFF > rewtime - range_val) & (timedFF <= rewtime + range_val))[0]
+        currentrewcheckscell = consecutive_stretch(currentrewchecks) # gets consecutive stretch of reward ind
+        # check for missing vals
+        currentrewcheckscell = [xx for xx in currentrewcheckscell if len(xx)>0]
+        currentrewcheckscell = np.array(currentrewcheckscell) # reformat for py
+        currentrewardlogical = np.array([sum(Rewindx[rr]==x).astype(bool) for x in currentrewcheckscell])
+        val = 0
+        for bin_val in range(int(np.ceil(range_val * 2 / binsize))):
+            val = bin_val+1
+            currentidxt = np.where((timedFF>(rewtime - range_val + (val * binsize) - binsize)) & (timedFF <= rewtime - range_val + val * binsize))[0]
+            checks = consecutive_stretch(currentidxt)
+            checks = [list(xx) for xx in checks]
+            if len(checks[0]) > 0:
+                currentidxlogical = np.array([np.isin(x, currentrewcheckscell[currentrewardlogical][0]) \
+                                for x in checks])
+                for i,cidx in enumerate(currentidxlogical):
+                    cidx = [bool(xx) for xx in cidx]
+                    if sum(cidx)>0:
+                        checkidx = np.array(np.array(checks)[i])[np.array(cidx)]
+                        rewdFF[bin_val, rr] = np.nanmean(dFF[checkidx])
+
+    meanrewdFF = np.nanmean(rewdFF, axis=1)    
+    # allbins = np.array([round(-range_val + bin_val * binsize - binsize, 13) for bin_val in range(int(np.ceil(range_val * 2 / binsize)))])
+    normmeanrewdFF = (meanrewdFF-np.min(meanrewdFF)) / (np.max(meanrewdFF) - np.min(meanrewdFF))
+    normrewdFF = np.array([(xx-np.min(xx))/((np.max(xx)-np.min(xx))) for xx in rewdFF.T])
+    return normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF
+################################FUNCTION DEFINITIONS################################

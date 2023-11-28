@@ -16,7 +16,7 @@ from math import ceil
 import datetime
 import quantify_grooms_hrz
 from collections import Counter
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
 vrdir =  r'Y:\DLC\VR_data\dlc' # copy of vr data, curated to remove badly labeled files
 dlcfls = r'Y:\DLC\dlc_mixedmodel2'#\for_analysis'
 
@@ -60,17 +60,8 @@ an_nms = [xx[:4].capitalize() for xx in ans_groom]
 an_nms_unique = np.unique(np.array(an_nms))
 an_session = Counter(an_nms)
 
-# categories quant
-# counts_groom = np.array(list(counts_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
-# cat = ['dark time', 'before rew', 'after rew', 'rew zone']
-# counts_groom = np.array([np.array(xx) for xx in counts_groom])
-# bar = np.sum(counts_groom,0)
-# fig, ax = plt.subplots()                                        
-# ax.bar(cat, bar)
-# ax.set_title(f'n = {len(an_nms)} sessions, {len(an_nms_unique)} animals')
-# ax.set_ylabel('number of grooming bouts')
-
-# positive relative to reward quant
+################################## fig 1 ##################################
+# position relative to reward quant
 %matplotlib inline
 import math
 rel_ypos_groom_s = np.array(list(yposgrs_dct_s.values()))[~np.isnan(ans_binary)][ans_binary_]
@@ -93,8 +84,8 @@ ax.legend()
 # count number of sessions per animal
 print(Counter(an_nms))
 plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\yppos_grooming_relative_to_rew.svg',
-            bbox_inches = 'tight', transparent = True)
-
+        bbox_inches = 'tight', transparent = True)
+################################## fig 2 ##################################
 # average time of long grooms
 len_grooms_ = np.array(list(len_grooms_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
 len_grooms_ = np.hstack(len_grooms_)
@@ -103,7 +94,7 @@ ax.hist(np.round(len_grooms_/31.25,2), bins = 30, color = 'slategrey', edgecolor
 ax.set_ylabel('Frequency')
 ax.set_xlabel('Duration of grooming bout (s)')
 plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\grooming_duration.svg',
-            bbox_inches = 'tight', transparent = True)
+        bbox_inches = 'tight', transparent = True)
 
 datadct = {}
 datadct['animals_groom'] = ans_groom
@@ -111,6 +102,85 @@ datadct['ypos_rel_reward_successfultrials'] = rel_ypos_groom_s
 datadct['ypos_rel_reward_failedtrials'] = rel_ypos_groom_f
 datadct['length_groom_seconds'] = np.round(len_grooms_/31.25,2)
 datadct['session_per_animal'] = an_session
+datadct['starts'] = starts_dct
+datadct['stops'] = stops_dct
 savepth = r"Y:\DLC\dlc_mixedmodel2\grooming\grooming_data.p"
 with open(savepth, "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
+
+# start trigger relative to tongue
+src = r'Y:\DLC\dlc_mixedmodel2'
+paws = []; tongues = []
+for an in ans_groom:
+        if 'T10_' in an or 'T11_' in an:
+                pth = an[:-18]+'_vr_dlc_align.p'
+        else:
+                pth = an[:-18]+'vr_dlc_align.p'
+        print(pth)
+        with open(os.path.join(src,pth),'rb') as fp: #unpickle
+                vralign = pickle.load(fp) 
+        starts = starts_dct[an]
+        #filter
+        threshold = 0.99
+        vralign['PawTop_x'][vralign['PawTop_likelihood'].astype('float32') < threshold] = 0
+        vralign['PawTop_y'][vralign['PawTop_likelihood'].astype('float32') < threshold] = 0
+        vralign['PawMiddle_x'][vralign['PawMiddle_likelihood'].astype('float32') < threshold] = 0
+        vralign['PawMiddle_y'][vralign['PawMiddle_likelihood'].astype('float32') < threshold] = 0
+        vralign['PawBottom_x'][vralign['PawBottom_likelihood'].astype('float32') < threshold] = 0
+        vralign['PawBottom_y'][vralign['PawBottom_likelihood'].astype('float32') < threshold] = 0
+        vralign['TongueTop_x'][vralign['TongueTop_likelihood'].astype('float32') < threshold] = 0
+        vralign['TongueTop_y'][vralign['TongueTop_likelihood'].astype('float32') < threshold] = 0
+        vralign['TongueTip_x'][vralign['TongueTip_likelihood'].astype('float32') < threshold] = 0
+        vralign['TongueTip_y'][vralign['TongueTip_likelihood'].astype('float32') < threshold] = 0
+        vralign['TongueBottom_x'][vralign['TongueBottom_likelihood'].astype('float32') < threshold] = 0
+        vralign['TongueBottom_y'][vralign['TongueBottom_likelihood'].astype('float32') < threshold] = 0
+
+        paw_y = np.nanmean(np.array([vralign['PawTop_y'],
+                vralign['PawBottom_y'],vralign['PawMiddle_y']]),axis=0)
+        paw = paw_y>0
+        tongue=(np.nanmean(np.array([vralign['TongueTip_y'],
+                vralign['TongueTop_y'],
+                vralign['TongueBottom_y']]),axis=0)).astype(int)
+        range_val = 10; binsize=0.1
+        normmeanstartpaw, meanstartpaw, normstartpaw, startpaw = perireward_binned_activity(paw_y, starts, vralign['timedFF'],
+                range_val, binsize, rewind = True)
+        normmeanstarttongue, meanstarttongue, normstarttongue, starttongue = perireward_binned_activity(tongue, starts, vralign['timedFF'],
+                range_val, binsize, rewind = True)
+        paws.append(startpaw)
+        tongues.append(starttongue)
+
+rng = (range_val/binsize)*2
+med = np.median(np.arange(0,rng+1)).astype(int)
+plotp = []; plott = []
+for i,p in enumerate(paws):        
+        trs = p.shape[1]
+        for tr in range(trs):
+                if sum(p[:med,tr])>0:
+                        print("bad start")
+                else:
+                        plotp.append(p[:,tr])
+                        plott.append(tongues[i][:,tr])
+
+fig, axes = plt.subplots(2,1)
+ax = axes[0]
+im = ax.imshow(np.array(plotp))
+divider = make_axes_locatable(ax) 
+cax = divider.append_axes('right', size='3%', pad=0.1) 
+fig.colorbar(im, cax=cax, orientation='vertical')
+ax.set_xticks([])
+ax.set_ylabel('No. of grooms')
+ax.axvline(med, color='white', linestyle='--')
+ax.set_title('Paw Y position')
+ax = axes[1]
+im = ax.imshow(np.array(plott), cmap = 'Reds')
+ax.axvline(med, color='k', linestyle='--')
+divider = make_axes_locatable(ax) 
+cax = divider.append_axes('right', size='3%', pad=0.1) 
+fig.colorbar(im, cax=cax, orientation='vertical')
+ax.set_ylabel('No. of grooms')
+ax.set_xlabel('Time from grooming start (s)')
+ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,20))
+ax.set_xticklabels(np.arange(-range_val,range_val+1,2))
+ax.set_title('Tongue Y Position')
+plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\start_trig_grooms_with_tongue.svg',
+        bbox_inches = 'tight', transparent = True)
