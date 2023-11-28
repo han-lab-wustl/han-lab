@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e218";
-days = [30];
+days = [33];
 src = "X:\vipcre";
 
 for day=days
@@ -33,9 +33,10 @@ for day=days
 end
 %%
 % for old data
-mouse_name = "E145";
-days = [4:7,9:12];
-src = "X:\pyramidal_cell_data";
+clear all
+mouse_name = "e186";
+days = [9:51];
+src = "Y:\sstcre_analysis\behavior";
 fmatsrc = 'Y:\sstcre_analysis\fmats';
 % add function path
 

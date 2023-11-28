@@ -74,7 +74,6 @@ if __name__ == "__main__":
     # will not work otherwise!!!
     # you would want to run `fix_vr_data...` on the whole VR_data folder to avoid 
     # errors
-    # uncomment below if you don't want to re-run step 0 but want the mouse df 
     # if you just want to remake the mouse df after deleting mice
     # you can run step 0 and go directly to step 2
     # (do not need to remake vr_align.p as you have just deleted some mice)
