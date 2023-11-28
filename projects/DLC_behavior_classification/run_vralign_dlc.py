@@ -12,10 +12,10 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"I:\dlc_inference\230508_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\dlc_inference\230509_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\dlc_inference\230510_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\dlc_inference\230513_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
+        dlccsv = [r"I:\eye_videos\230508_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\eye_videos\230509_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\eye_videos\230510_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\eye_videos\230513_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
         vrfl = [r"D:\adina_vr_files\VR_data\E200_08_May_2023_time(08_54_41).mat",
                 r"D:\adina_vr_files\VR_data\E200_09_May_2023_time(07_43_24).mat",
                 r"D:\adina_vr_files\VR_data\E200_10_May_2023_time(08_58_45).mat",

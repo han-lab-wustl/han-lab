@@ -32,8 +32,8 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     centroids_x = []; centroids_y = []
     areas = []; circumferences = []
     for i in range(len(vralign['EyeNorthWest_y'])):
-        eye_x = np.array([vralign[xx+"_x"] for xx in eye])
-        eye_y = np.array([vralign[xx+"_y"] for xx in eye])
+        eye_x = np.array([vralign[xx+"_x"][i] for xx in eye])
+        eye_y = np.array([vralign[xx+"_y"][i] for xx in eye])
         eye_coords = np.array([eye_x, eye_y]).astype(float)
         centroid_x, centroid_y = centeroidnp(eye_coords)
         area, circumference = get_eye_features([(vralign[xx+"_x"][i], 
@@ -58,7 +58,7 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
                         (vralign['rewards']==0.5).astype(int), 
                         vralign['timedFF'], range_val, binsize)
     # TODO: add to pickle structure
-    return areas, circumferences, normmeanrew_t, \
+    return areas, circumferences, centroids_x, centroids_y, normmeanrew_t, \
             normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \
             lickall, normmeanvel_t, meanvel, normvelall_t, \
             velall

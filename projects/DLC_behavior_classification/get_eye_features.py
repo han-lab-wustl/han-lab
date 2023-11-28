@@ -1,7 +1,7 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas as pd, sys
+import numpy as np, pandas as pd, sys, math
 import os, cv2, pickle
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
@@ -16,47 +16,70 @@ mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
 mpl.rcParams["xtick.major.size"] = 6
 mpl.rcParams["ytick.major.size"] = 6
-if __name__ == "__main__":
+if __name__ == "__main__": # TODO; compare with diameter
     src = r"I:\pupil_pickles"
-    sessions = os.listdir(src)    
-    normall_s = [] # get multiple sessions
-    normlickmean_s = []; lickmean_s = []
-    normvelmean_s = []; velmean_s = []
-    circumferences_s = []
-    for session in sessions:
+    add_to_dct = True # add to previous datadct
+    if add_to_dct:
+        with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
+            datadct = pickle.load(fp)
+        sessions_analyzed = datadct['sessions']
+        sessions_to_analyze = [xx for xx in os.listdir(src) if xx not in sessions_analyzed]
+        c_x = datadct['centroids_x_all_sessions']
+        c_y = datadct['centroids_y_all_sessions']
+        normall_s = datadct['perirew_norm_all_sessions']
+        normlickmean_s = datadct['perilickmean_norm_all_sessions']
+        lickmean_s = datadct['perilickmean_all_sessions']
+        normvelmean_s= datadct['perivelmean_norm_all_sessions']
+        velmean_s = datadct['perivelmean_all_sessions']
+        circumferences = datadct['circumferences_all_sessions']
+        sessions = [sessions_analyzed, sessions_to_analyze]
+    else:    
+        normall_s = [] # get multiple sessions
+        normlickmean_s = []; lickmean_s = []
+        normvelmean_s = []; velmean_s = []
+        circumferences_s = []
+        c_x = []; c_y = []
+        sessions = os.listdir(src)   
+        sessions_to_analyze = sessions 
+    for session in sessions_to_analyze:
         print(session)
         pdst = os.path.join(src, session)
-        areas, circumferences, normmeanrew_t, \
+        areas, circumferences, centroids_x, centroids_y, normmeanrew_t, \
             normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \
             lickall, normmeanvel_t, meanvel, normvelall_t, \
             velall = eye.get_area_circumference_from_vralign(pdst, 3/2, 10)
+        c_x.append(centroids_x)
+        c_y.append(centroids_y)
         normall_s.append(normrewall_t)
         normlickmean_s.append(normmeanlicks_t)
         lickmean_s.append(meanlicks)
-        normvelmean_s.append(normmeanlicks_t)
+        normvelmean_s.append(normmeanvel_t)
         velmean_s.append(meanvel)
         circumferences_s.append(circumferences)
     datadct= {}
+    datadct['sessions'] = list(np.hstack(np.array(sessions)))
+    datadct['centroids_x_all_sessions'] = c_x
+    datadct['centroids_y_all_sessions'] = c_y
     datadct['perirew_norm_all_sessions'] = normall_s
     datadct['perilickmean_norm_all_sessions'] = normlickmean_s
     datadct['perilickmean_all_sessions'] = lickmean_s
     datadct['perivelmean_norm_all_sessions'] = normvelmean_s
     datadct['perivelmean_all_sessions'] = velmean_s
     datadct['circumferences_all_sessions'] = circumferences
-    with open(r"I:\pupil_circumference_data.p", "wb") as fp:   #Pickling
+    with open(r"I:\pupil_data.p", "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
-    with open(pdst, "rb") as fp: #unpickle
-        vralign = pickle.load(fp)
+#%%
     # plot perireward pupil
     range_val = 10 #s
     binsize = 0.1 #s
-        
+    ##################################### fig 1 #####################################
+    %matplotlib inline
     fig, axes = plt.subplots(3,1, gridspec_kw={'height_ratios': [3, 1, 1]})
     ax = axes[0]
-    normall = normall_s[session]
+    
     for normall in normall_s:
         # for rew in normall:
-        # plot individual trials in grey
+        # plot average of individual trials in grey
         ax.plot(np.nanmean(normall,axis=0), color='slategray', alpha=0.2)
     meanplot = []
     for mean in normall_s:
@@ -68,6 +91,7 @@ if __name__ == "__main__":
     ax.set_ylabel('Normalized Pupil \n Circumference')
     ax.set_xticks([])
     ax = axes[1]
+    ax.set_ylim([0,1])
     for lick in lickmean_s:
         # lick = lickmean_s[session]
         ax.plot(lick, color='r', linewidth=0.5)
@@ -85,9 +109,118 @@ if __name__ == "__main__":
     ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
     ax.set_xticklabels(np.arange(-range_val,range_val+1))
     ax.set_xlabel('Time From Reward (s)')
-    fig.suptitle('n = 10 sessions, 3 animals')
+    ax.set_ylim([0,100])
+    fig.suptitle('n = 14 sessions, 4 animals')
     plt.savefig(r"C:\Users\workstation2\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil.svg", \
                 bbox_inches='tight',transparent=True)
+    
+    ##################################### fig 2 #####################################
+    # trial by trial subplot
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    for i,normall in enumerate(normall_s):
+        # for rew in normall:
+        # plot average of individual trials in grey
+        fig, axes = plt.subplots(3,1, gridspec_kw={'height_ratios': [3, 1, 1]})
+        ax = axes[0]
+        im = ax.imshow(normall)
+        ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+        ax.axvline(np.median(np.arange(0,le n(normall.T))+5), color='aqua', linestyle='--')
+        ax.set_xticks([])
+        ax.set_ylabel('Trials')
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='3%', pad=0.1)
+        fig.colorbar(im, cax=cax, orientation='vertical')        
+        ax = axes[1]
+        ax.plot(lickmean_s[i], color='r')
+        ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+        ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+        ax.set_xticks([])
+        ax.set_ylabel('Mean Lick \n Rate')
+        ax = axes[2]
+        ax.plot(velmean_s[i], color='slategrey')
+        ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+        ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+        ax.set_ylabel('Mean \n Velocity \n (cm/s)')
+        ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
+        ax.set_xticklabels(np.arange(-range_val,range_val+1))
+        ax.set_xlabel('Time From Reward (s)')
+        fig.suptitle(sessions[i])
+        plt.savefig(rf"C:\Users\workstation2\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil_per_trial_{sessions[i][:-15]}.svg", \
+                bbox_inches='tight',transparent=True)
+        
+    ##################################### fig 3 #####################################    
+    # angle of centroid relative to what?
+    # ax.plot(c_x[0])
+    # ax.plot(c_y[0])
+    # run peri reward time
+    range_val = 10 #s
+    binsize = 0.1 #s
+    pdst = os.path.join(src, sessions_analyzed[10])
+    with open(pdst, "rb") as fp: #unpickle
+        vralign = pickle.load(fp)
+    # angle between 2 points
+    xdist = vralign['EyeLidEast_x']-c_x[10]
+    ydist = vralign['EyeLidSouthWest_y']-c_y[10]
+    rad = [(math.atan(ydist[i]/xx)) for i,xx in enumerate(xdist)]
+    x = c_x[10]
+    # zscore = (c_x[7]-np.nanmean(c_x[7]))/np.std(c_x[7])
+    # zscore = c_y[7]
+    normmeanrew_t, meanrew, normrewall_t, \
+        rewall = eye.perireward_binned_activity(np.array(x), \
+                            (vralign['rewards']==0.5).astype(int), 
+                            vralign['timedFF'], range_val, binsize)
+    normmeanlicks_t, meanlicks, normlickall_t, \
+    lickall = eye.perireward_binned_activity(vralign['licks'], \
+                        (vralign['rewards']==0.5).astype(int), 
+                        vralign['timedFF'], range_val, binsize)
+    normmeanvel_t, meanvel, normvelall_t, \
+    velall = eye.perireward_binned_activity(vralign['forwardvel'], \
+                        (vralign['rewards']==0.5).astype(int), 
+                        vralign['timedFF'], range_val, binsize)
+    # get failed trials
+    c_x_ = c_x[10]
+    eps = list(np.where(vralign['changeRewLoc']>0)[0])
+    eps.append(len(vralign['changeRewLoc']))
+    rewlocs = vralign['changeRewLoc'][vralign['changeRewLoc']>0]
+    for i,ep in enumerate(eps):
+        eprng = np.arange(ep,eps[i+1])
+        c_x_ep = np.array(c_x_)[eprng]
+        rew_ep = np.hstack(vralign['rewards'])[eprng]
+        rewloc = rewlocs[ep]
+        ypos = vralign['ybinned'][eprng]
+        successtrialtable = []
+        failedtrialtable = []
+        trials = vralign['trialnum'][eprng]
+        for trial in np.unique(trials)[:-1]:
+            c_x_tr = c_x_ep[np.hstack(trials==trial)]
+            rew_tr = rew_ep[np.hstack(trials==trial)]
+            ypos_tr = ypos[np.hstack(trials==trial)]
+            rewloc_tr = (np.hstack(ypos_tr>=rewloc) & np.hstack(ypos_tr<=rewloc+1))
+            print(np.where(rewloc_tr))
+            if sum(rew_tr)==1.5:
+                successtrialtable.append([c_x_tr, rewloc_tr])
+            elif sum(rew_tr)==0:
+                failedtrialtable.append([c_x_tr, rewloc_tr])
+            
+    # normalize from -1 to 1
+    norm = []
+    for rew in rewall.T:
+        norm.append(2*((rew-np.min(rew)) / (np.max(rew)-np.min(rew)))-1)
+    norm = np.array(norm)   
+    fig, axes = plt.subplots()
+    axes.imshow(norm[:,:]) 
+    fig, axes = plt.subplots(3,1)
+    axes[0].imshow(norm[:,:])
+    axes[1].imshow(normlickall_t[:,:],cmap='Reds')
+    axes[2].imshow(velall.T[:,:],cmap='Greys')
+    x = 13
+    plt.plot(norm[x])
+    plt.plot(normlickall_t[x])
+    plt.plot(normvelall_t[x])
+    for n in norm:
+        ax.plot(norm)
+    # TODO: add to pickle structure
+    
 # #%%
         
 # # run peri reward LOCATION????????
@@ -151,3 +284,5 @@ if __name__ == "__main__":
     # ax.set_ylabel('Position (cm)')
     # plt.savefig(r"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\pupil_in_session.svg", \
     #                 bbox_inches='tight', transparent=True)
+
+# %%
