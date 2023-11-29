@@ -64,7 +64,7 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
             velall
 
 def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
-    pose_name, success=True):
+    pose_name, savedst, success=True):
     # get ep 1 all trials averaged (successes/fails?)
     # essentially make a tuning curve    
     try:
@@ -132,7 +132,7 @@ def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
         ax.set_title(f'Mouse: {pth}, epoch: {i+1}')
         ax.legend()
         plt.show()
-        fig.savefig(rf'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\{pth[:-2]}_pose_tuning_ep{i+1}.svg',
+        fig.savefig(os.path.join(savedst, f'{pth[:-2]}_pose_tuning_ep{i+1}.svg'),
             bbox_inches = 'tight', transparent = True)
 
     return

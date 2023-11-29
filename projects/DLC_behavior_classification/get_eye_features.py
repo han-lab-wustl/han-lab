@@ -18,7 +18,7 @@ mpl.rcParams["xtick.major.size"] = 6
 mpl.rcParams["ytick.major.size"] = 6
 if __name__ == "__main__": # TODO; compare with diameter
     src = r"I:\pupil_pickles"
-    add_to_dct = True # add to previous datadct
+    add_to_dct = False # add to previous datadct
     if add_to_dct:
         with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
             datadct = pickle.load(fp)
@@ -35,8 +35,8 @@ if __name__ == "__main__": # TODO; compare with diameter
         sessions = [sessions_analyzed, sessions_to_analyze]
     else:    
         normall_s = [] # get multiple sessions
-        normlickmean_s = []; lickmean_s = []
-        normvelmean_s = []; velmean_s = []
+        normlickmean_s = []; lickmean_s = []; lickall_s = []
+        normvelmean_s = []; velmean_s = []; velall_s = []
         circumferences_s = []
         c_x = []; c_y = []
         sessions = os.listdir(src)   
@@ -53,8 +53,10 @@ if __name__ == "__main__": # TODO; compare with diameter
         normall_s.append(normrewall_t)
         normlickmean_s.append(normmeanlicks_t)
         lickmean_s.append(meanlicks)
+        lickall_s.append(lickall)
         normvelmean_s.append(normmeanvel_t)
         velmean_s.append(meanvel)
+        velall_s.append(velall)
         circumferences_s.append(circumferences)
     datadct= {}
     datadct['sessions'] = list(np.hstack(np.array(sessions)))
@@ -66,6 +68,8 @@ if __name__ == "__main__": # TODO; compare with diameter
     datadct['perivelmean_norm_all_sessions'] = normvelmean_s
     datadct['perivelmean_all_sessions'] = velmean_s
     datadct['circumferences_all_sessions'] = circumferences
+    datadct['perilick_all_sessions'] = lickall_s
+    datadct['perivel_all_sessions'] = velall_s
     with open(r"I:\pupil_data.p", "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
 #%%
@@ -124,18 +128,18 @@ if __name__ == "__main__": # TODO; compare with diameter
         ax = axes[0]
         im = ax.imshow(normall)
         ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-        ax.axvline(np.median(np.arange(0,le n(normall.T))+5), color='aqua', linestyle='--')
+        ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
         ax.set_xticks([])
         ax.set_ylabel('Trials')
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='3%', pad=0.1)
         fig.colorbar(im, cax=cax, orientation='vertical')        
         ax = axes[1]
-        ax.plot(lickmean_s[i], color='r')
+        im = ax.imshow(lickmean_s[i], color='r')
         ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
         ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
         ax.set_xticks([])
-        ax.set_ylabel('Mean Lick \n Rate')
+        ax.set_ylabel('Lick \n Rate')
         ax = axes[2]
         ax.plot(velmean_s[i], color='slategrey')
         ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
@@ -177,31 +181,6 @@ if __name__ == "__main__": # TODO; compare with diameter
     velall = eye.perireward_binned_activity(vralign['forwardvel'], \
                         (vralign['rewards']==0.5).astype(int), 
                         vralign['timedFF'], range_val, binsize)
-    # get failed trials
-    c_x_ = c_x[10]
-    eps = list(np.where(vralign['changeRewLoc']>0)[0])
-    eps.append(len(vralign['changeRewLoc']))
-    rewlocs = vralign['changeRewLoc'][vralign['changeRewLoc']>0]
-    for i,ep in enumerate(eps):
-        eprng = np.arange(ep,eps[i+1])
-        c_x_ep = np.array(c_x_)[eprng]
-        rew_ep = np.hstack(vralign['rewards'])[eprng]
-        rewloc = rewlocs[ep]
-        ypos = vralign['ybinned'][eprng]
-        successtrialtable = []
-        failedtrialtable = []
-        trials = vralign['trialnum'][eprng]
-        for trial in np.unique(trials)[:-1]:
-            c_x_tr = c_x_ep[np.hstack(trials==trial)]
-            rew_tr = rew_ep[np.hstack(trials==trial)]
-            ypos_tr = ypos[np.hstack(trials==trial)]
-            rewloc_tr = (np.hstack(ypos_tr>=rewloc) & np.hstack(ypos_tr<=rewloc+1))
-            print(np.where(rewloc_tr))
-            if sum(rew_tr)==1.5:
-                successtrialtable.append([c_x_tr, rewloc_tr])
-            elif sum(rew_tr)==0:
-                failedtrialtable.append([c_x_tr, rewloc_tr])
-            
     # normalize from -1 to 1
     norm = []
     for rew in rewall.T:
@@ -219,9 +198,71 @@ if __name__ == "__main__": # TODO; compare with diameter
     plt.plot(normvelall_t[x])
     for n in norm:
         ax.plot(norm)
-    # TODO: add to pickle structure
-    
-# #%%
+#%%    
+def tolerant_mean(arrs):
+    lens = [len(i) for i in arrs]
+    arr = np.ma.empty((np.max(lens),len(arrs)))
+    arr.mask = True
+    for idx, l in enumerate(arrs):
+        arr[:len(l),idx] = l
+    return arr.mean(axis = -1), arr.std(axis=-1)
+
+# get failed trials
+rewsize = 15
+c_x_ = c_x[10]
+pdst = os.path.join(src, sessions_analyzed[10])
+with open(pdst, "rb") as fp: #unpickle
+    vralign = pickle.load(fp)
+
+eps = list(np.where(vralign['changeRewLoc']>0)[0])
+eps.append(len(vralign['changeRewLoc']))
+rewlocs = vralign['changeRewLoc'][vralign['changeRewLoc']>0]
+for i,ep in enumerate(eps):
+    eprng = np.arange(ep,eps[i+1])
+    c_x_ep = np.array(c_x_)[eprng]
+    rew_ep = np.hstack(vralign['rewards'])[eprng]
+    rewloc = rewlocs[i]
+    ypos = vralign['ybinned'][eprng]
+    successtrialtable = []
+    failedtrialtable = []
+    trials = vralign['trialnum'][eprng]
+    for trial in np.unique(trials)[:-1]:
+        c_x_tr = c_x_ep[np.hstack(trials==trial)]
+        rew_tr = rew_ep[np.hstack(trials==trial)]
+        ypos_tr = ypos[np.hstack(trials==trial)]
+        rewloc_tr = (np.hstack(ypos_tr>=rewloc) & np.hstack(ypos_tr<=rewloc+2))
+        ypos_ =np.hstack(ypos_tr).astype(int)
+        df = pd.DataFrame(np.array([c_x_tr, rewloc_tr, ypos_]).T)
+        # takes median and normalizes
+        df_ = df.groupby(2).mean()
+        c_x_tr_ = np.hstack(df_[0].values)
+        rewloc_tr_ = np.hstack(df_[1].values)
+        if sum(rew_tr)==1.5:
+            successtrialtable.append([c_x_tr_, rewloc_tr_])
+        elif sum(rew_tr)==0:
+            failedtrialtable.append([c_x_tr_, rewloc_tr_])
+    fig, ax = plt.subplots()
+    for s in successtrialtable:
+        ax.plot(s[0], color='slategray', alpha=0.2)
+    y, error = tolerant_mean(np.array([xx[0] for xx in successtrialtable]))
+    ax.plot(y, 'k')
+    ymin,ymax = ax.get_ylim()
+    rect = patches.Rectangle((rewloc-rewsize/2, ymin), rewsize, ymax, 
+                linewidth=1, edgecolor='k', 
+            facecolor='aqua', alpha=0.3)
+    ax.add_patch(rect)
+    ax.set_title(f'ep{i+1}, successful trials')
+    fig, ax = plt.subplots()
+    for s in failedtrialtable:
+        ax.plot(s[0], color='slategray', alpha=0.2)        
+    y, error = tolerant_mean(np.array([xx[0] for xx in failedtrialtable]))
+    ax.plot(y, 'k')
+    ymin,ymax = ax.get_ylim()
+    rect = patches.Rectangle((rewloc-rewsize/2, ymin), rewsize, ymax, 
+                linewidth=1, edgecolor='k', 
+            facecolor='aqua', alpha=0.3)
+    ax.add_patch(rect)
+    ax.set_title(f'ep{i+1}, failed trials')
         
 # # run peri reward LOCATION????????
 # range_val = 50 #cm
