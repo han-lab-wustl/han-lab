@@ -7,11 +7,11 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 #analyze videos and copy vr files before this step
 import matplotlib as mpl
 mpl.use('TkAgg')
-mpl.rcParams["pdf.fonttype"] = 42
-mpl.rcParams["ps.fonttype"] = 42
+mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 6
 mpl.rcParams["ytick.major.size"] = 6
 import matplotlib.pyplot as plt
+plt.rcParams["font.family"] = "Arial"
 from math import ceil 
 import datetime
 import quantify_grooms_hrz
@@ -46,16 +46,27 @@ for i,row in mouse_df.iterrows():
                 print(e)
         if i%20==0: print(f'{i}/{len(mouse_df)}')   # counter
 
-
 # make figs of compiled data
 ans_binary = np.array(list(groom_binary_dct.values()))
 ans_binary_ = ans_binary[~np.isnan(ans_binary)].astype(bool)
 ans = np.array(list(groom_binary_dct.keys()))[~np.isnan(ans_binary)]
-
 # based on this, most animals groom within a session
 ans_groom = ans[ans_binary_]
 ans_no_groom = ans[~ans_binary_]
+an_nms = [xx[:4].capitalize() for xx in ans_groom]
+an_nms_unique = np.unique(np.array(an_nms))
+an_session = Counter(an_nms)
 
+# or import saved data
+savepth = r"Y:\DLC\dlc_mixedmodel2\grooming\grooming_data.p"
+with open(savepth, "rb") as fp: #unpickle
+        datadct = pickle.load(fp)
+starts_dct = datadct['starts']
+ans_groom = datadct['animals_groom']
+rel_ypos_groom_s = datadct['ypos_rel_reward_successfultrials']
+rel_ypos_groom_f = datadct['ypos_rel_reward_failedtrials']
+len_grooms_seconds = datadct['length_groom_seconds']
+an_session = datadct['session_per_animal']
 an_nms = [xx[:4].capitalize() for xx in ans_groom]
 an_nms_unique = np.unique(np.array(an_nms))
 an_session = Counter(an_nms)
@@ -89,8 +100,9 @@ plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\yppo
 # average time of long grooms
 len_grooms_ = np.array(list(len_grooms_dct.values()))[~np.isnan(ans_binary)][ans_binary_]
 len_grooms_ = np.hstack(len_grooms_)
+len_grooms_seconds = np.round(len_grooms_/31.25,2)
 fig, ax = plt.subplots()                                        
-ax.hist(np.round(len_grooms_/31.25,2), bins = 30, color = 'slategrey', edgecolor='black')
+ax.hist(len_grooms_seconds, bins = 30, color = 'slategrey', edgecolor='black')
 ax.set_ylabel('Frequency')
 ax.set_xlabel('Duration of grooming bout (s)')
 plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\grooming_duration.svg',
@@ -107,6 +119,7 @@ datadct['stops'] = stops_dct
 savepth = r"Y:\DLC\dlc_mixedmodel2\grooming\grooming_data.p"
 with open(savepth, "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
+################################## fig 2 ##################################
 
 # start trigger relative to tongue
 src = r'Y:\DLC\dlc_mixedmodel2'
@@ -150,12 +163,12 @@ for an in ans_groom:
         tongues.append(starttongue)
 
 rng = (range_val/binsize)*2
-med = np.median(np.arange(0,rng+1)).astype(int)
+med = np.median(np.arange(0,rng+1)).astype(int)+4
 plotp = []; plott = []
 for i,p in enumerate(paws):        
         trs = p.shape[1]
         for tr in range(trs):
-                if sum(p[:med,tr])>0:
+                if sum(p[:med-1,tr])>0:
                         print("bad start")
                 else:
                         plotp.append(p[:,tr])
@@ -163,24 +176,26 @@ for i,p in enumerate(paws):
 
 fig, axes = plt.subplots(2,1)
 ax = axes[0]
-im = ax.imshow(np.array(plotp))
-divider = make_axes_locatable(ax) 
-cax = divider.append_axes('right', size='3%', pad=0.1) 
-fig.colorbar(im, cax=cax, orientation='vertical')
-ax.set_xticks([])
-ax.set_ylabel('No. of grooms')
-ax.axvline(med, color='white', linestyle='--')
-ax.set_title('Paw Y position')
-ax = axes[1]
-im = ax.imshow(np.array(plott), cmap = 'Reds')
+im = ax.imshow(np.array(plott)>0, cmap = 'Reds')
 ax.axvline(med, color='k', linestyle='--')
 divider = make_axes_locatable(ax) 
 cax = divider.append_axes('right', size='3%', pad=0.1) 
 fig.colorbar(im, cax=cax, orientation='vertical')
-ax.set_ylabel('No. of grooms')
+ax.set_xticks([])
+ax.set_ylabel('Trials')
+ax.set_title('Tongue')
+
+ax = axes[1]
+im = ax.imshow(np.array(plotp)>0)
+divider = make_axes_locatable(ax) 
+cax = divider.append_axes('right', size='3%', pad=0.1) 
+fig.colorbar(im, cax=cax, orientation='vertical')
+ax.set_ylabel('Trials')
+ax.axvline(med, color='white', linestyle='--')
+ax.set_title('Paw')
+ax.set_ylabel('Trials')
 ax.set_xlabel('Time from grooming start (s)')
 ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,20))
 ax.set_xticklabels(np.arange(-range_val,range_val+1,2))
-ax.set_title('Tongue Y Position')
 plt.savefig(r'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\start_trig_grooms_with_tongue.svg',
         bbox_inches = 'tight', transparent = True)

@@ -12,15 +12,15 @@
 % add han-lab and han-lab-archive repos to path!
 clear all; close all;
 
-an = 'e186';
+an = 'e218';
 % individual day analysis
 % dys = [27:30, 32:34,36,38,40:75];
-% dys = [32,33];
+dys = [34,35];
 % dys = [4:7,9:11];
-dys = [1:51];
-% src = 'X:\vipcre'; % folder where fall is
+% dys = [1:51];
+src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures
-src = 'Y:\sstcre_analysis\fmats';
+% src = 'Y:\sstcre_analysis\fmats';
 % pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
@@ -31,8 +31,8 @@ pptx    = exportToPPTX('', ... % make new file
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-%     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*plane0*', dy)));
+    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+%     pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*plane0*', dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
