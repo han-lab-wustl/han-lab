@@ -12,14 +12,12 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"I:\eye_videos\230508_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\eye_videos\230509_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\eye_videos\230510_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\eye_videos\230513_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
-        vrfl = [r"D:\adina_vr_files\VR_data\E200_08_May_2023_time(08_54_41).mat",
-                r"D:\adina_vr_files\VR_data\E200_09_May_2023_time(07_43_24).mat",
-                r"D:\adina_vr_files\VR_data\E200_10_May_2023_time(08_58_45).mat",
-                r"D:\adina_vr_files\VR_data\E200_13_May_2023_time(12_30_35).mat"]
+        dlccsv = [r"I:\eye_videos\231107_E216DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\eye_videos\231108_E216DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
+                r"I:\eye_videos\231109_E216DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]                
+        vrfl = [r"D:\adina_vr_files\E216_07_Nov_2023_time(15_15_24).mat",
+                r"D:\adina_vr_files\E216_08_Nov_2023_time(16_04_28).mat",
+                r"D:\adina_vr_files\E216_09_Nov_2023_time(16_26_42).mat"]
         savedst = r"I:\pupil_pickles"
         for i in range(len(dlccsv)): # align beh with video data
                 VRalign(vrfl[i], dlccsv[i], savedst)

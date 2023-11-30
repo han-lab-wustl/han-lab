@@ -1,5 +1,5 @@
 clear all;
-src = 'D:\adina_vr_files\VR_data';
+src = 'D:\adina_vr_files';
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)
