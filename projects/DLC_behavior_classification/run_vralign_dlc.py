@@ -12,18 +12,17 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"I:\eye_videos\231107_E216DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\eye_videos\231108_E216DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv",
-                r"I:\eye_videos\231109_E216DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]                
-        vrfl = [r"D:\adina_vr_files\E216_07_Nov_2023_time(15_15_24).mat",
-                r"D:\adina_vr_files\E216_08_Nov_2023_time(16_04_28).mat",
-                r"D:\adina_vr_files\E216_09_Nov_2023_time(16_26_42).mat"]
+        dlccsv = [r"D:\Tail_E186\Tail_221029_E186-Adina-2023-01-19\230508_E200DLC_resnet50_Tail_221029_E186Jan19shuffle1_250000.csv"]                
+        vrfl = [r"D:\adina_vr_files\VR_data\E200_08_May_2023_time(08_54_41).mat"]
+        dlccsv = [r"I:\dlc_inference\230502_E201DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
+        vrfl = [r"D:\adina_vr_files\VR_data\E201_02_May_2023_time(09_16_02).mat"]
+        savedst = r"D:\Tail_E186"
         savedst = r"I:\pupil_pickles"
         for i in range(len(dlccsv)): # align beh with video data
                 VRalign(vrfl[i], dlccsv[i], savedst)
 
         # example on how to open the pickle file
-        pdst = os.path.join(savedst, "E201_06_Apr_2023_vr_dlc_align.p")
+        pdst = os.path.join(savedst, "E200_14_Mar_2023_vr_dlc_align.p")
         with open(pdst, "rb") as fp: #unpickle
                 vralign = pickle.load(fp)
         
@@ -67,3 +66,24 @@ if __name__ == "__main__":
                 label = 'paw_y', alpha=0.5)
         axs.legend()
         axs.set_title(os.path.basename(pdst))
+
+#tail video (Adina)
+        vralign['LowerBack_y'][vralign['LowerBack_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['MidBack_y'][vralign['MidBack_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['UpperBack_y'][vralign['UpperBack_likelihood'].astype('float32')<0.99]=np.nan
+        
+        back_y = np.nanmean(np.array([vralign['LowerBack_y'],vralign['MidBack_y'],
+                        vralign['UpperBack_y']]).astype('float32'), axis=0)
+        fig, axs = plt.subplots()
+        axs.plot(ypos, color='slategray',
+                linewidth=0.5)
+        axs.plot(vel/20, label = 'forwardvel')
+        axs.plot(reward*20)
+        axs.plot(scipy.ndimage.gaussian_filter(back_y/3,1), label = 'back_y')
+        axs.scatter(np.argwhere(licks>0).T[0], ypos[licks>0], color='r', marker='.')
+
+        axs.legend()
+        axs.set_title(os.path.basename(pdst))
+        ypos = np.hstack(vralign['ybinned'])
+        vel = np.hstack(vralign['forwardvel'])
+        reward = np.hstack(vralign['rewards'])

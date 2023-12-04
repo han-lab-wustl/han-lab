@@ -1,6 +1,6 @@
 # zahra
 # eye mask
-import numpy as np, pandas as pd, matplotlib.pyplot as plt
+import numpy as np, pandas as pd, matplotlib.pyplot as plt, tiffile
 from PIL import Image, ImageDraw
 import cv2
 
@@ -18,21 +18,19 @@ def fixcsvcols(csv):
     else:
         print("\n ******** please pass path to csv ********")
     return df
-pth = r'Y:\DLC\dlc_mixedmodel2\230505_E200DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
-df = fixcsvcols(pth)
+# pth = r'Y:\DLC\dlc_mixedmodel2\230505_E200DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
+# df = fixcsvcols(pth)
 
-eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
-            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
-eye_coords = [];
-for i in range(len(df)):
-    eye_coords.append([(float(df[xx+"_x"].iloc[i]), 
-                                  float(df[xx+"_y"].iloc[i])) for xx in eye]),
+# eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
+#             'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
+# eye_coords = [];
+# for i in range(len(df)):
+#     eye_coords.append([(float(df[xx+"_x"].iloc[i]), 
+#                                   float(df[xx+"_y"].iloc[i])) for xx in eye]),
 
-import tifffile, os
-dst = r'Y:\DLC\eye_videos\test\eye_mask_13000-15000_e201_230402'
 def get_eye_mask(eye_coords, i, dst, eyelbl = False):
     # eye coords format = list of (x,y) tuples
-    img = Image.new('L', (600, 422), 0) # L is imagetype, 600, 422 is image dim
+    img = Image.new('L', (150, 100), 0) # L is imagetype, 600, 422 is image dim
 
     ImageDraw.Draw(img).polygon(eye_coords, outline=1, fill=1)
     mask = np.array(img)
@@ -54,12 +52,15 @@ def get_video_values_of_eye_mask(eye_coords, video):
 
 
 # get contours
-dfpth = r'Y:\\DLC\\dlc_mixedmodel2\\230402_E201DLC_resnet50_MixedModel_trial_2Mar27shuffle1_750000.csv'
-dst = r'Y:\DLC\eye_videos\test\eye_mask_13000-15000_e201_230402'
-
-for i in range(26000,30000): # define df from kmeans script
+dfpth = r'I:\eye_videos\230508_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv'
+df = pd.read_csv(dfpth, index_col=None)
+dst = r'I:\labeled_videos'
+eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
+            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
+for i in [497, 9927]: # define df from kmeans script
     get_eye_mask([(float(df[xx+"_x"].iloc[i]), 
-                   float(df[xx+"_y"].iloc[i])) for xx in eye],i,dst)
+        float(df[xx+"_y"].iloc[i])) for xx in eye],i,dst)
+
 import time
 pixel_values_mask = []
 video = r'Y:\DLC\eye_videos\230402_E201.avi'

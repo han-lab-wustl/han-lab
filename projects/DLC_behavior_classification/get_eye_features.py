@@ -1,12 +1,9 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas as pd, sys, math
-import os, cv2, pickle
+import numpy as np, pandas as pd, sys, math, os, cv2, pickle
 from PIL import Image, ImageDraw
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.patches as patches
+import matplotlib.pyplot as plt, matplotlib as mpl, matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
@@ -22,7 +19,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 if __name__ == "__main__": # TODO; compare with diameter
     src = r"I:\pupil_pickles"
     # get data
-    add_to_dct = True # add to previous datadct
+    add_to_dct = False # add to previous datadct
     if add_to_dct:
         with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
             datadct = pickle.load(fp)
@@ -123,7 +120,7 @@ ax.set_ylim([0,100])
 fig.suptitle('n = 17 sessions, 5 animals')
 plt.savefig(r"C:\Users\workstation2\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil.svg", \
             bbox_inches='tight',transparent=True)
-
+#%%
 ##################################### fig 2 #####################################
 # trial by trial subplot
 for i,normall in enumerate(normall_s):
@@ -170,7 +167,7 @@ for i,normall in enumerate(normall_s):
 circ_ = circumferences_s#datadct['circumferences_all_sessions']
 failrew = [] # make fake 'rew' variable
 i=6 # 1 session/mouse
-pdst = os.path.join(src, sessions_analyzed[i])
+pdst = os.path.join(src, sessions[i])# sessions_analyzed
 print(pdst)
 with open(pdst, "rb") as fp: #unpickle
     vralign = pickle.load(fp)
@@ -201,15 +198,93 @@ import itertools
 failedtrialtable_rew = np.array(list(itertools.chain.from_iterable([list(xx) for xx in failrew])))
 normmeanrewdFF,meanrewdFF,normrewdFF,rewdFF = eye.perireward_binned_activity(circ, \
             failedtrialtable_rew, vralign['timedFF'], range_val, binsize)
-fig, ax = plt.subplots()
+normmeanlick,meanlick,normlick,lick = eye.perireward_binned_activity(vralign['licks'], \
+            failedtrialtable_rew, vralign['timedFF'], range_val, binsize)
+normmeanvel,meanvel,normvel,vel = eye.perireward_binned_activity(vralign['forwardvel'], \
+            failedtrialtable_rew, vralign['timedFF'], range_val, binsize)
+
+fig, axes = plt.subplots(3,1)#, gridspec_kw={'height_ratios': [3, 1, 1]})
+ax = axes[0]
 im = ax.imshow(normrewdFF)
-ax.axvline(np.median(np.arange(0,len(normmeanrewdFF))), color='b', linestyle='--')
-ax.set_ylabel('Failed Trials')
+ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+ax.set_xticks([])
+ax.set_ylabel('Trials')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes('right', size='3%', pad=0.1)
+fig.colorbar(im, cax=cax, orientation='vertical')        
+ax = axes[1]
+im = ax.imshow(lick.T, cmap='Reds')
+ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+ax.set_xticks([])
+ax.set_ylabel('Lick \n Rate')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes('right', size='3%', pad=0.1)
+fig.colorbar(im, cax=cax, orientation='vertical')
+ax = axes[2]
+im = ax.imshow(vel.T, cmap='gist_yarg')
+ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+ax.set_ylabel('Mean \n Velocity \n (cm/s)')
 ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,50))
 ax.set_xticklabels(np.arange(-range_val,range_val+1,5))
-ax.set_xlabel('Time From Center of Reward Location (s)')
-plt.savefig(rf"C:\Users\workstation2\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\failed_trials_ex_e200_10may.svg", \
+ax.set_xlabel('Time From Center of Reward Loc. (s)')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes('right', size='3%', pad=0.1)
+fig.colorbar(im, cax=cax, orientation='vertical')
+plt.savefig(rf"C:\Users\workstation2\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil_per_trial_{sessions[0][i][:-15]}.svg", \
         bbox_inches='tight',transparent=True)
+#%%
+##################################### fig 4 #####################################
+# centroid x relative to rew
+# sessions = list(itertools.chain.from_iterable(sessions))
+fig, axes = plt.subplots(3,1,gridspec_kw={'height_ratios': [3, 1, 1]}); 
+ax = axes[0]
+trials = []; licktr = []; veltr = []
+for j in [4,5,6,7]:#len(sessions)-1): #,4,5,6,13,14,15,16
+    cx = c_x[j]
+    pdst = os.path.join(src, sessions[j])
+    with open(pdst, "rb") as fp: #unpickle
+        vralign = pickle.load(fp)
+    print(pdst)
+    cx_smooth = gaussian_filter(cx,sigma=1)
+    lick = vralign['licks']    
+    # align to rewards without binning
+    rewindx = np.where(vralign['rewards']==0.5)[0]
+    ymin = -10; ymax = 350
+    for rewind in rewindx:
+        try: # excludes rewards early and late in session
+            frames = cx_smooth[rewind-ymin:rewind+ymax]
+            vel = np.hstack(vralign['forwardvel'])[rewind-ymin:rewind+ymax]
+            licks = lick[rewind-ymin:rewind+ymax]
+            if len(frames)==(ymin+ymax): # only even length arrays
+                frames = (frames-np.min(frames))/(np.max(frames)-np.min(frames))
+                frames = frames
+                trials.append(frames)
+                licktr.append(licks)
+                veltr.append(vel)
+                ax.plot(frames, color='slategray', alpha=0.05)
+        except Exception as e:
+            print(e) # for trials with wrong index (too early or too)
+meantrials = np.mean(np.array(trials), axis=0)
+meanlicktrials = np.hstack(np.mean(np.array(licktr), axis=0))
+meanveltrials = np.nanmean(np.array(veltr), axis=0)
+ax.plot(meantrials, color='k', label = 'Trial Mean')
+ax.set_xticks([])
+# ax.set_ylim([57,58.7])
+ax.legend()
+ax.set_ylabel('Centroid X Position')
+ax = axes[1]
+ax.plot(meanlicktrials, color='r')
+ax.set_xticks([])
+ax.set_ylabel('Mean Lick \n Rate')
+ax = axes[2]
+ax.plot(meanveltrials, color='dimgrey')
+ax.set_xticks(np.arange(0, (ymin+ymax+1),100))
+ax.set_xticklabels(np.arange(-ymin,(ymax+1),100))
+ax.set_xlabel('# of frames from CS')
+ax.set_ylabel('Mean \n Velocity \n (cm/s)')
+plt.savefig(rf"C:\Users\workstation2\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\eyedir_change.svg", \
+        bbox_inches='tight',transparent=True)
+
 #%%
 
 #     ##################################### fig 3 #####################################    
