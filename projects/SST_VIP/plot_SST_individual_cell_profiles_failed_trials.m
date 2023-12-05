@@ -1,8 +1,8 @@
 % zahra adaptation of gm's code
 % sst individual cell profiles
 clear all; close all
-an = 'e135';
-dy = 4;
+an = 'e136';
+dy = 5;
 load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln0 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln1 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane1_Fall.mat", an, dy)));
@@ -10,7 +10,7 @@ pln2 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d
 plns = {};
 plns{1} = pln0; plns{2} = pln1; plns{3} = pln2;
 planes = 3;
-bin_size = 10; %cm, lower causes missing vals
+bin_size = 9; %cm, lower causes missing vals
 eps = find(changeRewLoc>0);
 eps = [eps length(changeRewLoc)];
 track_length = 180; %cm; TODO: import from VR instead
@@ -39,14 +39,15 @@ for ep = 1:length(eps)-1 % for each epoch
  
     rewloc = rewlocs(ep);    
     for pln=1:planes % for each plane
+        dff = plns{pln}.dFF_iscell(:,eprng);
+        success_dff_per_trial = zeros(length(ftr),nbins, size(dff,1));
+        trind = 1;
+        if ~isempty(ftr)
         fig = figure('Renderer', 'painters', 'WindowState', 'maximized');
         slideId = pptx.addSlide();
         fprintf('Added slide %d\n',slideId);
-        dff = plns{pln}.dFF_iscell(:,eprng);
-        success_dff_per_trial = zeros(length(str),nbins, size(dff,1));
-        trind = 1;
-        if ~isempty(str)
-        for tr=str % for each successful trial
+
+        for tr=ftr % for each successful trial
             trind=trind+1;
             trrng = (trialNum==tr);
             vel_ = vel(trrng);
@@ -66,6 +67,9 @@ for ep = 1:length(eps)-1 % for each epoch
                     end
                 end
             end
+            % 0 out nans like suyash?
+            vel_bin(isnan(vel_bin)) = 0;
+            dff_bin(isnan(dff_bin)) = 0;
             for cll=1:size(dff_bin,2) % plot each cell
                 subplot(ceil(sqrt(size(dff,1))),ceil(sqrt(size(dff,1))),cll)
                 plot(normalize(dff_bin(:,cll)), 'Color',grayColor); hold on
@@ -79,20 +83,20 @@ for ep = 1:length(eps)-1 % for each epoch
             plot(meandff(:,cll), 'k', 'LineWidth', 2); hold on
             xline((rewloc-rewsize/2)/bin_size, 'b--', 'LineWidth', 1.5) % mark beginning of reward zone
             ylabel('dFF')
-            xticks(0:6:nbins)
-            xticklabels(0:60:track_length)
+            xticks(0:5:nbins)
+            xticklabels(0:45:track_length)
             yyaxis right
             plot(vel_bin, 'Color', purple, 'LineWidth',2); 
             ylabel('Velocity (cm/s)')
             xlabel('Position (cm)')            
         end
-        sgtitle(sprintf('successful trials \n plane %i, epoch %i', pln, ep))        
+        sgtitle(sprintf('failed trials \n plane %i, epoch %i', pln, ep))        
         pptx.addPicture(fig);
-        export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_pln%i_ep%i', an, pln, ep)), '-jpg')
+        export_fig(fullfile(savedst, sprintf('%s_failed_trials_cell_profiles_pln%i_ep%i', an, pln, ep)), '-jpg')
         close(fig)
         end
     end
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_successful_trial_cell_profiles',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_failed_trial_cell_profiles',an)));

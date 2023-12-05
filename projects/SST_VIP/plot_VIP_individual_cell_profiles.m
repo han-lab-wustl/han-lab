@@ -1,16 +1,15 @@
 % zahra adaptation of gm's code
-% sst individual cell profiles
+% vip individual cell profiles
 clear all; close all
-an = 'e135';
-dy = 4;
-load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
-pln0 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
-pln1 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane1_Fall.mat", an, dy)));
-pln2 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane2_Fall.mat", an, dy)));
-plns = {};
-plns{1} = pln0; plns{2} = pln1; plns{3} = pln2;
+load("Z:\VIP_intswanalysisv9.mat")
+an = 'vip';
+%%
+dy = 3; % day
+fall = VIP_ints(1).NR.day{1,dy}.all;
+plns = fall.Falls;
 planes = 3;
 bin_size = 10; %cm, lower causes missing vals
+changeRewLoc =fall.rewardLocation{1}(:,1)';
 eps = find(changeRewLoc>0);
 eps = [eps length(changeRewLoc)];
 track_length = 180; %cm; TODO: import from VR instead
@@ -18,7 +17,7 @@ nbins = track_length/bin_size;
 rewlocs = changeRewLoc(changeRewLoc>0);
 rewsize = 10; %cm
 grayColor = [.7 .7 .7]; purple = [0.4940, 0.1840, 0.5560];
-savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data\sst';
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data\vip';
 %%
 % params to export to ppt
 pptx    = exportToPPTX('', ...
@@ -30,11 +29,11 @@ pptx    = exportToPPTX('', ...
 
 for ep = 1:length(eps)-1 % for each epoch
     eprng = eps(ep):eps(ep+1);
-    ypos = ybinned(eprng);
-    trialNum = trialnum(eprng);
-    rew = rewards(eprng);
-    timedff = timedFF(eprng);
-    vel = forwardvel(eprng);
+    ybinned = fall.ybinned{1}(:,1)'; ypos = ybinned(eprng);
+    trialnum = fall.trialNum{1}(:,1)'; trialNum = trialnum(eprng);
+    rewards = fall.rewards{1}(:,1)'; rew = rewards(eprng);
+    timedFF = fall.time{1}(:,1)'; timedff = timedFF(eprng);
+    forwardvel = fall.Forwards{1}(:,1)'; vel = forwardvel(eprng);
     [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialNum,rew);
  
     rewloc = rewlocs(ep);    
@@ -42,7 +41,7 @@ for ep = 1:length(eps)-1 % for each epoch
         fig = figure('Renderer', 'painters', 'WindowState', 'maximized');
         slideId = pptx.addSlide();
         fprintf('Added slide %d\n',slideId);
-        dff = plns{pln}.dFF_iscell(:,eprng);
+        dff = fall.Falls{pln}(eprng,:); dff = dff'; % invert for gm struct
         success_dff_per_trial = zeros(length(str),nbins, size(dff,1));
         trind = 1;
         if ~isempty(str)
@@ -88,7 +87,7 @@ for ep = 1:length(eps)-1 % for each epoch
         end
         sgtitle(sprintf('successful trials \n plane %i, epoch %i', pln, ep))        
         pptx.addPicture(fig);
-        export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_pln%i_ep%i', an, pln, ep)), '-jpg')
+%         export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_pln%i_ep%i', an, pln, ep)), '-jpg')
         close(fig)
         end
     end
