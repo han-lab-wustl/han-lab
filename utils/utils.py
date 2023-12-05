@@ -175,6 +175,14 @@ def convert_zstack_sbx_to_tif(sbxsrc):
     return sbxsrc[:-4]+".tif"
 
 def movesbx(src, dst, fldkeyword='ZD'):
+    """useful for moving sbx'es to another drive or to ris archive
+
+    Args:
+        src (_type_): dir with day dir data
+        dst (_type_): dest dir
+        fldkeyword (str, optional): how your sbx is saved (e.g. 231107_ZD).
+        it looks for the folder structure based on this. Defaults to 'ZD'.
+    """
     #dst = r'G:\sstcre_imaging\e201'
     fls = listdir(src)
     for fl in fls:

@@ -3,12 +3,18 @@
 clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
-animal = 'e201';%e200';
-load("Y:\sstcre_analysis\celltrack\e201_week12-15_plane0\Results\e201_commoncells_atleastoneactivedayperweek.mat")
+animal = 'e186';%e200';
+load("Y:\sstcre_analysis\fmats\e186\e186_commoncells_atleastoneactivedayperweek.mat")
+%e201 = Y:\sstcre_analysis\celltrack\e201_week12-15_plane0\Results\e201_commoncells_atleastoneactivedayperweek.mat
+% e186 = "Y:\sstcre_analysis\fmats\e186\e186_commoncells_atleastoneactivedayperweek.mat"
+% e145 = "Y:\sstcre_analysis\celltrack\e145_week01-02_plane2\Results\e145_plane2_commoncells_atleastoneactivedayperweek.mat"
 %%
 
 % load mats from all days
-fls = dir('Y:\sstcre_analysis\fmats\e201\days\tracked\*day*_Fall.mat');
+fls = dir('Y:\sstcre_analysis\fmats\e186\days\tracked\*_Fall.mat');
+% e201 = Y:\sstcre_analysis\fmats\e201\days\tracked\*_Fall.mat
+% e145: Y:\sstcre_analysis\fmats\e145\days\tracked
+% e186= Y:\sstcre_analysis\fmats\e186\days\tracked
 days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
@@ -19,6 +25,10 @@ end
 cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
 
+tracked_cells_all_days_norm = zeros(size(cc));
+tracked_cells_all_days = zeros(size(cc));
+num_cells_all_days = zeros(1, size(cc,2));
+dropped_cells_all_days = zeros(size(cc));
 % index of bordercells and iscell
 for fl=1:length(days)
     dy = days(fl);
@@ -29,12 +39,72 @@ for fl=1:length(days)
     iscellind = 1:size(dy.iscell,1);
     notbordercelliscellind = iscellind(~dy.bordercells);
     iscell = dy.iscell(notbordercelliscellind);
-    ind_needed = notbordercelliscellind(logical(iscell));
-    tracked_cells = ind_needed(ismember(ind_needed,nonzeros(cc(:,fl))));
+    ind_needed = notbordercelliscellind(logical(iscell));    
     pcs = reshape(cell2mat(dy.putative_pcs), [length(dy.putative_pcs{1}), length(dy.putative_pcs)]);
     pcs_tracked = pcs(ismember(ind_needed,nonzeros(cc(:,fl))),:);
+    tracked_cells = ind_needed(ismember(ind_needed,nonzeros(cc(:,fl)))); % all indexes that meet criteria
     pcs_per_ep = sum(pcs_tracked,2);
+    tracked_cells_all = ones(1,size(cc,1))*NaN;
+    dropped_cells_all = ones(1,size(cc,1))*NaN;
+    dropped_cell_ind = find(cc(:,fl)==0);
+    for ind=1:length(tracked_cells)
+        indx_ = find(cc(:,fl)==tracked_cells(ind));
+        tracked_cells_all(indx_) = pcs_per_ep(ind);
+        dropped_cells_all(dropped_cell_ind) = 100;
+    end    
+    num_cells_all_days(fl) = length(tracked_cells_all(~isnan(tracked_cells_all)));
+    tracked_cells_all_days(:,fl) = tracked_cells_all+2;
+    tracked_cells_all_days_norm(:,fl) = (tracked_cells_all+2)/num_cells_all_days(fl);
+    dropped_cells_all_days(:,fl) = (dropped_cells_all)/num_cells_all_days(fl);
 end
+% heatmap
+figure; imagesc(tracked_cells_all_days_norm)
+colormap pink
+title('Place Cell Frequency Across Days')
+xlabel('Day')
+ylabel('Cell Index')
+
+figure; imagesc(dropped_cells_all_days)
+colormap gray
+title('Dropped Cells')
+xlabel('Day')
+ylabel('Cell Index')
+
+% barplot per cell
+pc_all = zeros(size(cc,1),4);
+for i=1:size(tracked_cells_all_days,1)
+    % added every thing by 2 
+    freq = tracked_cells_all_days(i,:)-2;
+    pc_all(i,1) = sum(freq==0);
+    pc_all(i,2) = sum(freq==1);
+    pc_all(i,3) = sum(freq==2);
+    pc_all(i,4) = sum(freq>=3);
+end
+figure; 
+boxchart(pc_all); hold on;
+xlabel('Number of Epochs Labeled as a Place Cell')
+xticklabels({'0','1','2','3+'})
+ylabel('Days')
+title('Place Cell Identity Across Days')
+
+for j = 1:4
+    scatter(j, pc_all(:,j), 'ko', 'jitter','on')
+    alpha(.2)
+    hold on
+end
+%%
+place_cell_count = zeros(1,size(tracked_cells_all_days,2));
+number_cells = zeros(1,size(tracked_cells_all_days,2));
+for k = 1:size(tracked_cells_all_days,2)
+    a = tracked_cells_all_days(:,k);
+    tracked_cells_all_days_= a(~isnan(a));
+    place_cellCount= (sum(tracked_cells_all_days_>2))/length(tracked_cells_all_days_);
+    total_cells = length(tracked_cells_all_days_);
+    place_cell_count(k) = place_cellCount;
+    number_cells(k) = total_cells;
+end
+
+
 %%
 % plot F (and ideally dff) over ypos
 days_to_plot=[1,2,3,4,5];%1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
