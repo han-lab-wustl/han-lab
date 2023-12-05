@@ -135,7 +135,7 @@ def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
         fig.savefig(os.path.join(savedst, f'{pth[:-2]}_pose_tuning_ep{i+1}.svg'),
             bbox_inches = 'tight', transparent = True)
 
-    return
+    return os.path.join(savedst, f'{pth[:-2]}_pose_tuning_ep{i+1}.svg')
 
 def centeroidnp(arr):
     length = arr.shape[0]
