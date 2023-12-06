@@ -6,8 +6,8 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt, matplotlib as mpl, matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 plt.rcParams["font.family"] = "Arial"
-sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
-# sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+# sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
 mpl.use('TkAgg')
 mpl.rcParams["pdf.fonttype"] = 42
@@ -21,7 +21,7 @@ if __name__ == "__main__": # TODO; compare with diameter
     # get data
     add_to_dct = False # add to previous datadct
     if add_to_dct:
-        with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
+        with open(r"Z:\pupil_data.p", "rb") as fp: #unpickle
             datadct = pickle.load(fp)
         sessions_analyzed = datadct['sessions']
         sessions_to_analyze = [xx for xx in os.listdir(src) if xx not in sessions_analyzed]

@@ -13,9 +13,9 @@
 clear all; close all;
 
 an = 'e218';
-% individual day analysis
+% individual day analysis 
 % dys = [27:30, 32:34,36,38,40:75];
-dys = [34,35];
+dys = [40];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is
@@ -55,7 +55,7 @@ for dy=dys % for loop per day
     thres = 5; % 5 cm/s is the velocity filter, only get
     % frames when the animal is moving faster than that
     ftol = 10; % number of frames length minimum to be considered stopped
-    ntrials = 15; % e.g. last 8 trials to compare    
+    ntrials = 8; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -197,4 +197,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));

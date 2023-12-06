@@ -1,4 +1,4 @@
-function [success,fail,total_trials] = get_success_failure_trials(trialnum,reward)
+function [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum,reward)
 % Zahra
 % basic behavior quantification for HRZ
 % integrate with MasterHRZ?
@@ -13,18 +13,20 @@ function [success,fail,total_trials] = get_success_failure_trials(trialnum,rewar
 %     trialnum = fmat.trialnum;
 %     reward = fmat.rewards;
 % end
-
+str = []; ftr = [];
 success=0;fail=0;
-for trial=unique(trialnum)
+for trial=unique(trialnum)    
     if trial>=3 % trial < 3, probe trial
         if sum(reward(trialnum==trial)==1)>0 % if reward was found in the trial
             success=success+1;
+            str(success) = trial;
         else
             fail=fail+1;
+            ftr(fail) = trial;
         end
     end
 end
 
 total_trials = sum(unique(trialnum)>=3);
-
+ttr = unique(trialnum); ttr = ttr(ttr>2); % remove probes
 end
