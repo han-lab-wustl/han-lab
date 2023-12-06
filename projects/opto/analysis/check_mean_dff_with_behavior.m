@@ -1,7 +1,7 @@
 clear all; clear all; 
-animal = 'e201';
-srcdir = 'Z:\sstcre_imaging';
-days = [57,60,63];
+animal = 'e218';
+srcdir = 'X:\vipcre';
+days = [38];
 ep=2;
 for d=days
     fallm = dir(fullfile(srcdir,animal,sprintf('%i',d), '**', 'plane*','Fall.mat'));

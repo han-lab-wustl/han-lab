@@ -1,8 +1,8 @@
 % zahra's opto analysis for vip
 clear all; close all
 mouse_name = "e218";
-days = [35,36,37,38,39,40];
-cells_to_plot = {[453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
+days = [34,35,36,37,38,39,40];
+cells_to_plot = {[141, 17,20,7]+1, [453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
     [301 17 13 320]+1, [98 33 17 3]+1, [92 20 17 26]+1}; % indices of red cells from suite2p per day
 src = "X:\vipcre";
 dffs_cp_dys = {};

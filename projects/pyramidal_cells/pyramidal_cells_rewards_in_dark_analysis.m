@@ -94,7 +94,7 @@ for i=1:length(perirew)
     imagesc(normalize(perirew{i}(sorted_idx,:),2)); hold on
     xline(101,'k--', {'CS'}, 'LineWidth', 3)
     colormap jet
-    title(sprintf('day %i of rr', dys(i)))
+    title(sprintf('day %i of rr', i))
     pptx.addPicture(fig);
     close(fig)
 end
