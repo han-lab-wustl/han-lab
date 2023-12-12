@@ -137,6 +137,7 @@ def deleteregtif(src,fls=False,keyword='reg_tif'):
             # deletes reg_tif directory and all its contents
             print(f"\n*** deleting {path}***")
             shutil.rmtree(path)
+    return 
 
 def get_motion_corrected_tifs_from_suite2p_binary(binarypth, dst, 
             Ly=512, Lx=629, chunk=1000):
@@ -176,7 +177,9 @@ def convert_zstack_sbx_to_tif(sbxsrc):
 
 def movesbx(src, dst, fldkeyword='ZD'):
     """useful for moving sbx'es to another drive or to ris archive
-
+        assumes your sbxs are saved within a folder made by scanbox: only true of the newer
+        version > 2023
+        if older versions of sbx, may need to manually modify based on folder structure
     Args:
         src (_type_): dir with day dir data
         dst (_type_): dest dir

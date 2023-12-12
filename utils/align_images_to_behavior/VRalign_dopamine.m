@@ -1,4 +1,4 @@
-function [fullFfile] = VRalign_dopamine(vrfl, numfiles, params)
+function [fullFfile] = VRalign_dopamine(vrfl, params, numfiles)
 % Zahra's function
 % vrfl = path to vr file (for zahra's folder structure, in behavior/vr
 % numfiles = number of planes (I didn't name this variable so didn't change it
@@ -469,7 +469,7 @@ for n = 1:numfiles
     
     fullFfile = fullfile(Ffilepath{n},Ffile{n});
     pause(1);
-    save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','lickVoltage','solenoid2','urew_solenoid','rew_us_solenoid','-append');
+    save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','lickVoltage','solenoid2','urew_solenoid','rew_us_solenoid','VR','-append');
     save(fullFfile,'ybinnedALL','rewardsALL','forwardvelALL','licksALL','changeRewLocALL','trialnumALL','utimedFF','lickVoltageALL','solenoid2ALL','urew_solenoidALL','rew_us_solenoidALL','-append');
 %     if addabf
 %         save(fullFfile,'abfdata','-append');

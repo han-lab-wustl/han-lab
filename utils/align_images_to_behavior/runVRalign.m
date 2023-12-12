@@ -4,13 +4,26 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e218";
-days = [41];
+days = [45];
 src = "X:\vipcre";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\Fall.mat')); 
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    disp(savepthfmat)
+end
+%%
+clear all;
+mouse_name = "e228";
+days = [2];
+src = "X:\grabda_sparse";
+
+for day=days
+    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
+%     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\plane*','**\Fall.mat')); 
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end

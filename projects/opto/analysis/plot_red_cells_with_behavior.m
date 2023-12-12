@@ -1,9 +1,14 @@
 % zahra's opto analysis for vip
 clear all; close all
+% mouse_name = "e218";
+% days = [34,35,36,37,38,39,40,41];
+% cells_to_plot = {[141, 17,20,7]+1, [453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
+%     [301 17 13 320]+1, [98 33 17 3]+1, [92 20 17 26]+1, [17, 23, 36, 10]+1}; % indices of red cells from suite2p per day
 mouse_name = "e218";
-days = [34,35,36,37,38,39,40];
-cells_to_plot = {[141, 17,20,7]+1, [453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
-    [301 17 13 320]+1, [98 33 17 3]+1, [92 20 17 26]+1}; % indices of red cells from suite2p per day
+days = [35,38,41];
+cells_to_plot = {[453,63,26,38]+1,...
+    [301 17 13 320]+1, [17, 23, 36, 10]+1}; % indices of red cells from suite2p per day
+
 src = "X:\vipcre";
 dffs_cp_dys = {};
 dyind = 1;
@@ -20,33 +25,35 @@ for dy=days
     rewsize = VR.settings.rewardZone*gainf;
     ypos = ybinned*(gainf);
     velocity = forwardvel;
-    for cp=cells_to_plot{dyind}
-        fig = figure('Renderer', 'painters');
-        scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on;
-        plot(find(licks),ypos(find(licks)), ...
-            'r.', 'MarkerSize',5)
-        for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-            rectangle('position',[eps(mm) rewloc(mm)-rewsize/2 ...
-                eps(mm+1)-eps(mm) rewsize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-        end
-        plot(find(rewards==0.5),ypos(find(rewards==0.5)),'b*', ...
-            'MarkerSize',5)
-        ylabel("Track Position (cm)")
-        xticks([0:10000:length(timedFF)])
-        tic = floor(timedFF(1:10000:end)/60);
-        ticnan = ones(size(tic))*NaN;
-        ticnan(1) = tic(1);
-        ticnan(end) = tic(end);
-        xticklabels(ticnan)
-        xlabel("Time (minutes)")
-        ylim([0 270])
-        xlim([0 length(rewards)])
-        yticks([0:90:270])
-        yticklabels([0:90:270])
-        yyaxis right
-        plot((dFF(:,cp)+1), 'k')
-        ylim([0.5 4])
-    end
+%     fig = figure('Renderer', 'painters');
+%     iind = 1;
+%     scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on;
+%     plot(find(licks),ypos(find(licks)), ...
+%         'r.', 'MarkerSize',5)
+%     for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+%         rectangle('position',[eps(mm) rewloc(mm)-rewsize/2 ...
+%             eps(mm+1)-eps(mm) rewsize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%     end
+%     plot(find(rewards==0.5),ypos(find(rewards==0.5)),'b*', ...
+%         'MarkerSize',5)
+%     ylabel("Track Position (cm)")
+%     xticks([0:10000:length(timedFF)])
+%     tic = floor(timedFF(1:10000:end)/60);
+%     ticnan = ones(size(tic))*NaN;
+%     ticnan(1) = tic(1);
+%     ticnan(end) = tic(end);
+%     xticklabels(ticnan)
+%     xlabel("Time (minutes)")
+%     ylim([0 270])
+%     xlim([0 length(rewards)])
+%     yticks([0:90:270])
+%     yticklabels([0:90:270])
+%     for cp=cells_to_plot{dyind}              
+%         yyaxis right
+%         plot((dFF(:,cp)+iind))
+%         ylim([0.5 20])
+%         iind = iind + 5;
+%     end
     %%
     dffs_cp = zeros(length(cells_to_plot{dyind}), length(eps)-1);
     cpind = 1;
@@ -57,7 +64,7 @@ for dy=days
             eprng = eps(ep):eps(ep+1);
             ypos = ybinned(eprng);
             rewloc_ = rewloc(ep);
-            iind = ypos<(rewloc_-5); % rewsize 5 cm
+            iind = ypos>(rewloc_-5); % rewsize 10/2 cm
             dff_ep = dFF(eprng,cp);
             dff_ep_ = dff_ep(iind);
             zscore_dff = (dff_ep_-mean(dff_ep, 'omitnan'))/std(dff_ep, 'omitnan');

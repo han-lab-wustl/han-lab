@@ -28,8 +28,8 @@ end
 rew_stop_idx = rew_stop_idx(~isnan(rew_stop_idx));
 non_rew_stops = setxor(rew_stop_idx,stop_idx);
 non_rew_stops = non_rew_stops(~isnan(non_rew_stops));
-figure; plot(velocity); hold on; plot(rew_stop_idx, velocity(rew_stop_idx), 'r*'); 
-plot(find(rewards),velocity(rewards),'y*'); plot(non_rew_stops, velocity(non_rew_stops), 'b*')
+% figure; plot(velocity); hold on; plot(rew_stop_idx, velocity(rew_stop_idx), 'r*'); 
+% plot(find(rewards),velocity(rewards),'y*'); plot(non_rew_stops, velocity(non_rew_stops), 'b*')
 % binsize = 0.1; %half a second bins
 % range = 6; %seconds back and forward in time
 rewvel = zeros(ceil(range*2/binsize),size(dff,2),length(non_rew_stops));

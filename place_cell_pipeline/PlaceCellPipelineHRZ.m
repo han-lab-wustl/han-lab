@@ -15,7 +15,7 @@ clear all; close all;
 an = 'e218';
 % individual day analysis 
 % dys = [27:30, 32:34,36,38,40:75];
-dys = [21:41];
+dys = [45];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is
@@ -58,7 +58,7 @@ for dy=dys % for loop per day
     ntrials = 8; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%
     if exist('dFF', 'var')==1
     else % make dff and fc3
         fprintf('********calculating dFF and Fc3********\n')
@@ -197,4 +197,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
