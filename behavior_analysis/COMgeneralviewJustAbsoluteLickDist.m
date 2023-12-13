@@ -1,11 +1,5 @@
 %% COM general view
-%EH 201219
-% to do:
-% bonferroni correction or using ANOVA with post hoc?
-% change labels to "first x trials" and "last y trials". insert variable
-% fit learning curve to mean lick graph, print values
-% save values and figures
-% keeping better track of no lick trials, know which are dropped.
+% zahra's mods
 
 % generates three plots
 % COM plot with some modifications
@@ -68,42 +62,42 @@ if fltype == 'select'
     [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
     days = filename;
 else
-    % ZD added for loop for multiple days    
-%     days = [55:75];
-%     days = [4:7,9:11];
-%     days = [62:67,69:70,72:74,76,81:85];
-      days = [20,21,22,23,24,25,26,27];
-%     src = "Z:\sstcre_imaging";
-%     src = "X:\pyramidal_cell_data";
-%     src = "Y:\sstcre_imaging";
-      src = 'X:\vipcre';
+    % ZD added for loop for multiple days
+    %     days = [55:75];
+    %     days = [4:7,9:11];
+    %     days = [62:67,69:70,72:74,76,81:85];
+    days = [20:46];
+    %     src = "Z:\sstcre_imaging";
+    %     src = "X:\pyramidal_cell_data";
+    %     src = "Y:\sstcre_imaging";
+    src = 'X:\vipcre';
 end
-for dy=1:length(days)        
+for dy=1:length(days)
     if fltype == 'select'
         clearvars -except mouse_name filepath filename dy days fltype pptx
         file = fullfile(filepath,filename{dy});
-    else        
+    else
         clearvars -except mouse_name days src dy fltype pptx % Zahra added for for loop
         daypth = dir(fullfile(src, mouse_name, string(days(dy)), "behavior", "vr\*.mat"));
-%         daypth = dir(fullfile(src, mouse_name, string(days(dy)), "*.mat"));
+        %         daypth = dir(fullfile(src, mouse_name, string(days(dy)), "*.mat"));
         filename{dy} = daypth.name;
         filepath{dy} = daypth.folder;
         file=fullfile(filepath{dy},filename{dy});
     end
     load(file) %load it
     if length(find(VR.changeRewLoc)) > 1
-    try % based on 2 diff ways to read files
-        cd (filepath{dy}); %EH set path
-    catch 
-        cd (filepath); 
-    end
-    COMgeneralanalysis
-        
-         %% lick dist plot
+        try % based on 2 diff ways to read files
+            cd (filepath{dy}); %EH set path
+        catch
+            cd (filepath);
+        end
+        COMgeneralanalysis
+
+        %% lick dist plot
         % save COM - ZD
-%         dst = 'Y:\sstcre_analysis\hrz\lick_analysis';
-%         save(fullfile(dst, sprintf('%s_days%i-%i_lickCOM.mat', mouse_name, ...
-%             min(days), max(days))), "allCOM")
+        %         dst = 'Y:\sstcre_analysis\hrz\lick_analysis';
+        %         save(fullfile(dst, sprintf('%s_days%i-%i_lickCOM.mat', mouse_name, ...
+        %             min(days), max(days))), "allCOM")
 
         % ZD - save to ppt
         fig = figure;
@@ -111,11 +105,11 @@ for dy=1:length(days)
         fprintf('Added slide %d\n',slideId);
         %raw data plot
         subplot(3,8,[1 2 9 10 17 18])
-        plottitle = [VR.name_date_vr ' lick distance analysis']; %name of the file you are analyzing
+        plottitle = [VR.name_date_vr(1:end-15) ' lick distance analysis']; %name of the file you are analyzing
         if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-           sgtitle(plottitle,'fontsize',14,'interpreter','none')
+            sgtitle(plottitle,'fontsize',14,'interpreter','none')
         else %requires a function mtit
-        mtit(plottitle,'fontsize',14,'interpreter','none') %name of the file you are analising as main title
+            mtit(plottitle,'fontsize',14,'interpreter','none') %name of the file you are analising as main title
         end
         scatter(time_min,ypos,1,'o','MarkerEdgeColor',[0.6 0.6 0.6])
         hold on
@@ -127,15 +121,15 @@ for dy=1:length(days)
         ylabel('track position - cm')
         xlabel('time - minutes')
         title ('lick (red) along track - and reward (blue)')
-        
+
         %COM plots
         for tt = 1:length(RewLoc) % for the three reward locations..
             if tt<=3 && ~isempty(allCOM{tt})
                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) % blue normalized lick scatterplot all the trials, succesfull or not are considered
                 hold on
-    %             line([1,length(allCOM{tt})],[-7.5,-7.5],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4]) % dashed line is plotted at the nomalized COM (y=0 always) - 7.5
-                 line([1,length(allCOM{tt})],[0,0],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4]) %EH line at 0 for start of rew zone
-                for i=1:numel(trialyposlicks{tt}) % the x axis indicates the trial number 
+                %             line([1,length(allCOM{tt})],[-7.5,-7.5],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4]) % dashed line is plotted at the nomalized COM (y=0 always) - 7.5
+                line([1,length(allCOM{tt})],[0,0],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4]) %EH line at 0 for start of rew zone
+                for i=1:numel(trialyposlicks{tt}) % the x axis indicates the trial number
                     % (eg. if trial 4 has no licks, the location 4 on the x axes will appear empty and the next trial (trial 5)
                     % will be plotted at x positon 5)
                     scatter(ones(size(trialyposlicks{tt}{i})).*i,(trialyposlicks{tt}{i})-RewLocStart(tt),38,[0 0.4470 0.7410],'filled')
@@ -144,29 +138,29 @@ for dy=1:length(days)
                 end
                 alpha(.05)
                 scatter((1:length(allCOM{tt})),allCOM{tt},50,'g','filled')
-                scatter(find(failure{tt}),allCOM{tt}(find(failure{tt})),50,'r','filled') 
+                scatter(find(failure{tt}),allCOM{tt}(find(failure{tt})),50,'r','filled')
                 %failed trials are plotted with a red dot.
-    %             legend({'licks', 'successes', 'failures'})
-                subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)])% black normalized lick scatterplot with std. 
+                %             legend({'licks', 'successes', 'failures'})
+                subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)])% black normalized lick scatterplot with std.
                 % all the trials, succesfull or not are considered
                 errorbar(allCOM{tt},allstdCOM{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
                 hold on
-    %             line([1,length(allCOM{tt})],[-7.5,-7.5],'LineStyle','--','LineWidth',
-    % 1.5,'Color',	[0 0 0 0.4])
+                %             line([1,length(allCOM{tt})],[-7.5,-7.5],'LineStyle','--','LineWidth',
+                % 1.5,'Color',	[0 0 0 0.4])
                 line([1,length(allCOM{tt})],[0,0],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4])%EH line at 0 for start of rew zone
                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLocStart(tt))])
-                
+
                 if sum(abs(allCOM{tt})>0)>10
                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) % barplot with p value of first and last five trials. only succesfull trials are considered
                     succ = find(abs(COM{tt})>0);
-                    
-    %                 y=[(mean(allRatio{tt}(succ(1:numTrialsStart)))) (mean(allRatio{tt}(succ(end-(numTrialsEnd-1):end))))];%EH only successes
-    %                 [h,p1]=ttest2((allRatio{tt}(succ(1:numTrialsStart))),(allRatio{tt}(succ(end-(numTrialsEnd-1):end)))); %perform t-test. %EH
-    %               %ratio  
-    %                 y=[(nanmean(allRatio{tt}(1:numTrialsStart))) (nanmean(allRatio{tt}(end-(numTrialsEnd-1):end)))];
-    %                 [h,p1]=ttest2((allRatio{tt}(1:numTrialsStart)),(allRatio{tt}(end-(numTrialsEnd-1):end))); %perform t-test
-                    
-                    %distance of licks 
+
+                    %                 y=[(mean(allRatio{tt}(succ(1:numTrialsStart)))) (mean(allRatio{tt}(succ(end-(numTrialsEnd-1):end))))];%EH only successes
+                    %                 [h,p1]=ttest2((allRatio{tt}(succ(1:numTrialsStart))),(allRatio{tt}(succ(end-(numTrialsEnd-1):end)))); %perform t-test. %EH
+                    %               %ratio
+                    %                 y=[(nanmean(allRatio{tt}(1:numTrialsStart))) (nanmean(allRatio{tt}(end-(numTrialsEnd-1):end)))];
+                    %                 [h,p1]=ttest2((allRatio{tt}(1:numTrialsStart)),(allRatio{tt}(end-(numTrialsEnd-1):end))); %perform t-test
+
+                    %distance of licks
                     lickDistTrim=[];
                     keepLickDist=[];
                     earlyLickDist=[];
@@ -176,16 +170,16 @@ for dy=1:length(days)
                     lickDistTrim = lickDistTrim(:,keepLickDist);
                     earlyLickDist=cat(2,lickDistTrim{1,1:numTrialsStart});
                     lateLickDist=cat(2,lickDistTrim {1,end-(numTrialsEnd-1):end});
-                    
+
                     y=[(mean(earlyLickDist)) (mean(lateLickDist))];
                     [h,p1]=ttest2(earlyLickDist,lateLickDist); %perform t-test
-                    
+
                     %EH plot ratio
-    %                 y=[(nanmean(allRatio{tt}(1:numTrialsStart))) (nanmean(allRatio{tt}(end-(numTrialsEnd-1):end)))];
-    %                 [h,p1]=ttest2((allRatio{tt}(1:numTrialsStart)),(allRatio{tt}(end-(numTrialsEnd-1):end))); %perform t-tes
-                    
-    %                 y=[abs(nanmean(COM{tt}(succ(1:5)))) abs(nanmean(COM{tt}(succ(end-4:end))))]; %only succesfull trials considered
-    %                 [h,p1]=ttest(COM{tt}(succ(1:5)),COM{tt}(succ(end-4:end))); %perform t-test
+                    %                 y=[(nanmean(allRatio{tt}(1:numTrialsStart))) (nanmean(allRatio{tt}(end-(numTrialsEnd-1):end)))];
+                    %                 [h,p1]=ttest2((allRatio{tt}(1:numTrialsStart)),(allRatio{tt}(end-(numTrialsEnd-1):end))); %perform t-tes
+
+                    %                 y=[abs(nanmean(COM{tt}(succ(1:5)))) abs(nanmean(COM{tt}(succ(end-4:end))))]; %only succesfull trials considered
+                    %                 [h,p1]=ttest(COM{tt}(succ(1:5)),COM{tt}(succ(end-4:end))); %perform t-test
                     hBar=bar(y);
                     Labels = {'first five trials', 'last five trials'};
                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
@@ -205,305 +199,290 @@ for dy=1:length(days)
         pptx.addPicture(fig);
         pptx.addTextbox(sprintf('%s_day%i behavior COM',mouse_name,days(dy)));
         close(fig)
-    %     %% Speed Mean Plots
-    %      
-    %     figure;
-    %     %raw data plot
-    %     subplot(3,8,[1 2 9 10 17 18])
-    %     if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-    %        sgtitle([VR.name_date_vr ' Mean ROE by trial'],'fontsize',14,'interpreter','none')
-    %     else %requires a function mtit
-    %     mtit([VR.name_date_vr ' Mean ROE by trial'],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
-    %     end
-    %     scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
-    %     hold on
-    % 
-    %     
-    %     for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
-    %         for yy = 1:numel(ROE{xx})
-    %             scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
-    %             colormap(flipud(parula))
-    %     %         colormap((viridis())) % for a personal choice of colormap,
-    %     %         but commented out because requires download of code
-    %             
-    %         end
-    %     end
-    %     scatter(islickX,islickYpos,10,'r','x')
-    %     scatter(rewX,rewYpos,10,'b','filled')
-    %     
-    %     for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-    %         rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-    %     end
-    %     ylabel('track position - cm')
-    %     xlabel('time - minutes')
-    %     title ('lick (red) along track - and reward (blue)')
-    %     
-    %     %meanROE plots
-    %     for tt = 1:length(RewLoc) % for the three reward locations..
-    %         if tt<=3 && ~isempty(allCOM{tt})
-    %             subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
-    %             hold on
-    %             for i=1:numel(ROE{tt}) %plot all the ROE values
-    %                 scatter(ones(size(ROE{tt}{i})).*i,(ROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
-    %             end
-    %             alpha(.05)
-    %             scatter((1:length(meanROE{tt})),meanROE{tt},50,'filled') %plot the mean on top
-    %             scatter(find(failure{tt}),meanROE{tt}(find(failure{tt})),50,'r','filled')
-    %             first5success = find(failure{tt} == 0,5,'first');
-    %             last5success = find(failure{tt} == 0,5,'last');
-    %             
-    %             
-    %             subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
-    %             errorbar(meanROE{tt},stdROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
-    %             hold on
-    %             title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
-    %             
-    %             if sum(abs(allCOM{tt})>0)>10
-    %                 subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
-    %                 y=[abs(nanmean(meanROE{tt}(first5success))) abs(nanmean(meanROE{tt}(last5success)))];
-    %                 [h,p1]=ttest2(meanROE{tt}(first5success),meanROE{tt}(last5success));
-    %                 hBar=bar(y);
-    %                 Labels = {'first five trials', 'last five trials'};
-    %                 set(gca,'XTick', 1:2, 'XTickLabel', Labels);
-    %                 ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
-    %                 if p1<0.05
-    %                     hold on
-    %                     plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
-    %                     plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
-    %                     hold off
-    %                 end
-    %                 text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
-    % 
-    %             else
-    %                 disp('Not enough succesfull trials in the last reward zone to compute t-test');
-    %             end
-    %         end
-    %     end  
-    %     
-    %     
-    %        %% Speed Mean cut to only first portion in common Plots
-    %      
-    %     figure;
-    %     %raw data plot
-    %     subplot(3,8,[1 2 9 10 17 18])
-    %     if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-    %        sgtitle([VR.name_date_vr ' Mean ROE by trial'],'fontsize',14,'interpreter','none')
-    %     else %requires a function mtit
-    %     mtit([VR.name_date_vr ' Mean ROE by trial'],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
-    %     end
-    %     scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
-    %     hold on
-    % 
-    %     
-    %     for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
-    %         for yy = 1:numel(ROE{xx})
-    %             scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
-    %             colormap(flipud(parula))
-    %     %         colormap((viridis())) % for a personal choice of colormap,
-    %     %         but commented out because requires download of code
-    %             
-    %         end
-    %     end
-    %     scatter(islickX,islickYpos,10,'r','x')
-    %     scatter(rewX,rewYpos,10,'b','filled')
-    %     
-    %     for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-    %         rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-    %     end
-    %     ylabel('track position - cm')
-    %     xlabel('time - minutes')
-    %     title ('lick (red) along track - and reward (blue)')
-    %     
-    %     %meanROE plots
-    %     for tt = 1:length(RewLoc) % for the three reward locations..
-    %         if tt<=3 && ~isempty(allCOM{tt})
-    %             subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
-    %             hold on
-    %             for i=1:numel(cutROE{tt}) %plot all the ROE values
-    %                 scatter(ones(size(cutROE{tt}{i})).*i,(cutROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
-    %             end
-    %             alpha(.05)
-    %             scatter((1:length(meancutROE{tt})),meancutROE{tt},50,'filled') %plot the mean on top
-    %             scatter(find(failure{tt}),meancutROE{tt}(find(failure{tt})),50,'r','filled')
-    %             first5success = find(failure{tt} == 0,5,'first');
-    %             last5success = find(failure{tt} == 0,5,'last');
-    %             
-    %             
-    %             subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
-    %             errorbar(meancutROE{tt},semcutROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
-    %             hold on
-    %             title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
-    %             
-    %             if sum(abs(allCOM{tt})>0)>10
-    %                 subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
-    %                 y=[abs(nanmean(meancutROE{tt}(first5success))) abs(nanmean(meancutROE{tt}(last5success)))];
-    %                 [h,p1]=ttest2(meancutROE{tt}(first5success),meancutROE{tt}(last5success));
-    %                 hBar=bar(y);
-    %                 Labels = {'first five trials', 'last five trials'};
-    %                 set(gca,'XTick', 1:2, 'XTickLabel', Labels);
-    %                 ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
-    %                 if p1<0.05
-    %                     hold on
-    %                     plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
-    %                     plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
-    %                     hold off
-    %                 end
-    %                 text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
-    % 
-    %             else
-    %                 disp('Not enough succesfull trials in the last reward zone to compute t-test');
-    %             end
-    %         end
-    %     end  
-    % %     %% Analysis of speed distribution between Epoch 1 and Epoch 2 to show different behavior
-    %     learnnumtrials = 5; %how many "learned" trials you want to compare
-    % figure;
-    % 
-    % for p = 1:learnnumtrials
-    %     bin1 = min(cell2mat(cellfun(@(x) min(size(x,2)), ROE{1}(end-(learnnumtrials-1):end),'un',0)));%defining the maximum amount of shared bins accross all trials
-    %     bin2 = min(cell2mat(cellfun(@(x) min(size(x,2)), ROE{2}(end-(learnnumtrials-1):end),'un',0)));
-    %     
-    %     subplot(learnnumtrials,1,p) %plotting the distribution of vel in these spatial bins
-    %     histogram(ROE{1}{end-(learnnumtrials-p)}(1:min(bin1,bin2)),'FaceAlpha',0.5,'Binwidth',0.05) %for epoch 1
-    %     hold on
-    %     histogram(ROE{2}{end-(learnnumtrials-p)}(1:min(bin1,bin2)),'FaceAlpha',0.5,'Binwidth',0.05) %for epoch 2
-    %      xlim([0 1.5])
-    %     title(['trials ' num2str(size(ROE{1},2)-(learnnumtrials-p)) ' of RewEpoch 1 and ' num2str(size(ROE{2},2)-(learnnumtrials-p)) ' of RewEpoch 2'])
-    % end
-    % if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-    %     sgtitle([VR.name_date_vr ' Comparing Speed Distribution of Learned Trials'],'fontsize',14,'interpreter','none')
-    % else %requires a function mtit
-    %     mtit([VR.name_date_vr ' Comparing Speed Distribution of Learned Trials'],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
-    % end
-    % 
-    % testROEhist = cell(1,3); %creating a temporary variable for the combined distributions
-    % 
-    % for p = 1:2 %for the first two epochs...
-    %     for j = 1:learnnumtrials %for the number of trials you wish to combine
-    %         testROEhist{p} = [testROEhist{p} ROE{p}{end-j+1}(1:min(bin1,bin2))];
-    %         
-    %     end
-    %     figure(30)
-    %      hold on
-    %     histogram(testROEhist{p},15,'FaceAlpha',0.5)
-    %     
-    %     if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-    %         sgtitle([VR.name_date_vr ' Combined Distribution of Last 5 trials for Epoch 1(blue) & Epoch 2(orange)'],'fontsize',14,'interpreter','none')
-    %     else %requires a function mtit
-    %         mtit([VR.name_date_vr ' Combined Distribution of Last 5 trials for Epoch 1(blue) & Epoch 2(orange)'],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
-    %     end
-    %    figure(31)
-    %    hold on
-    %    [f,x] = ecdf(sort(testROEhist{p})'); %create a cumulative distribution
-    %    cuml{p} = f;
-    %    cumlx{p} = x;
-    %    plot(x,f)
-    %    if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-    %        sgtitle([VR.name_date_vr ' Combined Cumulative Distribution of Last 5 trials for Epoch 1(blue) & Epoch 2(orange)'],'fontsize',14,'interpreter','none')
-    %    else %requires a function mtit
-    %        mtit([VR.name_date_vr ' Combined Cumulative Distribution of Last 5 trials for Epoch 1(blue) & Epoch 2(orange)'],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
-    %    end
-    %     
-    % end
-    % 
-    % figure(31)
-    % [h,p] = kstest2( testROEhist{1}',testROEhist{2}'); %Two-sample Kolmogorov-Smirnov test for these distributions
-    % text(0.5,0.5,['p= ' num2str(p)]);
-    
-    % %% Sliding Window COM figure
-    %  
-    %     figure;
-    %     %raw data plot
-    %     subplot(3,8,[1 2 9 10 17 18])
-    %     if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
-    %        sgtitle([VR.name_date_vr ' Sliding Window'],'fontsize',14,'interpreter','none')
-    %     else %requires a function mtit
-    %     mtit([VR.name_date_vr ' Sliding Window '],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
-    %     end
-    %     scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
-    %     hold on
-    %     scatter(islickX,islickYpos,10,'r','filled')
-    %     scatter(rewX,rewYpos,10,'b','filled')
-    %     for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-    %         rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-    %     end
-    %     ylabel('track position - cm')
-    %     xlabel('time - minutes')
-    %     title ('lick (red) along track - and reward (blue)') 
-    %     
-    %     for tt = 1:length(RewLoc) % for the three reward locations..
-    %         if tt<=3 && ~isempty(allCOM{tt})
-    %             subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) % blue normalized lick scatterplot all the trials, succesfull or not are considered
-    %             hold on
-    %             line([1,length(allCOM{tt})],[-rewSize,-rewSize],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4]) % dashed line is plotted at the nomalized COM (y=0 always) - 7.5
-    %             for i=1:numel(trialyposlicks{tt}) % the x axis indicates the trial number (eg. if trial 4 has no licks, the location 4 on the x axes will appear empty and the next trial (trial 5) will be plotted at x positon 5)
-    %                 scatter(ones(size(trialyposlicks{tt}{i})).*i,(trialyposlicks{tt}{i})-RewLoc(tt),38,[0 0.4470 0.7410],'filled')
-    %             end
-    %             alpha(.05)
-    %             scatter((1:length(allCOM{tt})),allCOM{tt},50,'filled')
-    %             scatter(find(failure{tt}),allCOM{tt}(find(failure{tt})),50,'r','filled') %failed trials are plotted with a red dot.
-    %             
-    %             subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)])% black normalized lick scatterplot with std. all the trials, succesfull or not are considered
-    %             scatter((1:1:length(slidingMeanCOM{tt})),slidingMeanCOM{tt},'k');
-    %             hold on
-    %             line([1,length(slidingMeanCOM{tt})],[-rewSize,-rewSize],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4])
-    %             title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
-    %             
-    %             if ~isempty(slidingMeanCOM{tt})
-    %                 subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) % barplot with p value of first and last five trials. only succesfull trials are considered
-    %             scatter((1:1:length(slidingVarCOM{tt})),slidingVarCOM{tt},'k');
-    %             hold on
-    %             line([1,length(slidingMeanCOM{tt})],[-rewSize,-rewSize],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4])
-    %             title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
-    %             else
-    %                 disp('Not enough succesfull trials in the last reward zone to compute sliding window');
-    %             end
-    %         end
-    %     end   
+        %% Speed Mean Plots
+
+%         fig = figure;
+%         slideId = pptx.addSlide();
+%         fprintf('Added slide %d\n',slideId);
+%         %raw data plot
+%         subplot(3,8,[1 2 9 10 17 18])
+%         sgtitle([VR.name_date_vr(1:end-15) ' Mean ROE by trial'],'fontsize',14,'interpreter','none')
+%         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
+%         hold on
+%         for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
+%             for yy = 1:numel(ROE{xx})
+%                 scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
+%                 colormap(flipud(parula()))
+%             end
+%         end
+%         scatter(islickX,islickYpos,10,'r','x')
+%         scatter(rewX,rewYpos,10,'b','filled')
+% 
+%         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+%             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%         end
+%         ylabel('track position - cm')
+%         xlabel('time - minutes')
+%         title ('lick (red) along track - and reward (blue)')
+% 
+%         %meanROE plots
+%         for tt = 1:length(RewLoc) % for the three reward locations..
+%             if tt<=3 && ~isempty(allCOM{tt})
+%                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
+%                 hold on
+%                 for i=1:numel(ROE{tt}) %plot all the ROE values
+%                     scatter(ones(size(ROE{tt}{i})).*i,(ROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
+%                 end
+%                 alpha(.05)
+%                 scatter((1:length(meanROE{tt})),meanROE{tt},50,'filled') %plot the mean on top
+%                 scatter(find(failure{tt}),meanROE{tt}(find(failure{tt})),50,'r','filled')
+%                 first5success = find(failure{tt} == 0,5,'first');
+%                 last5success = find(failure{tt} == 0,5,'last');
+% 
+%                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
+%                 errorbar(meanROE{tt},stdROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
+%                 hold on
+%                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
+% 
+%                 if sum(abs(allCOM{tt})>0)>10
+%                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
+%                     y=[abs(mean(meanROE{tt}(first5success), 'omitnan')) abs(nanmean(meanROE{tt}(last5success)))];
+%                     [h,p1]=ttest2(meanROE{tt}(first5success),meanROE{tt}(last5success));
+%                     hBar=bar(y);
+%                     Labels = {'first five trials', 'last five trials'};
+%                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
+%                     ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
+%                     if p1<0.05
+%                         hold on
+%                         plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
+%                         plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
+%                         hold off
+%                     end
+%                     text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
+% 
+%                 else
+%                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
+%                 end
+%             end
+%         end
+%         pptx.addPicture(fig);
+%         pptx.addTextbox(sprintf('%s_day%i mean ROE',mouse_name,days(dy)));
+%         close(fig)
+
+
+        %% Speed Mean cut to only first portion in common Plots
+        % velocity only up to position 60
+%         fig = figure;
+%         slideId = pptx.addSlide();
+%         fprintf('Added slide %d\n',slideId);
+%         %raw data plot
+%         subplot(3,8,[1 2 9 10 17 18])
+%         sgtitle([VR.name_date_vr(1:end-15) ' Mean ROE by trial < 60 cm'],'fontsize',14,'interpreter','none')
+%         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
+%         hold on
+%         for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
+%             for yy = 1:numel(ROE{xx})
+%                 scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
+%                 colormap(flipud(parula()))
+%                 %         colormap((viridis())) % for a personal choice of colormap,
+%                 %         but commented out because requires download of code
+% 
+%             end
+%         end
+%         scatter(islickX,islickYpos,10,'r','x')
+%         scatter(rewX,rewYpos,10,'b','filled')
+% 
+%         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+%             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+%         end
+%         ylabel('track position - cm')
+%         xlabel('time - minutes')
+%         title ('lick (red) along track - and reward (blue)')
+% 
+%         %meanROE plots
+%         for tt = 1:length(RewLoc) % for the three reward locations..
+%             if tt<=3 && ~isempty(allCOM{tt})
+%                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
+%                 hold on
+%                 for i=1:numel(cutROE{tt}) %plot all the ROE values
+%                     scatter(ones(size(cutROE{tt}{i})).*i,(cutROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
+%                 end
+%                 alpha(.05)
+%                 scatter((1:length(meancutROE{tt})),meancutROE{tt},50,'filled') %plot the mean on top
+%                 scatter(find(failure{tt}),meancutROE{tt}(find(failure{tt})),50,'r','filled')
+%                 first5success = find(failure{tt} == 0,5,'first');
+%                 last5success = find(failure{tt} == 0,5,'last');
+% 
+% 
+%                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
+%                 errorbar(meancutROE{tt},semcutROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
+%                 hold on
+%                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
+% 
+%                 if sum(abs(allCOM{tt})>0)>10
+%                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
+%                     y=[abs(mean(meancutROE{tt}(first5success), 'omitnan')) abs(mean(meancutROE{tt}(last5success), 'omitnan'))];
+%                     [h,p1]=ttest2(meancutROE{tt}(first5success),meancutROE{tt}(last5success));
+%                     hBar=bar(y);
+%                     Labels = {'first five trials', 'last five trials'};
+%                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
+%                     ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
+%                     if p1<0.05
+%                         hold on
+%                         plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
+%                         plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
+%                         hold off
+%                     end
+%                     text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
+% 
+%                 else
+%                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
+%                 end
+%             end
+%         end
+%         pptx.addPicture(fig);
+%         pptx.addTextbox(sprintf('%s_day%i mean ROE < 60 cm',mouse_name,days(dy)));
+%         close(fig)
+        %
+        %         %     %% Analysis of speed distribution between Epoch 1 and Epoch 2 to show different behavior
+        %         learnnumtrials = 5; %how many "learned" trials you want to compare
+        %         figure;
+        %
+        %         for p = 1:learnnumtrials
+        %             bin1 = min(cell2mat(cellfun(@(x) min(size(x,2)), ROE{1}(end-(learnnumtrials-1):end),'un',0)));%defining the maximum amount of shared bins accross all trials
+        %             bin2 = min(cell2mat(cellfun(@(x) min(size(x,2)), ROE{2}(end-(learnnumtrials-1):end),'un',0)));
+        %
+        %             subplot(learnnumtrials,1,p) %plotting the distribution of vel in these spatial bins
+        %             histogram(ROE{1}{end-(learnnumtrials-p)}(1:min(bin1,bin2)),'FaceAlpha',0.5,'Binwidth',0.05) %for epoch 1
+        %             hold on
+        %             histogram(ROE{2}{end-(learnnumtrials-p)}(1:min(bin1,bin2)),'FaceAlpha',0.5,'Binwidth',0.05) %for epoch 2
+        %             xlim([0 1.5])
+        %             title(['trials ' num2str(size(ROE{1},2)-(learnnumtrials-p)) ' of RewEpoch 1 and ' num2str(size(ROE{2},2)-(learnnumtrials-p)) ' of RewEpoch 2'])
+        %         end
+        %         sgtitle([VR.name_date_vr ' Comparing Speed Distribution of Learned Trials'],'fontsize',14,'interpreter','none')
+        %
+        %
+        %         testROEhist = cell(1,3); %creating a temporary variable for the combined distributions
+        %
+        %         for p = 1:2 %for the first two epochs...
+        %             for j = 1:learnnumtrials %for the number of trials you wish to combine
+        %                 testROEhist{p} = [testROEhist{p} ROE{p}{end-j+1}(1:min(bin1,bin2))];
+        %             end
+        %             figure;
+        %             hold on
+        %             histogram(testROEhist{p},15,'FaceAlpha',0.5)
+        %
+        %             sgtitle([VR.name_date_vr ' Combined Distribution of Last 5 trials for Epoch 1(blue) & Epoch 2(orange)'],'fontsize',14,'interpreter','none')
+        %
+        %             figure(dy+p);
+        %             hold on
+        %             [f,x] = ecdf(sort(testROEhist{p})'); %create a cumulative distribution
+        %             cuml{p} = f;
+        %             cumlx{p} = x;
+        %             plot(x,f)
+        %             sgtitle([VR.name_date_vr ' Combined Cumulative Distribution of Last 5 trials for Epoch 1(blue) & Epoch 2(orange)'],'fontsize',14,'interpreter','none')
+        %
+        %
+        %         end
+        %
+        %         figure(dy)
+        %         [h,p] = kstest2( testROEhist{1}',testROEhist{2}'); %Two-sample Kolmogorov-Smirnov test for these distributions
+        %         text(0.5,0.5,['p= ' num2str(p)]);
+
+        %% Sliding Window COM figure
+
+        %         figure;
+        %         %raw data plot
+        %         subplot(3,8,[1 2 9 10 17 18])
+        %         if eval(version)>= 18 %checks if version of matlab is current enough to use inbed function
+        %            sgtitle([VR.name_date_vr ' Sliding Window'],'fontsize',14,'interpreter','none')
+        %         else %requires a function mtit
+        %         mtit([VR.name_date_vr ' Sliding Window '],'fontsize',14,'interpreter','none') %name of the file you are analising as main title
+        %         end
+        %         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
+        %         hold on
+        %         scatter(islickX,islickYpos,10,'r','filled')
+        %         scatter(rewX,rewYpos,10,'b','filled')
+        %         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+        %             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+        %         end
+        %         ylabel('track position - cm')
+        %         xlabel('time - minutes')
+        %         title ('lick (red) along track - and reward (blue)')
+        %
+        %         for tt = 1:length(RewLoc) % for the three reward locations..
+        %             if tt<=3 && ~isempty(allCOM{tt})
+        %                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) % blue normalized lick scatterplot all the trials, succesfull or not are considered
+        %                 hold on
+        %                 line([1,length(allCOM{tt})],[-rewSize,-rewSize],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4]) % dashed line is plotted at the nomalized COM (y=0 always) - 7.5
+        %                 for i=1:numel(trialyposlicks{tt}) % the x axis indicates the trial number (eg. if trial 4 has no licks, the location 4 on the x axes will appear empty and the next trial (trial 5) will be plotted at x positon 5)
+        %                     scatter(ones(size(trialyposlicks{tt}{i})).*i,(trialyposlicks{tt}{i})-RewLoc(tt),38,[0 0.4470 0.7410],'filled')
+        %                 end
+        %                 alpha(.05)
+        %                 scatter((1:length(allCOM{tt})),allCOM{tt},50,'filled')
+        %                 scatter(find(failure{tt}),allCOM{tt}(find(failure{tt})),50,'r','filled') %failed trials are plotted with a red dot.
+        %
+        %                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)])% black normalized lick scatterplot with std. all the trials, succesfull or not are considered
+        %                 scatter((1:1:length(slidingMeanCOM{tt})),slidingMeanCOM{tt},'k');
+        %                 hold on
+        %                 line([1,length(slidingMeanCOM{tt})],[-rewSize,-rewSize],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4])
+        %                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
+        %
+        %                 if ~isempty(slidingMeanCOM{tt})
+        %                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) % barplot with p value of first and last five trials. only succesfull trials are considered
+        %                 scatter((1:1:length(slidingVarCOM{tt})),slidingVarCOM{tt},'k');
+        %                 hold on
+        %                 line([1,length(slidingMeanCOM{tt})],[-rewSize,-rewSize],'LineStyle','--','LineWidth',1.5,'Color',	[0 0 0 0.4])
+        %                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
+        %                 else
+        %                     disp('Not enough succesfull trials in the last reward zone to compute sliding window');
+        %                 end
+        %             end
+        %         end
     end
-    
-%     % %% InterLick Interval and Total Lick Count
-    fig2 = figure; 
-    slideId = pptx.addSlide();
-    fprintf('Added slide %d\n',slideId);
-    x = 1:2;
-    numtrialcompair = 5;
-    for i = 1:size(InterLickInterval,1)
-        successful = find(failure{i} == 0);
-    subplot(2,size(InterLickInterval,1),i)
-    imagesc(flipud(squeeze(InterLickInterval(i,:,:))'))
-    xlabel('trial number')
-    y1 = yticklabels;
-    yticklabels(flipud(y1))
-    ylabel('Interlick Interval Number')
-    if length(successful) >= numtrialcompair*2
-    earlyInterval = reshape(InterLickInterval(i,successful(1:numtrialcompair),:),1,numtrialcompair*size(InterLickInterval,3));
-    lateInterval = reshape(InterLickInterval(i,successful(end-numtrialcompair+1:end),:),1,numtrialcompair*size(InterLickInterval,3));
-    earlyInterval(isnan(earlyInterval)) = [];
-    lateInterval(isnan(lateInterval)) = [];
-    earlymean = nanmean(earlyInterval);
-    latemean = nanmean(lateInterval);
-    earlystd =nanstd(earlyInterval)/sqrt(length(earlyInterval));
-    latestd = nanstd(lateInterval)/sqrt(length(lateInterval));
-    subplot(2,size(InterLickInterval,1),i+size(InterLickInterval,1))
-    bar(x,[earlymean latemean])
-    hold on
-    er = errorbar(x,[earlymean...
-        latemean]...
-        ,[earlystd latestd],[earlystd latestd]);
-    er.Color = [0 0 0];
-    [h,p] = ttest2(earlyInterval,lateInterval);
-    text(1.5,max([earlymean latemean] +0.001),['t-test2 p = ' num2str(p)])
-           Labels = {['first ' num2str(numtrialcompair) ' trials'], ['last ' num2str(numtrialcompair) ' trials']};
-                    set(gca,'XTick', 1:2, 'XTickLabel', Labels);
-    hold off
-    end
-    
-    end
-    pptx.addPicture(fig2);
-    pptx.addTextbox(sprintf('%s_day%i interlick interval',mouse_name,days(dy)));
-    close(fig2)
+    %
+    % %     % %% InterLick Interval and Total Lick Count
+    %     fig2 = figure;
+    %     slideId = pptx.addSlide();
+    %     fprintf('Added slide %d\n',slideId);
+    %     x = 1:2;
+    %     numtrialcompair = 5;
+    %     for i = 1:size(InterLickInterval,1)
+    %         successful = find(failure{i} == 0);
+    %     subplot(2,size(InterLickInterval,1),i)
+    %     imagesc(flipud(squeeze(InterLickInterval(i,:,:))'))
+    %     xlabel('trial number')
+    %     y1 = yticklabels;
+    %     yticklabels(flipud(y1))
+    %     ylabel('Interlick Interval Number')
+    %     if length(successful) >= numtrialcompair*2
+    %     earlyInterval = reshape(InterLickInterval(i,successful(1:numtrialcompair),:),1,numtrialcompair*size(InterLickInterval,3));
+    %     lateInterval = reshape(InterLickInterval(i,successful(end-numtrialcompair+1:end),:),1,numtrialcompair*size(InterLickInterval,3));
+    %     earlyInterval(isnan(earlyInterval)) = [];
+    %     lateInterval(isnan(lateInterval)) = [];
+    %     earlymean = nanmean(earlyInterval);
+    %     latemean = nanmean(lateInterval);
+    %     earlystd =nanstd(earlyInterval)/sqrt(length(earlyInterval));
+    %     latestd = nanstd(lateInterval)/sqrt(length(lateInterval));
+    %     subplot(2,size(InterLickInterval,1),i+size(InterLickInterval,1))
+    %     bar(x,[earlymean latemean])
+    %     hold on
+    %     er = errorbar(x,[earlymean...
+    %         latemean]...
+    %         ,[earlystd latestd],[earlystd latestd]);
+    %     er.Color = [0 0 0];
+    %     [h,p] = ttest2(earlyInterval,lateInterval);
+    %     text(1.5,max([earlymean latemean] +0.001),['t-test2 p = ' num2str(p)])
+    %            Labels = {['first ' num2str(numtrialcompair) ' trials'], ['last ' num2str(numtrialcompair) ' trials']};
+    %                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
+    %     hold off
+    %     end
+    %
+    %     end
+    %     pptx.addPicture(fig2);
+    %     pptx.addTextbox(sprintf('%s_day%i interlick interval',mouse_name,days(dy)));
+    %     close(fig2)
 end
 
 % save ppt
-fl = pptx.save(fullfile('Y:\sstcre_analysis',sprintf('%s_behavior_com',mouse_name)));
+fl = pptx.save(fullfile('Y:\analysis',sprintf('%s_behavior_com',mouse_name)));
