@@ -2,12 +2,13 @@
 % https://www.nature.com/articles/s41593-022-01050-4
 % zahra's analysis for opto
 % goal is to see population level differences when you inhibit vips
-clear all;
+clear all; close all
 
 an = 'e218';
 % individual day analysis 
-dys = [20:46];
+ dys = [20:23, 47];
 src = 'X:\vipcre'; % folder where fall is
+% src = 'Y:\analysis\fmats';
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
@@ -19,6 +20,7 @@ pptx    = exportToPPTX('', ... % make new file
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+%     pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*plane0*', dy)));
     % load vars
     load(fullfile(pth.folder,pth.name))
     
@@ -77,7 +79,7 @@ for dy=dys % for loop per day
     sgtitle(sprintf('animal: %s, day %i', an, dy))
     colorbar;
     pptx.addPicture(fig);
-    close(fig)
+%     close(fig)
 end
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_trialbytrial_pearson_corr',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_trialbytrial_pearson_corr_',an)));

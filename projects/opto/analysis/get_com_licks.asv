@@ -1,0 +1,17 @@
+function [lick_selectivity] = get_com_licks(trialnum, licks, ybinned, bin_size, nbins, rewloc, ...
+    rewsize)
+% center of mass location of licks - rewloc (start)
+trials = unique(trialnum>2);
+com_ = zeros(length(trials));
+for tr=1:length(trails)
+    lick = licks(trialnum==trials(tr));
+    ypos = ybinned(trialnum==trials(tr));
+    yposlick = ypos(lick);
+    avypos = mean(yposlick, 'omitnan');
+    com(tr) = avypos-(rewloc-rewsize/2);
+end
+
+% smoothed licks in opp
+% zone / (smoothed licks in rew zone + smoothed licks in opp zone)
+
+end
