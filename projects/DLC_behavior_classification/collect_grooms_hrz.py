@@ -184,7 +184,6 @@ fig.colorbar(im, cax=cax, orientation='vertical')
 ax.set_xticks([])
 ax.set_ylabel('Trials')
 ax.set_title('Tongue')
-
 ax = axes[1]
 im = ax.imshow(np.array(plotp)>0)
 divider = make_axes_locatable(ax) 

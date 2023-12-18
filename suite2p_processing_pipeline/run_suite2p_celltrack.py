@@ -100,8 +100,8 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-        ops['nimg_init'] = 1000
-        ops['th_badframes'] = 0 # prevents cropping of fov, see s2p docs, useful for weekly concatenated videos 
+        ops['nimg_init'] = 2000
+        # ops['th_badframes'] = 0 # prevents cropping of fov, see s2p docs, useful for weekly concatenated videos 
         # bc you might have one day with bad motion corr but it shouldn't drastically affect the rois?
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)

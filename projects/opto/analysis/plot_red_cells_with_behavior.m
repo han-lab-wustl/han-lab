@@ -25,35 +25,35 @@ for dy=days
     rewsize = VR.settings.rewardZone*gainf;
     ypos = ybinned*(gainf);
     velocity = forwardvel;
-%     fig = figure('Renderer', 'painters');
-%     iind = 1;
-%     scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on;
-%     plot(find(licks),ypos(find(licks)), ...
-%         'r.', 'MarkerSize',5)
-%     for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-%         rectangle('position',[eps(mm) rewloc(mm)-rewsize/2 ...
-%             eps(mm+1)-eps(mm) rewsize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-%     end
-%     plot(find(rewards==0.5),ypos(find(rewards==0.5)),'b*', ...
-%         'MarkerSize',5)
-%     ylabel("Track Position (cm)")
-%     xticks([0:10000:length(timedFF)])
-%     tic = floor(timedFF(1:10000:end)/60);
-%     ticnan = ones(size(tic))*NaN;
-%     ticnan(1) = tic(1);
-%     ticnan(end) = tic(end);
-%     xticklabels(ticnan)
-%     xlabel("Time (minutes)")
-%     ylim([0 270])
-%     xlim([0 length(rewards)])
-%     yticks([0:90:270])
-%     yticklabels([0:90:270])
-%     for cp=cells_to_plot{dyind}              
-%         yyaxis right
-%         plot((dFF(:,cp)+iind))
-%         ylim([0.5 20])
-%         iind = iind + 5;
-%     end
+    fig = figure('Renderer', 'painters');
+    iind = 1;
+    scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on;
+    plot(find(licks),ypos(find(licks)), ...
+        'r.', 'MarkerSize',5)
+    for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+        rectangle('position',[eps(mm) rewloc(mm)-rewsize/2 ...
+            eps(mm+1)-eps(mm) rewsize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+    end
+    plot(find(rewards==0.5),ypos(find(rewards==0.5)),'b*', ...
+        'MarkerSize',5)
+    ylabel("Track Position (cm)")
+    xticks([0:10000:length(timedFF)])
+    tic = floor(timedFF(1:10000:end)/60);
+    ticnan = ones(size(tic))*NaN;
+    ticnan(1) = tic(1);
+    ticnan(end) = tic(end);
+    xticklabels(ticnan)
+    xlabel("Time (minutes)")
+    ylim([0 270])
+    xlim([0 length(rewards)])
+    yticks([0:90:270])
+    yticklabels([0:90:270])
+    for cp=cells_to_plot{dyind}              
+        yyaxis right
+        plot((dFF(:,cp)+iind))
+        ylim([0.5 20])
+        iind = iind + 5;
+    end
     %%
     dffs_cp = zeros(length(cells_to_plot{dyind}), length(eps)-1);
     cpind = 1;

@@ -28,7 +28,6 @@ def listdir(pth, ifstring=None):
         lst = [os.path.join(pth, xx) for xx in os.listdir(pth)]
     return lst
     
-
 def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for clampex
     """copy vr files in bulk to internal drive
     assumes usb is plugged in!!
