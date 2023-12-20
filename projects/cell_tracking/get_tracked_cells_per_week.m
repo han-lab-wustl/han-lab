@@ -2,9 +2,9 @@
 % get cells detected in cellreg and do analysis
 
 clear all
-src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e200';
-weekfld = 'week09-12_plane0';
+src = 'Y:\analysis\'; % main folder for analysis
+animal = 'e218';
+weekfld = 'week01-06_plane0';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
@@ -43,14 +43,14 @@ ctab = hsv(length(cc));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%
 % align all cells across all days in 1 fig
 figure;
 axes=zeros(1,sessions);
 cells_to_plot = [1:size(cc,1)];
 for ss=1:sessions
     day=days(ss);day=day{1};
-    axes(ss)=subplot(2,2,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    axes(ss)=subplot(2,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;

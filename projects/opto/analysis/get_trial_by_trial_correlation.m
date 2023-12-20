@@ -4,9 +4,9 @@
 % goal is to see population level differences when you inhibit vips
 clear all; close all
 
-an = 'e218';
+an = 'e216';
 % individual day analysis 
- dys = [47];
+ dys = [42];
 src = 'X:\vipcre'; % folder where fall is
 % src = 'Y:\analysis\fmats';
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures

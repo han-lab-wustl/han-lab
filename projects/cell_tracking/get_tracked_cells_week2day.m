@@ -3,10 +3,10 @@
 clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
-src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';%e200';
-weeknms = [12 13 14 15]; %[09 10 11 13 14];
-weekfld = 'week12-15';
+src = 'Y:\analysis\'; % main folder for analysis
+animal = 'e218';%e200';
+weeknms = [1 2 3 4 5 6]; %[09 10 11 13 14];
+weekfld = 'week01-06_plane0';
 weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
@@ -24,7 +24,7 @@ end
 wkcount = 1;
 for week=weeknms % for e201, excluded week 1
     week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', ...
-        'week%02d_to_days'], week), ...
+        'week%02d_plane0_to_days'], week), ...
         "Results\*cellRegistered*"));
     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
     % find cells in all sessions

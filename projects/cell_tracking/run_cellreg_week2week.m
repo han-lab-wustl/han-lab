@@ -38,15 +38,15 @@ memory_efficient_run = 1;
 %% Setting paths for the cell registration procedure:
 
 % we need to find the path up-two levels
-pth = 'Y:\sstcre_analysis\celltrack'; % CHANGE
+pth = 'Y:\analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e200'; % CHANGE
+animal = 'e218'; % CHANGE
 planes = [0]; % CHANGE
 for plane=planes
 % plane = 0;
-results_directory= fullfile(pth,sprintf('%s_week09-12_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
+results_directory= fullfile(pth,sprintf('%s_week01-06_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -323,7 +323,7 @@ disp('Done')
 % correlations.
 
 % Defining the parameters for final registration:
-registration_approach='Simple threshold'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD WHYYY
+registration_approach='Probabilistic'; % either 'Probabilistic' or 'Simple threshold' % CHANGED BY ZD WHYYY
 model_type='Centroid distance'; % either 'Spatial correlation' or 'Centroid distance'
 p_same_threshold=0.5; % only relevant if probabilistic approach is used
 

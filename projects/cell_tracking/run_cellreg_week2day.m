@@ -38,12 +38,12 @@ memory_efficient_run = 1;
 %% Setting paths for the cell registration procedure:
 
 % we need to find the path up-two levels
-pth = 'Y:\sstcre_analysis\celltrack';
+pth = 'Y:\analysis\celltrack';
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-week = 09;
-animal = 'e200';
+week = 3;
+animal = 'e218';
 planes = [0];
 for plane=planes
 % plane = 2;

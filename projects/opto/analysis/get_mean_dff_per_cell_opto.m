@@ -230,11 +230,11 @@ for dy=dys
 end
 
 % plot certain days of opto vs. ctrl
-optoday = dffs{11};
-optodayprev_fails = mean(optoday{4},1,'omitnan'); % fails
-optodayopto_fails = mean(optoday{5},1,'omitnan');
+optoday = dffs{15};
+optodayprev_fails = mean(optoday{1},1,'omitnan'); % fails
+optodayopto_fails = mean(optoday{2},1,'omitnan');
 figure; plot(1,optodayprev_fails,'ko'); hold on; plot(2,optodayopto_fails,'ro'); xlim([0 3])
 for ii=1:size(optodayopto_fails,2)
     plot([1, 2],[optodayprev_fails(ii),optodayopto_fails(ii)], 'k'); hold on % pairwise plots
 end
-[h,p,i,stats] =ttest(optodayprev_fails,optodayopto_fails); % paired
+[h,p,i,stats] =ttest(optodayprev_fails,optodayopto_fails) % paired
