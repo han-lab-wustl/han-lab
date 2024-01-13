@@ -22,7 +22,7 @@ bins2shuffle_forcell = {};
 for cshuf = 1:size(fc3,2)   
     bins2shuffle_forcell{cshuf} = shuffling_bins(fc3(:,cshuf))';   
 end 
-nshuffles = 100;
+nshuffles = 1000;
 spatial_info_shuf = zeros([nshuffles size(fc3,2)]);
 shuffledbins_forcell(1:size(fc3,2)) = {0};
 parfor j = 1:nshuffles

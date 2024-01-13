@@ -195,7 +195,7 @@ def movesbx(src, dst, fldkeyword='ZD'):
             print(f"\n*** moving {sbxfl}***")
             shutil.move(sbxfl, dst)
             print(f"\n*** copying {matfl}***")
-            shutil.move(matfl, dst)
+            shutil.copy(matfl, dst)
         except:
             print(f"\n*** no sbx in {fl}***")
 

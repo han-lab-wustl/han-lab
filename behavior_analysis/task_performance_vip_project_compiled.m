@@ -5,21 +5,15 @@
 % rewzone = 10 cm before reward
 % TODO lick rate outside rew zone
 clear all; close all
-mouse_name = "e216";
-dys = [7 8 9 37 38 39 40 41 42 43 44 45 46 48];
+mouse_name = "e218"; % mice = ["e218", "e216", "e201", "e200", "e186", "e189", "e190"];
+dys = [20,21,22,23,35,36,37,38,39,40,41,... %e218 days
+    42,43,44,45,47 48 49 50 51 52 55 56....
+    ];
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
-opto_ep = [-1 -1 -1 2 -1 0 1 2 -1 -1 -1 0 1 2]; 
+opto_ep = [-1 -1 -1 -1,3 0 1 2 0 1 3,...
+    0 1 2, 0 3 0 1 2 0 1 2 0]; 
 src = "X:\vipcre";
-
-% mouse_name = "e218";
-% dys = [20,21,22,23,35,36,37,38,39,40,41,...
-%     42,43,44,45,47 48 49 50 51 52 55 56];
-% % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
-% % day2=1
-% opto_ep = [-1 -1 -1 -1,3 0 1 2 0 1 3,...
-%     0 1 2, 0 3 0 1 2 0 1 2 0]; 
-% src = "X:\vipcre";
 epind = 1; % for indexing
 bin_size = 2; % cm bins for lick
 % ntrials = 8; % get licks for last n trials
@@ -28,11 +22,9 @@ licks_opto = []; licks_ctrl = []; licks_preopto = []; licks_inctrl_1 = []; licks
 com_opto_success = []; com_ctrl_success = []; com_preopto_success = []; com_inctrl_1_success = []; com_inctrl_2_success = []; com_postopto_success = [];
 com_opto_fails = []; com_ctrl_fails = []; com_preopto_fails = []; com_inctrl_1_fails = []; com_inctrl_2_fails = []; com_postopto_fails = [];
 for dy=dys
-%     daypth = dir(fullfile(src, mouse_name, string(dy), "**\*Fall.mat"));
-%     load(fullfile(daypth.folder,daypth.name), 'licks', 'trialnum', 'rewards', 'changeRewLoc', ...
-%         'ybinned', 'timedFF', 'VR');
-    daypth = dir(fullfile(src, mouse_name, string(dy), 'behavior\vr\*.mat'));
-    load(fullfile(daypth.folder, daypth.name))
+    daypth = dir(fullfile(src, mouse_name, string(dy), "**\*Fall.mat"));
+    load(fullfile(daypth.folder,daypth.name), 'licks', 'trialnum', 'rewards', 'changeRewLoc', ...
+        'ybinned', 'timedFF', 'VR');
     eps = find(VR.changeRewLoc>0);
     eps = [eps length(VR.changeRewLoc)];
     track_length = 180/VR.scalingFACTOR;

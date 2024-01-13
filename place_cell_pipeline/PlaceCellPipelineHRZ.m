@@ -14,12 +14,12 @@ clear all;
 
 an = 'e216';
 % individual day analysis 
-% dys = [27:30, 32:34,36,38,40:75];
-dys = [8:10,32,33,35:42];
+% dys = [27:30, 32:3 4,36,38,40:75];
+dys = [50];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is
-savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\sstcre_analysis\fmats';
 % pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
 pptx    = exportToPPTX('', ... % make new file
