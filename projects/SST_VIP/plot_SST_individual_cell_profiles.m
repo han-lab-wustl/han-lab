@@ -2,7 +2,7 @@
 % sst individual cell profiles
 clear all; close all
 an = 'e135';
-dy = 4;
+dy = 3;
 load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln0 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln1 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane1_Fall.mat", an, dy)));
@@ -95,4 +95,4 @@ for ep = 1:length(eps)-1 % for each epoch
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_successful_trial_cell_profiles',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_successful_trial_cell_profiles_day%i',an, dy)));

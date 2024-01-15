@@ -32,7 +32,7 @@ def main(**args):
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
                                         params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], 
-                                 imagingfl)
+                imagingfl)
         if not params["cell_detect_only"]: 
             # if cell detect only not specified, make tifs, else skip
             if len(imagingfl)!=0:           
@@ -49,10 +49,11 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-        # # temp
-        # ops["threshold_scaling"]=0.9 #TODO: make modular
-        # ops["max_iterations"]=30
-
+        # temp
+        ops["threshold_scaling"]=1 #TODO: make modular
+        ops["max_iterations"]=30
+        # test for e216
+        ops["allow_overlap"] = True
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -92,15 +93,17 @@ def main(**args):
         tifspths.sort(); print(tifspths)
         #savedir
         params["savedir"] = "X:\sstcre_imaging" #TODO: make var
-        weekdir = os.path.join(params["savedir"],params["mouse_name"], 
-                               "week"+str(params["week"])); makedir(weekdir)    
+        weekdir = os.path.join(params["savedir"],params["mouse_name"], \
+            "week"+str(params["week"])); makedir(weekdir)    
         #do suite2p after tifs are made
         # set your options for running
         import suite2p
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-        ops['nimg_init'] = 1000
+        ops['nimg_init'] = 2000
+        # ops['th_badframes'] = 0 # prevents cropping of fov, see s2p docs, useful for weekly concatenated videos 
+        # bc you might have one day with bad motion corr but it shouldn't drastically affect the rois?
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -149,7 +152,11 @@ def main(**args):
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
             ops = preprocessing.fillops(ops, params)
-
+            # temp
+            ops["threshold_scaling"]=1 #TODO: make modular
+            ops["max_iterations"]=30
+            # test for e216
+            ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
             # db overwrites any ops (allows for experiment specific settings)
             db = {

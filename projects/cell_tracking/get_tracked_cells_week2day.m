@@ -3,10 +3,10 @@
 clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
-src = 'Y:\sstcre_analysis\'; % main folder for analysis
-animal = 'e201';%e200';
-weeknms = [12 13 14 15]; %[09 10 11 13 14];
-weekfld = 'week12-15';
+src = 'Y:\analysis\'; % main folder for analysis
+animal = 'e218';%e200';
+weeknms = [1 2 3 4 5 6]; %[09 10 11 13 14];
+weekfld = 'week01-06_plane0';
 weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
@@ -24,7 +24,7 @@ end
 wkcount = 1;
 for week=weeknms % for e201, excluded week 1
     week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', ...
-        'week%02d_to_days'], week), ...
+        'week%02d_plane0_to_days'], week), ...
         "Results\*cellRegistered*"));
     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
     % find cells in all sessions
@@ -68,7 +68,7 @@ end
 % need logicals i.e cell 1 in week 1 is in week 2 and week 3 and week 4
 % see below...
 week1cells_to_map=commoncells_4weeks(:,1); % start with all cells across weeks
-sessions_total=21; %total number of days imaged (e.g. included in dataset)
+sessions_total=31; %total number of days imaged (e.g. included in dataset)
 cellmap2dayacrossweeks=zeros(length(week1cells_to_map),sessions_total);
 for w=1:length(week1cells_to_map)
     %cell index in other weeks
@@ -104,7 +104,7 @@ days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
     dy = fls(fl);
-    days{fl} = load(fullfile(dy.folder,dy.name), 'ops', 'stat');
+    days{fl} = load(fullfile(dy.folder,dy.name)); %'ops', 'stat', 'dFF'
 end
 cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
@@ -124,7 +124,7 @@ for i=[cells_to_plot]
     axs=cell(1,sessions_total);
     for ss=1:sessions_total        
         day=days(ss);day=day{1};
-        axs{ss}=subplot(5,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+        axs{ss}=subplot(6,6,ss); % 2 rows, 3 column, 1 pos; 20 days
         imagesc(day.ops.meanImg) %meanImg or max_proj
         colormap('gray')
         hold on;
@@ -147,7 +147,7 @@ figure;
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
     day=days(ss);day=day{1};
-    axesnm(ss)=subplot(5,5,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    axesnm(ss)=subplot(6,6,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;
@@ -197,6 +197,7 @@ for dayplt=days_to_plot
     yyaxis right
     try
         plot(day.dFF(:,cc(cellno,dayplt)),'g') % 2 in the first position is cell no
+    catch        
     end
     title(sprintf('day %i', dayplt))
     axs{dayplt}=ax1;
@@ -241,7 +242,7 @@ title(sprintf('Cell no. %03d', cellno));
 % cc(cc==0)=1;
 % align to behavior (rewards and solenoid) for each cell?
 % per day, get this data...
-range=20;
+range=10;
 bin=0.2;
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
@@ -263,19 +264,16 @@ for d=daysrewards
     rng = eprng(mask);
     % runs for all cells
     [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(day.dFF(rng, :), ...
-        rewardsonly(rng),day.timedFF(rng),range,bin); %rewardsonly if mapping to reward
+        cs(rng),day.timedFF(rng),range,bin); %rewardsonly if mapping to reward
     % now extract ids only of the common cells
     ccbinnedPerireward{d}=binnedPerireward;
     ccrewdFF{d}=rewdFF;
 end
 %%
 % plot
-% if cell is missing from 1 day, take mean dff of others days from that
-% cell??? NOT implemented yet
-% pavlovian=[1:5];
+% if cell is missing from 1 day, drop
+
 cells_to_plot = randi([1 length(cc)],1,20);
-% cells_to_plot = [7 13 15 19 32 43 44 59 77 135];
-%[161 157 152 140 135 106 93 77 59 58 53 52 48 47 44 43 42 41 33 32 27 19 15 13 12 8 7 6 4];%[1:200];
 for cellno=cells_to_plot
     dd=1; %for legend
     figure;
@@ -292,15 +290,19 @@ for cellno=cells_to_plot
 %             else
 %               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
 %             end
-            legg{dd}=sprintf('day %d',d); dd=dd+1;           
+            legg{dd}=sprintf('day %d',d); dd=dd+1; 
+        catch
         end
         hold on;        
     end   
      % plot reward location as line
 %     xticks([1:5:50, 50])
 %     x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}
-%     xticklabels([allbins(1:5:end) range]);
-    xlabel('seconds')
+%     xticklabels([allbins(1
+% :5:end) range]);
+    xlabel('seconds from CS')
+    xticks([0:10:((range*2)/bin)])
+    xticklabels([-range:2:range])
     ylabel('dF/F')
     legend(char(legg))
     title(sprintf('Cell no. %04d', cellno))

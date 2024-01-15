@@ -23,13 +23,13 @@ for cshuf = 1:size(fc3,2)
     bins2shuffle_forcell{cshuf} = shuffling_bins(fc3(:,cshuf))';   
 end 
 nshuffles = 1000;
-spatial_info_shuf = zeros([nshuffles size(spatial_info,2)]);
+spatial_info_shuf = zeros([nshuffles size(fc3,2)]);
 shuffledbins_forcell(1:size(fc3,2)) = {0};
 parfor j = 1:nshuffles
     disp(['Shuffle number ', num2str(j)]) 
     shuffled_cells_activity = zeros(size(fc3));
     shuffled_cells_activity = make_shuffled_Fc3_trace(bins2shuffle_forcell, ...
-    fc3, shuffledbins_forcell, shuffled_cells_activity)
+    fc3, shuffledbins_forcell, shuffled_cells_activity);
     spatial_info_shuf(j,:) = get_spatial_info_all_cells(shuffled_cells_activity, ...
         fv,thres, ftol,ypos,Fs,ceil(track_length/bin),track_length);
 end

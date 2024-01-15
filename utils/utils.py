@@ -28,7 +28,6 @@ def listdir(pth, ifstring=None):
         lst = [os.path.join(pth, xx) for xx in os.listdir(pth)]
     return lst
     
-
 def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for clampex
     """copy vr files in bulk to internal drive
     assumes usb is plugged in!!
@@ -85,24 +84,24 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
     #dont copy weeks if not specified
     # if not weeks:
     #     weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
-    if days:
-        days.sort()
-        # move all converted fmats to separate folder
-        for i in days:     
-            print(i)   
-            # pth = os.path.join(src, str(i))
-            pth = os.path.join(src, str(i))
-            imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
-            # imgfl = pth
-            for plane in planes:
-                mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
-                if os.path.exists(mat):
-                    copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
-                    if os.path.exists(copypth) and overwrite==False:
-                        print(f"*********Fall for day {i} already exists in {dst}*********")    
-                    else:
-                        shutil.copy(mat, copypth)            
-                        print(f"*********Copied day {i} Fall to {dst}*********")
+    days = list(days)
+    days.sort()
+    # move all converted fmats to separate folder
+    for i in days:     
+        print(i)   
+        # pth = os.path.join(src, str(i))
+        pth = os.path.join(src, str(i))
+        imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+        # imgfl = pth
+        for plane in planes:
+            mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
+            if os.path.exists(mat):
+                copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
+                if os.path.exists(copypth) and overwrite==False:
+                    print(f"*********Fall for day {i} already exists in {dst}*********")    
+                else:
+                    shutil.copy(mat, copypth)            
+                    print(f"*********Copied day {i} Fall to {dst}*********")
 
     if weeks:
         for w in weeks:            
@@ -117,7 +116,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
                     print(f"*********Fall for week {w} already exists in {dst}*********")    
                 else:
                     shutil.copy(mat, copypth)        
-                    print(f"*********Copied {w} Fall to {dst}*********")
+                    print(f"*********Copied week {w} Fall to {dst}*********")
     return 
 
 def deleteregtif(src,fls=False,keyword='reg_tif'):
@@ -137,6 +136,7 @@ def deleteregtif(src,fls=False,keyword='reg_tif'):
             # deletes reg_tif directory and all its contents
             print(f"\n*** deleting {path}***")
             shutil.rmtree(path)
+    return 
 
 def get_motion_corrected_tifs_from_suite2p_binary(binarypth, dst, 
             Ly=512, Lx=629, chunk=1000):
@@ -176,7 +176,9 @@ def convert_zstack_sbx_to_tif(sbxsrc):
 
 def movesbx(src, dst, fldkeyword='ZD'):
     """useful for moving sbx'es to another drive or to ris archive
-
+        assumes your sbxs are saved within a folder made by scanbox: only true of the newer
+        version > 2023
+        if older versions of sbx, may need to manually modify based on folder structure
     Args:
         src (_type_): dir with day dir data
         dst (_type_): dest dir
@@ -193,7 +195,7 @@ def movesbx(src, dst, fldkeyword='ZD'):
             print(f"\n*** moving {sbxfl}***")
             shutil.move(sbxfl, dst)
             print(f"\n*** copying {matfl}***")
-            shutil.move(matfl, dst)
+            shutil.copy(matfl, dst)
         except:
             print(f"\n*** no sbx in {fl}***")
 
@@ -208,7 +210,7 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
 
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
-    drives = [r'X:\vipcre']
-    animals = ['e218']
+    drives = [r'X:\vipcre',r'X:\vipcre']
+    animals = ['e218', 'e216']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

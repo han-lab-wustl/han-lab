@@ -179,10 +179,8 @@ for allplanes=1:4
                 get(gca,'YLim'));
             setPositionConstraintFcn(h,fcn);
             
-            w2=input('Roi position final press1 else 0=')
-            
-            if w2==1
-                
+            w2=input('Roi position final press1 else 0=');            
+            if w2==1                
                 h1=get(gca,'title');
                 mpimg=mimg(:,:,allplanes,days_check(ndays));
                 newpos{fk,1}=str2num(h1.String);

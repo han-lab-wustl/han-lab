@@ -10,16 +10,16 @@
 
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path!
-clear all; close all;
+clear all; 
 
-an = 'e218';
+an = 'e216';
 % individual day analysis 
-% dys = [27:30, 32:34,36,38,40:75];
-dys = [40];
+% dys = [27:30, 32:3 4,36,38,40:75];
+dys = [50];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is
-savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\sstcre_analysis\fmats';
 % pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
 pptx    = exportToPPTX('', ... % make new file
@@ -58,7 +58,7 @@ for dy=dys % for loop per day
     ntrials = 8; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%
     if exist('dFF', 'var')==1
     else % make dff and fc3
         fprintf('********calculating dFF and Fc3********\n')
@@ -197,4 +197,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_',an)));
