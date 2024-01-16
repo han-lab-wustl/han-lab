@@ -210,7 +210,8 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
 
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
-    drives = [r'X:\vipcre',r'X:\vipcre']
-    animals = ['e218', 'e216']
+    drives = [r'X:\vipcre',r'X:\vipcre', r'Y:\hrz_consolidation', \
+            r'Y:\hrz_consolidation']
+    animals = ['e218', 'e216', 'e217', 'e228']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])
