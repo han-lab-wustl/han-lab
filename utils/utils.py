@@ -119,6 +119,44 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
                     print(f"*********Copied week {w} Fall to {dst}*********")
     return 
 
+def deletetifs(src,fls=False,keyword='*.tif'):
+    """deletes tifs
+    useful after you've checked for motion correction
+
+    Args:
+        src (str): path to animal folder containing processed data
+        keyword (str, optional): folder name. Defaults to 'reg_tif'.
+    """
+    #src = 'Z:\sstcre_imaging\e201'
+    if not fls:
+        fls = listdir(src)
+    for fl in fls:
+        from pathlib import Path
+        for path in Path(src).rglob(keyword):
+            # deletes reg_tif directory and all its contents
+            if 'red' not in str(path) and 'green' not in str(path):
+                print(f"\n*** deleting {path}***")
+                os.remove(path)
+    return 
+
+def deletebinaries(src,fls=False,keyword='data.bin'):
+    """deletes tifs
+    useful after you've checked for motion correction
+
+    Args:
+        src (str): path to animal folder containing processed data
+        keyword (str, optional): folder name. Defaults to 'reg_tif'.
+    """
+    #src = 'Z:\sstcre_imaging\e201'
+    if not fls:
+        fls = listdir(src)
+    for fl in fls:
+        from pathlib import Path
+        for path in Path(src).rglob(keyword):            
+            print(f"\n*** deleting {path}***")
+            os.remove(path)
+    return 
+
 def deleteregtif(src,fls=False,keyword='reg_tif'):
     """deletes reg_tif folder en masse
     useful after you've checked for motion correction
@@ -210,7 +248,8 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
 
 if __name__ == "__main__":
     usb = r'I:\2023_ZD_VR'
-    drives = [r'X:\vipcre',r'X:\vipcre']
-    animals = ['e218', 'e216']
+    drives = [r'X:\vipcre',r'X:\vipcre', r'Y:\hrz_consolidation', \
+            r'Y:\hrz_consolidation']
+    animals = ['e218', 'e216', 'e217', 'e228']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

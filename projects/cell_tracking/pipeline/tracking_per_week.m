@@ -1,3 +1,4 @@
+function tracking_per_week(pth, animal, planes, weekst, weekend, fls)
 %% Method overview:
 
 % This is an implementation of a probabilistic approach for the
@@ -31,19 +32,14 @@
 % write more to file during processing so don't run into out-of-memory errors. Is
 % much slower for smaller (1P) datasets but allows you to run many 2P
 % datasets through pipeline without running out of memory
-
-clear all; close all;
 memory_efficient_run = 1;
 
 %% Setting paths for the cell registration procedure:
 
 % we need to find the path up-two levels
-pth = 'Y:\analysis\celltrack'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e218'; % CHANGE
-planes = [0]; % CHANGE
 for plane=planes
 % plane = 0;
 results_directory= fullfile(pth,sprintf('%s_week%02d-%02d_plane%i',animal, weekst, weekend, plane), 'Results') ; % CHANGE WEEK NO
@@ -55,14 +51,9 @@ end
 
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 
-% define path of sample data
-% CHANGE
-fls = dir(fullfile(fileroot, sprintf("fmats\\%s\\converted*week*plane%i_Fall.mat", animal, plane)));
-%dir(fullfile('X:\imaging_yc\concat', '*converted_Fall.mat'));
-% dir(fullfile(fileroot, sprintf("fmats\\%s_param_test\\fall\\permissive\\converted_%s*_week*.mat", animal, animal))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
-reference_session_index=number_of_sessions; 
+reference_session_index=number_of_sessions-2; 
 % CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
 % multiple weeks = number_of_sessions-2
 
@@ -446,4 +437,6 @@ disp('End of cell registration procedure')
 if memory_efficient_run
     rmdir(temp_dir,'s');
 end
+end
+
 end

@@ -47,3 +47,4 @@ if __name__ == "__main__":
             
 # command line to convert avi to imagej comptabile
 # ffmpeg -i K:\230609_E201.avi -c:v rawvideo K:\230609_E201_conv.avi
+# all videos have undergone lossless compression :)
