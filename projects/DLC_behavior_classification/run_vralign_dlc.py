@@ -78,7 +78,7 @@ if __name__ == "__main__":
         axs.plot(ypos, color='slategray',
                 linewidth=0.5)
         axs.plot(vel/20, label = 'forwardvel')
-        axs.plot(reward*20)
+        axs.plot(reward*20, label = 'reward')
         axs.plot(scipy.ndimage.gaussian_filter(back_y/3,1), label = 'back_y')
         axs.scatter(np.argwhere(licks>0).T[0], ypos[licks>0], color='r', marker='.')
 
