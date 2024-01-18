@@ -10,8 +10,10 @@ import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
-    src = r"G:\eye\all\230508-230514\dlc_curation\to_convert"
+    src = r"G:\eye\TI"
     dst = r"I:\eye_videos"
+    # src = r"E:\tail\all\2023"
+    # dst = r"K:\tail_videos"
     vids = listdir(src)
     print(vids)
     for vid in vids:
