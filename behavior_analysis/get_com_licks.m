@@ -21,5 +21,4 @@ end
 
 % smoothed licks in opp
 % zone / (smoothed licks in rew zone + smoothed licks in opp zone)
-
 end

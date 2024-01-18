@@ -9,7 +9,7 @@ close all; clear all;
 
 ind = 1;
 days = filename;
-grayColor = [.7 .7 .7];
+grayColor = [.7 .7 .7]; coms_init = {}; coms_btwn = {};
 for dy=1:length(days)
     mouse_pth = fullfile(filepath,filename{dy});
     mouse = load(mouse_pth);    
@@ -46,17 +46,54 @@ for dy=1:length(days)
     sgtitle(string(filename{dy}))
 %     legend({'Position', 'Licks', 'Conditioned Stimulus'})
 %     saveas(fig, 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\behavior.svg')
-%     close(fig)
+%     close(fig)    
+    rewloc = 101; % fixed
+    success = 0; % probes
+    rewsize = 20;
+    % plot com in initial probes vs. b/wn epoch probes    
+    eps = find(mouse.VR.changeRewLoc>0);
+    eps = [eps length(mouse.VR.changeRewLoc)];
+    trialnum = mouse.VR.trialNum(eps(1):eps(2)); reward = mouse.VR.reward(eps(1):eps(2));
+    licks = mouse.VR.lick(eps(1):eps(2)); ypos = mouse.VR.ypos(eps(1):eps(2));
+    [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum,reward);
+    trials = unique(trialnum(trialnum<min(str))); % get trials before first successful trial
+    % get trials only when the mouse licks
+    trials_ = []; trind = 1;
+    for tr=trials
+        if sum(licks(trialnum==tr))>0
+            trials_(trind)=tr;
+        end
+        trind=trind+1;
+    end
+    [com] = get_com_licks(trialnum, reward, trials, logical(licks), ypos, rewloc, ...
+        rewsize, success);
+    coms_init{ind} = com;
+    % get ep1 probe coms
+    if length(eps)>2
+        trialnum = mouse.VR.trialNum(eps(2):eps(3)); reward = mouse.VR.reward(eps(2):eps(3));
+        licks = mouse.VR.lick(eps(2):eps(3)); ypos = mouse.VR.ypos(eps(2):eps(3));
+        [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum,reward);
+        trials = unique(trialnum(trialnum<3)); % get trials before first successful trial
+        % get trials only when the mouse licks
+        trials_ = []; trind = 1;
+        for tr=trials
+            if sum(licks(trialnum==tr))>0
+                trials_(trind)=tr;
+            end
+            trind=trind+1;
+        end
+        [com] = get_com_licks(trialnum, reward, trials, logical(licks), ypos, rewloc, ...
+            rewsize, success);
+        coms_btwn{ind} = mean(com, 'omitnan');
+    end
     ind=ind+1;    
 end
-% 
-% plot trial performance as bar graph
-% x = [success_prop{:}];
-% y = [fail_prop{:}];
-% figure;
-% bar([mean(y);mean(x)]','grouped','FaceColor','flat');
-% hold on
-% plot(1,y,'ok')
-% plot(2,x,'ok')
-% xticklabels(["Fails" "Successes"])
-% ylabel("Proportion of trials")
+
+% plot com in initial probes vs. b/wn epoch probes    
+figure;
+bar([mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))) mean(cell2mat(coms_btwn))], 'FaceColor', 'w'); hold on
+plot(1, cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false)), 'ko')
+plot(2, cell2mat(coms_btwn), 'ko')
+ylabel('COM licks')
+xlabel('probes')
+xticklabels(["initial probes", "b/wn epoch probes"])

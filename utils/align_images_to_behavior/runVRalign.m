@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e216";
-days = [53];
+days = [54];
 src = "X:\vipcre";
 
 for day=days
@@ -16,8 +16,8 @@ for day=days
 end
 %%
 clear all;
-mouse_name = "e228";
-days = [9];
+mouse_name = "e217";
+days = [8:10];
 src = "Y:\hrz_consolidation";
 
 for day=days

@@ -6,10 +6,10 @@
 % TODO lick rate outside rew zone
 clear all; close all
 mouse_name = "e216";
-dys = [7 8 9 37 38 39 40 41 42 43 44 45 46 48 50 51 52 53];
+dys = [7 8 9 37 38 39 40 41 42 43 44 45 46 48 50 51 52 53 54 ];
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
-opto_ep = [-1 -1 -1 2 -1 0 1 2 -1 -1 -1 0 1 2 3 0 1 2]; 
+opto_ep = [-1 -1 -1 2 -1 0 1 2 -1 -1 -1 0 1 2 3 0 1 2 3]; 
 src = "X:\vipcre";
 
 % mouse_name = "e218";
@@ -275,6 +275,7 @@ xlabel('conditions')
 xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2 in b/wn opto", ...
     "previous ep", "opto ep", "postopto ep"])
 [h,p,i,stats] = ttest2(rates_opto, rates_ctrl); % sig
+
 
 % lick selectivity
 figure;

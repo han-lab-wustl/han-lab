@@ -15,7 +15,7 @@ clear all;
 an = 'e216';
 % individual day analysis 
 % dys = [27:30, 32:3 4,36,38,40:75];
-dys = [53];%[37:42];%[33,35:42];
+dys = [54];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is

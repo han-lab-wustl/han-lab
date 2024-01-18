@@ -3,15 +3,15 @@
 convert tif to avis!
 """
 import tifffile as tif, numpy as np, os, sys, shutil
-sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
 from multiprocess import Pool
 import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
-    src = r"G:\eye\all\230508-230514\dlc_curation\to_convert"
-    dst = r"I:\eye_videos"
+    src = r"F:\mixedEyeVideos\unvideod"
+    dst = r"F:\avis"
     vids = listdir(src)
     print(vids)
     for vid in vids:
