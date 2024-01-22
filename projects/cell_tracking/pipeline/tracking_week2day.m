@@ -1,4 +1,4 @@
-function tracking_per_week(pth, animal, planes, weekst, weekend, fld)
+function tracking_week2day(pth, animal, planes, week, pthstr)
 %% Method overview:
 
 % This is an implementation of a probabilistic approach for the
@@ -36,13 +36,10 @@ memory_efficient_run = 1;
 
 %% Setting paths for the cell registration procedure:
 
-% we need to find the path up-two levels
-[fileroot,~,~] = fileparts(pth);
-
 % Defining the results_directory and creating the figures_directory:
 for plane=planes
 % plane = 0;
-results_directory= fullfile(pth,sprintf('%s_week%02d-%02d_plane%i',animal, weekst, weekend, plane), 'Results') ; % CHANGE WEEK NO
+results_directory= fullfile(pth,sprintf('%s_week%02d_plane%i_to_days', animal, week, plane), 'Results') ;
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -50,12 +47,12 @@ if exist(figures_directory,'dir')~=7
 end
 
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
+fld = sprintf(pthstr, animal, ...
+    week, plane); % make sure week folder exists & is populated
 fls = dir(fullfile(src, fld)); 
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
-reference_session_index=number_of_sessions-2; 
-% CHANGED BY ZD FROM 1; offset by 2 weeks for week to week mapping
-% multiple weeks = number_of_sessions-2
+reference_session_index=number_of_sessions; 
 
 for it = 1:number_of_sessions
     file_names{it} = fullfile(fls(it).folder, fls(it).name); %to account for dates of sessions in my trial data

@@ -1,6 +1,6 @@
+function [outputArg1,outputArg2] = plot_tracked_cells_week2day(inputArg1,inputArg2)
 % Zahra
 % get cells detected in cellreg and do analysis
-clear all;
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
 src = 'Y:\analysis\'; % main folder for analysis
@@ -427,4 +427,5 @@ for cellno=cells_to_plot
     ylabel('dF/F')
     legend(char(legg))
     title(sprintf('Cell no. %04d', cellno))
+end
 end

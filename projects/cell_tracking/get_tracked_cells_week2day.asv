@@ -104,7 +104,7 @@ days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
     dy = fls(fl);
-    days{fl} = load(fullfile(dy.folder,dy.name)); %'ops', 'stat', 'dFF'
+    days{fl} = load(fullfile(dy.folder,dy.name)) ; %'ops', 'stat', 'dFF'
 end
 cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
@@ -180,28 +180,41 @@ linkaxes(axesnm, 'xy')
 % dff=dff.dff;
 %%
 % plot F (and ideally dff) over ypos
-days_to_plot=[1 4 7 10 13 16];%1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
-cellno=randi([1 length(cc)],1,1);
+days_to_plot=[1 4 7 10 13 18];%1:sessions_total; %[1 4 7 10 13 16]; %plot 5 days at a time
+cellno=6;%randi([1 length(cc)],1,1);
 grayColor = [.7 .7 .7];
-fig=figure;
+fig = figure('Renderer', 'painters', 'WindowState', 'maximized');
 subplot_j=1;
 for dayplt=days_to_plot
-    ax1=subplot(6,1,subplot_j);
+    ax1=subplot(6,6,subplot_j);
     day=days(dayplt);day=day{1};
-    plot(day.ybinned, 'Color', grayColor); hold on; 
-    plot(day.changeRewLoc, 'b')
-    plot(find(day.licks),day.ybinned(find(day.licks)),'r.')     
+    gainf = day.VR.scalingFACTOR;
+    ypos = day.ybinned/gainf;
+    plot(ypos, 'Color', grayColor); hold on; 
+    plot(day.changeRewLoc/gainf, 'k')
+    plot(find(day.licks),ypos(find(day.licks)),'r.')     
     rew = day.rewards>0.5; % codes for single or double rewards
-    plot(find(rew),day.ybinned(find(rew)),'b.', ...
+    plot(find(rew),ypos(find(rew)),'b.', ...
         'MarkerSize',10); 
-    yyaxis right
+%     yyaxis right
+    title(sprintf('day %i', dayplt))
+    ylim([0 270]) % track lengthc
+    xticks([0:10000:length(day.timedFF)])
+    tic = floor(day.timedFF(1:10000:end)/60);
+    xticklabels(tic)
+    xlabel("Time (minutes)")
+    ax2=subplot(6,6,subplot_j+1);
     try
         plot(day.dFF(:,cc(cellno,dayplt)),'g') % 2 in the first position is cell no
     catch        
     end
     title(sprintf('day %i', dayplt))
-    axs{dayplt}=ax1;
-    subplot_j=subplot_j+1; % for subplot index
+    xticks([0:10000:length(day.timedFF)])
+    tic = floor(day.timedFF(1:10000:end)/60);
+    xticklabels(tic)
+    xlabel("Time (minutes)")
+    axs{dayplt}=[ax1 ax2];
+    subplot_j=subplot_j+2; % for subplot index
 end
 han=axes(fig,'visible','off'); 
 han.Title.Visible='on';
