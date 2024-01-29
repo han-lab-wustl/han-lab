@@ -852,17 +852,21 @@ end
 %     SOloccor(2) = NaN;
 %     notSOloccor(2) = NaN;
     subplot(4,2,3)
-    scatter(ones(size(grabdarows)),notSOloccor(grabdarows),25,[0.5 0.5 0.5],'filled')
+    scatter(ones(size(grabdarows))*2,notSOloccor(grabdarows),25,[0.5 0.5 0.5],'filled')
     
     hold on
     [~,p] = ttest(notSOloccor(grabdarows));
-    text(1,nanmean(notSOloccor(grabdarows)),['p:' num2str(p)])
-    scatter(ones(size(grabdarows))*2,SOloccor(grabdarows),25,'r','filled')
-    plot([1 2],[notSOloccor(grabdarows); SOloccor(grabdarows)],'Color',[0.55 0.55 0.55])
-    errorbar([1 2],[nanmean(notSOloccor(grabdarows)) nanmean(SOloccor(grabdarows))],[nanstd(notSOloccor(grabdarows)) nanstd(SOloccor(grabdarows))]/sqrt(length(grabdarows)-sum(isnan(SOloccor(grabdarows)))),'k-','Capsize',0,'LineWidth',1.5)
-    plot([1 2],[nanmean(notSOloccor(grabdarows)) nanmean(SOloccor(grabdarows))],'ks','LineWidth',2)
+    text(2,nanmean(notSOloccor(grabdarows)),['p:' num2str(p)])
+    scatter(ones(size(grabdarows)),SOloccor(grabdarows),25,'r','filled')
+    plot([2 1],[notSOloccor(grabdarows); SOloccor(grabdarows)],'Color',[0.55 0.55 0.55])
+    
+    errorbar([2 1],[nanmean(notSOloccor(grabdarows)) nanmean(SOloccor(grabdarows))],...
+        [nanstd(notSOloccor(grabdarows)) nanstd(SOloccor(grabdarows))]...
+        /sqrt(length(grabdarows)-sum(isnan(SOloccor(grabdarows)))),'k-','Capsize',0,'LineWidth',1.5)
+    
+    plot([2 1],[nanmean(notSOloccor(grabdarows)) nanmean(SOloccor(grabdarows))],'ks','LineWidth',2)
     [~,p] = ttest(SOloccor(grabdarows));
-    text(2,nanmean(SOloccor(grabdarows)),['p:' num2str(p)])
+    text(1,nanmean(SOloccor(grabdarows)),['p:' num2str(p)])
     xlim([0.5 2.5])
     ylabel('Loccomotion Correlation')
     xticks([1 2])
@@ -874,16 +878,20 @@ end
     yticks(-1:0.5:1)
 %     [~,p] = 
     subplot(4,2,4)
-    scatter(ones(size(mutrows)),notSOloccor(mutrows),25,[0.5 0.5 0.5],'filled')
+    scatter(ones(size(mutrows))*2,notSOloccor(mutrows),25,[0.5 0.5 0.5],'filled')
     hold on
     [~,p] = ttest(notSOloccor(mutrows));
-    text(1,nanmean(notSOloccor(mutrows)),['p:' num2str(p)])
-    scatter(ones(size(mutrows))*2,SOloccor(mutrows),25,'r','filled')
-    plot([1 2],[notSOloccor(mutrows); SOloccor(mutrows)],'Color',[0.55 0.55 0.55])
-    errorbar([1 2],[nanmean(notSOloccor(mutrows)) nanmean(SOloccor(mutrows))],[nanstd(notSOloccor(mutrows)) nanstd(SOloccor(mutrows))]/sqrt(length(mutrows)-sum(isnan(SOloccor(mutrows)))),'k-','Capsize',0,'LineWidth',1.5)
-    plot([1 2],[nanmean(notSOloccor(mutrows)) nanmean(SOloccor(mutrows))],'ks','LineWidth',2)
+    text(2,nanmean(notSOloccor(mutrows)),['p:' num2str(p)])
+    scatter(ones(size(mutrows)),SOloccor(mutrows),25,'r','filled')
+    plot([2 1],[notSOloccor(mutrows); SOloccor(mutrows)],'Color',[0.55 0.55 0.55])
+    
+    errorbar([2 1],[nanmean(notSOloccor(mutrows)) nanmean(SOloccor(mutrows))],...
+        [nanstd(notSOloccor(mutrows)) nanstd(SOloccor(mutrows))]/sqrt(length(mutrows)-sum(isnan(SOloccor(mutrows)))),...
+        'k-','Capsize',0,'LineWidth',1.5)
+    
+    plot([2 1],[nanmean(notSOloccor(mutrows)) nanmean(SOloccor(mutrows))],'ks','LineWidth',2)
      [~,p] = ttest(SOloccor(mutrows));
-    text(2,nanmean(SOloccor(mutrows)),['p:' num2str(p)])
+    text(1,nanmean(SOloccor(mutrows)),['p:' num2str(p)])
     xlim([0.5 2.5])
     ylabel('Loccomotion Correlation')
     xticks([1 2])

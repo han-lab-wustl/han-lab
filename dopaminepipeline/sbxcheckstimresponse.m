@@ -31,12 +31,12 @@ stims = zeros(1,length(stimmean));
 for allplanes =1:numplanes
     temp = allplanes:numplanes:length(stimmean);
     temp2 = find(abs(diff(stimmean(temp)))>200)+1;
-    temp2(find(abs(diff(temp2))<3)) = [];
+%     temp2(find(abs(diff(temp2))<3)) = [];
     stims(temp(temp2)) = 1;
 end
 stims(1:10) = 0;
         temp3 = find(stims);
-        stims(temp3(find(diff(temp3)<200)+1)) = 0;
+%         stims(temp3(find(diff(temp3)<200)+1)) = 0;
 
 figure;
 for pl = 1:numplanes

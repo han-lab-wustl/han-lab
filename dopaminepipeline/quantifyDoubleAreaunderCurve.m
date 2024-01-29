@@ -52,7 +52,7 @@ figure;
 for allcat=[1 12]%10:11%1:11%1:11%1:11
 extracount = extracount +1;
     %% settings
-    path='F:\workspaces_darkreward';%% WITH EARLIEST DAYS
+    path='D:\workspaces_darkreward';%% WITH EARLIEST DAYS
 
     workspaces = {'156_dark_reward_workspace.mat','167_dark_reward_workspace.mat','168_dark_reward_workspace.mat','169_dark_reward_workspace.mat',...
         '171_dark_reward_workspace' '170_dark_reward_workspace.mat','179_dark_reward_workspace.mat',{'181_dark_reward_earlydays_workspace_00.mat','181_dark_reward_latedays_workspace_00.mat'}};

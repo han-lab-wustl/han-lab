@@ -1,65 +1,65 @@
-% clear all
-clearvars -except pr_dir0
+%%MM_DA
+%%%for batch analysis select the day folder you want to analyze as input
+
+%%%EXTRACTS THE TIMEPOINTS OF BEAHAVIORAL EVENTS AND OUTPUTS ASSOCIATED CHANGE
+%%%%FLOURESCECNE
+%%%BEHAVIORAL Events:
+% 1)	First lick after reward
+% 2)	single rew CS
+% 3)	for single rew US
+% 4)	%non-rewarded licks
+% 5)	for UNREWARD SOLENOID
+% 6)	for REWARD WITHOUT CS SOLENOID
+% 7)	assuming double reward if US solenoid is missed
+% 8)	for doubles: First lick after reward
+% 9)	for double rew CS
+% 10)	for double rew US
+% 11)	stopping success trials: all stops
+% 12)	non rewarded stops
+% 13)	rewarded stops
+% 14)	NOn REWARDED STOPS WITH and without LICKS 
+% 15)	moving success trials: all motions
+% 16)	moving rewarded
+% 17)	moving unrewarded
+% 18)	non rewarded motion
+% 
+
+
+
+
+
+clear all
 close all
-mouse_id=181;
-addon = 'late_HRZ';
+mouse_id=171;
+addon = 'checkearly_dark_reward';
 mov_corr=[]; stop_corr=[]; mov_stop=[];
 mov_corr_success=[]; stop_corr_success=[];
 mov_corr_prob=[]; stop_corr_prob=[];
 mov_corr_fail=[]; stop_corr_fail=[]; cnt=0;
-% pr_dir0 = uipickfiles;
+pr_dir0 = uipickfiles;
 
-% oldbatch=input('if oldbatch press 1 else 0=');
-oldbatch = 0;
+
+%%%pick days in each directory
+oldbatch=input('if oldbatch press 1 else 0=');
 % dop_allsuc_stop_no_reward = NaN(length(pr_dir0),4,79);
-for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:12 14]%1:5%26:30%1:33%31:32%30%27:30%21%[1:21]%[1:2 4:5 12:22]%[8:21]%[2:4 6:11]%[1:2 4:5 12:20]%%[1:21]%%
-    %     clearvars -except alldays addon mouse_id mov_corr stop_corr mov_stop conc_coeff_rew conc_coeff_nr ...
-    %         mov_corr_success stop_corr_success mov_corr_prob stop_corr_prob mov_corr_fail stop_corr_fail...
-    %         c  alldays mouse_id mov_corr stop_corr mov_stop conc_coeff_rew conc_coeff_nr dop_suc_movint dop_suc_stopint roe_suc_movint roe_suc_stopint ...
-    %         dop_allsuc_mov dop_allsuc_stop roe_allsuc_mov roe_allsuc_stop ...
-    %         dop_allfail_mov dop_allfail_stop roe_allfail_mov roe_allfail_stop...
-    %         dop_alldays_planes_success_mov dop_alldays_planes_fail_mov dop_alldays_planes_success_stop dop_alldays_planes_fail_stop...
-    %         roe_alldays_planes_success_mov roe_alldays_planes_fail_mov roe_alldays_planes_success_stop roe_alldays_planes_fail_stop...
-    %         subp days_check cnt dop_alldays_planes_perireward roe_alldays_planes_perireward dop_allsuc_perireward roe_allsuc_perireward...
-    %         pr_dir0 dop_alldays_planes_success_stop_no_reward dop_alldays_planes_success_stop_reward...
-    %         dop_allsuc_stop_no_reward dop_allsuc_stop_reward roe_allsuc_stop_no_reward roe_allsuc_stop_reward...
-    %         dop_alldays_planes_double_0 roe_alldays_planes_double_0 dop_alldays_planes_perireward_double roe_alldays_planes_perireward_double...
-    %         dop_allsuc_perireward_double roe_allsuc_perireward_double dop_allsuc_perireward_double_se roe_allsuc_perireward_double_se...
-    %         day_labels roi_dop_alldays_planes_success_mov roi_dop_alldays_planes_success_stop roi_dop_alldays_planes_success_stop_no_reward...
-    %         roi_dop_alldays_planes_success_stop_reward roi_dop_allsuc_mov roi_dop_allsuc_stop roi_dop_allsuc_stop_no_reward roi_dop_allsuc_stop_reward...
-    %         roi_dop_alldays_planes_perireward_0 roi_dop_alldays_planes_perireward_double_0 roi_dop_alldays_planes_perireward roi_dop_alldays_planes_perireward_double...
-    %         roi_dop_allsuc_perireward roi_dop_allsuc_perireward_double roi_dop_allsuc_perireward_se roi_dop_allsuc_perireward_double_se...
-    %         roe_alldays_planes_perireward_0 roe_alldays_planes_success_stop_no_reward roe_alldays_planes_stop_reward roe_alldays_planes_perireward_double_0...
-    %         dop_alldays_planes_perireward_double_0 dop_alldays_planes_perireward_0 roe_alldays_planes_success_stop_reward...
-    %         roi_dop_alldays_planes_periCS roi_dop_alldays_planes_peridoubleCS roi_roe_alldays_planes_periCS roi_roe_alldays_planes_peridoubleCS roi_dop_allsuc_perirewardCS...
-    %         roi_dop_allsuc_perireward_doubleCS roi_roe_allsuc_perirewardCS roi_roe_allsuc_perireward_doubleCS...
-    %         roi_dop_alldays_planes_perinrlicks_0  roi_dop_alldays_planes_perinrlicks...
-    %         roi_dop_alldays_planes_periUS roi_dop_alldays_planes_peridoubleUS roi_dop_allsuc_perirewardUS roi_dop_allsuc_perireward_doubleUS...
-    %         roi_roe_alldays_planes_periUS roi_roe_alldays_planes_peridoubleUS roi_roe_allsuc_perirewardUS roi_roe_allsuc_perireward_doubleUS...
-    %         roi_dop_alldays_planes_unreward_single_0 roi_dop_alldays_planes_unreward_single roi_dop_allsuc_unreward_single roi_dop_allsuc_unreward_single_se...
-    %         roi_roe_alldays_planes_unrewardCS roi_roe_allsuc_perireward_unrewardCS oldbatch  roi_dop_alldays_planes_rewusonly_single_0...
-    %         roi_dop_alldays_planes_rewusonly_single_0 roi_dop_alldays_planes_rewusonly_single roi_dop_allsuc_rewusonly_single   roi_dop_allsuc_rewusonly_single_se....
-    %         roi_roe_alldays_planes_rewusonly roi_roe_allsuc_rewusonly roi_dop_alldays_planes_perireward_usonly_0   roi_dop_alldays_planes_perireward_usonly...
-    %         roi_dop_allsuc_perireward_usonly  roi_dop_allsuc_perireward_usonly_se roi_dop_alldays_planes_perirewarddoublemUS_CS_0    roi_dop_alldays_planes_perirewarddoublemUS_CS...
-    %          roi_dop_allsuc_perirewarddoublemUS_CS  roi_dop_allsuc_perirewarddoublemUS_CS_se roi_roe_alldays_planes_perirewarddoublemUS_CS    roi_roe_allsuc_perirewarddoublemUS_CS
-    
+for alldays = 1:length(pr_dir0)%%%number of days to run data on
+   
     clearvars lickVoltage forwardvel
-    %
+  
     
     close all
-    
     dir_s2p = struct2cell(dir([pr_dir0{alldays} '\**\suite2p']));
     planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
     
     planeroicount = 0;
     cnt=cnt+1;
     Day=alldays;
-    for allplanes=1:size(planefolders,2)
+    for allplanes=1:size(planefolders,2) %4%%%number of planes to feed
         plane=allplanes;
         
-        
+%         pr_dir1 = strcat(pr_dir0{Day},'\suite2p');
+%         pr_dir=strcat(pr_dir1,'\plane',num2str(plane-1),'\reg_tif\','')
         pr_dir=strcat(planefolders{2,allplanes},'\plane',num2str(plane-1),'\reg_tif\','')
-        
         
         
         if exist( pr_dir, 'dir')
@@ -92,7 +92,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             %                 rewards = rewards1;
             %             end
             %%%%%%%%%%%%%%%
-            numplanes=4;
+            numplanes=size(planefolders,2);
             gauss_win=5;
             frame_rate=31.25;
             lickThresh=-0.085;%-0.085; ZD changed to -0.07 because code was crashing otherwise...
@@ -107,7 +107,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             Stopped_frame = 15;%frame_rate; %number of seconds for it to be considered a stop;
             max_reward_stop = 5*frame_rate; %number of seconds after reward for a stop to be considered a reward related stop * frame rate.
             frame_tol = 5; %number of frames prior to reward to check for stopping points as a tolerance for defining stopped.
-            CSUStimelag = 0; %seconds between
+            CSUStimelag = 0.5; %seconds between
             frame_time=1/frame_rate;
             num_rew_win_frames=round(num_rew_win_sec/frame_time);%window in frames
             rew_lick_win_frames=round(rew_lick_win/frame_time);%window in frames
@@ -135,14 +135,8 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             speed_smth_1=smoothdata(speed_binned,'gaussian',gauss_win)';
             dop_smth=smoothdata(norm_base_mean,'gaussian',gauss_win);
             
-            if CSUSframelag_win_frames == 0
-                solenoid2ALL(find(rewardsALL)) = 1;
-            end
             
-            temp2=find(diff(changeRewLocALL));
-            rew_changeloc=temp2(find(diff(find(diff(changeRewLocALL)))==1))
-            
-            
+            %%%figure for behavior plotting
             
             figure;
             plot(utimedFF,rescale(speed_smth_1,min(dop_smth)-range(dop_smth),min(dop_smth)),'LineWidth',1.5)
@@ -153,62 +147,11 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             ylabel('dF/F')
             savefig('Fl_Speed_Reward.fig')
             
-            %%
-            %%%%% split all trials into successfull, failed, probes and
-            %%%%% epochs
-            
-            figure; plot(trialnumALL); hold on; plot(ybinnedALL);
-            %%probe trials
-            scatter(find(trialnumALL<=2)+1,ybinnedALL(find(trialnumALL<=2)+1),10,'MarkerEdgeColor',[0 .5 .5],...
-                'MarkerFaceColor',[0 .7 .7],...
-                'LineWidth',1.5)
-            probe_trials=find(trialnumALL<=2)+1;
-            
-            %%% success trials
-            rew_idz=find(rewardsALL==1); trial_idz=find(diff(trialnumALL));
-            succ=zeros(1,size(reward_binned,1));c=0; success_trial_num=[]
-            for jj=1:length(trial_idz)-1
-                idz=find(reward_binned(1,trial_idz(jj)+1:trial_idz(jj+1)))
-                if ~isempty(idz)
-                    c=c+1;
-                    succ(trial_idz(jj)+1:trial_idz(jj+1))=1;
-                    number_succ=c;
-                    success_trial_num =[success_trial_num unique(trialnumALL(trial_idz(jj)+1:trial_idz(jj+1)))];
-                    
-                end
-            end
-            
-            success_trials= find(succ);
-            %%failed trials
-            failed_trials=setxor(1:length(reward_binned),[success_trials probe_trials])
-            
-            
-            
-            scatter(find(succ),ybinnedALL(find(succ)),10,'ms',...
-                'LineWidth',1.5)
-            scatter(failed_trials,ybinnedALL(failed_trials),10,'bs',...
-                'MarkerFaceColor',[.7 .7 .7],...
-                'LineWidth',1.5)
-            scatter(find(licksALL),ybinnedALL(find(licksALL)),'g.')
-            scatter(find(reward_binned),ybinnedALL(find(reward_binned)),'ro')
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
             %%%%%%%%%%%%%%%%%%%calculate single traces
             %%%%%%rewarded licks
             
             
-            %double rewards
+            %______________________________________double lick idx
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%%%%%%%%%%%%%%%%%%%%%%%
             R = bwlabel(reward_binned>rew_thresh);%label rewards, ascending
@@ -240,9 +183,10 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             %             end
             
             %double rewards. must be doubles is any(short), assuming not just tri.
+           
             double_rew=find(ysize==0);%double events have ysize=0
             double_lick_idx = [];
-            double_lick_gap = [];
+            double_lick_gap = []; double_idx=[];
             for i=1:length(double_rew)
                 double_idx(i)=rew_idx(find(multi_reward_num==double_rew(i)));
                 if double_idx(i)+rew_lick_win_frames < length(supraLick)%if window to search for lick after rew is past length of supraLick, doesn't update single_lick_idx, but single_idx is
@@ -293,7 +237,8 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             
             
             
-            % single rewards
+            %%% __________________________________________single rewards
+            %%% first lick after reward FULL FOV
             
             
             single_rew=find(short);
@@ -351,19 +296,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 currentrewidxperplane = find(timedFF>=utimedFF(single_lick_idx(i)),1);
                 single_traces(:,i)=base_mean(currentrewidxperplane-pre_win_frames:currentrewidxperplane+post_win_frames)';%lick at pre_win_frames+1
                 single_traces_roesmth(:,i)=speed_smth_1(single_lick_idx(i)-pre_win_framesALL:single_lick_idx(i)+post_win_framesALL)';
-                %                 single_traces_lick(:,i)=supraLick(single_lick_idx(i)-pre_win_framesALL:single_lick_idx(i)+post_win_framesALL)';
-                
-                %                 [rho, pval]=corrcoef(single_traces(:,i),single_traces_roesmth(:,i));
-                %                 coeff_rewarded_licks(i,:)=[rho(1,2) pval(1,2)];
-                
-                %%% compute cross-corr and find the lag
-                %                 s2=single_traces(:,i);
-                %                 s1=single_traces_roesmth(:,i);
-                %                 [C21,lag21] = xcorr(s2,s1);
-                %                 C21 = C21/max(C21);
-                %                 [M21,I21] = max(C21);
-                %                 t21 = lag21(I21);
-                %                 lags_single_traces(1,i)=t21;
+             
             end
             norm_single_traces=single_traces./mean(single_traces(1:pre_win_frames,:));
             norm_single_traces_roesmth=single_traces_roesmth./mean(single_traces_roesmth(1:pre_win_framesALL,:));
@@ -386,7 +319,8 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             savefig(currfile)
             
             %%%%%%%%%%%%%%
-            %non-rewarded licks
+            %%%______________________________________________non-rewarded
+            %%%licks full FOV
             all_rew_lick=single_lick_idx;
             if exist('double_lick_idx','var')
                 all_rew_lick=[all_rew_lick double_lick_idx];%combine arrays, could also use union but should not have replicates
@@ -437,7 +371,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             
             
             %%%%%%%%%%%%
-            %for doubles
+            %for doubles first lick after reward
             double_traces=zeros(pre_win_frames+post_win_frames+1,length(double_lick_idx));
             
             
@@ -449,17 +383,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     
                     double_traces(:,i)=base_mean(currentdoublelickidxperplane-pre_win_frames:currentdoublelickidxperplane+post_win_frames)';%lick at pre_win_frames+1
                     double_traces_roesmth(:,i)=speed_smth_1(double_lick_idx(i)-pre_win_framesALL:double_lick_idx(i)+post_win_framesALL)';
-                    %                     [rho, pval]=corrcoef(double_traces(:,i),double_traces_roesmth(:,i));
-                    %                     coeff_doublerewarded_licks(i,:)=[rho(1,2) pval(1,2)];
-                    
-                    %%% compute cross-corr and find the lag
-                    %                     s2=double_traces(:,i);
-                    %                     s1=double_traces_roesmth(:,i);
-                    %                     [C21,lag21] = xcorr(s2,s1);
-                    %                     C21 = C21/max(C21);
-                    %                     [M21,I21] = max(C21);
-                    %                     t21 = lag21(I21);
-                    %                     lags_double_traces(1,i)=t21;
+
                 end
             else
                 double_traces = NaN(length(-pre_win_frames:post_win_frames));
@@ -491,35 +415,11 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
             
             
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
+            %%%%%locomotion moving and stops for full FOV
+            %%%MOVING TMPTS INITIATION 
             if exist('single_traces','var')
-                %                 find_figure(strcat(mouse_id,'_perireward','_plane',num2str(allplanes)))
-                %                 subplot(ceil(sqrt(length(pr_dir0))),ceil(sqrt(length(pr_dir0))),cnt),
-                %                 xlabel('seconds from first reward lick')
-                %                 ylabel('dF/F')
-                %                 striptitleindx = strfind(pr_dir0{Day},'\');
-                %                 title(pr_dir0{Day}(striptitleindx(end)+1:end))
-                %                 day_labels{Day} = pr_dir0{Day}(striptitleindx(end)+1:end);
-                %                 hold on
-                %                 subplot(ceil(sqrt(length(pr_dir0))),ceil(sqrt(length(pr_dir0))),cnt),plot(frame_time*(-pre_win_frames):frame_time:frame_time*post_win_frames,norm_single_traces);
-                %                 hold on
-                %                 subplot(ceil(sqrt(length(pr_dir0))),ceil(sqrt(length(pr_dir0))),cnt),plot(mean(norm_single_traces,2),'k','LineWidth',2);
-                %                 legend(['n = ',num2str(size(norm_single_traces,2))])
-                %
-                %                 plot(frame_time*(-pre_win_frames):frame_time:frame_time*post_win_frames,rescale(norm_single_traces_roesmth,0.99,1))
-                %
-                
-                %%%%moving and stop activity
-                
-                
-                %                 find_figure('dop_forwardvel_control_binned_activity');clf;
-                %                 subplot(4,1,allplanes),plot(norm_base_mean)
-                %                 hold on
-                %                 forwardvel=smoothdata(speed_binned,'gaussian',gauss_win)';
-                %                 plot(rescale(forwardvel,0.999,1.05),'k')
-                
-                
-                
+      
+               
                 
                 if size(forwardvelALL,2) == 1
                     [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)),speed_thresh,Stopped_frame,speedftol);
@@ -527,13 +427,6 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5))',speed_thresh,Stopped_frame,speedftol);
                 end
                 mov_success_tmpts = moving_middle(find(diff(moving_middle)>1)+1);
-                
-                
-                
-                
-                
-                
-                
                 
                 
                 idx_rm=(mov_success_tmpts- pre_win_framesALL)<=0;
@@ -556,6 +449,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 
                 
                 %%%%stopping success trials
+                %%%STOPPING INIT FULL FOV
                 
                 stop_success_tmpts =  moving_middle(find(diff(moving_middle)>1))+1;
                 
@@ -590,28 +484,28 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 end
                 didntstoprew = find(isnan(rew_stop_success_tmpts));
                 rew_stop_success_tmpts(isnan(rew_stop_success_tmpts)) = [];
-                rew_stop_success_tmpts=unique(rew_stop_success_tmpts);
+                 rew_stop_success_tmpts=unique(rew_stop_success_tmpts);
                 nonrew_stop_success_tmpts = setxor(rew_stop_success_tmpts,stop_success_tmpts);
                 
                 
-                %                 find_figure('velocity');clf
-                %                 vr_speed=smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5));
-                %                 plot(vr_speed)
-                %                 hold on
-                %                 vr_speed2=zeros(1,length(vr_speed)); vr_speed2(moving_middle)=1; vr_speed2(find(vr_speed2==0))=NaN;
-                %                 plot(vr_speed.*vr_speed2,'r.')
-                %                 vr_speed2=zeros(1,length(vr_speed));vr_speed2(stop)=1; vr_speed2(find(vr_speed2==0))=NaN;
-                %                 plot(vr_speed.*vr_speed2,'k.')
-                %                 rew_idx2=zeros(1,length(forwardvelALL)); rew_idx2(rew_idx)=1; rew_idx2(find(rew_idx2==0))=NaN;
-                %                 plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*rew_idx2,'bo')
-                %                 hold on
-                %                 tempspeed = smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5));
-                %                 stop_tmpts2=zeros(1,length(forwardvelALL)); stop_tmpts2(stop_success_tmpts)=1; stop_tmpts2(find(stop_tmpts2==0))=NaN;
-                %                 plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*stop_tmpts2,'go')
-                %                 scatter(nonrew_stop_success_tmpts,tempspeed(nonrew_stop_success_tmpts),'ys','filled')
-                %                 scatter(rew_stop_success_tmpts,tempspeed(rew_stop_success_tmpts),'bs','filled')
-                % %                 %
-                %                 plot(rescale(supraLick,-10,-5),'Color',[0.7 0.7 0.7])
+%                 find_figure('velocity');clf
+%                 vr_speed=smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5));
+%                 plot(vr_speed)
+%                 hold on
+%                 vr_speed2=zeros(1,length(vr_speed)); vr_speed2(moving_middle)=1; vr_speed2(find(vr_speed2==0))=NaN;
+%                 plot(vr_speed.*vr_speed2,'r.')
+%                 vr_speed2=zeros(1,length(vr_speed));vr_speed2(stop)=1; vr_speed2(find(vr_speed2==0))=NaN;
+%                 plot(vr_speed.*vr_speed2,'k.')
+%                 rew_idx2=zeros(1,length(forwardvelALL)); rew_idx2(rew_idx)=1; rew_idx2(find(rew_idx2==0))=NaN;
+%                 plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*rew_idx2,'bo')
+%                 hold on
+%                 tempspeed = smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5));
+%                 stop_tmpts2=zeros(1,length(forwardvelALL)); stop_tmpts2(stop_success_tmpts)=1; stop_tmpts2(find(stop_tmpts2==0))=NaN;
+%                 plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*stop_tmpts2,'go')
+%                 scatter(nonrew_stop_success_tmpts,tempspeed(nonrew_stop_success_tmpts),'ys','filled')
+%                 scatter(rew_stop_success_tmpts,tempspeed(rew_stop_success_tmpts),'bs','filled')
+% %                 %
+%                 plot(rescale(supraLick,-10,-5),'Color',[0.7 0.7 0.7])
                 
                 save('params','didntstoprew','rew_stop_success_tmpts','nonrew_stop_success_tmpts','stop_success_tmpts','mov_success_tmpts','-append')
                 
@@ -631,7 +525,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 rew_idx2=zeros(1,length(forwardvelALL)); rew_idx2(rew_idx)=1; rew_idx2(find(rew_idx2==0))=NaN;
                 plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*rew_idx2,'bo')
                 
-                %  non rewarded stops
+                % _______________ non rewarded stops
                 dop_success_peristop_no_reward=[]; roe_success_peristop_no_reward=[];
                 if ~isempty(nonrew_stop_success_tmpts)
                     for stamps=1:length(nonrew_stop_success_tmpts)
@@ -647,7 +541,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 end
                 
                 
-                % rewarded stops
+                % __________________rewarded stops
                 dop_success_peristop_reward=[]; roe_success_peristop_reward=[];
                 if ~isempty(rew_stop_success_tmpts)
                     for stamps=1:length(rew_stop_success_tmpts)
@@ -708,14 +602,14 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 roe_allsuc_mov(alldays,allplanes,:)=mean(roe_success_perimov,1);
                 roe_allsuc_stop(alldays,allplanes,:)=mean(roe_success_peristop,1);
                 
-                
-                %%%%% perireward
+              
+                %%%%% perireward ALL DAYS AND PLANES STORING
                 dop_alldays_planes_perireward_0{alldays,allplanes}=single_traces;
                 roe_alldays_planes_perireward_0{alldays,allplanes}=single_traces_roesmth;
                 
                 dop_alldays_planes_perireward_double_0{alldays,allplanes} = double_traces;
                 roe_alldays_planes_perireward_double_0{alldays,allplanes} = double_traces_roesmth;
-                if ~isempty(roe_success_peristop_no_reward)
+                  if ~isempty(roe_success_peristop_no_reward)
                     roe_allsuc_stop_no_reward(alldays,allplanes,:)=mean(roe_success_peristop_no_reward,1);
                 else
                     roe_allsuc_stop_no_reward(alldays,allplanes,:)=NaN(1,1,313);
@@ -872,16 +766,6 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 roinorm_single_tracesCS=roisingle_tracesCS./mean(roisingle_tracesCS(1:pre_win_frames,:));
                 roinorm_single_traces_roesmthCS=roisingle_traces_roesmthCS./mean(roisingle_traces_roesmthCS(1:pre_win_framesALL,:));
                 
-                %%%epoch and trial check
-                singlerew_epoch=zeros(1,size(singlerew,2));
-                rew_changeloc2=[1 rew_changeloc length(reward_binned)];
-                for ep=1:length(rew_changeloc2)-1
-                    singlerew_epoch(find(singlerew>rew_changeloc2(ep) & singlerew<rew_changeloc2(ep+1)))=ep;
-                end
-                singlerew_trialnum=trialnumALL(singlerew);
-                
-                %%%
-                
                 
                 save('params','roinorm_single_tracesCS','roinorm_single_traces_roesmthCS','-append')
                 
@@ -917,18 +801,6 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 end
                 roinorm_single_tracesUS=roisingle_tracesUS./mean(roisingle_tracesUS(1:pre_win_frames,:));
                 roinorm_single_traces_roesmthUS=roisingle_traces_roesmthUS./mean(roisingle_traces_roesmthUS(1:pre_win_framesALL,:));
-                
-                  %%%epoch and trial check
-                singlerewus_epoch=zeros(1,size(singlerew,2));
-                rew_changeloc2=[1 rew_changeloc length(reward_binned)]; 
-                for ep=1:length(rew_changeloc2)-1
-                    singlerewus_epoch(find(singlerew>rew_changeloc2(ep) & singlerew<rew_changeloc2(ep+1)))=ep;     
-                end
-                singlerewus_trialnum=trialnumALL(singlerew);
-                %%%
-                
-                
-                
                 
                 
                 save('params','roinorm_single_tracesUS','roinorm_single_traces_roesmthUS','-append')
@@ -1032,17 +904,6 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     roinorm_unrew_single_tracesCS=roiunrew_single_traces_CS./mean(roiunrew_single_traces_CS(1:pre_win_frames,:));
                     roinorm_unrew_single_traces_roesmthCS=roiunrew_single_traces_roesmthCS./mean(roiunrew_single_traces_roesmthCS(1:pre_win_framesALL,:));
                     
-                    
-                    %%%epoch and trial check
-                    singleunrew_epoch=zeros(1,size(singleunrew,2));
-                    rew_changeloc2=[1 rew_changeloc length(reward_binned)];
-                    for ep=1:length(rew_changeloc2)-1
-                        singleunrew_epoch(find(singleunrew>rew_changeloc2(ep) & singleunrew<rew_changeloc2(ep+1)))=ep;
-                    end
-                    singleunrew_trialnum=trialnumALL(singleunrew);
-                    %%%
-                    
-                    
                     save('params','roinorm_unrew_single_tracesCS','roinorm_unrew_single_traces_roesmthCS','-append')
                     
                     
@@ -1092,17 +953,6 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                         end
                         roinorm_rew_us_single_tracesUS=roirew_us_single_traces_US./mean(roirew_us_single_traces_US(1:pre_win_frames,:));
                         roinorm_rew_us_single_traces_roesmthUS=roirew_us_single_traces_roesmthUS./mean(roirew_us_single_traces_roesmthUS(1:pre_win_framesALL,:));
-                        
-                        %%%epoch and trial check
-                        singlerew_us_epoch=zeros(1,size(singlerew_us,2));
-                        rew_changeloc2=[1 rew_changeloc length(reward_binned)];
-                        for ep=1:length(rew_changeloc2)-1
-                            singlerew_us_epoch(find(singlerew_us>rew_changeloc2(ep) & singlerew_us<rew_changeloc2(ep+1)))=ep;
-                        end
-                        singlerew_us_trialnum=trialnumALL(singlerew_us);
-                        %%%
-                        
-                        
                         
                         save('params','roinorm_rew_us_single_tracesUS','roinorm_rew_us_single_traces_roesmthUS','-append')
                         
@@ -1336,18 +1186,25 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 
                 %%
                 % for double rew CS
-                if exist('double_idx','var')
+                if exist('double_idx','var')                 
                     doublerew = double_idx-CSUSframelag_win_frames;
                     roidouble_tracesCS=zeros(pre_win_frames+post_win_frames+1,length(doublerew));
                     roidouble_traces_roesmthCS=zeros(pre_win_framesALL+post_win_framesALL+1,length(doublerew));
+                    if ~isempty(doublerew)
                     for i=1:length(doublerew)
                         currentdoubleCSidxperplane = find(timedFF>=utimedFF(doublerew(i)),1);
                         roidouble_tracesCS(:,i)=roibase_mean(currentdoubleCSidxperplane-pre_win_frames:currentdoubleCSidxperplane+post_win_frames)';%lick at pre_win_frames+1
                         roidouble_traces_roesmthCS(:,i)=speed_smth_1(doublerew(i)-pre_win_framesALL:doublerew(i)+post_win_framesALL)';
                         
                     end
+                                          else
+                    roidouble_tracesCS = NaN(length(-pre_win_frames:post_win_frames));
+                    roidouble_traces_roesmthCS = NaN(length(-pre_win_framesALL:post_win_framesALL));
+                    end
                     roinorm_double_tracesCS=roidouble_tracesCS./mean(roidouble_tracesCS(1:pre_win_frames,:));
                     roinorm_double_traces_roesmthCS=roidouble_traces_roesmthCS./mean(roidouble_traces_roesmthCS(1:pre_win_framesALL,:));
+
+                    
                     save('params','roinorm_double_tracesCS','roinorm_double_traces_roesmthCS','-append')
                     
                     %plot doubles CS and save figure
@@ -1373,14 +1230,23 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     doublerew = double_idx;
                     roidouble_tracesUS=zeros(pre_win_frames+post_win_frames+1,length(doublerew));
                     roidouble_traces_roesmthUS=zeros(pre_win_framesALL+post_win_framesALL+1,length(doublerew));
-                    for i=1:length(doublerew)
-                        currentdoubleUSidxperplane = find(timedFF>=utimedFF(doublerew(i)),1);
-                        roidouble_tracesUS(:,i)=roibase_mean(currentdoubleUSidxperplane-pre_win_frames:currentdoubleUSidxperplane+post_win_frames)';%lick at pre_win_frames+1
-                        roidouble_traces_roesmthUS(:,i)=speed_smth_1(doublerew(i)-pre_win_framesALL:doublerew(i)+post_win_framesALL)';
-                        
+                    if ~isempty(doublerew)
+                        for i=1:length(doublerew)
+                            currentdoubleUSidxperplane = find(timedFF>=utimedFF(doublerew(i)),1);
+                            roidouble_tracesUS(:,i)=roibase_mean(currentdoubleUSidxperplane-pre_win_frames:currentdoubleUSidxperplane+post_win_frames)';%lick at pre_win_frames+1
+                            roidouble_traces_roesmthUS(:,i)=speed_smth_1(doublerew(i)-pre_win_framesALL:doublerew(i)+post_win_framesALL)';
+
+                        end
+                                            else
+                        roidouble_tracesUS = NaN(length(-pre_win_frames:post_win_frames));
+                        roidouble_traces_roesmthUS = NaN(length(-pre_win_framesALL:post_win_framesALL));
                     end
                     roinorm_double_tracesUS=roidouble_tracesUS./mean(roidouble_tracesUS(1:pre_win_frames,:));
-                    roinorm_double_traces_roesmthUS=roidouble_traces_roesmthUS./mean(roidouble_traces_roesmthUS(1:pre_win_framesALL,:));
+                        roinorm_double_traces_roesmthUS=roidouble_traces_roesmthUS./mean(roidouble_traces_roesmthUS(1:pre_win_framesALL,:));
+
+
+                    
+                    
                     save('params','roinorm_double_tracesUS','roinorm_double_traces_roesmthUS','-append')
                     
                     %plot doubles US and save figure
@@ -1397,7 +1263,6 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     
                     currfile=strcat(['ROI_' num2str(roii) '_PeriReward_Fl_double_rew_US.fig']);
                     savefig(currfile)
-                    
                     
                 end
                 
@@ -1493,11 +1358,11 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                         end
                     end
                     
-                    %                    find_figure('velocity')
-                    %                    scatter(lick_norew_stop_success_tmpts-1,tempspeed(lick_norew_stop_success_tmpts),'mv','filled')
-                    %                    scatter(  nolick_norew_stop_success_tmpts-1,tempspeed(  nolick_norew_stop_success_tmpts),'gv','filled')
-                    %
-                    
+%                    find_figure('velocity') 
+%                    scatter(lick_norew_stop_success_tmpts-1,tempspeed(lick_norew_stop_success_tmpts),'mv','filled')
+%                    scatter(  nolick_norew_stop_success_tmpts-1,tempspeed(  nolick_norew_stop_success_tmpts),'gv','filled')
+%                    
+                
                     
                     
                     %%
@@ -1523,7 +1388,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                         end
                     end
                     
-                    %%% NOn REWARDED STOPS WITH and without LICKS
+                    %%% NOn REWARDED STOPS WITH and without LICKS 
                     
                     roidop_lick_peristop_no_reward=[];
                     
@@ -1541,7 +1406,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     end
                     
                     
-                    roidop_nolick_peristop_no_reward=[];roe_success_nolick_peristop_no_reward=[];
+                    roidop_nolick_peristop_no_reward=[];       roe_success_nolick_peristop_no_reward=[];
                     
                     for stamps=1:length(nolick_norew_stop_success_tmpts)
                         if sum(~isnan(nolick_norew_stop_success_tmpts))>=1
@@ -1594,10 +1459,10 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     plot(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)).*stop_tmpts2,'go')
                     scatter(nonrew_stop_success_tmpts,tempspeed(nonrew_stop_success_tmpts),'ys','filled')
                     scatter(rew_stop_success_tmpts,tempspeed(rew_stop_success_tmpts),'bs','filled')
-                    scatter(lick_norew_stop_success_tmpts-1,tempspeed(lick_norew_stop_success_tmpts),'mv','filled')
-                    scatter(  nolick_norew_stop_success_tmpts-1,tempspeed(  nolick_norew_stop_success_tmpts),'gv','filled')
-                    
-                    plot(rescale(supraLick,-10,-5),'Color',[.7 .7 .7])
+                   scatter(lick_norew_stop_success_tmpts-1,tempspeed(lick_norew_stop_success_tmpts),'mv','filled')
+                   scatter(  nolick_norew_stop_success_tmpts-1,tempspeed(  nolick_norew_stop_success_tmpts),'gv','filled')
+                   
+                plot(rescale(supraLick,-10,-5),'Color',[.7 .7 .7])
                     
                     
                     %%
@@ -1605,16 +1470,16 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     rew_mov_success_tmpts=[];
                     for jj=1:length(rew_stop_success_tmpts)
                         if ~isempty(find(rew_stop_success_tmpts(jj)-mov_success_tmpts<0,1,'first'))
-                            rew_mov_success_tmpts(jj) =mov_success_tmpts(find(rew_stop_success_tmpts(jj)-mov_success_tmpts<0,1,'first'));
+                        rew_mov_success_tmpts(jj) =mov_success_tmpts(find(rew_stop_success_tmpts(jj)-mov_success_tmpts<0,1,'first'));
                         end
                     end
                     
                     %%%moving unrewarded
                     
                     nonrew_mov_success_tmpts = setxor(rew_mov_success_tmpts,mov_success_tmpts);
-                    %                     scatter(nonrew_mov_success_tmpts,tempspeed(nonrew_mov_success_tmpts),'gv','filled')
-                    %                     scatter(rew_mov_success_tmpts,tempspeed(rew_mov_success_tmpts),'cv','filled')
-                    %
+%                     scatter(nonrew_mov_success_tmpts,tempspeed(nonrew_mov_success_tmpts),'gv','filled')
+%                     scatter(rew_mov_success_tmpts,tempspeed(rew_mov_success_tmpts),'cv','filled')
+%                     
                     
                     
                     %  non rewarded motion
@@ -1658,7 +1523,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     end
                     
                     
-                   
+                    
                     
                     
                     
@@ -1763,7 +1628,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     end
                     %%
                     
-                    if ~isempty(roidop_success_perimov_no_reward)
+                     if ~isempty(roidop_success_perimov_no_reward)
                         roi_dop_alldays_planes_success_mov_no_reward{alldays,planeroicount}= roidop_success_perimov_no_reward./mean(roidop_success_perimov_no_reward(:,1:pre_win_frames),2);
                     else
                         roi_dop_alldays_planes_success_mov_no_reward{alldays,planeroicount}= NaN(1,size(roidop_success_perimov,2));
@@ -1775,7 +1640,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     end
                     
                     
-                    if ~isempty(roidop_success_perimov_no_reward)
+                     if ~isempty(roidop_success_perimov_no_reward)
                         roi_dop_allsuc_mov_no_reward(alldays,planeroicount,:)=mean(roidop_success_perimov_no_reward./mean(roidop_success_perimov_no_reward(:,1:pre_win_frames),2),1);
                     else
                         roi_dop_allsuc_mov_no_reward(alldays,planeroicount,:) = NaN(1,size(roidop_success_perimov,2));
@@ -1801,7 +1666,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     end
                     
                     
-                    if ~isempty( roidop_lick_peristop_no_reward)
+                     if ~isempty( roidop_lick_peristop_no_reward)
                         roi_dop_allsuc_lick_stop_no_reward(alldays,planeroicount,:)=mean( roidop_lick_peristop_no_reward./mean( roidop_lick_peristop_no_reward(:,1:pre_win_frames),2),1);
                     else
                         roi_dop_allsuc_lick_stop_no_reward(alldays,planeroicount,:) = NaN(1,size(roidop_success_peristop_no_reward,2));
@@ -1815,10 +1680,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     
                     
                     
-                     %%%computes idx for success failed and probe
-%                    HRZ_locmotion
                     
-%                     HRZ_licks
                     
                     
                     %%

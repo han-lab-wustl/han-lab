@@ -114,24 +114,24 @@ for ii=1:length(COMlick_rewlocprev)
     lastep_COM{ii} = ddd(lastep_mask(ii));
 end
 %%
-nulldist = cell2mat(lastep_COM(~cellfun('isempty',lastep_COM)));
+nulldist = abs(cell2mat(lastep_COM(~cellfun('isempty',lastep_COM))));
 randomsess = unique(randi([1 length(nulldist)],1,17));
 nulldist = nulldist(randomsess);
 % plot com in initial probes vs. b/wn epoch probes    
 figure;
-bar([mean(nulldist, 'omitnan') NaN mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))) NaN... % mean of all trials
-    mean(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))) NaN...% mean of all trials
-    mean(cell2mat(coms_btwn))], 'FaceColor', 'w'); hold on
-x = [ones(1,length(nulldist)), ones(1,length(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))))*3,...
-    ones(1,length(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))))*5,...
-    ones(1,length(cell2mat(coms_btwn)))*7];
-y = [nulldist, cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false)),...
-    cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false)),...
-    cell2mat(coms_btwn)];
+bar([mean(nulldist, 'omitnan')  mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false)))) ... % mean of all trials
+    mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false)))) ...% mean of all trials
+    mean(abs(cell2mat(coms_btwn)))], 'FaceColor', 'w'); hold on
+x = [ones(1,length(nulldist)), ones(1,length(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))))*2,...
+    ones(1,length(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))))*3,...
+    ones(1,length(cell2mat(coms_btwn)))*4];
+y = [nulldist, abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))),...
+    abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))),...
+    abs(cell2mat(coms_btwn))];
 swarmchart(x,y,'ko')
-ylabel('Center of Mass Licks (cm)-Reward Location')
+ylabel('Dist. of Licks to Reward Location')
 xlabel('Trial Type')
-xticklabels(["Non-memory Probes", "", "Initial Probes", "", "Learning Trials", "", "Between Epoch Probes"])
+xticklabels(["Non-memory Probes", "Initial Probes", "Learning Trials", "Between Epoch Probes"])
 
 initprobes = cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false));
 [h,p,i,stats] = ttest2(abs(initprobes), abs(nulldist));

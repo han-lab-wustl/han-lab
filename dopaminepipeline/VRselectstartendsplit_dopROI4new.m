@@ -120,7 +120,7 @@ sol2(find(sol2==0.5))=0;
 idxsol1=find(sol1==0.5);
 nids=[];
 for jj=1:length(idxsol1)
-    ex1=sol2(idxsol1(jj)-50:idxsol1(jj)+50);
+    ex1=sol2(max([1,idxsol1(jj)-50]):min([idxsol1(jj)+50,length(sol1)]));
     if isempty(find(ex1>0))
         idxsol1(jj)
         nids=[nids idxsol1(jj)];
@@ -133,7 +133,7 @@ unrew_sol(nids)=1;
 nids=[];
 idxsol2=find(sol2==1);
 for jj=1:length(idxsol2)
-    ex1=sol1(idxsol2(jj)-50:idxsol2(jj)+50);
+    ex1=sol1(max([1,idxsol2(jj)-50]):min([idxsol2(jj)+50,length(sol2)]));
     if isempty(find(ex1>0))
 %         idxsol1(jj)
         nids=[nids idxsol2(jj)];
@@ -182,6 +182,7 @@ if addabf
     figure;subplot(2,1,1);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,5)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
     subplot(2,1,2);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
     xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
+    pause
     [abfscanstart,y] = ginput(1)
     abfscanstart = round(abfscanstart)
     
@@ -189,11 +190,12 @@ if addabf
     figure;subplot(2,1,1);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,imagingchannel)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
     subplot(2,1,2);hold on;plot(data(:,imagingchannel));plot(abs(diff(data(:,5)))>0.3*max(abs(diff(data(:,imagingchannel)))),'r');
     xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
+    pause
     [abfscanstop,y]= ginput(1)
     abfscanstop = round(abfscanstop)
     disp(['Length of scan is ', num2str(abfscanstop-abfscanstart)])
     disp(['Time of scan is ', num2str((abfscanstop-abfscanstart)/1000)])
-    abfdata = data(abfscastart:abfscanstop,:);
+    abfdata = data(abfscanstart:abfscanstop,:);
     close all;
 end
 
@@ -218,6 +220,17 @@ end
 %     hold on;
 %     plot(ybinned);
 %     plot(rewards*600,'r');
+
+
+%% for loading abf data as well
+
+addstims = input('Would you like to add opto stim data? (0-no,1-yes)'); %note this adds abf data as "abfdata," to your F files, cut at the imaging points but not aligned or named for generalization purposes
+if addstims
+    [optofilename,optopath] = uigetfile('*.mat','pick your sbx info file');
+    optofullfilename = [optopath char(optofilename)];
+    load(optofullfilename);
+    newstims = stims;
+end
 
 %%
 numfiles=input('Number of planes: ');
@@ -461,6 +474,10 @@ for n = 1:numfiles
     save(fullFfile,'VR','scanstart','scanstop','uimageSync','urewards','uforwardvel','uybinned','unumframes','uVRtimebinned','utrialnum','uchangeRewLoc','ulicks','ulickVoltage','-append');
     if addabf
         save(fullFfile,'abfdata','-append');
+    end
+    if addstims
+        stims = newstims;
+        save(fullFfile,'stims','-append')
     end
 end
 

@@ -40,7 +40,7 @@ def main(**args):
                 if params["crop_opto"]:
                     imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
                 else:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
+                    imagingflnm = preprocessing.maketifs(imagingflnm,99,499,109,717)            
                 print(imagingflnm)
 
         #do suite2p after tifs are made

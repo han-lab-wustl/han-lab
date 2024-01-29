@@ -14,6 +14,7 @@ dys_s = {[7 8 9 37 38 39 40 41 42 44 45 46 48 50:59], ...
      [35:42,44],...
      [33:35, 40:43, 45]...
      [52:59], [2:5,31,32,33]};
+
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
 opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1],...
@@ -53,20 +54,21 @@ for dy=dys
     rewsize = VR.settings.rewardZone/VR.scalingFACTOR;
     trialnum = VR.trialNum; % use VR variables
     rewards = VR.reward;
+    time = VR.time;
     licks = logical(VR.lick);
     if opto_ep(epind)==3
         eprng = eps(3):eps(4);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio_opto] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, opto_ep(epind), rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, opto_ep(epind), rewlocs, time );
         % vs. previous epoch
         eprng = eps(2):eps(3);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio_preopto] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs, time);
         % vs. next ep
         if length(eps)>4
             eprng = eps(4):eps(5);
             [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio_postopto] = get_pre_reward_lick_binned(track_length, ...
-        eprng, trialnum, rewards, licks, ybinned, 4, rewlocs);    
+        eprng, trialnum, rewards, licks, ybinned, 4, rewlocs, time);    
         else
             prerewlickbin_ratio_postopto = 0;
         end
@@ -77,16 +79,16 @@ for dy=dys
     elseif opto_ep(epind)==2
         eprng = eps(2):eps(3);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio_opto] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, opto_ep(epind), rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, opto_ep(epind), rewlocs, time);
         % vs. previous epoch
         eprng = eps(1):eps(2);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio_preopto] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, 1, rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, 1, rewlocs, time);
         % vs. next ep
         if length(eps)>3
             eprng = eps(3):eps(4);
             [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio_postopto] = get_pre_reward_lick_binned(track_length, ...
-        eprng, trialnum, rewards, licks, ybinned, 3, rewlocs);    
+        eprng, trialnum, rewards, licks, ybinned, 3, rewlocs, time);    
         else
             prerewlickbin_ratio_postopto = 0;
         end
@@ -97,17 +99,17 @@ for dy=dys
     elseif opto_ep(epind)==-1 % just pre opto days
         eprng = eps(2):eps(3);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs, time);
         licks_preopto(epind) = prerewlickbin_ratio;
     elseif opto_ep(epind)==0  % intermediate control days 1
         eprng = eps(2):eps(3);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs, time);
         licks_inctrl_1(epind) = prerewlickbin_ratio;
     elseif opto_ep(epind)==1  % intermediate control days 2
         eprng = eps(2):eps(3);
         [lickbin_s,lickbin_f,prerewlickbin,prerewlickbin_ratio] = get_pre_reward_lick_binned(track_length, ...
-    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs);
+    eprng, trialnum, rewards, licks, ybinned, 2, rewlocs, time);
         licks_inctrl_2(epind) = prerewlickbin_ratio;
     end
     epind = epind+1;   
@@ -138,10 +140,13 @@ bar([mean(offvector,'omitnan') NaN...
     mean(offopsin,'omitnan') NaN...
     mean(onopsin,'omitnan')], 'FaceColor', 'w'); hold on
 swarmchart(x,y,'k'); hold on
-ylabel("Non-consumption Licks / Trial")
+ylabel("Non-consumption Lick Rate / Trial")
 xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
     "", "VIP stGtACR LED on"])
 [h,p1,i,stats] = ttest2(offopsin,onopsin);
 [h,p2,i,stats] = ttest2(onvector,onopsin);
+[h,p3,i,stats] = ttest2(offvector,onvector);
+set(gca, 'YScale', 'log')
+
 title(sprintf("all trials, p = %f b/wn off and on opsin, \n p=%f bw/n on vector and opsin", p1,p2))
 box off

@@ -38,7 +38,7 @@ saving=0;
 % savepath='G:\dark_reward\dark_reward\figures ';
  filepath = 'C:\Users\workstation4\Desktop\04242023\HRZ_reward_figures'
 timeforpost = [0 1];
-timeforpre=[-1 0];
+timeforpre=[-0.9 -0.4];
 timeforpost=[0 1.5];
 for allcat=1%7%1:11%1:11
     % path='G:\'
@@ -298,7 +298,7 @@ for allcat=1%7%1:11%1:11
             subplot(2,length(workspaces),length(workspaces)+currmouse)
             ylims = ylim;
              xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*post_win_frames*numplanes;
-%             dopvariable(:,jj,:) = squeeze(dopvariable(:,jj,:))-repmat(nanmean(dopvariable(:,jj,find(xax>=timeforpre(1)&xax<timeforpre(2))),3),1,size(dopvariable,3))+1;
+            dopvariable(:,jj,:) = squeeze(dopvariable(:,jj,:))-repmat(nanmean(dopvariable(:,jj,find(xax>=timeforpre(1)&xax<timeforpre(2))),3),1,size(dopvariable,3))+1;
             
             %                         xax=frame_time*(-pre_win_frames):frame_time:frame_time*post_win_frames,dop_success_peristop;
             
@@ -669,7 +669,7 @@ for allcat=1%7%1:11%1:11
             ylim(setylimmanual);
             ylims = ylim;
              xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*post_win_frames*numplanes;
-%             dopvariable(:,jj,:) = squeeze(dopvariable(:,jj,:))-repmat(nanmean(dopvariable(:,jj,find(xax>=timeforpre(1)&xax<timeforpre(2))),3),1,size(dopvariable,3))+1;
+            dopvariable(:,jj,:) = squeeze(dopvariable(:,jj,:))-repmat(nanmean(dopvariable(:,jj,find(xax>=timeforpre(1)&xax<timeforpre(2))),3),1,size(dopvariable,3))+1;
           
             %         xax=frame_time*(-pre_win_frames):frame_time:frame_time*post_win_frames,dop_success_peristop;
             xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*post_win_frames*numplanes;
@@ -2137,3 +2137,101 @@ for currmouse = 1:size(allmouse_dop{2},1)
     lastindex = find(~cellfun(@isempty,allmouse_dop{2}(currmouse,:)),1,'last');
     cell2mat(cellfun(@nanmean,allmouse_dop{2}(currmouse,1:lastindex-1)','UniformOutput',0));
 end
+
+%% Pre Window Loccor
+
+
+
+SOloccor = [];
+
+notSOloccor = [];
+
+
+for currmouse = 1:size(allmouse_dop{2},1)
+%     figure;
+
+xax = allmouse_time{2}{currmouse,1};
+lastindex = find(~cellfun(@isempty,allmouse_dop{2}(currmouse,:)),1,'last');
+yax = nanmean(allmouse_dop{2}{currmouse,lastindex});
+speedyax = nanmean(allmouse_roe{2}{currmouse,lastindex});
+temp = corrcoef(speedyax(1:find(xax<=0,1,'last')),yax(1:find(xax<=0,1,'last')));
+% mdl = fitlm(xax(1:find(xax<=0,1,'last')),yax(1:find(xax<=0,1,'last')));
+% allmouse_RampMdl{1,currmouse} = mdl;
+SOloccor(currmouse) = temp(1,2);
+% plot(xax,yax)
+% hold on
+% xlims = xlim;
+% plot(xlims,xlims*mdl.Coefficients.Estimate(2)+mdl.Coefficients.Estimate(1))
+
+% SOslopes(currmouse) = mdl.Coefficients.Estimate(2);
+% SORsquared(currmouse) = mdl.Rsquared.Ordinary;
+
+xax = allmouse_time{2}{currmouse,1};
+lastindex = find(~cellfun(@isempty,allmouse_dop{2}(currmouse,:)),1,'last');
+yax = nanmean(cell2mat(cellfun(@nanmean,allmouse_dop{2}(currmouse,1:lastindex-1)','UniformOutput',0)));
+speedyax = nanmean(cell2mat(cellfun(@nanmean,allmouse_roe{2}(currmouse,1:lastindex-1)','UniformOutput',0)));
+% mdl = fitlm(xax(1:find(xax<=0,1,'last')),yax(1:find(xax<=0,1,'last')));
+temp = corrcoef(speedyax(1:find(xax<=0,1,'last')),yax(1:find(xax<=0,1,'last')));
+% allmouse_RampMdl{2,currmouse} = mdl;
+% notSOslopes(currmouse) = mdl.Coefficients.Estimate(2);
+% notSORsquared(currmouse) = mdl.Rsquared.Ordinary;
+notSOloccor(currmouse) = temp(1,2);
+% plot(xax,yax)
+% hold on
+% xlims = xlim;
+% plot(xlims,xlims*mdl.Coefficients.Estimate(2)+mdl.Coefficients.Estimate(1))
+end
+
+
+
+figure;
+subplot(4,2,3)
+scatter(ones(size(SOloccor(1:6))),SOloccor(1:6),25,'r','filled','Jitter','on','Jitteramount',0.04)
+hold on
+scatter(ones(size(notSOloccor(1:6)))*2,notSOloccor(1:6),25,[0.5 0.5 0.5],'filled','Jitter','on','Jitteramount',0.04)
+
+
+ plot([1 2],[nanmean(SOloccor(1:6)) nanmean(notSOloccor(1:6))],'ks')
+    errorbar([1 2],[nanmean(SOloccor(1:6)) nanmean(notSOloccor(1:6))],[nanstd(SOloccor(1:6))/sqrt(length(SOloccor(1:6))) nanstd(notSOloccor(1:6))/sqrt(length(SOloccor(1:6)))],'k','Capsize',0,'LineStyle','none','LineWidth',1.5)
+   xlim([0.5 2.5])
+   plot([0.5 2.5],[0 0],'k--')
+   ylabel('Pre-CS Speed Correlation')
+   xticks(1:2)
+    title('GrabDa')
+   xticklabels({'SO','notSO'})
+   ylim([-1 1])
+   yticks(1:0.5:1)
+%    ylim([-4 2]*10^-3)
+%    yticks((-4:2:2)*10^-3)
+%    [~,p] = ttest2(SOloccor(1:6),SOloccor(7:end));
+%    text(1.5,nanmean(SOloccor),['p:' num2str(p)])
+    [~,p] = ttest(SOloccor(1:6));
+    text(1,nanmean(SOloccor(1:6)),['p:' num2str(p)])
+    [~,p] = ttest(notSOloccor(1:6));
+    text(2,nanmean(notSOloccor(1:6)),['p:' num2str(p)])
+   
+   
+ subplot(4,2,4)
+
+scatter(ones(size(SOloccor(7:end))),SOloccor(7:end),25,'r','filled','Jitter','on','Jitteramount',0.04)
+hold on
+
+scatter(ones(size(notSOloccor(7:end)))*2,notSOloccor(7:end),25,[0.5 0.5 0.5],'filled','Jitter','on','Jitteramount',0.04)
+ plot([1 2],[nanmean(SOloccor(7:end)) nanmean(notSOloccor(7:end))],'ks')
+    errorbar([1 2],[nanmean(SOloccor(7:end)) nanmean(notSOloccor(7:end))],[nanstd(SOloccor(7:end))/sqrt(length(SOloccor(7:end))) nanstd(notSOloccor(7:end))/sqrt(length(SOloccor(7:end)))],'k','Capsize',0,'LineStyle','none','LineWidth',1.5)
+   xlim([0.5 2.5])
+   plot([0.5 2.5],[0 0],'k--')
+   ylabel('Linear Fit Slope')
+   xticks(1:2)
+  title('GrabDa-Mut')
+   xticklabels({'SO','notSO'})
+%    ylim([-4 2]*10^-3)
+%    yticks((-4:2:2)*10^-3)
+%    [~,p] = ttest2(notSOloccor(1:6),notSOloccor(7:end));
+%    text(1.5,nanmean(notSOloccor),['p:' num2str(p)])
+[~,p] = ttest(SOloccor(7:end));
+    text(1,nanmean(SOloccor(7:end)),['p:' num2str(p)])
+    [~,p] = ttest(notSOloccor(7:end));
+    text(2,nanmean(notSOloccor(7:end)),['p:' num2str(p)])
+   ylim([-1 1])
+   yticks(1:0.5:1)

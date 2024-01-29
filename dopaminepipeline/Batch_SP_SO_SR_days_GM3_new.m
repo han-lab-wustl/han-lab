@@ -6,13 +6,12 @@
 
 
 %%
-
 clear all
 close all 
-mouse_id=195;
+mouse_id=213;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
-ref_exist=1;%%% if reference image hase been already choosen
+ref_exist=0;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end
@@ -39,16 +38,19 @@ for allplanes=1:size(planefolders,2)
         N=info(1).Height;
         numframes=length(info);
         chone_temp=[];
-        for i=1:numframes
-            chone_temp(:,:,i)=imread(myfilename,i,'Info',info);
-        end
+%         for i=1:numframes
+%             chone_temp(:,:,i)=imread(myfilename,i,'Info',info);
+%         end
+        chone_temp = double(TIFFStack(myfilename));
         
         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+%         crop_points1=[1 169 619 512]; %%% Direct .sbx crop
         
         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
         eval(['x2=crop_points' num2str(1) '(3)']);
         eval(['y1=crop_points' num2str(1) '(2)']);
         eval(['y2=crop_points' num2str(1) '(4)'])
+        
         
         M=size(chone_temp,2);
         N=size(chone_temp,1);
@@ -210,10 +212,10 @@ end
 
 %%
 %extract base mean from all rois selected before
-% clear all
+clear all
 close all
-mouse_id=195;
-% pr_dir=uipickfiles;
+mouse_id=213;
+pr_dir=uipickfiles; 
 days_check=1:length(pr_dir);
 tic
 
@@ -222,7 +224,7 @@ tic
     planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
      days
 for allplanes=1:size(planefolders,2) %1:4
-   
+        clearvars -except mouse_id pr_dir days_check days dir_s2p planefolders allplanes
        
         pr_dir2=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
  
@@ -245,25 +247,20 @@ for allplanes=1:size(planefolders,2) %1:4
             jj
             myfilename = (list_tif(ntif(jj)).name);
             info=imfinfo(myfilename);
-            numframes=length(info);
-            M=info(1).Width;
-            N=info(1).Height;
-            chone_temp=zeros(N,M,numframes);
-            parfor i=1:numframes
-                chone_temp(:,:,i)=imread(myfilename,i,'Info',info);
-            end
+            chone_temp = double(TIFFStack(myfilename));
             chone=cat(3,chone,chone_temp);
             
         end
-        toc
+%         toc
         %%%%%
         
         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+%          crop_points1=[1 169 619 512]; %%% Direct .sbx crop
         
-        eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
-        eval(['x2=crop_points' num2str(1) '(3)']);
-        eval(['y1=crop_points' num2str(1) '(2)']);
-        eval(['y2=crop_points' num2str(1) '(4)'])
+        eval(['x1=crop_points' num2str(1) '(1);']);  %x for area for correction
+        eval(['x2=crop_points' num2str(1) '(3);']);
+        eval(['y1=crop_points' num2str(1) '(2);']);
+        eval(['y2=crop_points' num2str(1) '(4);'])
         
         M=size(chone,2);
         N=size(chone,1);
@@ -278,6 +275,12 @@ for allplanes=1:size(planefolders,2) %1:4
         for jj=1:size(params.newBWmask,1)
             if ~isempty(params.newBWmask{jj,1})
                 masksel=params.newBWmask{jj,1};
+%                 if size(masksel,1)< size(chone,1)
+%                     masksel = [masksel; zeros(size(chone,1)-size(masksel,1),size(masksel,2))];
+%                 end
+%                 if size(masksel,2)< size(chone,2)
+%                     masksel = [masksel zeros(size(masksel,1),size(chone,2)-size(masksel,2))];
+%                 end
                 roim_sel=chone.*masksel;
                 roim_sel(roim_sel==0)=NaN;
                 mean_roi=squeeze(nanmean(nanmean(roim_sel(:,:,:,:),1)));
@@ -286,19 +289,19 @@ for allplanes=1:size(planefolders,2) %1:4
                 %%%%% Baseline correction each roi
                 
                 
-                tic
+%                 tic
                 %%%
-                for deg=1:4
-                    roibase_mean{jj,deg}=detrend(mean_roi,deg);%%%detrend
-                    
-                    %%% munni method 3rd degree moving filtering
-%                     noise=sgolayfilt(mean_roi,deg,size(mean_roi,1)-1);
-                    bz_sig=mean_roi;%-noise;
-                    roibase_mean4{jj,deg}=bz_sig;
-                end
+%                 for deg=1:4
+%                     roibase_mean{jj,deg}=detrend(mean_roi,deg);%%%detrend
+%                     
+%                     %%% munni method 3rd degree moving filtering
+% %                     noise=sgolayfilt(mean_roi,deg,size(mean_roi,1)-1);
+%                     bz_sig=mean_roi;%-noise;
+%                     roibase_mean4{jj,deg}=bz_sig;
+%                 end
                 
                 
-                toc
+%                 toc
                 find_figure('base_mean_rois');
                 if jj==1
                     subplot(4,1,1),imagesc(squeeze(mean(chone,3))); colormap(gray), axis image
@@ -307,20 +310,23 @@ for allplanes=1:size(planefolders,2) %1:4
                 find_figure('base_mean_rois'); subplot(4,1,1)
                 hold on;  plot(params.newroicoords{jj,1}(:,1),params.newroicoords{jj,1}(:,2),color_cod{jj},'Linewidth',2)
                 
-                subplot(4,1,jj+1),plot( roibase_mean{jj,1});
+                subplot(4,1,jj+1),
+%                 plot( roibase_mean{jj,1});
+                
                 %%%%%% basleine zeroing with old version
                 junk=squeeze(nanmean(nanmean(roim_sel)));%mean of each image, frame x 1 vector
                 numframes = size(chone,3);
                 mean_all=nanmean(nanmean(nanmean(roim_sel)));
                 base_window=200;
-                junk2=zeros(size(junk));
-                parfor kk=1:length(junk)
-                    kk
-                    cut=junk(max(1,kk-base_window):min(numframes,kk+base_window));
-                    cutsort=sort(cut);
-                    a=round(length(cut)*.08);
-                    junk2(kk)=cutsort(a);
-                end
+%                 junk2=zeros(size(junk));
+%                 parfor kk=1:length(junk)
+%                     kk
+%                     cut=junk(max(1,kk-base_window):min(numframes,kk+base_window));
+%                     cutsort=sort(cut);
+%                     a=round(length(cut)*.08);
+%                     junk2(kk)=cutsort(a);
+%                 end
+                junk2 = movquant(junk,0.08,base_window,[],'omitnan','truncate');
                 
                 parfor i=1:numframes
                     i
@@ -329,11 +335,12 @@ for allplanes=1:size(planefolders,2) %1:4
                 
                 
                 roibase_mean3{jj,1}=squeeze(nanmean(nanmean(roim_sel(:,:,:),1)));
+                plot(roibase_mean3{jj,1})
    
             end
-            params.roibasemean2=roibase_mean;
+%             params.roibasemean2=roibase_mean;
             params.roibasemean3=roibase_mean3;
-            params.roibasemean4=roibase_mean4;
+%             params.roibasemean4=roibase_mean4;
             params.roirawmean2=roiraw_mean;
             
             
@@ -341,16 +348,17 @@ for allplanes=1:size(planefolders,2) %1:4
         base_window=200;
         numframes = size(chone,3); %fix  to set slidingwindow limits to full video
         % old version
-        tic
+%         tic
         junk=squeeze(nanmean(nanmean(chone)));%mean of each image, frame x 1 vector
-        mean_all=nanmean(nanmean(nanmean(chone)));
-        junk2=zeros(size(junk));
-        for kk=1:length(junk)
-            cut=junk(max(1,kk-base_window):min(numframes,kk+base_window));
-            cutsort=sort(cut);
-            a=round(length(cut)*.08);
-            junk2(kk)=cutsort(a);
-        end
+%         mean_all=nanmean(nanmean(nanmean(chone)));
+%         junk2=zeros(size(junk));
+%         for kk=1:length(junk)
+%             cut=junk(max(1,kk-base_window):min(numframes,kk+base_window));
+%             cutsort=sort(cut);
+%             a=round(length(cut)*.08);
+%             junk2(kk)=cutsort(a);
+%         end
+        junk2 = movquant(junk,0.08,base_window,[],'omitnan','truncate');
         params.raw_mean = junk;
         
         parfor i=1:numframes

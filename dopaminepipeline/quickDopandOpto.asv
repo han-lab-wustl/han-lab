@@ -73,8 +73,7 @@ for allplanes=1:size(planefolders,2) %1:4
         xs = cellfun(@(x) utimedFF(x(find(solenoid2ALL(x),1))) ,rewrect,'UniformOutput',1);
         nonCS = utimedFF(cellfun(@(x) x(1),consecutive_stretch(find(solenoid2ALL)),'UniformOutput',1));
         [deleteidx] = ismember(nonCS,xs);
-        deleteidx(find(deleteidx)+1) = 1;
-        nonCS([deleteidx]) = [];
+        nonCS(deleteidx) = [];
         for x = 1:length(xs)
             currx = find(timedFF>=(xs(x)-timewindow)&timedFF<(xs(x)+timewindow));
             yyaxis left
@@ -92,17 +91,17 @@ for allplanes=1:size(planefolders,2) %1:4
         
         subplot(2,4,allplanes*2)
         for x = 1:length(xs)
-            randCS = randi(length(nonCS));
+            randCS = randperm(length(nonCS));
             randxs = nonCS(randCS);
             nonCS(randCS) = [];
-            currx = find(timedFF>=(randxs-timewindow)&timedFF<(randxs+timewindow));
+            currx = find(timedFF>=(randxs(x)-timewindow)&timedFF<(randxs(x)+timewindow));
             yyaxis left
-            plot(timedFF(currx)-randxs,dFF(currx),'-','Color',planecolors{allplanes})
+            plot(timedFF(currx)-randxs(x),dFF(currx),'-','Color',planecolors{allplanes})
             ylim([0.85 1.2])
             hold on
             yyaxis right
-            currspeedx = find(utimedFF>=(randxs-timewindow)&utimedFF<(randxs+timewindow));
-            plot(utimedFF(currspeedx)-randxs,forwardvelALL(currspeedx),'k-')
+            currspeedx = find(utimedFF>=(randxs(x)-timewindow)&utimedFF<(randxs(x)+timewindow));
+            plot(utimedFF(currspeedx)-randxs(x),forwardvelALL(currspeedx),'k-')
             ylim([-5 200])
             yticks([0:25:75])
             
@@ -135,26 +134,25 @@ for allplanes=1:size(planefolders,2) %1:4
             yticks([0:25:75])
             
         end
-        title(['Peri Rand Opto Plane ' num2str(allplanes)])
-            subplot(2,4,allplanes*2)
+        title(['Peri CS Opto Plane ' num2str(allplanes)])
+            
              for x = 1:length(xs)
-            randCS = randi(length(availableidx)-1);
-            randtemp = FakeCS(availableidx(randCS):availableidx(randCS)+1);
-            randxs = FakeCS(availableidx(randCS))+8+rand*(diff(randtemp)-16);
-            availableidx(randCS) = [];
-            currx = find(timedFF>=(randxs-timewindow)&timedFF<(randxs+timewindow));
+            randCS = randperm(length(availableidx)-1);
+            randxs = nonCS(randCS);
+            nonCS(randCS) = [];
+            currx = find(timedFF>=(randxs(x)-timewindow)&timedFF<(randxs(x)+timewindow));
             yyaxis left
-            plot(timedFF(currx)-randxs,dFF(currx),'-','Color',planecolors{allplanes})
+            plot(timedFF(currx)-randxs(x),dFF(currx),'-','Color',planecolors{allplanes})
             ylim([0.85 1.2])
             hold on
             yyaxis right
-            currspeedx = find(utimedFF>=(randxs-timewindow)&utimedFF<(randxs+timewindow));
-            plot(utimedFF(currspeedx)-randxs,forwardvelALL(currspeedx),'k-')
+            currspeedx = find(utimedFF>=(randxs(x)-timewindow)&utimedFF<(randxs(x)+timewindow));
+            plot(utimedFF(currspeedx)-randxs(x),forwardvelALL(currspeedx),'k-')
             ylim([-5 200])
             yticks([0:25:75])
             
         end
-        title(['Peri Rand nonOpto Plane ' num2str(allplanes)])
+        title(['Peri CS nonOpto Plane ' num2str(allplanes)])
         end
         
 end

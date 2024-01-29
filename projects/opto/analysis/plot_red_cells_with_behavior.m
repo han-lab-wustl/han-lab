@@ -35,7 +35,7 @@ for dy=days
     ypos = ybinned*(gainf);
     velocity = forwardvel;
     figure; %fig = figure('Renderer', 'painters');
-    subplot(1,2,1)
+%     subplot(1,2,1)
     iind = 1;
     scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on;
     plot(find(licks),ypos(find(licks)), ...
@@ -57,10 +57,11 @@ for dy=days
     yticklabels([0:90:270])
     dffs_cp = {};
     indtemp = 1;
-    subplot(1,2,2)
+%     subplot(1,2,2)
+    figure;
     for cp=cells_to_plot{dyind}              
         plot((dFF(:,cp)+iind)); hold on
-        ylim([0.5 20])
+%         ylim([0 20])
         iind = iind + 5;
         % compare to prev epoch
         rngopto = eps(opto_ep(dyind)):eps(opto_ep(dyind)+1);
@@ -73,8 +74,8 @@ for dy=days
         dffs_cp{indtemp} = {dffopto(yposoptomask,cp), dffpreopto(ypospreoptomask,cp)};
         indtemp = indtemp + 1;
     end
-    xticks([0:10000:length(timedFF)])
-    tic = ceil([timedFF(1:10000:end) max(timedFF)]/60);
+    xticks([0:5000:length(timedFF)])
+    tic = ([timedFF(1:5000:end) max(timedFF)]/60);
     xticklabels(tic)
     xlabel("Time (minutes)")
     %%
