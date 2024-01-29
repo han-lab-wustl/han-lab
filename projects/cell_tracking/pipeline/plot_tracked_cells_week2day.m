@@ -1,4 +1,5 @@
-function [savepth, cellmap2dayacrossweeks] = plot_tracked_cells_week2day(src, animal, weekfld, weeknms, sessions_total)
+function [savepth, cellmap2dayacrossweeks] = plot_tracked_cells_week2day(src, animal, ...
+    weekfld, weeknms, sessions_total)
 % session_total = numof days imaged.
 % Zahra
 % get cells detected in cellreg and do analysis
@@ -125,10 +126,8 @@ linkaxes(axesnm, 'xy')
 
 %%
 % plot traces across all days
-days_to_plot=[1,6,10,14,18]; %plot 5 days at a time
 cellno=randi(length(cc));
-grayColor = [.7 .7 .7];
-fig=figure;
+figure;
 for dayplt=1:sessions_total
     ax1=subplot(sessions_total,1,dayplt);
     day=days(dayplt);day=day{1};

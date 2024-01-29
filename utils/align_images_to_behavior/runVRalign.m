@@ -1,10 +1,10 @@
-%Zahra
+ %Zahra
 %run VR align
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
 mouse_name = "e216";
-days = [55];
+days = [60];
 src = "X:\vipcre";
 
 for day=days

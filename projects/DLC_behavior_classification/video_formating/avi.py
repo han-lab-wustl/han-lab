@@ -28,5 +28,5 @@ def vidwrite(fn, images, framerate=31.25*2, vcodec='libx264'):
 def read_to_memmap(arr, ii, fl):
     arr[ii] = sitk.GetArrayFromImage(sitk.ReadImage(fl))
     arr.flush(); del arr
-    if ii%1000==0: print(ii, flush=True)
+    if ii%10000==0: print(ii, flush=True)
     return

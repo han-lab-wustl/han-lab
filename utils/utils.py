@@ -247,7 +247,7 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
     return os.path.join(src, animal)
 
 if __name__ == "__main__":
-    usb = r'I:\2023_ZD_VR'
+    usb = r'G:\zd_vr'
     drives = [r'X:\vipcre',r'X:\vipcre', r'Y:\hrz_consolidation', \
             r'Y:\hrz_consolidation']
     animals = ['e218', 'e216', 'e217', 'e228']

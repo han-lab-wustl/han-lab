@@ -53,7 +53,7 @@ def main(**args):
         ops["threshold_scaling"]=1 #TODO: make modular
         ops["max_iterations"]=30
         # test for e216
-        ops["allow_overlap"] = True
+        # ops["allow_overlap"] = True
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -156,7 +156,7 @@ def main(**args):
             ops["threshold_scaling"]=1 #TODO: make modular
             ops["max_iterations"]=30
             # test for e216
-            ops["allow_overlap"] = True
+            # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
             # db overwrites any ops (allows for experiment specific settings)
             db = {

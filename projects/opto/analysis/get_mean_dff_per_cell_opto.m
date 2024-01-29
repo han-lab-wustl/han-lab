@@ -71,7 +71,7 @@ for dy=dys
 end
 
 %%
-% 1 - success opto, 2 - success prev opto, 3 - success postopto, 4 - fails opto, 5 - fails prev opto, 6 - fails prev opto
+% 1 - success opto, 2 - success prev opto, 3 - success postopto, 4 - fails opto, 5 - fails prev opto, 6 - fails POST opto
 % other days besides opto : 1 - success, 2 - fails
 % 
 % mouse_name = "e218";
@@ -80,18 +80,63 @@ end
 % % day2=1
 % opto_ep = [-1 -1 -1 -1,3 0 1 2 0 1 3, 0 1 2, 0 3 0 1 2 0]; 
 % plot certain days of opto vs. ctrl
-dyind=12;
-optoday = dffs{dyind};
-optodayprev_fails = mean(optoday{5},1,'omitnan'); % fails
-optodayopto_fails = mean(optoday{4},1,'omitnan');
-figure; plot(1,optodayprev_fails,'ko'); hold on; plot(2,optodayopto_fails,'ro'); xlim([0 3])
-for ii=1:size(optodayopto_fails,2)
-    plot([1, 2],[optodayprev_fails(ii),optodayopto_fails(ii)], 'k'); hold on % pairwise plots
+optodys = find(opto_ep==2);
+
+for dy=1:length(optodys)
+    optoday = dffs{optodys(dy)};    
+    optodayprev_fails = mean(optoday{5},1,'omitnan'); % fails
+    optodayopto_fails = mean(optoday{4},1,'omitnan');
+    figure; subplot(1,2,1); plot(1,optodayprev_fails,'ko'); hold on; plot(2,optodayopto_fails,'ro'); xlim([0 3])
+    for ii=1:size(optodayopto_fails,2)
+        plot([1, 2],[optodayprev_fails(ii),optodayopto_fails(ii)], 'k'); hold on % pairwise plots
+    end
+    [h,p,i,stats] =ttest(optodayprev_fails,optodayopto_fails); % paired
+    ylabel('dFF')
+    xticks(0:3); xticklabels({NaN, 'previous epoch', 'opto epoch', NaN})
+    title(sprintf('failed trials, day %i, opto ep %i \n paired t-test p-val: %03d \n t-stat: %03d', ...
+        dys(optodys(dy)), opto_ep(optodys(dy)), p, stats.tstat))
+
+    optodayprev_suc = mean(optoday{2},1,'omitnan'); % success
+    optodayopto_suc = mean(optoday{1},1,'omitnan');
+    subplot(1,2,2); plot(1,optodayprev_suc,'ko'); hold on; plot(2,optodayopto_suc,'ro'); xlim([0 3])
+    for ii=1:size(optodayopto_suc,2)
+        plot([1, 2],[optodayprev_suc(ii),optodayopto_suc(ii)], 'k'); hold on % pairwise plots
+    end
+    [h,p,i,stats] =ttest(optodayprev_suc,optodayopto_suc); % paired
+    ylabel('dFF')
+    xticks(0:3); xticklabels({NaN, 'previous epoch', 'opto epoch', NaN})
+    title(sprintf('successful trials, day %i, opto ep %i \n paired t-test p-val: %03d \n t-stat: %03d', ...
+        dys(optodys(dy)), opto_ep(optodys(dy)), p, stats.tstat))
 end
-[h,p,i,stats] =ttest(optodayprev_fails,optodayopto_fails); % paired
-ylabel('dFF')
-xticks(0:3); xticklabels({NaN, 'prev ep', 'opto ep', NaN})
-% title(sprintf('successful trials, day %i \n paired t-test p-val: %03d \n t-stat: %03d', ...
-%     dys(dyind), p, stats.tstat))
-title(sprintf('failed trials, day %i \n paired t-test p-val: %03d \n t-stat: %03d', ...
-    dys(dyind), p, stats.tstat))
+%%
+% plot mean dff of pertubation sessions per session
+optodys = find(opto_ep>1);
+dffprev = []; dffopto = [];
+for dy=1:length(optodys)
+    optoday = dffs{optodys(dy)};
+    dffprev(dy) = mean(mean(optoday{5},1,'omitnan'),'omitnan');
+    dffopto(dy) = mean(mean(optoday{4},1,'omitnan'),'omitnan');
+end
+figure; 
+bar([mean(dffprev) mean(dffopto)], 'FaceColor', 'w'); hold on
+plot(1, dffprev, 'ko')
+plot(2, dffopto, 'ko')
+xlim([0 3])
+xticklabels(["previous epoch", "opto epoch"])
+ylabel('mean dFF')
+title('failed trials')
+
+dffprev = []; dffopto = [];
+for dy=1:length(optodys)
+    optoday = dffs{optodys(dy)};
+    dffprev(dy) = mean(mean(optoday{2},1,'omitnan'),'omitnan');
+    dffopto(dy) = mean(mean(optoday{1},1,'omitnan'),'omitnan');
+end
+figure; 
+bar([mean(dffprev) mean(dffopto)], 'FaceColor', 'w'); hold on
+plot(1, dffprev, 'ko')
+plot(2, dffopto, 'ko')
+xlim([0 3])
+xticklabels(["previous epoch", "opto epoch"])
+ylabel('mean dFF')
+title('successful trials')

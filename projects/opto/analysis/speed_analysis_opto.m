@@ -7,12 +7,12 @@
 clear all; close all
 % mouse_name = "e216";
 mice = ["e216", "e218"];
-dys_s = {[7 8 9 37 38 39 40 41 42 44 45 46 48 50:60], ...
+dys_s = {[7 8 9 37 38 39 40 41 42 43 44 45 46 48 50 51 52 53 54 55 56 57 58], ...
     [20,21,22,23,35,36,37,38,39,40,41,...
      42,43,44,45,47 48 49 50 51 52 55 56]};
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
-opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1 3],
+opto_eps = {[-1 -1 -1 2 -1 0 1 2 -1 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0],
     [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0]};
 src = "X:\vipcre";
 
@@ -30,10 +30,8 @@ opto_ep = opto_eps(m); opto_ep = opto_ep{1};
 epind = 1; % for indexing
 bin_size = 2; % cm bins for lick
 % ntrials = 8; % get licks for last n trials
-rates_opto = []; rates_ctrl = []; rates_preopto = []; rates_inctrl_1 = []; rates_inctrl_2 = []; rates_postopto = [];
+prerew_opto = []; rates_ctrl = []; rates_preopto = []; rates_inctrl_1 = []; rates_inctrl_2 = []; rates_postopto = [];
 licks_opto = []; licks_ctrl = []; licks_preopto = []; licks_inctrl_1 = []; licks_inctrl_2 = []; licks_postopto = [];
-com_opto_success = []; com_ctrl_success = []; com_preopto_success = []; com_inctrl_1_success = []; com_inctrl_2_success = []; com_postopto_success = [];
-com_opto_fails = []; com_ctrl_fails = []; com_preopto_fails = []; com_inctrl_1_fails = []; com_inctrl_2_fails = []; com_postopto_fails = [];
 for dy=dys
 %     daypth = dir(fullfile(src, mouse_name, string(dy), "**\*Fall.mat"));
 %     load(fullfile(daypth.folder,daypth.name), 'licks', 'trialnum', 'rewards', 'changeRewLoc', ...
@@ -45,6 +43,7 @@ for dy=dys
     track_length = 180/VR.scalingFACTOR;
     nbins = track_length/bin_size;
     ybinned = VR.ypos/VR.scalingFACTOR;
+    vel = -0.013*VR.ROE./diff(VR.time(2:end));  
     rewlocs = VR.changeRewLoc(VR.changeRewLoc>0)/VR.scalingFACTOR;
     rewsize = VR.settings.rewardZone/VR.scalingFACTOR;
     trialnum = VR.trialNum; % use VR variables
@@ -52,54 +51,29 @@ for dy=dys
     licks = logical(VR.lick);
     if opto_ep(epind)==3
         eprng = eps(3):eps(4);
-        trialnum_ = trialnum(eprng);
+        vel_ = vel(eprng);
         reward_ = rewards(eprng);
         licks_ = licks(eprng);
-        ybinned_ = ybinned(eprng);
-        rewloc = rewlocs(opto_ep(epind));
-        [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
-        successrate_opto = success/total_trials;
-        last8rng = (ismember(trialnum_,str)); % only do for failed trials
-        lick_selectivity_opto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
-            rewsize);
-        % get failed pre and post licks
-        success=1;[com_success_opto] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
-        rewsize, success); % coms successful trials
-        success=0;[com_fails_opto] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
-        rewsize,success); % coms failed trials
+        ybinned_ = ybinned(eprng); 
+        % around reward
+        vel_near_reward_opto = vel_((ybinned_>=(rewloc-rewsize/2)-5) && (ybinned_<(rewloc+rewsize/2)+30));
         % vs. previous epoch
-        eprng = eps(2):eps(3);
-        trialnum_ = trialnum(eprng);
+        eprng = eps(2):eps(3);        
+        vel_ = vel(eprng);
         reward_ = rewards(eprng);
         licks_ = licks(eprng);
-        ybinned_ = ybinned(eprng);
-        rewloc = rewlocs(2);
-        [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
-        successrate_ctrl = success/total_trials;
-        last8rng = (ismember(trialnum_,str));
-        lick_selectivity_ctrl = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
-            rewsize);
-        success=1;[com_success_ctrl] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
-        rewsize,success); % coms successful trials
-        success=0;[com_fails_ctrl] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
-        rewsize,success); % coms failed trials
+        ybinned_ = ybinned(eprng); 
+        % around reward
+        vel_near_reward_beforeopto = vel_((ybinned_>=(rewloc-rewsize/2)-30) && (ybinned_<(rewloc+rewsize/2)+30));
         % vs. next ep
         if length(eps)>4
             eprng = eps(4):eps(5);
-            trialnum_ = trialnum(eprng);
+            vel_ = vel(eprng);
             reward_ = rewards(eprng);
             licks_ = licks(eprng);
-            ybinned_ = ybinned(eprng);
-            rewloc = rewlocs(4);
-            [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
-            successrate_postopto = success/total_trials;
-            last8rng = (ismember(trialnum_,str));
-            lick_selectivity_postopto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
-                rewsize);
-            success=1;[com_success_postopto] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
-            rewsize,success); % coms successful trials
-            success=0;[com_fails_postopto] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
-            rewsize,success); % coms failed trials        
+            ybinned_ = ybinned(eprng); 
+            % around reward
+            vel_near_reward_afteropto = vel_((ybinned_>=(rewloc-rewsize/2)-30) && (ybinned_<(rewloc+rewsize/2)+30));
         else
             successrate_postopto = 0; lick_selectivity_postopto=0; com_success_postopto=0; com_fails_postopto=0;
         end
@@ -294,21 +268,6 @@ xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2
     "previous ep", "opto ep", "postopto ep"])
 [h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
    [rates{1}{5}' rates{2}{5}']); % sig
-% for ed's grant
-% barplot
-figure;
-bar([mean([rates{1}{1}' rates{2}{1}'])...
-    mean([rates{1}{4}' rates{2}{4}'])...
-    mean([rates{1}{5}' rates{2}{5}'])], 'FaceColor', 'w'); hold on
-plot(1, [rates{1}{1}' rates{2}{1}'], 'ko')
-plot(2, [rates{1}{4}' rates{2}{4}'], 'ko')
-plot(3, [rates{1}{5}' rates{2}{5}'], 'ko')
-ylabel('Fraction of Successful Trials')
-xlabel('Condition')
-xticklabels(["Sessions Before Stim", "LED off", "LED on"])
-[h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
-   [rates{1}{5}' rates{2}{5}']); % sig
-title('n=2 animals, 14 stim sessions, 10 prestim sessions')
 %%
 % com
 figure;

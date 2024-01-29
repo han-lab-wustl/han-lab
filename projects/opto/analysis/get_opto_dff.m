@@ -1,6 +1,7 @@
 function [dff_opto_success, dff_opto_fails, dff_prevopto_success, ...
     dff_prevopto_fails,dff_postopto_success,dff_postopto_fails] = get_opto_dff(eps, optoep, epind, ...
     trialnum, rewards, licks, ybinned, rewlocs, iscell, stat, dFF, pcs)
+    rewsize = 10; % fix hard coded!!!
     eprng = eps(optoep):eps(optoep+1);
     trialnum_ = trialnum(eprng);
     reward_ = rewards(eprng);
@@ -8,8 +9,10 @@ function [dff_opto_success, dff_opto_fails, dff_prevopto_success, ...
     ybinned_ = ybinned(eprng);
     rewloc = rewlocs(optoep);
     [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
-    success_mask = (ismember(trialnum_,str)); % only do for failed trials
+    success_mask = (ismember(trialnum_,str)); % successful trials
+    success_mask = success_mask(ybinned_<(rewloc-rewsize/2)); % only get pre reward activity
     fails_mask = (ismember(trialnum_,ftr)); % only do for failed trials
+    fails_mask = fails_mask(ybinned_<(rewloc-rewsize/2)); % only get pre reward activity
     % get 'good' cells
     pc = logical(iscell(:,1));
     [~,bordercells] = remove_border_cells_all_cells(stat, dFF);
@@ -27,8 +30,10 @@ function [dff_opto_success, dff_opto_fails, dff_prevopto_success, ...
     ybinned_ = ybinned(eprng);
     rewloc = rewlocs(2);
     [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
-    success_mask = (ismember(trialnum_,str)); % only do for failed trials
+    success_mask = (ismember(trialnum_,str)); % successful trials
+    success_mask = success_mask(ybinned_<(rewloc-rewsize/2)); % only get pre reward activity
     fails_mask = (ismember(trialnum_,ftr)); % only do for failed trials
+    fails_mask = fails_mask(ybinned_<(rewloc-rewsize/2)); % only get pre reward activity
     % get 'good' cells
     pc = logical(iscell(:,1));
     [~,bordercells] = remove_border_cells_all_cells(stat, dFF);
@@ -48,8 +53,10 @@ function [dff_opto_success, dff_opto_fails, dff_prevopto_success, ...
         ybinned_ = ybinned(eprng);
         rewloc = rewlocs(optoep+1);
         [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);        
-        success_mask = (ismember(trialnum_,str)); % only do for failed trials
+        success_mask = (ismember(trialnum_,str)); % successful trials
+        success_mask = success_mask(ybinned_<(rewloc-rewsize/2)); % only get pre reward activity
         fails_mask = (ismember(trialnum_,ftr)); % only do for failed trials
+        fails_mask = fails_mask(ybinned_<(rewloc-rewsize/2)); % only get pre reward activity
         % get 'good' cells
         pc = logical(iscell(:,1));
         [~,bordercells] = remove_border_cells_all_cells(stat, dFF);

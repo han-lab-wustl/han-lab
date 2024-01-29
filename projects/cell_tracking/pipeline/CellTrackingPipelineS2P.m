@@ -33,6 +33,7 @@ for week=weekall
 tracking_week2day(pth, animal, planes, week, pthstr)
 end
 %% 5 - combine maps and visualize
+sessions_total = 31; % total number of days tracked
 for plane=planes
 weekfld = sprintf('week%02d-%02d_plane%i', weekst, weekend, plane);
 [savepth,cellmap2dayacrossweeks] = plot_tracked_cells_week2day(src, animal, ....

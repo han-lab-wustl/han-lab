@@ -5,20 +5,16 @@ convert tif to avis!
 import tifffile as tif, numpy as np, os, sys, shutil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
-from multiprocess import Pool
 import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
-<<<<<<< HEAD
-    src = r"F:\mixedEyeVideos\unvideod"
-    dst = r"F:\avis"
-=======
-    src = r"G:\eye\TI"
-    dst = r"I:\eye_videos"
+
+    src = r"G:\tailvideos"
+    dst = r"\\storage1.ris.wustl.edu\ebhan\Active\tail_videos"
     # src = r"E:\tail\all\2023"
     # dst = r"K:\tail_videos"
->>>>>>> b003bd1f9cb7413a2c40e7a3fd95472b98b6674d
+
     vids = listdir(src)
     print(vids)
     for vid in vids:
@@ -33,7 +29,10 @@ if __name__ == "__main__":
         if not os.path.exists(flnm[:-4]+'.npy') and not os.path.exists(flnm):
             arr = np.memmap(flnm[:-4]+'.npy', dtype='uint8', 
                             mode='w+', shape=(len(fls),y,x))
+            # arr = np.zeros((len(fls),y,x))
             for ii,fl in enumerate(fls):
+                # if ii%10000==0: print(ii)
+                # arr[ii] = sitk.GetArrayFromImage(sitk.ReadImage(fl))
                 read_to_memmap(arr, ii, fl)
             # args = [(arr, ii, fl) for ii,fl in enumerate(fls)]
             # with Pool(3) as p:
