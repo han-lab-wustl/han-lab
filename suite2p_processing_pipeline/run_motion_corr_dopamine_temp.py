@@ -2,7 +2,7 @@
 import os , numpy as np, tifffile, SimpleITK as sitk, sys
 from math import ceil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
-imagingflnm = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\E181\Day_02"
+imagingflnm = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\E181\Day_02"; #E179 dark reward\Day_08"
 
 import suite2p
 ops = suite2p.default_ops() # populates ops with the default options
@@ -11,7 +11,7 @@ ops["reg_tif"]=True
 ops["nplanes"]=4
 ops["delete_bin"]=True #False
 ops["save_mat"]=True
-
+ops['nimg_init'] = 2000
 # provide an h5 path in 'h5py' or a tiff path in 'data_path'
 # db overwrites any ops (allows for experiment specific settings)
 db = {
