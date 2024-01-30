@@ -43,6 +43,6 @@ def maketifs(imagingflnm,y1,y2,x1,x2,zplns=3000):
     return imagingflnm
 
 
-imagingflnm = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\E181\Day_04"
+imagingflnm = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\E179 dark reward\Day_08"
 y1,y2,x1,x2 = 99,499,109,717
 maketifs(imagingflnm,y1,y2,x1,x2,zplns=3000)

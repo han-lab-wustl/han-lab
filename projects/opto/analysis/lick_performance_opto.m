@@ -140,13 +140,13 @@ bar([mean(offvector,'omitnan') NaN...
     mean(offopsin,'omitnan') NaN...
     mean(onopsin,'omitnan')], 'FaceColor', 'w'); hold on
 swarmchart(x,y,'k'); hold on
-ylabel("Non-consumption Lick Rate / Trial")
+ylabel("Lick Rate / Trial")
 xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
     "", "VIP stGtACR LED on"])
 [h,p1,i,stats] = ttest2(offopsin,onopsin);
 [h,p2,i,stats] = ttest2(onvector,onopsin);
 [h,p3,i,stats] = ttest2(offvector,onvector);
-set(gca, 'YScale', 'log')
+% set(gca, 'YScale', 'log')
 
-title(sprintf("all trials, p = %f b/wn off and on opsin, \n p=%f bw/n on vector and opsin", p1,p2))
+title(sprintf("all trials, p = %f b/wn off and on opsin, \n p=%f bw/n on vector and opsin \n p=%f b/wn off and on vector", p1,p2,p3))
 box off
