@@ -135,11 +135,21 @@ onvector = [opto{3}' opto{4}' opto{5}' opto{6}'];
 x = [ones(1,length(offvector)), ...
     ones(1,length(onvector))*3, ones(1,length(offopsin))*5, ones(1,length(onopsin))*7];
 y = [offvector, onvector, offopsin, onopsin];
-bar([mean(offvector,'omitnan') NaN...
+means = [mean(offvector,'omitnan') NaN...
     mean(onvector,'omitnan') NaN...
     mean(offopsin,'omitnan') NaN...
-    mean(onopsin,'omitnan')], 'FaceColor', 'w'); hold on
+    mean(onopsin,'omitnan')];
+bar(means, 'FaceColor', 'w'); hold on
 swarmchart(x,y,'k'); hold on
+yerr = {offopsin,NaN,offvector,NaN,onopsin,NaN,onvector};
+err = [];
+for i=1:length(yerr)
+    err(i) =2*(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+end
+er = errorbar([1 NaN 3 NaN 5 NaN 7],means,err);
+er.Color = [0 0 0];                            
+er.LineStyle = 'none';  
+
 ylabel("Lick Rate / Trial")
 xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
     "", "VIP stGtACR LED on"])

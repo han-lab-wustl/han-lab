@@ -119,15 +119,27 @@ randomsess = unique(randi([1 length(nulldist)],1,17));
 nulldist = nulldist(randomsess);
 % plot com in initial probes vs. b/wn epoch probes    
 figure;
-bar([mean(nulldist, 'omitnan')  mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false)))) ... % mean of all trials
+means = [mean(nulldist, 'omitnan')  mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false)))) ... % mean of all trials
     mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false)))) ...% mean of all trials
-    mean(abs(cell2mat(coms_btwn)))], 'FaceColor', 'w'); hold on
+    mean(abs(cell2mat(coms_btwn)))];
+bar(means, 'FaceColor', 'w'); hold on
 x = [ones(1,length(nulldist)), ones(1,length(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))))*2,...
     ones(1,length(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))))*3,...
     ones(1,length(cell2mat(coms_btwn)))*4];
 y = [nulldist, abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))),...
     abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))),...
     abs(cell2mat(coms_btwn))];
+yerr = {nulldist, abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))),...
+    abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false))),...
+    abs(cell2mat(coms_btwn))};
+err = [];
+for i=1:length(yerr)
+    err(i) =2*(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+end
+er = errorbar([1 2 3 4],means,err);
+er.Color = [0 0 0];                            
+er.LineStyle = 'none';  
+
 swarmchart(x,y,'ko')
 ylabel('Dist. of Licks to Reward Location')
 xlabel('Trial Type')

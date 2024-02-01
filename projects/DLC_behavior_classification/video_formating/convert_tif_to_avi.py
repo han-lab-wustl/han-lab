@@ -10,8 +10,8 @@ from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
 
-    src = r"F:\eye\to_convert"
-    dst = r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
+    src = r"G:\eyevideos\2"
+    dst = r"Y:\videos_temp\eye"
     # src = r"E:\tail\all\2023"
     # dst = r"K:\tail_videos"
 
