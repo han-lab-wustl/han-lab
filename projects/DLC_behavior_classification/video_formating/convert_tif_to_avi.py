@@ -3,30 +3,33 @@
 convert tif to avis!
 """
 import tifffile as tif, numpy as np, os, sys, shutil
-sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
 import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
 
-    src = r"G:\tailvideos"
-    dst = r"\\storage1.ris.wustl.edu\ebhan\Active\tail_videos"
+    src = r"E:\tail_temp\240115-240121\3"
+    checkdst = r"K:\tail_videos"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
+    # dst = r"I:\eye_videos"
     # src = r"E:\tail\all\2023"
-    # dst = r"K:\tail_videos"
+    dst = r"K:\tail_videos"
 
     vids = listdir(src)
     print(vids)
     for vid in vids:
         # vid = vids[12]
         print(vid)
+        # check and save at diff locations
+        checkflnm = os.path.join(checkdst, os.path.basename(vid)+'.avi')
         flnm = os.path.join(dst, os.path.basename(vid)+'.avi')
         fls = np.array(listdir(vid, ifstring='tif'))
         # order by tif index, wrong if you just do sort!
         order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[2]) for xx in fls])
         fls = fls[np.argsort(order)]
         y,x = sitk.GetArrayFromImage(sitk.ReadImage(fls[0])).shape
-        if not os.path.exists(flnm[:-4]+'.npy') and not os.path.exists(flnm):
+        if not os.path.exists(checkflnm[:-4]+'.npy') and not os.path.exists(checkflnm):
             arr = np.memmap(flnm[:-4]+'.npy', dtype='uint8', 
                             mode='w+', shape=(len(fls),y,x))
             # arr = np.zeros((len(fls),y,x))
@@ -45,7 +48,7 @@ if __name__ == "__main__":
             del arr # remove var
             # now delete memmap array
             if os.path.exists(flnm): os.remove(flnm[:-4]+'.npy')
-        if delete_fld==True and os.path.exists(flnm):
+        if delete_fld==True and (os.path.exists(checkflnm) or os.path.exists(flnm)):
             print(f"***********deleting tif folder {vid} after making avi \n*********** \n")
             shutil.rmtree(vid)
             
