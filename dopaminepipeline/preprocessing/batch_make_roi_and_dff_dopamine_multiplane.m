@@ -11,7 +11,7 @@ close all
 mouse_id=213;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
-ref_exist=0;%%% if reference image hase been already choosen
+ref_exist=1;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end
@@ -23,7 +23,7 @@ for allplanes=1:size(planefolders,2)
     for days=days_check
         dir_s2p = struct2cell(dir([pr_dir{days} '\**\suite2p']));
     planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
-        pr_dir2=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
+        pr_dir2=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\');
         %%% grab 1st file/initial 500 frames
         cd(pr_dir2)
         list_tif=dir('*.tif');
@@ -126,7 +126,7 @@ for allplanes=1:size(planefolders,2)
             [x1,y1,BW,xi,yi]=roipoly;hold on
             plot(xi,yi,color_cod{lopc},'Linewidth',2)
             
-            w=input('input vals 1 to keep drawing or 0 to move to next subplot');
+            w=input('1 to keep drawing or 0 to move to next subplot: ');
             BW_cell{lopc,1}=BW;
             coords{lopc,1}=[xi,yi];
             
@@ -186,7 +186,7 @@ for allplanes=1:size(planefolders,2)
                 get(gca,'YLim'));
             setPositionConstraintFcn(h,fcn);
             
-            w2=input('Roi position final press1 else 0=')
+            w2=input('Roi position final? 1 else 0: ')
             
             if w2==1
                 
@@ -199,13 +199,13 @@ for allplanes=1:size(planefolders,2)
         end
         dir_s2p = struct2cell(dir([pr_dir{roi_sel} '\**\suite2p']));
     planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
-        pr_dir_s=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
+        pr_dir_s=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\');
         cd(pr_dir_s)
         params.mimg=mpimg;
         params.newroicoords=newpos;
         params.newBWmask=BWnewpos;
         save('params.mat','params')
-        w=input('input vals 1 to keep drawing or 0 to move to next subplot');
+        w=input('1 to keep drawing or 0 to move to next subplot: ');
         
     end
 end
