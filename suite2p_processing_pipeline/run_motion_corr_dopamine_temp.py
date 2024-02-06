@@ -2,7 +2,11 @@
 import os , numpy as np, tifffile, SimpleITK as sitk, sys
 from math import ceil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+<<<<<<< HEAD
+imagingflnm = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\E179 dark reward\Day_07"
+=======
 imagingflnm = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\E181\Day_02"; #E179 dark reward\Day_08"
+>>>>>>> 03d81bd025768d2a9b9173219d2e03291888eb35
 
 import suite2p
 ops = suite2p.default_ops() # populates ops with the default options
