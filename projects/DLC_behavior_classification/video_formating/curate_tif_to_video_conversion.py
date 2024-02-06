@@ -4,7 +4,7 @@
 
 import os, pandas as pd
 
-src = r"H:\tailvideos"
+src = r"F:\raw_tail_vids\2"
 vids = [os.path.join(src, xx) for xx in os.listdir(src) if 'csv' not in xx]
 fls = [len(os.listdir(xx)) for xx in vids]
 

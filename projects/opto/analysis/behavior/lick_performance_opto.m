@@ -144,7 +144,7 @@ swarmchart(x,y,'k'); hold on
 yerr = {offopsin,NaN,offvector,NaN,onopsin,NaN,onvector};
 err = [];
 for i=1:length(yerr)
-    err(i) =2*(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+    err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
 end
 er = errorbar([1 NaN 3 NaN 5 NaN 7],means,err);
 er.Color = [0 0 0];                            
@@ -153,10 +153,22 @@ er.LineStyle = 'none';
 ylabel("Lick Rate / Trial")
 xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
     "", "VIP stGtACR LED on"])
-[h,p1,i,stats] = ttest2(offopsin,onopsin);
+[h,p1,i,stats] = ttest(offopsin,onopsin);
 [h,p2,i,stats] = ttest2(onvector,onopsin);
-[h,p3,i,stats] = ttest2(offvector,onvector);
-% set(gca, 'YScale', 'log')
+[h,p3,i,stats] = ttest(offvector,onvector);
+% condt = [repelem("Control LED off",length(offopsin)), repelem("Control LED on",length(onopsin)), ...
+%     repelem("VIP stGtACR LED off",length(offvector)), ...
+%     repelem("VIP stGtACR LED on",length(onvector))]';
+% tbl = table(condt,[offvector,onvector,offopsin,onopsin]',VariableNames=["Condition" "Lick Rate"]);
+% aov = anova(tbl,'Lick Rate');
+% multcompare(aov,'CriticalValueType',"bonferroni")
 
 title(sprintf("all trials, p = %f b/wn off and on opsin, \n p=%f bw/n on vector and opsin \n p=%f b/wn off and on vector", p1,p2,p3))
 box off
+diffpow = mean(onopsin);
+basepwr = mean(onvector);
+stdpow = std([onvector onopsin]);
+nout = sampsizepwr('t2',[basepwr, stdpow],diffpow,0.80);
+% pwrout = sampsizepwr('t2',[basepwr, stdpow],diffpow,[],7);
+halfeffect = (basepwr-diffpow)/2;
+nout_half = sampsizepwr('t2',[basepwr, stdpow],basepwr-halfeffect,0.80);

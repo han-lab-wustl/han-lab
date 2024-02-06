@@ -5,7 +5,7 @@ clear all; close all
 % cells_to_plot = {[141, 17,20,7]+1, [453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
 %     [301 17 13 320]+1, [98 33 17 3]+1, [92 20 17 26]+1, [17, 23, 36, 10]+1, [6, 114, 11, 24]+1,...
 %      [49 47 6 37]+1, [434,19,77,5]+1}; % indices of red cells from suite2p per day
-mouse_name = "e218";
+mice = {"e216", "e218"};
 days = [35,38,41,44,47,50];
 cells_to_plot = {[453,63,26,38]+1,...
     [301 17 13 320]+1, [17, 23, 36, 10]+1, [6, 114, 11, 24]+1,...
@@ -19,6 +19,7 @@ opto_ep = [3 2 3 2 3 2];
 y = []; x = [];
 
 dyind = 1;
+for m=1:length(mice)
 for dy=days
     daypth = dir(fullfile(src, mouse_name, string(dy), "**\*Fall.mat"));
     load(fullfile(daypth.folder,daypth.name), 'dFF', 'changeRewLoc', 'VR', 'ybinned', 'forwardvel', ...
@@ -92,6 +93,7 @@ for dy=days
         mean(dffs{2}{1})/mean(dffs{2}{2}); mean(dffs{3}{1})/mean(dffs{3}{2}); mean(dffs{4}{1})/mean(dffs{4}{2})], 'omitnan');
     x(dyind) = meandff;
     dyind = dyind+1;
+end
 end
 %%
 

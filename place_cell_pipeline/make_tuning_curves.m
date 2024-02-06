@@ -36,6 +36,7 @@ for ep=1:length(eps)-1
         % updated how we get moving time to be consistent with dop pipeline
         [time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
         ypos_mov = ypos(time_moving);
+        % ypos_mov(ypos_mov<=3)=8;
         for i = 1:nbins
             time_in_bin{i} = time_moving(ypos_mov >= (i-1)*bin_size & ...
                 ypos_mov < i*bin_size);

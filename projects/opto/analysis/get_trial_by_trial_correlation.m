@@ -2,14 +2,18 @@
 % https://www.nature.com/articles/s41593-022-01050-4
 % zahra's analysis for opto
 % goal is to see population level differences when you inhibit vips
+% i see some stuff in e218 but e216
+% generally, more or less correlated per epoch
+% flip flops between trials
+% relate correlation of trials with lick behavior?
 clear all; close all
 
 an = 'e216';
 % individual day analysis 
- dys = [42];
+ dys = [7 8 9 37 38 39 40 41 42 44 45 46 47 48 50 52,54:60];
 src = 'X:\vipcre'; % folder where fall is
 % src = 'Y:\analysis\fmats';
-savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data'; % where to save ppt of figures
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
     'Title','correlation', ...
@@ -50,7 +54,7 @@ for dy=dys % for loop per day
     pc = logical(iscell(:,1));
     [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
     bordercells_pc = bordercells(pc); % mask border cells
-    fc3_pc = Fc3(:,pc); % only iscell
+    fc3_pc = dFF(:,pc); % only iscell
     fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
     fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
     % activity binning
@@ -75,11 +79,11 @@ for dy=dys % for loop per day
     xticklabels(0:10:max(unique(trialnumall)))
     yticks(0:10:max(unique(trialnumall))-1)
     yticklabels(0:10:max(unique(trialnumall)))
-    xlabel('Trial-by-trial Pearson correlation of Fc3')
+    xlabel('Trial-by-trial Pearson correlation of dFF')
     sgtitle(sprintf('animal: %s, day %i', an, dy))
     colorbar;
     pptx.addPicture(fig);
 %     close(fig)
 end
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_trialbytrial_pearson_corr_',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_trialbytrial_pearson_corr',an)));

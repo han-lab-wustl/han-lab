@@ -1,4 +1,4 @@
-% calc opto epoch success and fails
+% get mean dff per cell in opto vs. pre opto epochs
 % https://www.nature.com/articles/s41593-022-01050-4
 % lick selectivity = smoothed licks in rew zone - smoothed licks in opp
 % zone / (smoothed licks in rew zone + smoothed licks in opp zone)
@@ -6,10 +6,12 @@
 % TODO lick rate outside rew zone
 clear all; close all
 mouse_name = "e218";
-dys = [20,21,22,23,35,36,37,38,39,40,41,42,43,44,45,47 48 49 50 51 52];
+% dys = [20,21,22,23,35,36,37,38,39,40,41,42,43,44,45,47 48 49 50 51 52];
+dys = 20:23;
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
-opto_ep = [-1 -1 -1 -1,3 0 1 2 0 1 3, 0 1 2, 0 3 0 1 2 0 1]; 
+opto_ep = [-1 -1 -1 -1];
+% opto_ep = [-1 -1 -1 -1,3 0 1 2 0 1 3, 0 1 2, 0 3 0 1 2 0 1]; 
 src = "X:\vipcre";
 epind = 1; % for indexing
 bin_size = 2; % cm
