@@ -1,6 +1,7 @@
 function [mean_length_of_transients_per_cell_opto,....
     mean_length_of_transients_per_cell_ctrl, auc_transients_per_cell_opto,...
-    auc_transients_per_cell_ctrl] = get_transient_stats(changeRewLoc, VR,ybinned, putative_pcs, Fc3, iscell,...
+    auc_transients_per_cell_ctrl, peak_transients_per_cell_opto, peak_transients_per_cell_ctrl] = get_transient_stats(changeRewLoc,gainf,...
+    ybinned, putative_pcs, Fc3, iscell,...
     stat, optoep)
 % test script for counting transients
 % compare to previos epoch
@@ -15,12 +16,11 @@ end
 % preprocessing
 eps = find(changeRewLoc>0);
 eps = [eps length(changeRewLoc)];
-track_length = 180/VR.scalingFACTOR;
+track_length = 180*gainf;
 bin_size=3;
 nbins = track_length/bin_size;
-ybinned = ybinned/VR.scalingFACTOR;
-rewlocs = changeRewLoc(changeRewLoc>0)/VR.scalingFACTOR;
-rewsize = VR.settings.rewardZone/VR.scalingFACTOR;
+ybinned = ybinned*gainf;
+rewlocs = changeRewLoc(changeRewLoc>0)*gainf;
 eprng = eps(optoep):eps(optoep+1);
 ypos = ybinned(eprng);
 eprng = eprng(ypos<rewlocs(optoep)); % pre reward ypos
@@ -31,18 +31,19 @@ bordercells_pc = bordercells(pc); % mask border cells
 fc3_pc = Fc3(eprng,pc); % only iscell
 fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
 fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-start_of_transients = cell(1, size(fc3_pc,2));
+peak_of_transients = cell(1, size(fc3_pc,2));
 length_of_transients = cell(1, size(fc3_pc,2));
 auc_of_transients = cell(1, size(fc3_pc,2));
 for cll=1:size(fc3_pc,2) % get transients of each cell
     transient = consecutive_stretch(find(fc3_pc(:,cll)>0));
-    start_of_transients{cll} = cell2mat(cellfun(@min, transient, 'UniformOutput', false));
-    auc_of_transients{cll} = cell2mat(cellfun(@trapz, transient, 'UniformOutput', false));
+    peak_of_transients{cll} = cell2mat(cellfun(@(x) mean(fc3_pc(x,cll)), transient, 'UniformOutput', false));
+    auc_of_transients{cll} = cell2mat(cellfun(@(x) trapz(fc3_pc(x,cll)), transient, 'UniformOutput', false));
     length_of_transients{cll} = cell2mat(cellfun(@length, transient, 'UniformOutput', false));
     clear transient
 end
 % get number and length
 auc_transients_per_cell_opto = cell2mat(cellfun(@mean, auc_of_transients, 'UniformOutput',false));
+peak_transients_per_cell_opto = cell2mat(cellfun(@mean, peak_of_transients, 'UniformOutput',false));
 mean_length_of_transients_per_cell_opto = cell2mat(cellfun(@(x) mean(x./31.25), length_of_transients, 'UniformOutput', false));
 % previous opto
 eprng = eps(optoep-1):eps(optoep);
@@ -51,18 +52,19 @@ eprng = eprng(ypos<rewlocs(optoep)); % pre reward ypos
 fc3_pc = Fc3(eprng,pc); % only iscell
 fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
 fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-start_of_transients = cell(1, size(fc3_pc,2));
+peak_of_transients = cell(1, size(fc3_pc,2));
 length_of_transients = cell(1, size(fc3_pc,2));
 auc_of_transients = cell(1, size(fc3_pc,2));
 for cll=1:size(fc3_pc,2) % get transients of each cell
     transient = consecutive_stretch(find(fc3_pc(:,cll)>0));
-    start_of_transients{cll} = cell2mat(cellfun(@min, transient, 'UniformOutput', false));
-    auc_of_transients{cll} = cell2mat(cellfun(@trapz, transient, 'UniformOutput', false));
+    peak_of_transients{cll} = cell2mat(cellfun(@(x) mean(fc3_pc(x,cll)), transient, 'UniformOutput', false));
+    auc_of_transients{cll} = cell2mat(cellfun(@(x) trapz(fc3_pc(x,cll)), transient, 'UniformOutput', false));
     length_of_transients{cll} = cell2mat(cellfun(@length, transient, 'UniformOutput', false));
     clear transient
 end
 % get number and length
 auc_transients_per_cell_ctrl = cell2mat(cellfun(@mean, auc_of_transients, 'UniformOutput',false));
+peak_transients_per_cell_ctrl = cell2mat(cellfun(@mean, peak_of_transients, 'UniformOutput',false));
 mean_length_of_transients_per_cell_ctrl = cell2mat(cellfun(@(x) mean(x./31.25), length_of_transients, 'UniformOutput', false));
 % 
 % figure; plot(1,number_of_transients_per_cell_ctrl,'ko'); hold on; 

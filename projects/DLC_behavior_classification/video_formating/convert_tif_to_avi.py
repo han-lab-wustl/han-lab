@@ -9,28 +9,17 @@ by Zahra
 4. checks to make sure avi is made, deletes folder and array
 """
 import tifffile as tif, numpy as np, os, sys, shutil
-sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
 from utils.utils import listdir
 import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
 
-<<<<<<< HEAD
-    src = r"F:\raw_tail_vids\1"
+    src = r"F:\Behind_movies"
     dst = r"Y:\videos_temp\tail"
-=======
-<<<<<<< HEAD
-    src = r"E:\tail_temp\240115-240121\3"
-    checkdst = r"K:\tail_videos"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
-    # dst = r"I:\eye_videos"
-=======
-    src = r"G:\eyevideos\2"
-    dst = r"Y:\videos_temp\eye"
->>>>>>> 03d81bd025768d2a9b9173219d2e03291888eb35
->>>>>>> 097c18b96088986bd88fb2454ae335227b13e6c2
-    # src = r"E:\tail\all\2023"
-    dst = r"K:\tail_videos"
+    checkdst = r"Y:\videos_temp\tail"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
 
     vids = listdir(src)
     print(vids)
