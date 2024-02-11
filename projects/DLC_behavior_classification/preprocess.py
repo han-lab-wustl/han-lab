@@ -8,7 +8,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 def preprocess(step,vrdir, dlcfls,columns=False,
-               only_add_experiment=False):
+        only_add_experiment=False):
     if step == 0: # copy vr files from  usb matching dlc data
     #vrdir =  r'I:\VR_data' # copy of vr data, curated to remove badly labeled files
     #dlcfls = r'G:\dlc_mixedmodel2' # h5 and csv files from dlc

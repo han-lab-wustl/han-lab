@@ -20,7 +20,7 @@ mpl.rcParams["ytick.major.size"] = 6
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 if __name__ == "__main__": # TODO; compare with diameter
-    src = r"I:\pupil_pickles"
+    src = r"I:\pupil_pickles" # path to pickle files you want to analyze
     add_to_dct = False # add to previous datadct
     if add_to_dct:
         with open(r"Z:\pupil_data.p", "rb") as fp: #unpickle
@@ -119,9 +119,9 @@ ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
 ax.set_xticklabels(np.arange(-range_val,range_val+1))
 ax.set_xlabel('Time From Reward (s)')
 ax.set_ylim([0,100])
-fig.suptitle('n = 14 sessions, 4 animals')
-plt.savefig(r"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil.svg", \
-            bbox_inches='tight',transparent=True)
+fig.suptitle('n = 14 sessions, 4 animals') # change for number of sessions
+# plt.savefig(r"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil.svg", \
+#             bbox_inches='tight',transparent=True)
 
 ##################################### fig 2 #####################################
 # trial by trial subplot
@@ -159,67 +159,68 @@ for i,normall in enumerate(normall_s):
     cax = divider.append_axes('right', size='3%', pad=0.1)
     fig.colorbar(im, cax=cax, orientation='vertical')
     fig.suptitle(sessions[i])
-    plt.savefig(rf"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil_per_trial_{sessions[i][:-15]}.svg", \
-            bbox_inches='tight',transparent=True)
+    # plt.savefig(rf"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil_per_trial_{sessions[i][:-15]}.svg", \
+    #         bbox_inches='tight',transparent=True)
 
 ##################################### fig 3 #####################################
 # failed trials
 # get failed trials
-rewsize = 10
-circ = datadct['circumferences_all_sessions']
-pdst = os.path.join(src, sessions_analyzed[6])
-with open(pdst, "rb") as fp: #unpickle
-    vralign = pickle.load(fp)
+# session_num = 6 # pick one session
+# rewsize = 10
+# circ = datadct['circumferences_all_sessions']
+# pdst = os.path.join(src, sessions_analyzed[session_num])
+# with open(pdst, "rb") as fp: #unpickle
+#     vralign = pickle.load(fp)
 
-eps = list(np.where(vralign['changeRewLoc']>0)[0])
-eps.append(len(vralign['changeRewLoc']))
-rewlocs = vralign['changeRewLoc'][vralign['changeRewLoc']>0]
-for i,ep in enumerate(eps):
-    eprng = np.arange(ep,eps[i+1])
-    c_x_ep = np.array(c_x_)[eprng]
-    rew_ep = np.hstack(vralign['rewards'])[eprng]
-    rewloc = rewlocs[i]
-    ypos = vralign['ybinned'][eprng]
-    successtrialtable = []
-    failedtrialtable = []
-    trials = vralign['trialnum'][eprng]
-    for trial in np.unique(trials)[:-1]:
-        c_x_tr = c_x_ep[np.hstack(trials==trial)]
-        rew_tr = rew_ep[np.hstack(trials==trial)]
-        ypos_tr = ypos[np.hstack(trials==trial)]
-        rewloc_tr = (np.hstack(ypos_tr>=rewloc) & np.hstack(ypos_tr<=rewloc+2))
-        ypos_ =np.hstack(ypos_tr).astype(int)
-        df = pd.DataFrame(np.array([c_x_tr, rewloc_tr, ypos_]).T)
-        # takes median and normalizes
-        df_ = df.groupby(2).mean()
-        c_x_tr_ = np.hstack(df_[0].values)
-        rewloc_tr_ = np.hstack(df_[1].values)
-        if sum(rew_tr)==1.5:
-            successtrialtable.append([c_x_tr_, rewloc_tr_])
-        elif sum(rew_tr)==0:
-            failedtrialtable.append([c_x_tr_, rewloc_tr_])
-    fig, ax = plt.subplots()
-    for s in successtrialtable:
-        ax.plot(s[0], color='slategray', alpha=0.2)
-    y, error = tolerant_mean(np.array([xx[0] for xx in successtrialtable]))
-    ax.plot(y, 'k')
-    ymin,ymax = ax.get_ylim()
-    rect = patches.Rectangle((rewloc-rewsize/2, ymin), rewsize, ymax, 
-                linewidth=1, edgecolor='k', 
-            facecolor='aqua', alpha=0.3)
-    ax.add_patch(rect)
-    ax.set_title(f'ep{i+1}, successful trials')
-    fig, ax = plt.subplots()
-    for s in failedtrialtable:
-        ax.plot(s[0], color='slategray', alpha=0.2)        
-    y, error = tolerant_mean(np.array([xx[0] for xx in failedtrialtable]))
-    ax.plot(y, 'k')
-    ymin,ymax = ax.get_ylim()
-    rect = patches.Rectangle((rewloc-rewsize/2, ymin), rewsize, ymax, 
-                linewidth=1, edgecolor='k', 
-            facecolor='aqua', alpha=0.3)
-    ax.add_patch(rect)
-    ax.set_title(f'ep{i+1}, failed trials')
+# eps = list(np.where(vralign['changeRewLoc']>0)[0])
+# eps.append(len(vralign['changeRewLoc']))
+# rewlocs = vralign['changeRewLoc'][vralign['changeRewLoc']>0]
+# for i,ep in enumerate(eps):
+#     eprng = np.arange(ep,eps[i+1])
+#     c_x_ep = np.array(c_x_)[eprng]
+#     rew_ep = np.hstack(vralign['rewards'])[eprng]
+#     rewloc = rewlocs[i]
+#     ypos = vralign['ybinned'][eprng]
+#     successtrialtable = []
+#     failedtrialtable = []
+#     trials = vralign['trialnum'][eprng]
+#     for trial in np.unique(trials)[:-1]:
+#         c_x_tr = c_x_ep[np.hstack(trials==trial)]
+#         rew_tr = rew_ep[np.hstack(trials==trial)]
+#         ypos_tr = ypos[np.hstack(trials==trial)]
+#         rewloc_tr = (np.hstack(ypos_tr>=rewloc) & np.hstack(ypos_tr<=rewloc+2))
+#         ypos_ =np.hstack(ypos_tr).astype(int)
+#         df = pd.DataFrame(np.array([c_x_tr, rewloc_tr, ypos_]).T)
+#         # takes median and normalizes
+#         df_ = df.groupby(2).mean()
+#         c_x_tr_ = np.hstack(df_[0].values)
+#         rewloc_tr_ = np.hstack(df_[1].values)
+#         if sum(rew_tr)==1.5:
+#             successtrialtable.append([c_x_tr_, rewloc_tr_])
+#         elif sum(rew_tr)==0:
+#             failedtrialtable.append([c_x_tr_, rewloc_tr_])
+#     fig, ax = plt.subplots()
+#     for s in successtrialtable:
+#         ax.plot(s[0], color='slategray', alpha=0.2)
+#     y, error = tolerant_mean(np.array([xx[0] for xx in successtrialtable]))
+#     ax.plot(y, 'k')
+#     ymin,ymax = ax.get_ylim()
+#     rect = patches.Rectangle((rewloc-rewsize/2, ymin), rewsize, ymax, 
+#                 linewidth=1, edgecolor='k', 
+#             facecolor='aqua', alpha=0.3)
+#     ax.add_patch(rect)
+#     ax.set_title(f'ep{i+1}, successful trials')
+#     fig, ax = plt.subplots()
+#     for s in failedtrialtable:
+#         ax.plot(s[0], color='slategray', alpha=0.2)        
+#     y, error = tolerant_mean(np.array([xx[0] for xx in failedtrialtable]))
+#     ax.plot(y, 'k')
+#     ymin,ymax = ax.get_ylim()
+#     rect = patches.Rectangle((rewloc-rewsize/2, ymin), rewsize, ymax, 
+#                 linewidth=1, edgecolor='k', 
+#             facecolor='aqua', alpha=0.3)
+#     ax.add_patch(rect)
+#     ax.set_title(f'ep{i+1}, failed trials')
 
 
 #     ##################################### fig 3 #####################################    

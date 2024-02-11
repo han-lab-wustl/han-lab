@@ -3,7 +3,62 @@ from datetime import datetime
 import scipy.io as sio, matplotlib.pyplot as plt, re
 import h5py, pickle
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
+
+def get_videos_from_hrz_csv(csvpth, dst, vidpth=r'\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos'):
+    """
+    csv = path of hrz vr behavior
+    dst = where to store moved videos
+    """
+    df = pd.read_csv(csvpth, index_col=None)
+    pths = [os.path.basename(xx) for xx in df.Var1.values]
+            
+    dates_with_monthname = re.findall(
+        r'(\d{2}_(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_\d{4})',
+        str(pths)
+    )
+    mouse_names = [re.split(r"_", pth)[0].upper() for pth in pths]
+    
+    dates = []
+    for s in dates_with_monthname:
+        datetime_object = datetime.strptime(s[0], '%d_%b_%Y')
+        dates.append(str(datetime_object.date()))    
+    
+    vids = [xx for xx in listdir(vidpth) if 'avi' in xx]
+    vids2get= []
+    for vid in vids:
+        mnm = os.path.basename(vid)
+        mouse_name = re.split(r"_", mnm)[1].upper() 
+        date = str(datetime.strptime(re.split(r"_", mnm)[0], '%y%m%d').date())
+        if 'avi' in mouse_name: mouse_name=mouse_name[:-4]
+        if mouse_name in mouse_names and date in dates:
+            print(vid, mouse_name, date)
+            vids2get.append(vid)
+            shutil.move(vid, os.path.join(dst, mnm))
+            
+    return vids2get
+
+def match_eye_to_tail_videos(eyevids,dst, vidpth = r'\\storage1.ris.wustl.edu\ebhan\Active\tail_videos'):
+    
+    pths = [os.path.basename(xx) for xx in listdir(eyevids)]            
+    mouse_names = [re.split(r"_", pth)[1].upper() for pth in pths]
+    dates = [str(datetime.strptime(re.split(r"_", mnm)[0], '%y%m%d').date()) for mnm in pths]
+    
+    vids = [xx for xx in listdir(vidpth) if 'avi' in xx]
+    vids2get= []
+    for vid in vids:
+        mnm = os.path.basename(vid)
+        mouse_name = re.split(r"_", mnm)[1].upper() 
+        date = str(datetime.strptime(re.split(r"_", mnm)[0], '%y%m%d').date())
+        if 'avi' in mouse_name: mouse_name=mouse_name[:-4]
+        for i,mnms in enumerate(mouse_names):
+            if mnms==mouse_name and dates[i]==date:
+                print(vid, mouse_name, date)
+                vids2get.append(vid)                        
+                shutil.move(vid, os.path.join(dst, mnm))
+            
+    return vids2get
 
 def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     """copies vr files for existing dlc csvs
