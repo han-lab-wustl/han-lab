@@ -17,7 +17,7 @@ for ep=1:length(eps)-1
     % mask1 = trn>=8;
     strials = ones(1, length(unique(trn)))*NaN; % only get successful trials
     for trial=unique(trn)
-        if trial>=3 && trial>=max(trn)-ntrials % trial < 3, probe trial
+        if trial>=3 && trial>=max(trn)-ntrials%trial>min(trn)+ntrials%trial>=max(trn)-ntrials % trial < 3, probe trial
             %                 if sum(rew(trn==trial)==1)>0 % if reward was found in the trial
             %                     strials(trial)=trial;
             %                 end
@@ -36,6 +36,7 @@ for ep=1:length(eps)-1
         % updated how we get moving time to be consistent with dop pipeline
         [time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
         ypos_mov = ypos(time_moving);
+        % ypos_mov(ypos_mov<=3)=8;
         for i = 1:nbins
             time_in_bin{i} = time_moving(ypos_mov >= (i-1)*bin_size & ...
                 ypos_mov < i*bin_size);
@@ -49,6 +50,8 @@ for ep=1:length(eps)-1
         fc3_pc = Fc3(eprng,pc); % only iscell
         fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
         fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        % smooth
+        fc3_pc = smoothdata(fc3_pc, 'gaussian', 3);
         % activity binning
         cell_activity = zeros(nbins, size(fc3_pc,2));
         for i = 1:size(fc3_pc,2)

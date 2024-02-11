@@ -105,7 +105,7 @@ for dy=1:length(sessions)
 end
 %%
 % collect coms from hrz probes
-load('C:\Users\Han\Box\neuro_phd_stuff\han_2023-\ed_grant_2024\com_hrz_probes.mat')
+load('C:\Users\Han\Box\neuro_phd_stuff\han_2023-\ed_grant_2024\my_figs\com_hrz_probes.mat')
 lastep_mask = cell2mat(cellfun(@length, COMlick_rewlocprev, 'UniformOutput',false));
 lastep_COM = {};
 for ii=1:length(COMlick_rewlocprev)
@@ -115,7 +115,7 @@ for ii=1:length(COMlick_rewlocprev)
 end
 %%
 nulldist = abs(cell2mat(lastep_COM(~cellfun('isempty',lastep_COM))));
-randomsess = unique(randi([1 length(nulldist)],1,17));
+randomsess = unique(randi([1 length(nulldist)],1,15));
 nulldist = nulldist(randomsess);
 % plot com in initial probes vs. b/wn epoch probes    
 figure;
@@ -134,7 +134,7 @@ yerr = {nulldist, abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'Unif
     abs(cell2mat(coms_btwn))};
 err = [];
 for i=1:length(yerr)
-    err(i) =2*(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+    err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
 end
 er = errorbar([1 2 3 4],means,err);
 er.Color = [0 0 0];                            

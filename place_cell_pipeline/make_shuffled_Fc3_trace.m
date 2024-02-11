@@ -8,7 +8,7 @@ for i = 1:size(fc3,2)
         sca = fc3(cell2mat(s_),i);
         shuffled_cells_activity(:,i) = sca;
     catch
-        disp(i)
+        % disp(i)
 %         disp('\n likely a cell with no transient \n')
 end 
 end

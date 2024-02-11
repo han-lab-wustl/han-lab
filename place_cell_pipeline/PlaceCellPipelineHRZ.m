@@ -11,11 +11,10 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path!
 clear all; 
-
-an = 'e216';
+an = 'e217';
 % individual day analysis 
 % dys = [27:30, 32:3 4,36,38,40:75];
-dys = [61];%[37:42];%[33,35:42];
+dys = [7];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is

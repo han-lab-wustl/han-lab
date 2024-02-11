@@ -5,20 +5,30 @@ clear all; close all
 % cells_to_plot = {[141, 17,20,7]+1, [453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
 %     [301 17 13 320]+1, [98 33 17 3]+1, [92 20 17 26]+1, [17, 23, 36, 10]+1, [6, 114, 11, 24]+1,...
 %      [49 47 6 37]+1, [434,19,77,5]+1}; % indices of red cells from suite2p per day
-mouse_name = "e218";
-days = [35,38,41,44,47,50];
-cells_to_plot = {[453,63,26,38]+1,...
+mice = {"e216", "e218"};
+% mice = {"e186"};%{"e201"};
+% dys_s = {[2:5,31,32,33,36, 38 40 41]};%{[52:65]};
+dys_s = {[37 41 57 60],...
+    [35,38,41,44,47,50]};
+opto_ep_s = {[2 3 2 3],...
+    [3 2 3 2 3 2]};
+cells_to_plot_s = {{135+1,1655+1,780,2356+1}, ...
+    {[453,63,26,38]+1,...
     [301 17 13 320]+1, [17, 23, 36, 10]+1, [6, 114, 11, 24]+1,...
-    [49 47 6 37]+1, [434,19,77,5]+1}; % indices of red cells from suite2p per day
-
+    [49 47 6 37]+1, [434,19,77,5]+1}}; % indices of red cells from suite2p per day
 src = "X:\vipcre";
 dffs_cp_dys = {};
 % get dff per red cell and correlate with success rate
 % opto_ep = [2 3 2 2 2 2 2 3 2 3 2];
-opto_ep = [3 2 3 2 3 2];
 y = []; x = [];
-
-dyind = 1;
+mind=1; % day and mouse index
+%%
+for m=1:length(mice)
+    mouse_name = mice{m};
+    days = dys_s{m};
+    cells_to_plot = cells_to_plot_s{m};
+    opto_ep = opto_ep_s{m};
+    dyind = 1;
 for dy=days
     daypth = dir(fullfile(src, mouse_name, string(dy), "**\*Fall.mat"));
     load(fullfile(daypth.folder,daypth.name), 'dFF', 'changeRewLoc', 'VR', 'ybinned', 'forwardvel', ...
@@ -79,25 +89,28 @@ for dy=days
     xticklabels(tic)
     xlabel("Time (minutes)")
     %%
-    dffs_cp_dys{dyind} = dffs_cp; % collect opto trace per day    
+    dffs_cp_dys{mind} = dffs_cp; % collect opto trace per day    
     % get dff per red cell and correlate with success rate
     optorng = eps(opto_ep(dyind)):eps(opto_ep(dyind)+1);
     [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum(optorng),rewards(optorng));
-    successrate = (success/total_trials)*100;
-    y(dyind) = successrate;
-    dffs = dffs_cp_dys{dyind};
-    % for 4 cells, get average dff (ratio compared to prev epoch)
-%     meandff = median(dffs{4}{1})/median(dffs{4}{2});
-    meandff = median([mean(dffs{1}{1})/mean(dffs{1}{2}); ...
-        mean(dffs{2}{1})/mean(dffs{2}{2}); mean(dffs{3}{1})/mean(dffs{3}{2}); mean(dffs{4}{1})/mean(dffs{4}{2})], 'omitnan');
-    x(dyind) = meandff;
+    successrate = success/total_trials;
+    y(mind) = successrate;
+    dffs = dffs_cp_dys{mind};
+    % for 4 cells, get average dff (ratio compared to prev epoch), only
+    meandff = cell2mat(cellfun(@(x) mean(x{1}, 'omitnan'), dffs, ...
+        'UniformOutput', false))/cell2mat(cellfun(@(x) mean(x{2}, 'omitnan'), dffs, 'UniformOutput', false));
+    % meandff = median([mean(dffs{1}{1})/mean(dffs{1}{2}); ...
+    %     mean(dffs{2}{1})/mean(dffs{2}{2}); mean(dffs{3}{1})/mean(dffs{3}{2}); mean(dffs{4}{1})/mean(dffs{4}{2})], 'omitnan');
+    x(mind) = meandff;
     dyind = dyind+1;
+    mind = mind+1;
+end
 end
 %%
-
+x = x(x<2); y = y(x<2);
 fig = figure('Renderer', 'painters'); plot(x,y/100, 'ko')
-mdl = fitlm(x,y/100);
-ylabel('Fraction of Successful Trials')
+mdl = fitlm(x,y);
+ylabel('Success Rate')
 xlabel('dFF (LED on) / dFF (LED off)')
 title(sprintf('r = %f', sqrt(mdl.Rsquared.Ordinary)))
 box off

@@ -1,19 +1,33 @@
 ##
 """
 convert tif to avis!
+by Zahra
+2/5/2024
+1. takes tifs from bonsai (in an external drive)
+2. makes a memory mapped array in dst
+3. converts array to lossless avi
+4. checks to make sure avi is made, deletes folder and array
 """
 import tifffile as tif, numpy as np, os, sys, shutil
-sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
 from utils.utils import listdir
 import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
+<<<<<<< HEAD
     src = r"F:\240129-240204"
     # checkdst = r"I:\eye_videos"
     # dst = r"I:\eye_videos"
     dst = r"K:\tail_videos"
     checkdst = r"K:\tail_videos"
+=======
+
+    src = r"F:\Behind_movies"
+    dst = r"Y:\videos_temp\tail"
+    checkdst = r"Y:\videos_temp\tail"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
+>>>>>>> 03257286f1285e1a4af2ef484af53f0470f37fb3
 
     vids = listdir(src)
     print(vids)
@@ -31,10 +45,7 @@ if __name__ == "__main__":
         if not os.path.exists(checkflnm[:-4]+'.npy') and not os.path.exists(checkflnm):
             arr = np.memmap(flnm[:-4]+'.npy', dtype='uint8', 
                             mode='w+', shape=(len(fls),y,x))
-            # arr = np.zeros((len(fls),y,x))
             for ii,fl in enumerate(fls):
-                # if ii%10000==0: print(ii)
-                # arr[ii] = sitk.GetArrayFromImage(sitk.ReadImage(fl))
                 read_to_memmap(arr, ii, fl)
             # args = [(arr, ii, fl) for ii,fl in enumerate(fls)]
             # with Pool(3) as p:
@@ -50,7 +61,10 @@ if __name__ == "__main__":
         if delete_fld==True and (os.path.exists(checkflnm) or os.path.exists(flnm)):
             print(f"***********deleting tif folder {vid} after making avi \n*********** \n")
             shutil.rmtree(vid)
-            
+
+#######################
+# for adina!           
+####################### 
 # command line to convert avi to imagej comptabile
 # ffmpeg -i K:\230609_E201.avi -c:v rawvideo K:\230609_E201_conv.avi
 # all videos have undergone lossless compression :)

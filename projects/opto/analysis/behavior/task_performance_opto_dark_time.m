@@ -6,25 +6,14 @@
 % TODO lick rate outside rew zone
 clear all; close all
 % mouse_name = "e216";
-mice = ["e216", "e218", "e189", "e190", "e201", "e186"];
-cond = ["vip", "vip", "ctrl", "ctrl", "sst", "sst"];%, "pv"];
-dys_s = {[7 8 9 37 38 39 40 41 42 44 45 46 48 50:59], ...
-    [20,21,22,23,35,36,37,38,39,40,41,...
-     42,43,44,45,47 48 49 50 51 52 55 56],...
-     [35:42,44],...
-     [33:35, 40:43, 45]...
-     [52:59], [2:5,31,32,33]};
+mice = ["e216", "e218"];
+dys_s = {[7 8 9 49 61 62], ...
+    [20,21,22,23,59 60 61 62 64]};
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
-opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1],...
-    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0],...
-    [-1 -1 -1 -1 2 3 2 0 2],...
-    [-1 -1 -1 3 0 1 2 3],...
-    [-1 -1 -1 2 3 0 2 3],...
-    [-1 -1 -1 -1 2 3 2]};
-src = ["X:\vipcre", "X:\vipcre", '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', ...
-    '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', 'Z:\sstcre_imaging', ...
-    'Y:\analysis\fmats'];
+opto_eps = {[-1 -1 -1 2 0 2],...
+    [-1 -1 -1 -1, 2 0 3 0 2]};
+src = "X:\vipcre";
 
 % mouse_name = "e218";
 % dys = 
@@ -48,14 +37,8 @@ for dy=dys
 %     daypth = dir(fullfile(src, mouse_name, string(dy), "**\*Fall.mat"));
 %     load(fullfile(daypth.folder,daypth.name), 'licks', 'trialnum', 'rewards', 'changeRewLoc', ...
 %         'ybinned', 'timedFF', 'VR');
-    daypth = dir(fullfile(src(m), mice(m), string(dy), '**', '*time*.mat'));    
-    if m==6 % e186 in a diff format
-        daypth = dir(fullfile(src(m), mice(m), 'days', '*.mat'));
-        daypth = daypth(dy);    
-        load(fullfile(daypth.folder, daypth.name), 'VR') % load fall
-    else
-        load(fullfile(daypth.folder, daypth.name))
-    end
+    daypth = dir(fullfile(src, mice(m), string(dy), 'behavior\vr\*.mat'));
+    load(fullfile(daypth.folder, daypth.name))
     eps = find(VR.changeRewLoc>0);
     eps = [eps length(VR.changeRewLoc)];
     track_length = 180/VR.scalingFACTOR;
@@ -76,7 +59,8 @@ for dy=dys
         [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
         successrate_opto = success/total_trials;
         last8rng = (ismember(trialnum_,str)); % only do for failed trials
-        lick_selectivity_opto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, rewsize);
+        lick_selectivity_opto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
+            rewsize);
         % get failed pre and post licks
         success=1;[com_success_opto] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
         rewsize, success); % coms successful trials
@@ -92,7 +76,8 @@ for dy=dys
         [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
         successrate_ctrl = success/total_trials;
         last8rng = (ismember(trialnum_,str));
-        lick_selectivity_ctrl = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc,rewsize);
+        lick_selectivity_ctrl = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
+            rewsize);
         success=1;[com_success_ctrl] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
         rewsize,success); % coms successful trials
         success=0;[com_fails_ctrl] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
@@ -108,7 +93,8 @@ for dy=dys
             [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
             successrate_postopto = success/total_trials;
             last8rng = (ismember(trialnum_,str));
-            lick_selectivity_postopto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc,rewsize);
+            lick_selectivity_postopto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
+                rewsize);
             success=1;[com_success_postopto] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
             rewsize,success); % coms successful trials
             success=0;[com_fails_postopto] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
@@ -139,7 +125,8 @@ for dy=dys
         [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
         successrate_opto = success/total_trials;
         last8rng = (ismember(trialnum_,str));
-        lick_selectivity_opto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc,  rewsize);
+        lick_selectivity_opto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
+            rewsize);
         success=1;[com_success_opto] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
         rewsize, success); % coms successful trials
         success=0;[com_fails_opto] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
@@ -154,7 +141,6 @@ for dy=dys
         [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
         successrate_ctrl = success/total_trials;
         last8rng = (ismember(trialnum_,str));
-        lick_selectivity_ctrl = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, rewsize);        
         success=1; [com_success_ctrl] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
         rewsize,success); % coms successful trials
         success=0; [com_fails_ctrl] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
@@ -170,7 +156,8 @@ for dy=dys
             [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum_,reward_);
             successrate_postopto = success/total_trials;
             last8rng = (ismember(trialnum_,str));
-            lick_selectivity_postopto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc,rewsize);
+            lick_selectivity_postopto = get_lick_selectivity(licks_(last8rng), ybinned_(last8rng), bin_size, nbins, rewloc, ...
+                rewsize);
             success=1;[com_success_postopto] = get_com_licks(trialnum_, reward_, str, licks_, ybinned_, rewloc, ...
             rewsize,success); % coms successful trials
             success=0;[com_fails_postopto] = get_com_licks(trialnum_, reward_, ftr, licks_, ybinned_, rewloc, ...
@@ -296,7 +283,7 @@ bar([mean([rates{1}{1}' rates{2}{1}'])...
     mean([rates{1}{6}' rates{2}{6}'])], 'FaceColor', 'w'); hold on
 plot(1, [rates{1}{1}' rates{2}{1}'], 'ko')
 plot(2, [rates{1}{2}' rates{2}{2}'], 'ko')
-plot(3, [rates{1}{3}' rates{2}{3}'], 'ko')
+plot(3, NaN, 'ko')
 plot(4, [rates{1}{4}' rates{2}{4}'], 'ko')
 plot(5, [rates{1}{5}' rates{2}{5}'], 'ko')
 plot(6, [rates{1}{6}' rates{2}{6}'], 'ko')
@@ -306,73 +293,7 @@ xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2
     "previous ep", "opto ep", "postopto ep"])
 [h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
    [rates{1}{5}' rates{2}{5}']); % sig
-%%
-% barplot with ctrl mice
-% cond = ["ctrloff", "ctrlon", "vipoff", "vipon"];
-figure;
-means = [mean([rates{3}{4}' rates{4}{4}' rates{5}{4}' rates{6}{4}']) NaN ...
-    mean([rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}']) NaN ...
-    mean([rates{1}{4}' rates{2}{4}']) NaN...
-    mean([rates{1}{5}' rates{2}{5}'])];
-bar(means, 'FaceColor', 'w'); hold on
-y1 = [rates{3}{4}' rates{4}{4}' rates{5}{4}' rates{6}{4}']; x = ones(1,size(y1,2));
-swarmchart(x,y1,'k')
-y2 = [rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}']; x = ones(1,size(y2,2))*3;
-swarmchart(x,y2,'k')
-y3 = [rates{1}{4}' rates{2}{4}']; x = ones(1,size(y3,2))*5;
-swarmchart(x,y3,'k')
-y4 = [rates{1}{5}' rates{2}{5}']; x = ones(1,size(y4,2))*7;
-swarmchart(x,y4,'k')
-yerr = {y1,NaN,y2,NaN,y3,NaN,y4};
-err = [];
-for i=1:length(yerr)
-    err(i) =2*(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
-end
-er = errorbar([1 NaN 3 NaN 5 NaN 7],means,err);
-er.Color = [0 0 0];                            
-er.LineStyle = 'none';  
-ylabel('Fraction of Successful Trials')
-xlabel('Condition')
-xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
-    "", "VIP stGtACR LED on"])
-% [h,p1,i,stats] = ttest2([rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}'], ....
-%    [rates{1}{5}' rates{2}{5}']); % sig
-% [h,p2,i,stats] = ttest([rates{1}{4}' rates{2}{4}'], ....
-%    [rates{1}{5}' rates{2}{5}']); % sig
-box off
-condt = [repelem("Control LED off",length(y1)), repelem("Control LED on",length(y2)), repelem("VIP stGtACR LED off",length(y3)), ...
-    repelem("VIP stGtACR LED on",length(y4))];
-aov= anova1([rates{3}{4}' rates{4}{4}' rates{5}{4}' rates{6}{4}' rates{3}{5}' rates{4}{5}' rates{5}{5}'...
-    rates{6}{5}' rates{1}{4}' rates{2}{4}'...
-    rates{2}{5}' rates{2}{5}'], condt);
-[c,m,h,gnames] = multcompare(aov,'CriticalValueType',"dunnett")
-nctrl = length(y2);
-title(sprintf('control n=4, %i sessions, opto n=2, 14 sessions \n p=%f b/wn led on control vs. opsin \n p=%f b/wn opsin led off vs. on ',nctrl,p1,p2))
-%%
-% mean of sessions
-figure;
-bar([mean(mean([rates{3}{4}' rates{4}{4}'])) ...
-    mean(mean([rates{3}{5}' rates{4}{5}']))...
-    mean(mean([rates{1}{4}' rates{2}{4}']))...
-    mean(mean([rates{1}{5}' rates{2}{5}']))], 'FaceColor', 'w'); hold on
-plot(1, [mean(rates{3}{4}') mean(rates{4}{4}')], 'ko')
-plot(2, [mean(rates{3}{5}') mean(rates{4}{5}')], 'ko')
-plot(3, [mean(rates{1}{4}') mean(rates{2}{4}')], 'ko')
-plot(4, [mean(rates{1}{5}') mean(rates{2}{5}')], 'ko')
-ylabel('Fraction of Successful Trials')
-xlabel('Condition')
-xticklabels(["Vector Control LED off", "Vector Control LED on", "stGtACR LED off", ...
-    "stGtACR LED on"])
-[h,p,i,stats] = ttest2([mean(rates{3}{5}') mean(rates{4}{5}')], ....
-   [mean(rates{1}{5}') mean(rates{2}{5}')]); % sig
-title(sprintf('control n=2, 8 sessions, opto n=2, 14 sessions \n p=%f b/wn led on control vs. opsin',p))
-diffpow = mean([mean(rates{3}{5}') mean(rates{4}{5}') mean(rates{5}{5}') mean(rates{6}{5}')])-mean([mean(rates{1}{5}') mean(rates{2}{5}')]);
-basepwr = mean([mean(rates{3}{5}') mean(rates{4}{5}')]);
-stdpow = std([mean(rates{3}{5}') mean(rates{4}{5}') mean(rates{5}{5}') mean(rates{6}{5}') mean(rates{1}{5}') mean(rates{2}{5}')]);
-% nout = sampsizepwr('t',[basepwr, stdpow],diffpow,0.80);
-% need 4 animals to
-% detect a difference between led on and off sessions and between vector
-% ctrl led on and vector control led on and opsin led on
+
 %%
 % com
 figure;
@@ -395,24 +316,26 @@ xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2
 title('successful trials')
 [h,p,i,stats] = ttest2([com_success{1}{4}' com_success{2}{4}'], ....
    [com_success{1}{5}' com_success{2}{5}']); % sig
-%%
+
 % com fails
+
 figure;
-bar([mean([com_fail{3}{4}' com_fail{4}{4}' com_fail{5}{4}' com_fail{6}{4}'],'omitnan') NaN ...
-    mean([com_fail{3}{5}' com_fail{4}{5}' com_fail{5}{5}' com_fail{6}{5}'],'omitnan') NaN ...
-    mean([com_fail{1}{4}' com_fail{2}{4}'],'omitnan') NaN...
-    mean([com_fail{1}{5}' com_fail{2}{5}'],'omitnan')], 'FaceColor', 'w'); hold on
-y = [com_fail{3}{4}' com_fail{4}{4}' com_fail{5}{4}' com_fail{6}{4}']; x = ones(1,size(y,2));
-swarmchart(x,y,'k')
-y = [com_fail{3}{5}' com_fail{4}{5}' com_fail{5}{5}' com_fail{6}{5}']; x = ones(1,size(y,2))*3;
-swarmchart(x,y,'k')
-y = [com_fail{1}{4}' com_fail{2}{4}']; x = ones(1,size(y,2))*5;
-swarmchart(x,y,'k')
-y = [com_fail{1}{5}' com_fail{2}{5}']; x = ones(1,size(y,2))*7;
-swarmchart(x,y,'k')
+bar([mean([com_fail{1}{1}' com_fail{2}{1}'])...
+    mean([com_fail{1}{2}' com_fail{2}{2}']) ...
+    mean([com_fail{1}{3}' com_fail{2}{3}'])...
+    mean([com_fail{1}{4}' com_fail{2}{4}'])...
+    mean([com_fail{1}{5}' com_fail{2}{5}'])...
+    mean([com_fail{1}{6}' com_fail{2}{6}'])], 'FaceColor', 'w'); hold on
+plot(1, [com_fail{1}{1}' com_fail{2}{1}'], 'ko')
+plot(2, [com_fail{1}{2}' com_fail{2}{2}'], 'ko')
+plot(3, [com_fail{1}{3}' com_fail{2}{3}'], 'ko')
+plot(4, [com_fail{1}{4}' com_fail{2}{4}'], 'ko')
+plot(5, [com_fail{1}{5}' com_fail{2}{5}'], 'ko')
+plot(6, [com_fail{1}{6}' com_fail{2}{6}'], 'ko')
 ylabel(['ypos COM of licks - rewloc start' newline '(excluding consumption licks)'])
-xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
-    "", "VIP stGtACR LED on"])
+xlabel('conditions')
+xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2 in b/wn opto", ...
+    "previous ep", "opto ep",  "postopto ep"])
 title('failed trials')
 [h,p,i,stats] = ttest2([com_fail{1}{4}' com_fail{2}{4}'], ....
    [com_fail{1}{5}' com_fail{2}{5}']); % sig
