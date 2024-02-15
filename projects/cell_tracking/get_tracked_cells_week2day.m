@@ -285,12 +285,12 @@ end
 %%
 % plot
 % if cell is missing from 1 day, drop
-
+close all
 cells_to_plot = randi([1 length(cc)],1,20);
 for cellno=cells_to_plot
     dd=1; %for legend
     figure;
-    clear legg;
+    legg={};
     for d=daysrewards
         clear pltrew;
         pltrew=ccbinnedPerireward{d}; %temp hack that excludes cell #1
@@ -314,60 +314,20 @@ for cellno=cells_to_plot
 %     xticklabels([allbins(1
 % :5:end) range]);
     xlabel('seconds from CS')
-    xticks([0:10:((range*2)/bin)])
-    xticklabels([-range:2:range])
+    % xticks([0:10:((range*2)/bin)])
+    % xticklabels([-range:2:range])
     ylabel('dF/F')
     legend(char(legg))
     title(sprintf('Cell no. %04d', cellno))
 end
 
-%%
-% plot dff of certain cells across opto epoch (ep2)
-cells_plot = [7 13 15 19 32 43 44 59 77 135];
-% cells_plot = randi([1 length(cc)],1,20);
-opto = [1 4 7 10 13 16 19]; % ep 2
-opto = [3 6 9 12 15 18 20]; % ctrl
-
-clear legg;
-for cellno=cells_plot
-    dd=1; %for legend
-    figure;
-    clear legg;
-    for d=opto
-        day=days(d);day=day{1};
-        eps = find(day.changeRewLoc);
-        eps = [eps length(day.changeRewLoc)]; % includes end of recording as end of a epoch
-        % ep 2
-        eprng = eps(2):eps(3);
-    %     mask = (day.trialnum(eprng)>=3) & (day.trialnum(eprng)<8); % only first 5 trials
-        mask = day.trialnum(eprng)>=8; % non opto trials
-        rng = eprng(mask);
-        try %if cell exists on that day, otherwise day is dropped...
-            plot(day.dFF(rng,cc(cellno,d)))                        
-%             else
-%               plot(pltrew(cc(cellno,d),:)', 'Color', 'red')    
-%             end
-            legg{dd}=sprintf('day %d',d); dd=dd+1;           
-        end
-        hold on;        
-    end   
-     % plot reward location as line
-%     xticks([1:5:50, 50])
-%     x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}
-%     xticklabels([allbins(1:5:end) range]);
-    xlabel('seconds')
-    ylabel('dF/F')
-    legend(char(legg))
-    title(sprintf('Control day, Cell no. %04d', cellno))
-end
-
 %% peri velocity analysis
 
-range=20;
+range=8;
 bin=0.2;
 addpath('C:\Users\Han\Documents\MATLAB\han-lab\utils')
 %only get days with rewards (exclude training)
-daysrewards = [1 4 7 10 16 19]; % opto ep 2
+daysrewards = 1:length(days); % opto ep 2
 % daysrewards = [3 6 9 12 15 18 20]; % control
 ccbinnedPerivelocity=cell(1,length(daysrewards));
 ccveldFF=cell(1,length(daysrewards));
@@ -400,9 +360,9 @@ cells_to_plot = randi([1 1317],1,20);%[7 13 15 19 32 43 44 59 77 135];
 for cellno=cells_to_plot
     dd=1; %for legend
     figure;
-    clear legg;
+    legg = {};
     for d=daysrewards
-        clear pltrew;
+        clear pltrew;        
         pltvel=ccbinnedPerivelocity{d};
         pltrew=ccbinnedPerireward{d};%temp hack that excludes cell #1
         try %if cell exists on that day, otherwise day is dropped...
@@ -423,8 +383,9 @@ for cellno=cells_to_plot
 %     xticks([1:5:50, 50])
 %     x1=xline(median([1:5:50, 50]),'-.b','Reward'); %{'Conditioned', 'stimulus'}
 %     xticklabels([allbins(1:5:end) range]);
-    xlabel('seconds')
+    xlabel('Seconds from Start')
     ylabel('dF/F')
+    % legg=legg(~isempty(legg));
     legend(char(legg))
     title(sprintf('Cell no. %04d', cellno))
 end

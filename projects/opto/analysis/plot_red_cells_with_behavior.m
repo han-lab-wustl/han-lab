@@ -108,9 +108,9 @@ end
 end
 %%
 x = x(x<2); y = y(x<2);
-fig = figure('Renderer', 'painters'); plot(x,y/100, 'ko')
+fig = figure('Renderer', 'painters'); plot(x,y, 'ko')
 mdl = fitlm(x,y);
 ylabel('Success Rate')
 xlabel('dFF (LED on) / dFF (LED off)')
-title(sprintf('r = %f', sqrt(mdl.Rsquared.Ordinary)))
+title(sprintf('r = %f, p = %f', sqrt(mdl.Rsquared.Ordinary), mdl.Coefficients.pValue(2)))
 box off

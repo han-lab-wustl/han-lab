@@ -17,7 +17,7 @@ from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
 
-    src = r"F:\Behind_movies"
+    src = r"F:\tail\240205-240211"
     dst = r"Y:\videos_temp\tail"
     checkdst = r"Y:\videos_temp\tail"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
 
