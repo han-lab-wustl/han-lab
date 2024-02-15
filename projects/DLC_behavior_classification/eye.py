@@ -24,9 +24,9 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
             'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
 
-    for e in eye:
-        vralign[e+'_x'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
-        vralign[e+'_y'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
+    # for e in eye: #optional: threshold points
+    #     vralign[e+'_x'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
+    #     vralign[e+'_y'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
 
     #eye centroids, area, perimeter
     centroids_x = []; centroids_y = []

@@ -1,5 +1,5 @@
 clear all;
-src = 'Y:\DLC\VR_data\dlc\convert';
+src = 'I:\vids_to_analyze\face_and_pupil';
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)

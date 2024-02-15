@@ -1,6 +1,6 @@
 import deeplabcut, os, pandas as pd
 
-config_path = r"D:\Tail_Demo-Adina-2023-11-09"
+config_path = r"D:\Tail_Demo-Adina-2023-11-09\config.yaml"
 # path to videos here
 vids = r'I:\vids_to_analyze\tail'
 vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
