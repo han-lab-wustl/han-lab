@@ -1,5 +1,6 @@
 import os, sys, pickle, pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 import preprocessing
 from clustering.kmeans import collect_clustering_vars, run_pca, run_kmeans
 #analyze videos and copy vr files before this step
@@ -8,7 +9,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 def preprocess(step,vrdir, dlcfls,columns=False,
-               only_add_experiment=False):
+        only_add_experiment=False):
     if step == 0: # copy vr files from  usb matching dlc data
     #vrdir =  r'I:\VR_data' # copy of vr data, curated to remove badly labeled files
     #dlcfls = r'G:\dlc_mixedmodel2' # h5 and csv files from dlc
@@ -67,8 +68,8 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 
 #%%
 if __name__ == "__main__":
-    vrdir =  r'Y:\DLC\VR_data\dlc' # copy of vr data, curated to remove badly labeled files
-    dlcfls = r'Y:\DLC\dlc_mixedmodel2' # h5 and csv files from dlc
+    vrdir =  r"\\storage1.ris.wustl.edu\ebhan\Active\all_vr_data" # copy of vr data, curated to remove badly labeled files
+    dlcfls = r"I:\vids_to_analyze\face_and_pupil" # h5 and csv files from dlc
     df = preprocess(0,vrdir,dlcfls)
     # need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
@@ -81,18 +82,18 @@ if __name__ == "__main__":
         df = pickle.load(fp)
     # makes vr align picklesuite
     preprocess(1,vrdir,dlcfls) # savedst = dlcfls
-    # gets clustering vars
-    dfs = preprocess(2,vrdir,dlcfls)
-    columns = ['tongue', 'nose', 'paw', 
-               'forwardvelocity']
-        # , 'forwardvelocity']#, 'whiskerUpper',
-    #    'whiskerLower', 'ybinned', 'licks',
-       #'lickVoltage']
+#     # gets clustering vars
+#     dfs = preprocess(2,vrdir,dlcfls)
+#     columns = ['tongue', 'nose', 'paw', 
+#                'forwardvelocity']
+#         # , 'forwardvelocity']#, 'whiskerUpper',
+#     #    'whiskerLower', 'ybinned', 'licks',
+#        #'lickVoltage']
     
-    cluster_output = preprocess(3,vrdir,dlcfls,columns=columns)
-    #pca_2_result, label, dfkmeans
+#     cluster_output = preprocess(3,vrdir,dlcfls,columns=columns)
+#     #pca_2_result, label, dfkmeans
        
-# #%%
+# # #%%
 # # custom analysis, can make into function
 # %matplotlib inline
 # experiments = ['novr', 'pavlovian', 'hrz']

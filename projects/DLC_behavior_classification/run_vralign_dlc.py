@@ -12,11 +12,11 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"D:\Tail_E186\Tail_221029_E186-Adina-2023-01-19\230508_E200DLC_resnet50_Tail_221029_E186Jan19shuffle1_250000.csv"]                
-        vrfl = [r"D:\adina_vr_files\VR_data\E200_08_May_2023_time(08_54_41).mat"]
+        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E217DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
+        vrfl = [r"D:\adina_vr_files\E217_20_Jan_2024_time(13_54_33).mat"]
         #dlccsv = [r"I:\dlc_inference\230502_E201DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
         #vrfl = [r"D:\adina_vr_files\VR_data\E201_02_May_2023_time(09_16_02).mat"]
-        savedst = r"D:\Tail_E186"
+        savedst = r"D:\PupilTraining-Matt-2023-07-07"
         #savedst = r"I:\pupil_pickles"
         for i in range(len(dlccsv)): # align beh with video data
                 VRalign(vrfl[i], dlccsv[i], savedst)
@@ -30,7 +30,11 @@ if __name__ == "__main__":
         vralign.keys()
         # you have to do this weird thing in matplotlib to make the plots pop out
         matplotlib.use('TkAgg')
-        %matplotlib inline
+
+        # 
+        # 
+        # 
+        # 
         # plot hrz behavior with paw    
         # reformatting
         ypos = np.hstack(vralign['ybinned'])
@@ -87,3 +91,33 @@ if __name__ == "__main__":
         ypos = np.hstack(vralign['ybinned'])
         vel = np.hstack(vralign['forwardvel'])
         reward = np.hstack(vralign['rewards'])
+#tail - footsteps
+        vralign['LowerBack_y'][vralign['LowerBack_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['MidBack_y'][vralign['MidBack_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['UpperBack_y'][vralign['UpperBack_likelihood'].astype('float32')<0.99]=np.nan
+        
+        back_y = np.nanmean(np.array([vralign['LowerBack_y'],vralign['MidBack_y'],
+                        vralign['UpperBack_y']]).astype('float32'), axis=0)
+        fig, axs = plt.subplots()
+        axs.plot(ypos, color='slategray',
+                linewidth=0.5)
+        axs.plot(vel/20, label = 'forwardvel')
+        axs.plot(reward*20, label = 'reward')
+        axs.plot(scipy.ndimage.gaussian_filter(back_y/3,1), label = 'back_y')
+        axs.scatter(np.argwhere(licks>0).T[0], ypos[licks>0], color='r', marker='.')
+
+        axs.legend()
+        axs.set_title(os.path.basename(pdst))
+        ypos = np.hstack(vralign['ybinned'])
+        vel = np.hstack(vralign['forwardvel'])
+        reward = np.hstack(vralign['rewards'])
+
+        vralign['FrontLeftPaw_x'][vralign['FrontLeftPaw_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['FrontLeftPaw_y'][vralign['FrontLeftPaw_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['BackLeftHeel_x'][vralign['BackLeftHeel_likelihood'].astype('float32')<0.99]=np.nan
+        vralign['BackLeftHeel_y'][vralign['BackLeftHeel_likelihood'].astype('float32')<0.99]=np.nan
+        dist = (vralign['FrontLeftPaw_y']-vralign['BackLeftHeel_y'])
+        fig, axs = plt.subplots()
+        axs.set_title(os.path.basename(pdst))
+        axs.plot(dist, label ='y distance between paws')
+        axs.legend()

@@ -1,5 +1,5 @@
 clear all;
-src = 'D:\adina_vr_files';
+src = 'I:\vids_to_analyze\face_and_pupil';
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)

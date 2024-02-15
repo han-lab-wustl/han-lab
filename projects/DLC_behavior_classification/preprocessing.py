@@ -1,9 +1,64 @@
-import os, sys, shutil, tifffile, numpy as np, pandas as pd
+import os, sys, shutil, tifffile, numpy as np, pandas as pd, scipy
 from datetime import datetime
 import scipy.io as sio, matplotlib.pyplot as plt, re
 import h5py, pickle
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
+
+def get_videos_from_hrz_csv(csvpth, dst, vidpth=r'\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos'):
+    """
+    csv = path of hrz vr behavior
+    dst = where to store moved videos
+    """
+    df = pd.read_csv(csvpth, index_col=None)
+    pths = [os.path.basename(xx) for xx in df.Var1.values]
+            
+    dates_with_monthname = re.findall(
+        r'(\d{2}_(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_\d{4})',
+        str(pths)
+    )
+    mouse_names = [re.split(r"_", pth)[0].upper() for pth in pths]
+    
+    dates = []
+    for s in dates_with_monthname:
+        datetime_object = datetime.strptime(s[0], '%d_%b_%Y')
+        dates.append(str(datetime_object.date()))    
+    
+    vids = [xx for xx in listdir(vidpth) if 'avi' in xx]
+    vids2get= []
+    for vid in vids:
+        mnm = os.path.basename(vid)
+        mouse_name = re.split(r"_", mnm)[1].upper() 
+        date = str(datetime.strptime(re.split(r"_", mnm)[0], '%y%m%d').date())
+        if 'avi' in mouse_name: mouse_name=mouse_name[:-4]
+        if mouse_name in mouse_names and date in dates:
+            print(vid, mouse_name, date)
+            vids2get.append(vid)
+            shutil.move(vid, os.path.join(dst, mnm))
+            
+    return vids2get
+
+def match_eye_to_tail_videos(eyevids,dst, vidpth = r'\\storage1.ris.wustl.edu\ebhan\Active\tail_videos'):
+    
+    pths = [os.path.basename(xx) for xx in listdir(eyevids)]            
+    mouse_names = [re.split(r"_", pth)[1].upper() for pth in pths]
+    dates = [str(datetime.strptime(re.split(r"_", mnm)[0], '%y%m%d').date()) for mnm in pths]
+    
+    vids = [xx for xx in listdir(vidpth) if 'avi' in xx]
+    vids2get= []
+    for vid in vids:
+        mnm = os.path.basename(vid)
+        mouse_name = re.split(r"_", mnm)[1].upper() 
+        date = str(datetime.strptime(re.split(r"_", mnm)[0], '%y%m%d').date())
+        if 'avi' in mouse_name: mouse_name=mouse_name[:-4]
+        for i,mnms in enumerate(mouse_names):
+            if mnms==mouse_name and dates[i]==date:
+                print(vid, mouse_name, date)
+                vids2get.append(vid)                        
+                shutil.move(vid, os.path.join(dst, mnm))
+            
+    return vids2get
 
 def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     """copies vr files for existing dlc csvs
@@ -21,7 +76,6 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     mouse_data = {}
     mouse_dlc = []
     for csvfl in csvs:
-        print(csvfl)        
         date = os.path.basename(csvfl)[:6]
         datetime_object = datetime.strptime(date, '%y%m%d')
         nm = os.path.basename(csvfl)[7:11]
@@ -44,15 +98,14 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
         vrfls.sort()
         dates = mouse_data[mouse] # if a mouse has multiple dates        
         for xx in vrfls:
-            if mouse[0].upper() != 'E': dt = str(datetime.strptime(os.path.basename(xx)[4:15], 
-                '%d_%b_%Y').date())
-            else:
-                dt = str(datetime.strptime(os.path.basename(xx)[5:16], 
-                '%d_%b_%Y').date())
+            s = re.findall(r'(\d{2}_(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_\d{4})',
+            xx)
+            datetime_object = datetime.strptime(s[0][0], '%d_%b_%Y')                
+            dt = str(datetime_object.date())
             if 'test'.lower() not in xx and 'test'.upper() not in xx and dt in dates:
                 shutil.copy(xx,dlcfls)
                 mouse_vr.append([mouse, xx, dt])
-                 # TODO: need to switch to regex                
+                
         print(f"\n********* copied vr files to dlc pose data for {mouse} *********")
     
     # pair dlc files with vr
@@ -80,6 +133,40 @@ def fixcsvcols(csv):
         print("\n ******** please pass path to csv ********")
     return df
 
+def interpolate_vrdata(uscanstop,uscanstart,dlcdf,vrdata):
+    original_length = uscanstop-uscanstart
+    target_length = len(dlcdf)
+    x_original = np.linspace(0, 1, original_length)            
+    # Creating the interpolation function
+    f = scipy.interpolate.interp1d(x_original, vrdata, kind='linear')  # 'linear', 'nearest', 'cubic'..
+    # Interpolating to get the new values
+    x_int = np.linspace(0, 1, target_length)
+    vrdata_interpolated = f(x_int)
+    
+    return vrdata_interpolated
+
+def hdf5_to_dict(hdf5_object):
+    """
+    Recursively converts HDF5 groups and datasets into a nested dictionary.
+    
+    Parameters:
+    - hdf5_object: An HDF5 file or group object.
+    
+    Returns:
+    - A dictionary representation of the HDF5 file or group.
+    """
+    result = {}
+    for key in hdf5_object.keys():
+        # Check if the current object is a group or a dataset
+        if isinstance(hdf5_object[key], h5py.Group):
+            # If it's a group, recursively call the function
+            result[key] = hdf5_to_dict(hdf5_object[key])
+        else:
+            # If it's a dataset, convert it to a NumPy array
+            result[key] = hdf5_object[key][()]
+    return result
+
+
 def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
     """zahra's implementation for VRstandendsplit for python dlc pipeline
     TODO: does not care about planes, figure out what to do with this
@@ -104,16 +191,11 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
     else:
         # modified VRstartendsplit
         dst = os.path.join(savedst, os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
-        print(dst)            # aligns structure so size is the same
         dlcdf = pd.read_csv(dlccsv)
         if 'bodyparts' not in dlcdf.columns.to_list(): #fixes messed up cols
             dlcdf = fixcsvcols(dlccsv) #saves over df
-        # bin every other row
-        idx = len(dlcdf) - 1 if len(dlcdf) % 2 else len(dlcdf)
-        dlcdf = dlcdf[:idx].groupby(dlcdf.index[:idx] // 2).mean()
-        colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
-        print(colssave)
-        if not os.path.exists(dst) and len(colssave)>0: # if pickle is made already
+        if not os.path.exists(dst) and len(dlcdf)>0: # if pickle is made already
+            print(f"******VR aligning {dst}******")            # aligns structure so size is the same
             f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
             VR = f['VR']
             
@@ -155,19 +237,27 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             #imaging data from before you started VR so sets to 0
 
             # cuts all of the variables from VR
-            urewards = np.squeeze(VR['reward'][scanstart:scanstop])
-            uimageSync = np.squeeze(VR['imageSync'][scanstart:scanstop])
-            uforwardvel = -0.013*VR['ROE'][scanstart:scanstop]/np.diff(np.squeeze(VR['time'][scanstart-1:scanstop]))
-            uybinned = np.squeeze(VR['ypos'][scanstart:scanstop])
+            urewards = np.squeeze(VR['reward'][scanstart:scanstop]); 
+            # convert cs to a large number
+            urewards[urewards==0.5] = 1000
+            urewards = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards))
+            uimageSync = np.squeeze(VR['imageSync'][scanstart:scanstop]); uimageSync = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uimageSync); 
+            uforwardvel = np.hstack(-0.013*VR['ROE'][scanstart:scanstop])/np.diff(np.squeeze(VR['time'][scanstart-1:scanstop]))
+            uforwardvel = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uforwardvel)
+            uybinned = np.squeeze(VR['ypos'][scanstart:scanstop]); uybinned = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uybinned); 
             unumframes = len(range(scanstart,scanstop))
             uVRtimebinned = np.squeeze(VR['time'][scanstart:scanstop] - check_imaging_start_before - VR['time'][scanstart])
-            utrialnum = np.squeeze(VR['trialNum'][scanstart:scanstop])
+            uVRtimebinned = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uVRtimebinned) 
+            utrialnum = np.squeeze(VR['trialNum'][scanstart:scanstop]); utrialnum = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,utrialnum))
             uchangeRewLoc = np.squeeze(VR['changeRewLoc'][scanstart:scanstop])
             uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
+            uchangeRewLoc = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,uchangeRewLoc))
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
-            ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])
-            utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), 
-                        len(dlcdf)) #subsample - then why are we doing this freq
+            ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); ulicks=ulicks>0
+            ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])             
+            ulickVoltage = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulickVoltage)
+            # utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), len(np.arange(uscanstart,uscanstop))) #subsample - then why are we doing this freq
+            utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), len(dlcdf)) #subsample - then why are we doing this freq
             timedFF = utimedFF
             #initialize
             rewards = np.zeros_like(timedFF)
@@ -177,6 +267,20 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             changeRewLoc = np.zeros_like(timedFF)
             licks = np.zeros_like(timedFF)
             lickVoltage = np.zeros_like(timedFF)
+                        
+            colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
+            print(colssave)    
+            #downsample to vr frame rate
+            # for cols in colssave:
+            # # Generate an example array with 80000 elements
+            #     arr = dlcdf[cols].values.astype(float)
+            #     new_length = (uscanstop-uscanstart)
+            #     # Calculate the downsampling factor
+            #     factor = (uscanstop-uscanstart)/len(dlcdf)
+            #     indices_to_keep = np.linspace(0, len(arr) - 1, num=new_length, dtype=int)
+            #     # Select the elements based on the calculated indices
+            #     downsampled_arr = arr[indices_to_keep]
+            #     newdf[cols] = downsampled_arr
 
             for newindx in range(len(timedFF)): # this is longer in python lol
                 if newindx%10000==0: print(newindx)
@@ -261,16 +365,6 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             ypos = ybinned.copy()
             trialsplit = np.where(np.diff(np.squeeze(trialnum)))[0]
             ypossplit = np.where(np.diff(np.squeeze(ypos)) < -50)[0]
-            #ZD commented out because it was setting trialnum to a constant as
-            # previously debugged by GM and ZD above
-            # for t in range(len(trialsplit)):
-            #     try: # accounts for different lengths, ok to bypass?
-            #         if trialsplit[t] < ypossplit[t]:
-            #             trialnum[trialsplit[t]:ypossplit[t]+1] = trialnum[trialsplit[t]-1]
-            #         elif trialsplit[t] > ypossplit[t]:
-            #             trialnum[ypossplit[t]+1:trialsplit[t]] = trialnum[trialsplit[t]+1]
-            #     except IndexError:
-            #         pass
                 
             # doing the same thing but with changerewloc
             rewlocsplit = np.where(changeRewLoc)[0]
@@ -278,24 +372,26 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
                 if (rewlocsplit[c]-1 not in ypossplit):
                     idx = np.argmin(np.abs(ypossplit+1-rewlocsplit[c]))
                     changeRewLoc[ypossplit[idx]+1] = changeRewLoc[rewlocsplit[c]]
-                    changeRewLoc[rewlocsplit[c]] = 0
-            
+                    changeRewLoc[rewlocsplit[c]] = 0                                    
             # fix string to int conversion when importing mat
             experiment = str(bytes(np.ravel(VR['settings']['name']).tolist()))[2:-1]
             vralign = {}
-            vralign['experiment'] = experiment
-            vralign['ybinned']=ybinned
-            vralign['rewards']=rewards
-            vralign['forwardvel']=forwardvel
-            vralign['licks']=licks
-            vralign['changeRewLoc']=changeRewLoc
-            vralign['trialnum']=trialnum
-            vralign['timedFF']=timedFF
-            vralign['lickVoltage']=lickVoltage
+            vralign['experiment']=experiment
+            vralign['ybinned']=np.hstack(ybinned)
+            vralign['rewards']=np.hstack(rewards)
+            vralign['forwardvel']=np.hstack(forwardvel)
+            vralign['licks']=np.hstack(licks)
+            vralign['changeRewLoc']=np.hstack(changeRewLoc)
+            vralign['trialnum']=np.hstack(trialnum)
+            vralign['timedFF']=np.hstack(timedFF)
+            vralign['lickVoltage']=np.hstack(lickVoltage)
+            for col in colssave:
+                vralign[col] = dlcdf[col].values.astype(float)
+            vralign['start_stop']=(uscanstart, uscanstop)
+            VR = hdf5_to_dict(VR)
+            vralign['VR']=VR
             # vralign['VR']=VR fails because h5py do not pickle apparently -_- 
             # saves dlc variables into pickle as well  
-            for col in colssave:
-                vralign[col] = dlcdf[col].values
             print(list(vralign.keys()))
             with open(dst, "wb") as fp:   #Pickling
                 pickle.dump(vralign, fp)            
