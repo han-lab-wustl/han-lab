@@ -1,25 +1,32 @@
-function [pre,post,rew] = get_place_cell_density(eprng, dFF, trialnum, pcs, coms, rewloc, ybinned, ep)
-first_trials = eprng(trialnum(eprng)>2 & trialnum(eprng)<4);
-last_trials = eprng(trialnum(eprng)>max(trialnum(eprng))-2);
+function [pre,post,rew] = get_place_cell_density(eprng, dFF, fv, trialnum, pcs, track_length, rewloc, ybinned, Fs, ...
+    window, nBins, thres, ftol)
+%%%%% calcs place cell density pre, post, and at rew loc %%%%% 
+first_trials = eprng(trialnum(eprng)>2 & trialnum(eprng)<6);
+last_trials = eprng(trialnum(eprng)>max(trialnum(eprng))-3);
 pcspop = any(pcs,2);
 dff_first = dFF(first_trials, pcspop); % only place cells
 dff_last = dFF(last_trials, pcspop); % only place cells
 ypos_f = ybinned(first_trials);
 ypos_l = ybinned(last_trials);
-dff_com_f = [];
-dff_com_l = [];
-com_ep = coms{ep};
-for pc=1:sum(pcspop)
-dff_com_f(pc) = median(dff_first((ypos_f>com_ep(pc)-3 & ypos_f<com_ep(pc)+3),pc), 'omitnan'); % 5 cm window around com
-dff_com_l(pc) = median(dff_last((ypos_l>com_ep(pc)-3 & ypos_l<com_ep(pc)+3),pc), 'omitnan');
-end
-pref = mean(dff_com_f(com_ep<rewloc-10), 'omitnan'); % 10 cm window
-postf = mean(dff_com_f(com_ep>rewloc+5), 'omitnan');
-rewf = mean(dff_com_f(com_ep>rewloc-5 & com_ep<rewloc+5), 'omitnan');
-prel = mean(dff_com_l(com_ep<rewloc-5), 'omitnan'); % 10 cm window
-postl = mean(dff_com_l(com_ep>rewloc+5), 'omitnan');
-rewl = mean(dff_com_l(com_ep>rewloc-5 & com_ep<rewloc+5), 'omitnan');
-pre=prel-pref;
-post=postl-postf;
+pref = get_spatial_sparsity_all_cells(dff_first(ypos_f<rewloc-window,:),...
+    ypos_f(ypos_f<rewloc-window),nBins,track_length,fv(ypos_f<rewloc-window), thres, Fs, ftol);
+postf =get_spatial_sparsity_all_cells(dff_first(ypos_f<rewloc+window,:),...
+    ypos_f(ypos_f<rewloc+window),nBins,track_length,fv(ypos_f<rewloc+window), thres, Fs, ftol);
+rewf = get_spatial_sparsity_all_cells(dff_first((ypos_f>rewloc-window & ypos_f<rewloc+window),:),...
+    ypos_f((ypos_f>rewloc-window & ypos_f<rewloc+window)),nBins,track_length,fv((ypos_f>rewloc-window & ypos_f<rewloc+window)), ...
+    thres, Fs, ftol);
+prel = get_spatial_sparsity_all_cells(dff_last(ypos_l<rewloc-window,:),...
+    ypos_l(ypos_l<rewloc-window),nBins,track_length,fv(ypos_l<rewloc-window), thres, Fs, ftol);
+postl = get_spatial_sparsity_all_cells(dff_last(ypos_l<rewloc+window,:),...
+    ypos_l(ypos_l<rewloc+window),nBins,track_length,fv(ypos_l<rewloc+window), thres, Fs, ftol);
+rewl = get_spatial_sparsity_all_cells(dff_last((ypos_l>rewloc-window & ypos_l<rewloc+window),:),...
+    ypos_l((ypos_l>rewloc-window & ypos_l<rewloc+window)),nBins,track_length,fv((ypos_l>rewloc-window & ypos_l<rewloc+window)), ...
+    thres, Fs, ftol);
+pre=median(prel-pref, 'omitnan');
+post=median(postl-postf, 'omitnan');
 rew=rewl-rewf;
+% pre=median(prel-pref, 'omitnan');
+% post=median(postl-postf, 'omitnan');
+% rew=median(rewl-rewf, 'omitnan');
+
 end
