@@ -21,7 +21,6 @@ pertile = 0.25; % count licks w/in this percentile
 prerewdist = rewloc_bin-(rewloc*pertile)/bin_size;
 postrewdist = rewloc_bin+(rewloc*pertile)/bin_size;
 % prerewlickbin = mean(lickbin_s(ceil(prerewdist):ceil(rewloc_bin)),'omitnan');
-% only success/failed trials
 ypos = ybinned_(ismember(trialnum_,ttr));
 flick = licks_(ismember(trialnum_,ttr));
 prerewlicks = sum(flick((ypos>(rewloc-(rewloc*pertile))) & ypos<rewloc))/31.25;%/(sum(time_)/60)*30; % /s
