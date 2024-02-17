@@ -3,16 +3,31 @@ import numpy as np, scipy
 from eye import get_area_circumference_from_vralign, perireward_binned_activity, consecutive_stretch, nan_helper
 import statsmodels.api as sm
 #%%
+<<<<<<< HEAD
 pdst = r"I:\vids_to_analyze\face_and_pupil\E201_22_Apr_2023_vr_dlc_align.p"
+=======
+pdst = r"D:\PupilTraining-Matt-2023-07-07\downsampled pickles\E228_20_Jan_2024_vr_dlc_align.p"
+>>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
 # remember than after interpolating, rewards > 1 are now cs
 gainf, rewsize = 3/2, 20
+<<<<<<< HEAD
 # removes repeated frames of reward delivery (to not double the number of trials)
 rewards = consecutive_stretch(np.where(vralign['rewards']>1)[0])
 rewards = [min(xx) for xx in rewards]
 cs = np.zeros_like(vralign['rewards'])
 cs[rewards] = 1
+=======
+rewards = vralign['rewards']==1
+cs = vralign['rewards']==0.5
+
+# removes repeated frames of reward delivery (to not double the number of trials)
+# rewards = consecutive_stretch(np.where(vralign['rewards']>1)[0]) 
+# rewards = [min(xx) for xx in rewards]
+# cs = np.zeros_like(vralign['rewards'])
+# cs[rewards] = 1
+>>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
 areas_, circumferences, centroids_x, centroids_y, normmeanrew_t, \
         normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \
         lickall, normmeanvel_t, meanvel, normvelall_t, \
@@ -31,9 +46,15 @@ velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
 speed = abs(vralign['forwardvel'])
 nans, x = nan_helper(speed)
 speed[nans]= np.interp(x(nans), x(~nans), speed[~nans])
+<<<<<<< HEAD
  
 X = np.array([velocity, speed, licks]).T # Predictor(s)
  
+=======
+
+X = np.array([velocity, speed, licks]).T # Predictor(s)
+
+>>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
 X = sm.add_constant(X) # Adds a constant term to the predictor(s)
 y = areas # Outcome
 # Fit a regression model
@@ -50,6 +71,7 @@ binsize = 0.1 #s
 input_peri = areas_res
 normmeanrew_t, meanrew, normrewall_t, \
 rewall = perireward_binned_activity(np.array(input_peri), \
+<<<<<<< HEAD
                         cs.astype(int),
                         vralign['timedFF'], range_val, binsize)
 normmeanlicks_t, meanlicks, normlickall_t, \
@@ -57,6 +79,15 @@ lickall = perireward_binned_activity(vralign['licks'], \
                 cs.astype(int),
                 vralign['timedFF'], range_val, binsize)
  
+=======
+                        cs.astype(int), 
+                        vralign['timedFF'], range_val, binsize)
+normmeanlicks_t, meanlicks, normlickall_t, \
+lickall = perireward_binned_activity(vralign['licks'], \
+                cs.astype(int), 
+                vralign['timedFF'], range_val, binsize)
+
+>>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
 #%%
 # plot peri reward
 fig, axes=plt.subplots(2,1)
@@ -72,6 +103,7 @@ axes[1].set_title('Mean of Trials')
 #%%
 normmeanlicks_t, meanlicks, normlickall_t, \
 lickall = perireward_binned_activity(vralign['licks'], \
+<<<<<<< HEAD
                 cs.astype(int),
                 vralign['timedFF'], range_val, binsize)
 normmeanvel_t, meanvel, normvelall_t, \
@@ -79,6 +111,15 @@ velall = perireward_binned_activity(vralign['forwardvel'], \
                 cs.astype(int),
                 vralign['timedFF'], range_val, binsize)
  
+=======
+                cs.astype(int), 
+                vralign['timedFF'], range_val, binsize)
+normmeanvel_t, meanvel, normvelall_t, \
+velall = perireward_binned_activity(vralign['forwardvel'], \
+                cs.astype(int), 
+                vralign['timedFF'], range_val, binsize)
+
+>>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
 plt.figure(); plt.imshow(normlickall_t, cmap="Reds")
 plt.figure(); plt.imshow(normvelall_t, cmap="Greys")
 plt.figure(); plt.plot(normmeanrew_t)
