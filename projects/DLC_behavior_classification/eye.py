@@ -1,7 +1,8 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas as pd
+import numpy as np, pandas as pd, scipy
+import statsmodels.api as sm 
 import os, cv2, pickle
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
@@ -9,6 +10,23 @@ import matplotlib as mpl
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 ################################FUNCTION DEFINITIONS################################
+
+def nan_helper(y):
+        """Helper to handle indices and logical indices of NaNs.
+
+        Input:
+                - y, 1d numpy array with possible NaNs
+        Output:
+                - nans, logical indices of NaNs
+                - index, a function, with signature indices= index(logical_indices),
+                to convert logical indices of NaNs to 'equivalent' indices
+        Example:
+                # linear interpolation of NaNs
+                nans, x= nan_helper(y)
+                y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+        """
+
+        return np.isnan(y), lambda z: z.nonzero()[0]
 
 def get_unrewarded_stops(vralign):
     stops = vralign['forwardvel']==0 # 0 velocity
@@ -42,21 +60,48 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
         centroids_y.append(centroid_y)
         areas.append(area); circumferences.append(circumference)
     areas = np.array(areas); circumferences = np.array(circumferences)
-    # run peri reward time
+    ############## GLM ##############
+    areas = scipy.ndimage.gaussian_filter(areas,1.5)
+    licks = scipy.ndimage.gaussian_filter(vralign['licks'],5)    
+    velocity = vralign['forwardvel']
+    velocity = scipy.ndimage.gaussian_filter(vralign['licks'],3)
+    nans, x = nan_helper(velocity)
+    velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
+    speed = abs(vralign['forwardvel'])
+    nans, x = nan_helper(speed)
+    speed[nans]= np.interp(x(nans), x(~nans), speed[~nans])
+    # removes repeated frames of reward delivery (to not double the number of trials)
+    rewards = consecutive_stretch(np.where(vralign['rewards']>1)[0])
+    rewards = [min(xx) for xx in rewards]
+    cs = np.zeros_like(vralign['rewards'])
+    cs[rewards] = 1
+    X = np.array([velocity, speed, licks]).T # Predictor(s)
+    X = sm.add_constant(X) # Adds a constant term to the predictor(s)
+    y = areas # Outcome
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    areas_res = result.resid_pearson
+    # areas_pred = result.predict(X)
+    ############## GLM ##############
+    # run peri reward time & plot
     range_val = 10 #s
     binsize = 0.1 #s
+    input_peri = areas_res
     normmeanrew_t, meanrew, normrewall_t, \
-        rewall = perireward_binned_activity(np.array(circumferences), \
-                            (vralign['rewards']==0.5).astype(int), 
+    rewall = perireward_binned_activity(np.array(input_peri), \
+                            cs.astype(int), 
                             vralign['timedFF'], range_val, binsize)
+
     normmeanlicks_t, meanlicks, normlickall_t, \
     lickall = perireward_binned_activity(vralign['licks'], \
-                        (vralign['rewards']==0.5).astype(int), 
-                        vralign['timedFF'], range_val, binsize)
+                    cs.astype(int), 
+                    vralign['timedFF'], range_val, binsize)
     normmeanvel_t, meanvel, normvelall_t, \
     velall = perireward_binned_activity(vralign['forwardvel'], \
-                        (vralign['rewards']==0.5).astype(int), 
-                        vralign['timedFF'], range_val, binsize)
+                    cs.astype(int), 
+                    vralign['timedFF'], range_val, binsize)
+
     # TODO: add to pickle structure
     return areas, circumferences, centroids_x, centroids_y, normmeanrew_t, \
             normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \

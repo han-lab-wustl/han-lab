@@ -9,7 +9,7 @@ import matplotlib as mpl
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 plt.rcParams["font.family"] = "Arial"
-# sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
 mpl.use('TkAgg')
@@ -20,7 +20,7 @@ mpl.rcParams["ytick.major.size"] = 6
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 if __name__ == "__main__": # TODO; compare with diameter
-    src = r"I:\pupil_pickles" # path to pickle files you want to analyze
+    src = r"D:\PupilTraining-Matt-2023-07-07\light world pickles" # path to pickle files you want to analyze
     add_to_dct = False # add to previous datadct
     if add_to_dct:
         with open(r"Z:\pupil_data.p", "rb") as fp: #unpickle
@@ -125,40 +125,46 @@ fig.suptitle('n = 14 sessions, 4 animals') # change for number of sessions
 
 ##################################### fig 2 #####################################
 # trial by trial subplot
-for i,normall in enumerate(normall_s):
-    # for rew in normall:
-    # plot average of individual trials in grey
-    fig, axes = plt.subplots(3,1)#, gridspec_kw={'height_ratios': [3, 1, 1]})
-    ax = axes[0]
-    im = ax.imshow(normall)
-    ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-    ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-    ax.set_xticks([])
-    ax.set_ylabel('Trials')
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='3%', pad=0.1)
-    fig.colorbar(im, cax=cax, orientation='vertical')        
-    ax = axes[1]
-    im = ax.imshow(lickall[i].T, cmap='Reds')
-    ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-    ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-    ax.set_xticks([])
-    ax.set_ylabel('Lick \n Rate')
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='3%', pad=0.1)
-    fig.colorbar(im, cax=cax, orientation='vertical')
-    ax = axes[2]
-    im = ax.imshow(velall[i].T, cmap='gist_yarg')
-    ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-    ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-    ax.set_ylabel('Mean \n Velocity \n (cm/s)')
-    ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
-    ax.set_xticklabels(np.arange(-range_val,range_val+1))
-    ax.set_xlabel('Time From Reward (s)')
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='3%', pad=0.1)
-    fig.colorbar(im, cax=cax, orientation='vertical')
-    fig.suptitle(sessions[i])
+normall_s = np.array(normall_s)
+lickall_s = np.array([xx.T for xx in lickall_s])
+velall_s = np.array([xx.T for xx in velall_s])
+normall=np.vstack(normall_s)
+velall=np.vstack(velall_s)
+lickall=np.vstack(lickall_s)
+# for rew in normall:
+# plot average of individual trials in grey
+# fig, axes = plt.subplots(3,1)#, gridspec_kw={'height_ratios': [3, 1, 1]})
+fig, axes = plt.subplots(1,1)
+ax = axes[0]
+im = ax.imshow(normall)
+ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+ax.set_xticks([])
+ax.set_ylabel('Trials')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes('right', size='3%', pad=0.1)
+fig.colorbar(im, cax=cax, orientation='vertical')        
+ax = axes[1]
+im = ax.imshow(lickall, cmap='Reds')
+ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+ax.set_xticks([])
+ax.set_ylabel('Lick \n Rate')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes('right', size='3%', pad=0.1)
+fig.colorbar(im, cax=cax, orientation='vertical')
+ax = axes[2]
+im = ax.imshow(velall, cmap='gist_yarg')
+ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+ax.set_ylabel('Mean \n Velocity \n (cm/s)')
+ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
+ax.set_xticklabels(np.arange(-range_val,range_val+1))
+ax.set_xlabel('Time From Reward (s)')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes('right', size='3%', pad=0.1)
+fig.colorbar(im, cax=cax, orientation='vertical')
+
     # plt.savefig(rf"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil_per_trial_{sessions[i][:-15]}.svg", \
     #         bbox_inches='tight',transparent=True)
 
