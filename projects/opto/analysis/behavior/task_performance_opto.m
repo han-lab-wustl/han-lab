@@ -6,14 +6,15 @@
 % TODO lick rate outside rew zone
 clear all; close all
 % mouse_name = "e216";
-mice = ["e216", "e218"];
+mice = ["e216", "e218", "e217"];
 dys_s = {[7 8 9 37 38 39 40 41 42 44 45 46 48 50:60], ...
     [20,21,22,23,35,36,37,38,39,40,41,...
-     42,43,44,45,47 48 49 50 51 52 55 56]};
+     42,43,44,45,47 48 49 50 51 52 55 56],...
+     [2:7]};
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
-opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1 3],
-    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0]};
+opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1 3],....
+    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0], [-1 -1 -1 -1 2 3]};
 src = "X:\vipcre";
 
 % mouse_name = "e218";
@@ -25,8 +26,8 @@ src = "X:\vipcre";
 % src = "X:\vipcre";
 rates = {};
 for m=1:length(mice)
-dys = dys_s(m); dys = dys{1};
-opto_ep = opto_eps(m); opto_ep = opto_ep{1};
+dys = dys_s{m};
+opto_ep = opto_eps{m};
 epind = 1; % for indexing
 bin_size = 2; % cm bins for lick
 % ntrials = 8; % get licks for last n trials
@@ -276,39 +277,32 @@ end
 %%
 % barplot
 figure;
-bar([mean([rates{1}{1}' rates{2}{1}'])...
-    mean([rates{1}{2}' rates{2}{2}']) ...
-    mean([rates{1}{3}' rates{2}{3}'])...
-    mean([rates{1}{4}' rates{2}{4}'])...
-    mean([rates{1}{5}' rates{2}{5}'])...
-    mean([rates{1}{6}' rates{2}{6}'])], 'FaceColor', 'w'); hold on
-plot(1, [rates{1}{1}' rates{2}{1}'], 'ko')
-plot(2, [rates{1}{2}' rates{2}{2}'], 'ko')
-plot(3, [rates{1}{3}' rates{2}{3}'], 'ko')
-plot(4, [rates{1}{4}' rates{2}{4}'], 'ko')
-plot(5, [rates{1}{5}' rates{2}{5}'], 'ko')
-plot(6, [rates{1}{6}' rates{2}{6}'], 'ko')
+preoptoctrl = cell2mat(cellfun(@(x) mean(x{1}, 'omitnan')', rates, 'UniformOutput', false));
+inctrl1 = cell2mat(cellfun(@(x) mean(x{2}, 'omitnan')', rates, 'UniformOutput', false));
+inctrl2 = cell2mat(cellfun(@(x) mean(x{3}, 'omitnan')', rates, 'UniformOutput', false));
+preopto = cell2mat(cellfun(@(x) mean(x{4}, 'omitnan')', rates, 'UniformOutput', false));
+opto = cell2mat(cellfun(@(x) mean(x{5}, 'omitnan')', rates, 'UniformOutput', false));
+postopto = cell2mat(cellfun(@(x) mean(x{6}, 'omitnan')', rates, 'UniformOutput', false));
+
+bar([mean(preoptoctrl, 'omitnan') mean(inctrl1, 'omitnan') mean(inctrl2, 'omitnan') mean(preopto, 'omitnan') mean(opto, 'omitnan') mean(postopto, 'omitnan')], 'FaceColor', 'w'); hold on
+x = [repelem(1,length(preoptoctrl)) repelem(2, length(inctrl1)) repelem(3, length(inctrl2))...
+    repelem(4, length(preopto)) repelem(5, length(opto))...
+    repelem(6, length(postopto))];
+y = [preoptoctrl inctrl1 inctrl2 preopto opto postopto];
+swarmchart(x,y, 'ko')
 ylabel('success rate')
 xlabel('conditions')
 xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2 in b/wn opto", ...
     "previous ep", "opto ep", "postopto ep"])
-[h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
-   [rates{1}{5}' rates{2}{5}']); % sig
-% for ed's grant
-% barplot
-figure;
-bar([mean([rates{1}{1}' rates{2}{1}'])...
-    mean([rates{1}{4}' rates{2}{4}'])...
-    mean([rates{1}{5}' rates{2}{5}'])], 'FaceColor', 'w'); hold on
-plot(1, [rates{1}{1}' rates{2}{1}'], 'ko')
-plot(2, [rates{1}{4}' rates{2}{4}'], 'ko')
-plot(3, [rates{1}{5}' rates{2}{5}'], 'ko')
-ylabel('Fraction of Successful Trials')
-xlabel('Condition')
-xticklabels(["Sessions Before Stim", "LED off", "LED on"])
-[h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
-   [rates{1}{5}' rates{2}{5}']); % sig
-title('n=2 animals, 14 stim sessions, 10 prestim sessions')
+[h,p,i,stats] = ttest(preopto, opto) % sig
+%%
+SEM = std(opto)/sqrt(length(opto));               % Standard Error
+ts = tinv([0.025  0.975],length(opto)-1);      % T-Score
+CI = mean(opto) + ts*SEM;                      % Confidence Intervals
+SEM = std(preopto)/sqrt(length(preopto));               % Standard Error
+ts = tinv([0.025  0.975],length(preopto)-1);      % T-Score
+CI_pre = mean(preopto) + ts*SEM;                      % Confidence Intervals
+
 %%
 % com
 figure;

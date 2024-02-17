@@ -6,23 +6,23 @@
 % TODO lick rate outside rew zone
 clear all; close all
 % mouse_name = "e216";
-mice = ["e216", "e218", "e189", "e190", "e201", "e186"];
+mice = ["e216", "e218", "e217", "e189", "e190", "e201", "e186"];
 cond = ["vip", "vip", "ctrl", "ctrl", "sst", "sst"];%, "pv"];
 dys_s = {[7 8 9 37 38 39 40 41 42 44 45 46 48 50:59], ...
     [20,21,22,23,35,36,37,38,39,40,41,...
-     42,43,44,45,47 48 49 50 51 52 55 56],...
+     42,43,44,45,47 48 49 50 51 52 55 56], [2:11],...
      [35:42,44],...
      [33:35, 40:43, 45]...
      [52:59], [2:5,31,32,33]};
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
 opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1],...
-    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0],...
+    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0], [-1 -1 -1 -1 2 3 2 0 3 0], ...
     [-1 -1 -1 -1 2 3 2 0 2],...
     [-1 -1 -1 3 0 1 2 3],...
     [-1 -1 -1 2 3 0 2 3],...
     [-1 -1 -1 -1 2 3 2]};
-src = ["X:\vipcre", "X:\vipcre", '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', ...
+src = ["X:\vipcre", "X:\vipcre", "X:\vipcre", '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', ...
     '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', 'Z:\sstcre_imaging', ...
     'Y:\analysis\fmats'];
 
@@ -49,7 +49,7 @@ for dy=dys
 %     load(fullfile(daypth.folder,daypth.name), 'licks', 'trialnum', 'rewards', 'changeRewLoc', ...
 %         'ybinned', 'timedFF', 'VR');
     daypth = dir(fullfile(src(m), mice(m), string(dy), '**', '*time*.mat'));    
-    if m==6 % e186 in a diff format
+    if m==7 % e186 in a diff format
         daypth = dir(fullfile(src(m), mice(m), 'days', '*.mat'));
         daypth = daypth(dy);    
         load(fullfile(daypth.folder, daypth.name), 'VR') % load fall
@@ -285,45 +285,44 @@ rates{m} = {rates_preopto, rates_inctrl_1  rates_inctrl_2  rates_ctrl  rates_opt
 com_success{m} = {com_preopto_success, com_inctrl_1_success  com_inctrl_2_success  com_ctrl_success  com_opto_success, com_postopto_success};
 com_fail{m} = {com_preopto_fails, com_inctrl_1_fails  com_inctrl_2_fails  com_ctrl_fails  com_opto_fails, com_postopto_fails};
 end
-%%
-% barplot
-figure;
-bar([mean([rates{1}{1}' rates{2}{1}'])...
-    mean([rates{1}{2}' rates{2}{2}']) ...
-    mean([rates{1}{3}' rates{2}{3}'])...
-    mean([rates{1}{4}' rates{2}{4}'])...
-    mean([rates{1}{5}' rates{2}{5}'])...
-    mean([rates{1}{6}' rates{2}{6}'])], 'FaceColor', 'w'); hold on
-plot(1, [rates{1}{1}' rates{2}{1}'], 'ko')
-plot(2, [rates{1}{2}' rates{2}{2}'], 'ko')
-plot(3, [rates{1}{3}' rates{2}{3}'], 'ko')
-plot(4, [rates{1}{4}' rates{2}{4}'], 'ko')
-plot(5, [rates{1}{5}' rates{2}{5}'], 'ko')
-plot(6, [rates{1}{6}' rates{2}{6}'], 'ko')
-ylabel('success rate')
-xlabel('conditions')
-xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2 in b/wn opto", ...
-    "previous ep", "opto ep", "postopto ep"])
-[h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
-   [rates{1}{5}' rates{2}{5}']); % sig
+% %%
+% % barplot
+% figure;
+% bar([mean([rates{1}{1}' rates{2}{1}'])...
+%     mean([rates{1}{2}' rates{2}{2}']) ...
+%     mean([rates{1}{3}' rates{2}{3}'])...
+%     mean([rates{1}{4}' rates{2}{4}'])...
+%     mean([rates{1}{5}' rates{2}{5}'])...
+%     mean([rates{1}{6}' rates{2}{6}'])], 'FaceColor', 'w'); hold on
+% plot(1, [rates{1}{1}' rates{2}{1}'], 'ko')
+% plot(2, [rates{1}{2}' rates{2}{2}'], 'ko')
+% plot(3, [rates{1}{3}' rates{2}{3}'], 'ko')
+% plot(4, [rates{1}{4}' rates{2}{4}'], 'ko')
+% plot(5, [rates{1}{5}' rates{2}{5}'], 'ko')
+% plot(6, [rates{1}{6}' rates{2}{6}'], 'ko')
+% ylabel('success rate')
+% xlabel('conditions')
+% xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2 in b/wn opto", ...
+%     "previous ep", "opto ep", "postopto ep"])
+% [h,p,i,stats] = ttest2([rates{1}{4}' rates{2}{4}'], ....
+%    [rates{1}{5}' rates{2}{5}']); % sig
 %%
 % barplot with ctrl mice
 % cond = ["ctrloff", "ctrlon", "vipoff", "vipon"];
 figure;
-means = [mean([rates{3}{4}' rates{4}{4}' rates{5}{4}' rates{6}{4}']) NaN ...
-    mean([rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}']) NaN ...
-    mean([rates{1}{4}' rates{2}{4}']) NaN...
-    mean([rates{1}{5}' rates{2}{5}'])];
+ctrloff = [mean(rates{4}{4}') mean(rates{5}{4}') mean(rates{6}{4}') mean(rates{7}{4}')];
+ctrlon = [mean(rates{4}{5}') mean(rates{5}{5}') mean(rates{6}{5}') mean(rates{7}{5}')];
+opsinoff = [mean(rates{1}{4}') mean(rates{2}{4}') mean(rates{3}{4}')]; 
+opsinon = [mean(rates{1}{5}') mean(rates{2}{5}') mean(rates{3}{5}')];
+means = [mean(ctrloff) NaN ...
+    mean(ctrlon) NaN ...
+    mean(opsinoff) NaN...
+    mean(opsinon)];
 bar(means, 'FaceColor', 'w'); hold on
-y1 = [rates{3}{4}' rates{4}{4}' rates{5}{4}' rates{6}{4}']; x = ones(1,size(y1,2));
-swarmchart(x,y1,'k')
-y2 = [rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}']; x = ones(1,size(y2,2))*3;
-swarmchart(x,y2,'k')
-y3 = [rates{1}{4}' rates{2}{4}']; x = ones(1,size(y3,2))*5;
-swarmchart(x,y3,'k')
-y4 = [rates{1}{5}' rates{2}{5}']; x = ones(1,size(y4,2))*7;
-swarmchart(x,y4,'k')
-yerr = {y1,NaN,y2,NaN,y3,NaN,y4};
+x = [ones(1,size(ctrloff,2)), ones(1,size(ctrlon,2))*3, ones(1,size(opsinoff,2))*5, ones(1,size(opsinon,2))*7];
+y = [ctrloff, ctrlon, opsinoff, opsinon];
+swarmchart(x,y, 'ko')
+yerr = {ctrloff,NaN,ctrlon,NaN,opsinoff,NaN,opsinon};
 err = [];
 for i=1:length(yerr)
     err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
@@ -339,84 +338,119 @@ xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off",
 % [h,p2,i,stats] = ttest([rates{1}{4}' rates{2}{4}'], ....
 %    [rates{1}{5}' rates{2}{5}']); % sig
 box off
-condt = [repelem("Control LED off",length(y1)), repelem("Control LED on",length(y2)), repelem("VIP stGtACR LED off",length(y3)), ...
-    repelem("VIP stGtACR LED on",length(y4))]';
-tbl = table(condt,[rates{3}{4}' rates{4}{4}' rates{5}{4}' rates{6}{4}' rates{3}{5}' rates{4}{5}' rates{5}{5}'...
-    rates{6}{5}' rates{1}{4}' rates{2}{4}'...
-    rates{2}{5}' rates{2}{5}']',VariableNames=["Condition" "Success Rate"]);
+condt = [repelem("Control LED off",length(ctrloff)), repelem("Control LED on",length(ctrlon)), repelem("VIP stGtACR LED off",length(opsinon)), ...
+    repelem("VIP stGtACR LED on",length(opsinoff))]';
+tbl = table(condt,y',VariableNames=["Condition" "Success Rate"]);
 aov = anova(tbl,'Success Rate');
 multcompare(aov,'CriticalValueType',"bonferroni")
-nctrl = length(y2);
-title(sprintf('control n=4, %i sessions, opto n=2, 14 sessions \n p=%f b/wn led on control vs. opsin \n p=%f b/wn opsin led off vs. on ',nctrl,p1,p2))
-%%
-% mean of sessions
-figure;
-bar([mean(mean([rates{3}{4}' rates{4}{4}'])) ...
-    mean(mean([rates{3}{5}' rates{4}{5}']))...
-    mean(mean([rates{1}{4}' rates{2}{4}']))...
-    mean(mean([rates{1}{5}' rates{2}{5}']))], 'FaceColor', 'w'); hold on
-plot(1, [mean(rates{3}{4}') mean(rates{4}{4}')], 'ko')
-plot(2, [mean(rates{3}{5}') mean(rates{4}{5}')], 'ko')
-plot(3, [mean(rates{1}{4}') mean(rates{2}{4}')], 'ko')
-plot(4, [mean(rates{1}{5}') mean(rates{2}{5}')], 'ko')
-ylabel('Fraction of Successful Trials')
-xlabel('Condition')
-xticklabels(["Vector Control LED off", "Vector Control LED on", "stGtACR LED off", ...
-    "stGtACR LED on"])
-[h,p,i,stats] = ttest2([mean(rates{3}{5}') mean(rates{4}{5}')], ....
-   [mean(rates{1}{5}') mean(rates{2}{5}')]); % sig
-title(sprintf('control n=2, 8 sessions, opto n=2, 14 sessions \n p=%f b/wn led on control vs. opsin',p))
-diffpow = mean(y4);
-basepwr = mean(y2);
-stdpow = std([y2]);
-nout = sampsizepwr('t2',[basepwr, stdpow],diffpow,0.80);
-pwrout = sampsizepwr('t2',[basepwr, stdpow],diffpow,[],7);
-% if the effect is half
-halfeffect = (basepwr-diffpow)/2;
-nout_half = sampsizepwr('t2',[basepwr, stdpow],basepwr-halfeffect,0.80);
-% need 4 animals to
+nctrl = length(ctrloff);
+% title(sprintf('p=%f b/wn led on control vs. opsin \n p=%f b/wn opsin led off vs. on ',p1,p2))
+% %%
+% % mean of sessions
+% figure;
+% bar([mean(mean([rates{3}{4}' rates{4}{4}'])) ...
+%     mean(mean([rates{3}{5}' rates{4}{5}']))...
+%     mean(mean([rates{1}{4}' rates{2}{4}']))...
+%     mean(mean([rates{1}{5}' rates{2}{5}']))], 'FaceColor', 'w'); hold on
+% plot(1, [mean(rates{3}{4}') mean(rates{4}{4}')], 'ko')
+% plot(2, [mean(rates{3}{5}') mean(rates{4}{5}')], 'ko')
+% plot(3, [mean(rates{1}{4}') mean(rates{2}{4}')], 'ko')
+% plot(4, [mean(rates{1}{5}') mean(rates{2}{5}')], 'ko')
+% ylabel('Success Rate')
+% xlabel('Condition')
+% xticklabels(["Vector Control LED off", "Vector Control LED on", "stGtACR LED off", ...
+%     "stGtACR LED on"])
+% [h,p,i,stats] = ttest2([mean(rates{3}{5}') mean(rates{4}{5}')], ....
+%    [mean(rates{1}{5}') mean(rates{2}{5}')]); % sig
+% title(sprintf('control n=2, 8 sessions, opto n=2, 14 sessions \n p=%f b/wn led on control vs. opsin',p))
+% diffpow = mean(y4);
+% basepwr = mean(y2);
+% stdpow = std([y2]);
+% nout = sampsizepwr('t2',[basepwr, stdpow],diffpow,0.80);
+% pwrout = sampsizepwr('t2',[basepwr, stdpow],diffpow,[],7);
+% % if the effect is half
+% halfeffect = (basepwr-diffpow)/2;
+% nout_half = sampsizepwr('t2',[basepwr, stdpow],basepwr-halfeffect,0.80);
+% % need 4 animals to
 % detect a difference between led on and off sessions and between vector
 % ctrl led on and vector control led on and opsin led on
 %%
-% com
-figure;
-bar([mean([com_success{1}{1}' com_success{2}{1}'])...
-    mean([com_success{1}{2}' com_success{2}{2}']) ...
-    mean([com_success{1}{3}' com_success{2}{3}'])...
-    mean([com_success{1}{4}' com_success{2}{4}'])...
-    mean([com_success{1}{5}' com_success{2}{5}'])...
-    mean([com_success{1}{6}' com_success{2}{6}'])], 'FaceColor', 'w'); hold on
-plot(1, [com_success{1}{1}' com_success{2}{1}'], 'ko')
-plot(2, [com_success{1}{2}' com_success{2}{2}'], 'ko')
-plot(3, [com_success{1}{3}' com_success{2}{3}'], 'ko')
-plot(4, [com_success{1}{4}' com_success{2}{4}'], 'ko')
-plot(5, [com_success{1}{5}' com_success{2}{5}'], 'ko')
-plot(6, [com_success{1}{6}' com_success{2}{6}'], 'ko')
-ylabel(['ypos COM of licks - rewloc start' newline '(excluding consumption licks)'])
-xlabel('conditions')
-xticklabels(["preopto days all ep", "control day 1 in b/wn opto", "control day 2 in b/wn opto", ...
-    "previous ep", "opto ep",  "postopto ep"])
-title('successful trials')
-[h,p,i,stats] = ttest2([com_success{1}{4}' com_success{2}{4}'], ....
-   [com_success{1}{5}' com_success{2}{5}']); % sig
-%%
-% com fails
-figure;
-bar([mean([com_fail{3}{4}' com_fail{4}{4}' com_fail{5}{4}' com_fail{6}{4}'],'omitnan') NaN ...
-    mean([com_fail{3}{5}' com_fail{4}{5}' com_fail{5}{5}' com_fail{6}{5}'],'omitnan') NaN ...
-    mean([com_fail{1}{4}' com_fail{2}{4}'],'omitnan') NaN...
-    mean([com_fail{1}{5}' com_fail{2}{5}'],'omitnan')], 'FaceColor', 'w'); hold on
-y = [com_fail{3}{4}' com_fail{4}{4}' com_fail{5}{4}' com_fail{6}{4}']; x = ones(1,size(y,2));
-swarmchart(x,y,'k')
-y = [com_fail{3}{5}' com_fail{4}{5}' com_fail{5}{5}' com_fail{6}{5}']; x = ones(1,size(y,2))*3;
-swarmchart(x,y,'k')
-y = [com_fail{1}{4}' com_fail{2}{4}']; x = ones(1,size(y,2))*5;
-swarmchart(x,y,'k')
-y = [com_fail{1}{5}' com_fail{2}{5}']; x = ones(1,size(y,2))*7;
-swarmchart(x,y,'k')
-ylabel(['ypos COM of licks - rewloc start' newline '(excluding consumption licks)'])
-xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
-    "", "VIP stGtACR LED on"])
-title('failed trials')
-[h,p,i,stats] = ttest2([com_fail{1}{4}' com_fail{2}{4}'], ....
-   [com_fail{1}{5}' com_fail{2}{5}']); % sig
+% % com
+% figure;
+% ctrloff = [com_success{4}{4}' com_success{5}{4}' com_success{6}{4}' com_success{7}{4}'];
+% ctrlon = [com_success{4}{5}' com_success{5}{5}' com_success{6}{5}' com_success{7}{5}'];
+% opsinoff = [com_success{1}{4}' com_success{2}{4}' com_success{3}{4}']; 
+% opsinon = [com_success{1}{5}' com_success{2}{5}' com_success{3}{5}'];
+% means = [mean(ctrloff) NaN ...
+%     mean(ctrlon) NaN ...
+%     mean(opsinoff) NaN...
+%     mean(opsinon)];
+% bar(means, 'FaceColor', 'w'); hold on
+% x = [ones(1,size(ctrloff,2)), ones(1,size(ctrlon,2))*3, ones(1,size(opsinoff,2))*5, ones(1,size(opsinon,2))*7];
+% y = [ctrloff, ctrlon, opsinoff, opsinon];
+% swarmchart(x,y, 'ko')
+% yerr = {ctrloff,NaN,ctrlon,NaN,opsinoff,NaN,opsinon};
+% err = [];
+% for i=1:length(yerr)
+%     err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+% end
+% er = errorbar([1 NaN 3 NaN 5 NaN 7],means,err);
+% er.Color = [0 0 0];                            
+% er.LineStyle = 'none';  
+% ylabel('COM-rewloc (cm)')
+% xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
+%     "", "VIP stGtACR LED on"])
+% % [h,p1,i,stats] = ttest2([rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}'], ....
+% %    [rates{1}{5}' rates{2}{5}']); % sig
+% % [h,p2,i,stats] = ttest([rates{1}{4}' rates{2}{4}'], ....
+% %    [rates{1}{5}' rates{2}{5}']); % sig
+% box off
+% title('Successful Trials')
+% condt = [repelem("Control LED off",length(ctrloff)), repelem("Control LED on",length(ctrlon)), repelem("VIP stGtACR LED off",length(opsinon)), ...
+%     repelem("VIP stGtACR LED on",length(opsinoff))]';
+% tbl = table(condt,y',VariableNames=["Condition" "Success Rate"]);
+% aov = anova(tbl,'Success Rate');
+% multcompare(aov,'CriticalValueType',"bonferroni")
+% nctrl = length(ctrloff);
+% % title(sprintf('control n=4, %i sessions, opto n=3, 14 sessions \n p=%f b/wn led on control vs. opsin \n p=%f b/wn opsin led off vs. on ',nctrl,p1,p2))
+% % %%
+% ylabel(['ypos COM of licks - rewloc start' newline '(excluding consumption licks)'])
+% %%
+% % com fails
+% figure;
+% ctrloff = [com_fail{4}{4}' com_fail{5}{4}' com_fail{6}{4}' com_fail{7}{4}'];
+% ctrlon = [com_fail{4}{5}' com_fail{5}{5}' com_fail{6}{5}' com_fail{7}{5}'];
+% opsinoff = [com_fail{1}{4}' com_fail{2}{4}' com_fail{3}{4}']; 
+% opsinon = [com_fail{1}{5}' com_fail{2}{5}' com_fail{3}{5}'];
+% means = [mean(ctrloff, 'omitnan') NaN ...
+%     mean(ctrlon, 'omitnan') NaN ...
+%     mean(opsinoff, 'omitnan') NaN...
+%     mean(opsinon, 'omitnan')];
+% bar(means, 'FaceColor', 'w'); hold on
+% x = [ones(1,size(ctrloff,2)), ones(1,size(ctrlon,2))*3, ones(1,size(opsinoff,2))*5, ones(1,size(opsinon,2))*7];
+% y = [ctrloff, ctrlon, opsinoff, opsinon];
+% swarmchart(x,y, 'ko')
+% yerr = {ctrloff,NaN,ctrlon,NaN,opsinoff,NaN,opsinon};
+% err = [];
+% for i=1:length(yerr)
+%     err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+% end
+% er = errorbar([1 NaN 3 NaN 5 NaN 7],means,err);
+% er.Color = [0 0 0];                            
+% er.LineStyle = 'none';  
+% xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
+%     "", "VIP stGtACR LED on"])
+% % [h,p1,i,stats] = ttest2([rates{3}{5}' rates{4}{5}' rates{5}{5}' rates{6}{5}'], ....
+% %    [rates{1}{5}' rates{2}{5}']); % sig
+% % [h,p2,i,stats] = ttest([rates{1}{4}' rates{2}{4}'], ....
+% %    [rates{1}{5}' rates{2}{5}']); % sig
+% box off
+% condt = [repelem("Control LED off",length(ctrloff)), repelem("Control LED on",length(ctrlon)), repelem("VIP stGtACR LED off",length(opsinon)), ...
+%     repelem("VIP stGtACR LED on",length(opsinoff))]';
+% tbl = table(condt,y',VariableNames=["Condition" "Success Rate"]);
+% aov = anova(tbl,'Success Rate');
+% multcompare(aov,'CriticalValueType',"bonferroni")
+% nctrl = length(ctrloff);
+% % title(sprintf('control n=4, %i sessions, opto n=3, 14 sessions \n p=%f b/wn led on control vs. opsin \n p=%f b/wn opsin led off vs. on ',nctrl,p1,p2))
+% % %%
+% ylabel(['ypos COM of licks - rewloc start' newline '(excluding consumption licks)'])

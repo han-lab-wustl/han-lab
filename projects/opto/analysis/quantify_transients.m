@@ -46,21 +46,21 @@ end
 transient_stats_m{m} = transient_stats;
 end
 %%
-optodys1 = find(opto_ep_s{1}>1); optodys2= find(opto_ep_s{2}>1); t1 = transient_stats_m{1}; 
+optodys1 = find(opto_ep_s{1}==-1); optodys2= find(opto_ep_s{2}==-1); t1 = transient_stats_m{1}; 
 t2 = transient_stats_m{2};
-ctrl = [cell2mat(cellfun(@(x) x(1), t1(optodys1), 'UniformOutput', false)),...
-    cell2mat(cellfun(@(x) x(1), t2(optodys2), 'UniformOutput', false))];
-opto = [cell2mat(cellfun(@(x) x(2), t1(optodys1), 'UniformOutput', false)),...
-    cell2mat(cellfun(@(x) x(2), t2(optodys2), 'UniformOutput', false))];
-y = [ctrl, opto];
-x = [repelem(1, length(ctrl)), repelem(2, length(opto))];
-figure;
-bar([mean(ctrl), mean(opto)], 'FaceColor', 'w'); hold on
-swarmchart(x,y, 'ko')
-ylabel('mean length of transients (s)')
-xticklabels(["previous epoch", "opto epoch"])
-[~,p,t,stats]=ttest(ctrl, opto)
-title(sprintf('p = %f', p))
+% ctrl = [cell2mat(cellfun(@(x) x(1), t1(optodys1), 'UniformOutput', false)),...
+%     cell2mat(cellfun(@(x) x(1), t2(optodys2), 'UniformOutput', false))];
+% opto = [cell2mat(cellfun(@(x) x(2), t1(optodys1), 'UniformOutput', false)),...
+%     cell2mat(cellfun(@(x) x(2), t2(optodys2), 'UniformOutput', false))];
+% y = [ctrl, opto];
+% x = [repelem(1, length(ctrl)), repelem(2, length(opto))];
+% figure;
+% bar([mean(ctrl), mean(opto)], 'FaceColor', 'w'); hold on
+% swarmchart(x,y, 'ko')
+% ylabel('mean length of transients (s)')
+% xticklabels(["previous epoch", "opto epoch"])
+% [~,p,t,stats]=ttest(ctrl, opto)
+% title(sprintf('p = %f', p))
 % % mean across animals
 % ctrl = [mean(cell2mat(cellfun(@(x) x(1), t1(optodys1), 'UniformOutput', false))),...
 %     mean(cell2mat(cellfun(@(x) x(1), t2(optodys2), 'UniformOutput', false)))];
@@ -91,21 +91,32 @@ x = [repelem(1, length(ctrl)), repelem(2, length(opto))];
 figure;
 bar([mean(ctrl), mean(opto)], 'FaceColor', 'w'); hold on
 swarmchart(x,y, 'ko')
-ylabel('mean auc of transient')
-xticklabels(["previous epoch", "opto epoch"])
+yerr = {ctrl, opto};
+err = [];
+for i=1:length(yerr)
+    err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+end
+er = errorbar([1 2],[mean(ctrl), mean(opto)],err);
+er.Color = [0 0 0];                            
+er.LineStyle = 'none';  
+
+ylabel('Mean AUC transient')
+xticklabels(["LED off", "LED on"])
 [~,p,t,stats]=ttest(ctrl, opto)
 title(sprintf('p = %f', p))
-%% peak fc3
-ctrl = [cell2mat(cellfun(@(x) x(5), t1(optodys1), 'UniformOutput', false)),...
-    cell2mat(cellfun(@(x) x(5), t2(optodys2), 'UniformOutput', false))];
-opto = [cell2mat(cellfun(@(x) x(6), t1(optodys1), 'UniformOutput', false)),...
-    cell2mat(cellfun(@(x) x(6), t2(optodys2), 'UniformOutput', false))];
-y = [ctrl, opto];
-x = [repelem(1, length(ctrl)), repelem(2, length(opto))];
-figure;
-bar([mean(ctrl), mean(opto)], 'FaceColor', 'w'); hold on
-swarmchart(x,y, 'ko')
-ylabel('mean of transient')
-xticklabels(["previous epoch", "opto epoch"])
-[~,p,t,stats]=ttest(ctrl, opto)
-title(sprintf('p = %f', p))
+box off
+
+% %% peak fc3
+% ctrl = [cell2mat(cellfun(@(x) x(5), t1(optodys1), 'UniformOutput', false)),...
+%     cell2mat(cellfun(@(x) x(5), t2(optodys2), 'UniformOutput', false))];
+% opto = [cell2mat(cellfun(@(x) x(6), t1(optodys1), 'UniformOutput', false)),...
+%     cell2mat(cellfun(@(x) x(6), t2(optodys2), 'UniformOutput', false))];
+% y = [ctrl, opto];
+% x = [repelem(1, length(ctrl)), repelem(2, length(opto))];
+% figure;
+% bar([mean(ctrl), mean(opto)], 'FaceColor', 'w'); hold on
+% swarmchart(x,y, 'ko')
+% ylabel('mean of transient')
+% xticklabels(["previous epoch", "opto epoch"])
+% [~,p,t,stats]=ttest(ctrl, opto)
+% title(sprintf('p = %f', p))

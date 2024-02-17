@@ -1,4 +1,4 @@
-function sparsity = get_spatial_sparsity_per_cell(Fc3,position,Fs,nBins,track_length)
+function sparsity = get_spatial_sparsity_per_cell(Fc3,position,nBins,track_length,fv, thres, Fs, ftol)
 %% Fc3 = dFF of 1 cell
 % position - position of animal on track
 % Fs - Frame rate of acquisition
@@ -7,7 +7,7 @@ function sparsity = get_spatial_sparsity_per_cell(Fc3,position,Fs,nBins,track_le
 
 %%
 
-time_moving = get_moving_time(position,5,Fs);
+[time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
 bin_size = track_length/nBins;
 pos_moving = position(time_moving);
 

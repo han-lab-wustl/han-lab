@@ -6,30 +6,30 @@
 
 clear all; close all
 % mouse_name = "e216";
-mice = ["e216", "e218", "e189", "e190", "e201", "e186"];
-cond = ["vip", "vip", "ctrl", "ctrl", "sst", "pv"];%, "pv"];
+mice = ["e216", "e218", "e217", "e189", "e190", "e201", "e186"];
+cond = ["vip", "vip", "ctrl", "ctrl", "sst", "sst"];%, "pv"];
 dys_s = {[7 8 9 37 38 39 40 41 42 44 45 46 48 50:59], ...
     [20,21,22,23,35,36,37,38,39,40,41,...
-     42,43,44,45,47 48 49 50 51 52 55 56],...
+     42,43,44,45,47 48 49 50 51 52 55 56], [2:11],...
      [35:42,44],...
      [33:35, 40:43, 45]...
      [52:59], [2:5,31,32,33]};
-
 % experiment conditions: preopto=-1; optoep=3/2; control day1=0; control
 % day2=1
 opto_eps = {[-1 -1 -1 2 -1 0 1 3 -1 -1 0 1 2 3 0 1 2 3 0 1 2 0 1],...
-    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0],...
+    [-1 -1 -1 -1,3 0 1 2 0 1 3,0 1 2, 0 3 0 1 2 0 1 2 0], [-1 -1 -1 -1 2 3 2 0 3 0], ...
     [-1 -1 -1 -1 2 3 2 0 2],...
     [-1 -1 -1 3 0 1 2 3],...
     [-1 -1 -1 2 3 0 2 3],...
     [-1 -1 -1 -1 2 3 2]};
-src = ["X:\vipcre", "X:\vipcre", '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', ...
+src = ["X:\vipcre", "X:\vipcre", "X:\vipcre", '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', ...
     '\\storage1.ris.wustl.edu\ebhan\Active\dzahra', 'Z:\sstcre_imaging', ...
     'Y:\analysis\fmats'];
 
+
 licks_m = {};
 for m=1:length(mice)
-dys = dys_s(m); dys = dys{1};
+dys = dys_s{m};
 opto_ep = opto_eps(m); opto_ep = opto_ep{1};
 epind = 1; % for indexing
 % ntrials = 8; % get licks for last n trials
@@ -39,7 +39,7 @@ for dy=dys
 %     load(fullfile(daypth.folder,daypth.name), 'licks', 'trialnum', 'rewards', 'changeRewLoc', ...
 %         'ybinned', 'timedFF', 'VR');
     daypth = dir(fullfile(src(m), mice(m), string(dy), '**', '*time*.mat'));    
-    if m==6 % e186 in a diff format
+    if m==7 % e186 in a diff format
         daypth = dir(fullfile(src(m), mice(m), 'days', '*.mat'));
         daypth = daypth(dy);    
         load(fullfile(daypth.folder, daypth.name), 'VR') % load fall
@@ -128,10 +128,10 @@ end
 figure; 
 ctrl=cellfun(@(x) x{1}, licks_m); % grab for each mouse
 opto=cellfun(@(x) x{2}, licks_m);
-offopsin = [ctrl{1}' ctrl{2}'];
-offvector = [ctrl{3}' ctrl{4}' ctrl{5}' ctrl{6}'];
-onopsin = [opto{1}' opto{2}'];
-onvector = [opto{3}' opto{4}' opto{5}' opto{6}'];
+offopsin = [mean(ctrl{1}', 'omitnan') mean(ctrl{2}', 'omitnan') mean(ctrl{3}', 'omitnan')];
+offvector = [mean(ctrl{4}', 'omitnan') mean(ctrl{5}', 'omitnan') mean(ctrl{6}', 'omitnan') mean(ctrl{7}', 'omitnan')];
+onopsin = [mean(opto{1}', 'omitnan') mean(opto{2}', 'omitnan') mean(opto{3}', 'omitnan')];
+onvector = [mean(opto{4}', 'omitnan') mean(opto{5}', 'omitnan') mean(opto{6}', 'omitnan') mean(opto{7}', 'omitnan')];
 x = [ones(1,length(offvector)), ...
     ones(1,length(onvector))*3, ones(1,length(offopsin))*5, ones(1,length(onopsin))*7];
 y = [offvector, onvector, offopsin, onopsin];
@@ -149,21 +149,16 @@ end
 er = errorbar([1 NaN 3 NaN 5 NaN 7],means,err);
 er.Color = [0 0 0];                            
 er.LineStyle = 'none';  
-
+[h,p,i,stats]=ttest(offopsin,onopsin)
 ylabel("Lick Rate / Trial")
 xticklabels(["Control LED off", "", "Control LED on", "", "VIP stGtACR LED off", ...
     "", "VIP stGtACR LED on"])
-[h,p1,i,stats] = ttest(offopsin,onopsin);
-[h,p2,i,stats] = ttest2(onvector,onopsin);
-[h,p3,i,stats] = ttest(offvector,onvector);
-% condt = [repelem("Control LED off",length(offopsin)), repelem("Control LED on",length(onopsin)), ...
-%     repelem("VIP stGtACR LED off",length(offvector)), ...
-%     repelem("VIP stGtACR LED on",length(onvector))]';
-% tbl = table(condt,[offvector,onvector,offopsin,onopsin]',VariableNames=["Condition" "Lick Rate"]);
-% aov = anova(tbl,'Lick Rate');
-% multcompare(aov,'CriticalValueType',"bonferroni")
-
-title(sprintf("all trials, p = %f b/wn off and on opsin, \n p=%f bw/n on vector and opsin \n p=%f b/wn off and on vector", p1,p2,p3))
+condt = [repelem("Control LED off",length(offopsin)), repelem("Control LED on",length(onopsin)), ...
+    repelem("VIP stGtACR LED off",length(offvector)), ...
+    repelem("VIP stGtACR LED on",length(onvector))]';
+tbl = table(condt,[offvector,onvector,offopsin,onopsin]',VariableNames=["Condition" "Lick Rate"]);
+aov = anova(tbl,'Lick Rate');
+multcompare(aov,'CriticalValueType',"bonferroni")
 box off
 diffpow = mean(onopsin);
 basepwr = mean(onvector);

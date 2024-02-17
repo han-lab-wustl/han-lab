@@ -24,7 +24,7 @@ if __name__ == "__main__":
     checkdst = r"K:\tail_videos"
 =======
 
-    src = r"F:\Behind_movies"
+    src = r"F:\tail\240205-240211"
     dst = r"Y:\videos_temp\tail"
     checkdst = r"Y:\videos_temp\tail"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
 >>>>>>> 03257286f1285e1a4af2ef484af53f0470f37fb3
