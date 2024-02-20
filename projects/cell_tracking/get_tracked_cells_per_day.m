@@ -2,8 +2,8 @@
 % get cells detected in cellreg and do analysis
 
 clear all
-src = 'D:\katherine_fall_daily_tracking'; % main folder for analysis
-animal = 'e145';
+src =  'Y:\analysis\fmats'; % main folder for analysis
+animal = 'e218';
 fld = sprintf('%s_daily_tracking',animal);
 pth = dir(fullfile(src, fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
@@ -21,6 +21,7 @@ end
 save(fullfile(pth.folder,'commoncells.mat'),'commoncells') 
 fprintf('\n *************number of common cells: %i************* \n', size(commoncells,1))
 
+%%
 % load mats from all days
 fls = dir(fullfile(src, sprintf('%s\\%s*.mat', animal, animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
