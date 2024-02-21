@@ -1,8 +1,7 @@
 function [mean_length_of_transients_per_cell_opto,....
     mean_length_of_transients_per_cell_ctrl, auc_transients_per_cell_opto,...
     auc_transients_per_cell_ctrl, peak_transients_per_cell_opto, peak_transients_per_cell_ctrl] = get_transient_stats(changeRewLoc,gainf,...
-    ybinned, putative_pcs, Fc3, iscell,...
-    stat, optoep)
+    ybinned, fc3_pc, optoep)
 % test script for counting transients
 % compare to previos epoch
 % zahra sees decrease in length of transients in opto but not preopto or
@@ -23,19 +22,12 @@ ybinned = ybinned*gainf;
 rewlocs = changeRewLoc(changeRewLoc>0)*gainf;
 eprng = eps(optoep):eps(optoep+1);
 ypos = ybinned(eprng);
-eprng = eprng(ypos<rewlocs(optoep)); % pre reward ypos
-pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
-pc = logical(iscell(:,1));
-[~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
-bordercells_pc = bordercells(pc); % mask border cells
-fc3_pc = Fc3(eprng,pc); % only iscell
-fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
-fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+eprng = eprng(ypos<rewlocs(optoep)); 
 peak_of_transients = cell(1, size(fc3_pc,2));
 length_of_transients = cell(1, size(fc3_pc,2));
 auc_of_transients = cell(1, size(fc3_pc,2));
 for cll=1:size(fc3_pc,2) % get transients of each cell
-    transient = consecutive_stretch(find(fc3_pc(:,cll)>0));
+    transient = consecutive_stretch(find(fc3_pc(eprng,cll)>0));
     peak_of_transients{cll} = cell2mat(cellfun(@(x) mean(fc3_pc(x,cll)), transient, 'UniformOutput', false));
     auc_of_transients{cll} = cell2mat(cellfun(@(x) trapz(fc3_pc(x,cll)), transient, 'UniformOutput', false));
     length_of_transients{cll} = cell2mat(cellfun(@length, transient, 'UniformOutput', false));
@@ -49,14 +41,11 @@ mean_length_of_transients_per_cell_opto = cell2mat(cellfun(@(x) mean(x./31.25), 
 eprng = eps(optoep-1):eps(optoep);
 ypos = ybinned(eprng);
 eprng = eprng(ypos<rewlocs(optoep)); % pre reward ypos
-fc3_pc = Fc3(eprng,pc); % only iscell
-fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
-fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
 peak_of_transients = cell(1, size(fc3_pc,2));
 length_of_transients = cell(1, size(fc3_pc,2));
 auc_of_transients = cell(1, size(fc3_pc,2));
 for cll=1:size(fc3_pc,2) % get transients of each cell
-    transient = consecutive_stretch(find(fc3_pc(:,cll)>0));
+    transient = consecutive_stretch(find(fc3_pc(eprng,cll)>0));
     peak_of_transients{cll} = cell2mat(cellfun(@(x) mean(fc3_pc(x,cll)), transient, 'UniformOutput', false));
     auc_of_transients{cll} = cell2mat(cellfun(@(x) trapz(fc3_pc(x,cll)), transient, 'UniformOutput', false));
     length_of_transients{cll} = cell2mat(cellfun(@length, transient, 'UniformOutput', false));

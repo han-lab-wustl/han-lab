@@ -2,8 +2,8 @@
 % get cells detected in cellreg and do analysis
 
 clear all
-src = 'D:\katherine_fall_daily_tracking'; % main folder for analysis
-animal = 'e145';
+src =  'Y:\analysis\fmats'; % main folder for analysis
+animal = 'e218';
 fld = sprintf('%s_daily_tracking',animal);
 pth = dir(fullfile(src, fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
@@ -11,16 +11,17 @@ load(fullfile(pth.folder, pth.name))
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
 sessions=length(cell_registered_struct.centroid_locations_corrected);% specify no of sessions
-cindex = bins(counts==sessions); % finding cells in all sessions
+cindex = bins(counts>=sessions-15); % finding cells in all sessions
 commoncells=zeros(length(cindex),sessions);
 % make matrix of commoncells
 for ci=1:length(cindex)
-    commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
+     (ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
 end
 % save
 save(fullfile(pth.folder,'commoncells.mat'),'commoncells') 
 fprintf('\n *************number of common cells: %i************* \n', size(commoncells,1))
 
+%%
 % load mats from all days
 fls = dir(fullfile(src, sprintf('%s\\%s*.mat', animal, animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));

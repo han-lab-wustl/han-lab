@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e217";
-days = [4 9];
+days = [13:16];
 src = "X:\vipcre";
 
 for day=days
