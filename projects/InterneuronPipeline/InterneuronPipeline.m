@@ -4,7 +4,7 @@
 %section 1: run Videos tiff, makes tiffs from the .sbx files for as many
 %days as you want
 
-runVideosTiff_EH_new_sbx1
+% runVideosTiff_EH_new_sbx1
 %inputs are just the number of sbx to run and then you hand pick each one
 
 
@@ -68,26 +68,26 @@ click_ROIs_GM
 %you remember later which day's planes you are looking for, nothing hard
 %coded.
 
-make_proc_files_Ints_per_day
+% make_proc_files_Ints_per_day
 
 %% section 7 registers2p
 
-registers2p
+% registers2p
 
 %% section 8 multiple_days_reg_file
-
-startnew = input('are you starting from scratch? (0 - no , 1 - yes) :');
-
-if startnew == 1
-
-multiple_days_reg_file_GM
-else
-    multiple_days_reg_file_cont
-end
+% 
+% startnew = input('are you starting from scratch? (0 - no , 1 - yes) :');
+% 
+% if startnew == 1
+% 
+% multiple_days_reg_file_GM
+% else
+%     multiple_days_reg_file_cont
+% end
 
 %% section 9 main_getall_days_registered
 
-main_get_all_cells_registered_GM
+% main_get_all_cells_registered_GM
 
 % %
 % %
@@ -95,26 +95,26 @@ main_get_all_cells_registered_GM
 % % passed this point is HRZ specific
 %% section 10 vrselect startend split
 
-% VRselectstartendsplit
-abffileSelectStartEndSplit
+VRselectstartendsplit
+% abffileSelectStartEndSplit
 
 %% section 11 Interneuron Struture PV
 
 
 %% section 11 Interneuron Struture
-
-m=1; %do not change
-curr=3; %current day
-[mouseP(m).Falls{curr},mouseP(m).Forwards{curr},...
-    mouseP(m).CPP{curr},mouseP(m).ybinned{curr},mouseP(m).rewards{curr},mouseP(m).F0{curr},...
-    mouseP(m).masks{curr},mouseP(m).mimg{curr},mouseP(m).Fallnb{curr},mouseP(m).name{curr},mouseP(m).time{curr},mouseP(m).rewardLocation{curr},mouseP(m).licks{curr},mouseP(m).trialNum{curr}]=... 
-    HRZNeuronStructor(7.8,4,'E137',...
-    {'file000_cha_XC_plane_1_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days',...
-    'file000_cha_XC_plane_2_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days',...
-    'file000_cha_XC_plane_3_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days',...
-    'file000_cha_XC_plane_4_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days'},...
-    {'E:\E137\D14\suite2p\plane0\reg_tif\',...
-    'E:\E137\D14\suite2p\plane1\reg_tif\',...
-    'E:\E137\D14\suite2p\plane2\reg_tif\',...
-    'E:\E137\D14\suite2p\plane3\reg_tif\'}...
-   ,0,'new',160); %ETL Was 3600 but thats past sat range
+% 
+% m=1; %do not change
+% curr=3; %current day
+% [mouseP(m).Falls{curr},mouseP(m).Forwards{curr},...
+%     mouseP(m).CPP{curr},mouseP(m).ybinned{curr},mouseP(m).rewards{curr},mouseP(m).F0{curr},...
+%     mouseP(m).masks{curr},mouseP(m).mimg{curr},mouseP(m).Fallnb{curr},mouseP(m).name{curr},mouseP(m).time{curr},mouseP(m).rewardLocation{curr},mouseP(m).licks{curr},mouseP(m).trialNum{curr}]=... 
+%     HRZNeuronStructor(7.8,4,'E137',...
+%     {'file000_cha_XC_plane_1_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days',...
+%     'file000_cha_XC_plane_2_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days',...
+%     'file000_cha_XC_plane_3_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days',...
+%     'file000_cha_XC_plane_4_roibyclick_F_D1_D2_D3_D5_DR1_DR3_DR21_DR22_DR23_registered_all_days'},...
+%     {'E:\E137\D14\suite2p\plane0\reg_tif\',...
+%     'E:\E137\D14\suite2p\plane1\reg_tif\',...
+%     'E:\E137\D14\suite2p\plane2\reg_tif\',...
+%     'E:\E137\D14\suite2p\plane3\reg_tif\'}...
+%    ,0,'new',160); %ETL Was 3600 but thats past sat range

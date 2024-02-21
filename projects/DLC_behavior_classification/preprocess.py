@@ -21,7 +21,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
     if step == 1: # align to vr
         with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
             df = pickle.load(fp)
-        [preprocessing.VRalign(os.path.join(dlcfls,row["VR"]), 
+        [preprocessing.VRalign_automatic(os.path.join(dlcfls,row["VR"]), 
                     os.path.join(dlcfls,row["DLC"]),dlcfls, only_add_experiment=only_add_experiment) for i,row in df.iterrows()]
             
     if step == 2: # collect clustering vars
@@ -57,8 +57,8 @@ def preprocess(step,vrdir, dlcfls,columns=False,
         # pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
         # cluster_output['pavlovian'] = [pca,lbl,df_kmeans]
         #hrz
-        tasks = ['M3_M4_altered_dim_HRZ_norewards__MM_sol2', 
-                 'M3_M4_altered_dim_HRZ_double_probe_middle_5cmRL_GM_sol2']
+        tasks = ['M3_M4_altered_dim_HRZ_norewards__MM_sol2', \
+                'M3_M4_altered_dim_HRZ_double_probe_middle_5cmRL_GM_sol2']
         X_scaled, pca_2_result, df_kmeans = run_pca(df[df.experiment.isin(tasks)],
                                     columns)
         pca, lbl, df_kmeans = run_kmeans(X_scaled, pca_2_result, df_kmeans)
@@ -69,7 +69,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 #%%
 if __name__ == "__main__":
     vrdir =  r"\\storage1.ris.wustl.edu\ebhan\Active\all_vr_data" # copy of vr data, curated to remove badly labeled files
-    dlcfls = r"I:\vids_to_analyze\face_and_pupil" # h5 and csv files from dlc
+    dlcfls = r"I:\vids_to_analyze\tail" # h5 and csv files from dlc
     df = preprocess(0,vrdir,dlcfls)
     # need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     
 #     cluster_output = preprocess(3,vrdir,dlcfls,columns=columns)
 #     #pca_2_result, label, dfkmeans
-       
+
 # # #%%
 # # custom analysis, can make into function
 # %matplotlib inline

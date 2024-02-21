@@ -1,5 +1,5 @@
 clear all;
-src = 'I:\vids_to_analyze\face_and_pupil';
+src = 'I:\vids_to_analyze\tail';
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)
