@@ -60,24 +60,26 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
         centroids_y.append(centroid_y)
         areas.append(area); circumferences.append(circumference)
     areas = np.array(areas); circumferences = np.array(circumferences)
-    ############## GLM ##############
-<<<<<<< HEAD
-=======
-    areas = scipy.ndimage.gaussian_filter(areas,1.5)
-    licks = scipy.ndimage.gaussian_filter(vralign['licks'],5)    
+    areas = scipy.signal.savgol_filter(areas,5, 2)
+    vralign['licks'][:-10]=0
+    licks = scipy.signal.savgol_filter(vralign['licks'],10, 2) 
     velocity = vralign['forwardvel']
-    velocity = scipy.ndimage.gaussian_filter(vralign['licks'],3)
     nans, x = nan_helper(velocity)
     velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
+    velocity = scipy.signal.savgol_filter(velocity,10, 2)
+    # calculate acceleration
+    acc_ = np.diff(velocity)/np.diff(np.hstack(vralign['timedFF']))
+    # pad nans
+    acc=np.zeros_like(velocity)
+    acc[:-1]=acc_
+    speed = abs(velocity)
+    eyelid = vralign['EyeNorthEast_y']
+    eyelid = scipy.signal.savgol_filter(eyelid,10, 2)
     speed = abs(vralign['forwardvel'])
     nans, x = nan_helper(speed)
     speed[nans]= np.interp(x(nans), x(~nans), speed[~nans])
-    # removes repeated frames of reward delivery (to not double the number of trials)
-    rewards = consecutive_stretch(np.where(vralign['rewards']>1)[0])
-    rewards = [min(xx) for xx in rewards]
-    cs = np.zeros_like(vralign['rewards'])
-    cs[rewards] = 1
-    X = np.array([velocity, speed, licks]).T # Predictor(s)
+
+    X = np.array([velocity, speed, acc, licks, eyelid]).T # Predictor(s)
     X = sm.add_constant(X) # Adds a constant term to the predictor(s)
     y = areas # Outcome
     # Fit a regression model
@@ -88,29 +90,33 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     ############## GLM ##############
     # run peri reward time & plot
     range_val = 10 #s
-<<<<<<< HEAD
-    binsize = 0.05 #s
-=======
-    binsize = 0.1 #s
->>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
+    binsize = 0.1 
     input_peri = areas_res
+    rewards = vralign["rewards"]
+    try:    
+        rewards_iind = consecutive_stretch(np.where(rewards)[0])
+        rewards_iind = [min(xx) for xx in rewards_iind]
+        rewards = np.zeros_like(rewards)
+        rewards[rewards_iind]=1
+    except:
+        print("Reward array does not have repeats!")
     normmeanrew_t, meanrew, normrewall_t, \
     rewall = perireward_binned_activity(np.array(input_peri), \
-                            cs.astype(int), 
+                            rewards.astype(int), 
                             vralign['timedFF'], range_val, binsize)
 
     normmeanlicks_t, meanlicks, normlickall_t, \
     lickall = perireward_binned_activity(vralign['licks'], \
-                    cs.astype(int), 
+                    rewards.astype(int), 
                     vralign['timedFF'], range_val, binsize)
     normmeanvel_t, meanvel, normvelall_t, \
     velall = perireward_binned_activity(vralign['forwardvel'], \
-                    cs.astype(int), 
+                    rewards.astype(int), 
                     vralign['timedFF'], range_val, binsize)
 
->>>>>>> fc19874ee0f6816c73e1bd9b48347b0547ffc21c
-    # TODO: add to pickle structure
-    return areas, circumferences, centroids_x, centroids_y
+    
+    return areas, circumferences, centroids_x, centroids_y, \
+    meanrew, rewall, meanlicks, meanvel
 
 def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
     pose_name, savedst, success=True):

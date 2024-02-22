@@ -271,89 +271,100 @@ def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
             uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
             uchangeRewLoc = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,uchangeRewLoc))
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
-            ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); ulicks=ulicks>0
+            ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); 
+            # skip this for now, can binarize later with lick voltage
+            # ulicks=ulicks>0
             ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])             
             ulickVoltage = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulickVoltage)
             # utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), len(np.arange(uscanstart,uscanstop))) #subsample - then why are we doing this freq
             utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), len(dlcdf)) #subsample - then why are we doing this freq
             timedFF = utimedFF
-            #initialize
-            rewards = np.zeros_like(timedFF)
-            forwardvel = np.zeros_like(timedFF)
-            ybinned = np.zeros_like(timedFF)
-            trialnum = np.zeros_like(timedFF)
-            changeRewLoc = np.zeros_like(timedFF)
-            licks = np.zeros_like(timedFF)
-            lickVoltage = np.zeros_like(timedFF)
+            # interpolate instead!            
+            rewards = urewards
+            forwardvel = uforwardvel
+            ybinned = uybinned
+            trialnum = utrialnum
+            changeRewLoc = uchangeRewLoc
+            licks = ulicks
+            lickVoltage = ulickVoltage
+            
+            # #initialize
+            # rewards = np.zeros_like(timedFF)
+            # forwardvel = np.zeros_like(timedFF)
+            # ybinned = np.zeros_like(timedFF)
+            # trialnum = np.zeros_like(timedFF)
+            # changeRewLoc = np.zeros_like(timedFF)
+            # licks = np.zeros_like(timedFF)
+            # lickVoltage = np.zeros_like(timedFF)
                         
             colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
 
-            for newindx in range(len(timedFF)): # this is longer in python lol
-                if newindx%10000==0: print(newindx)
-                if newindx == 0:
-                    after = np.mean([timedFF[newindx], timedFF[newindx+1]])
-                    rewards[newindx] = np.sum(urewards[uVRtimebinned <= after])
-                    forwardvel[newindx] = np.mean(uforwardvel[uVRtimebinned <= after])
-                    ybinned[newindx] = np.mean(uybinned[uVRtimebinned <= after])
-                    trialnum[newindx] = np.max(utrialnum[uVRtimebinned <= after])
-                    changeRewLoc[newindx] = uchangeRewLoc[newindx]
-                    licks[newindx] = np.sum(ulicks[uVRtimebinned <= after]) > 0
-                    lickVoltage[newindx] = np.mean(ulickVoltage[uVRtimebinned <= after])
+            # for newindx in range(len(timedFF)): # this is longer in python lol
+            #     if newindx%10000==0: print(newindx)
+            #     if newindx == 0:
+            #         after = np.mean([timedFF[newindx], timedFF[newindx+1]])
+            #         rewards[newindx] = np.sum(urewards[uVRtimebinned <= after])
+            #         forwardvel[newindx] = np.mean(uforwardvel[uVRtimebinned <= after])
+            #         ybinned[newindx] = np.mean(uybinned[uVRtimebinned <= after])
+            #         trialnum[newindx] = np.max(utrialnum[uVRtimebinned <= after])
+            #         changeRewLoc[newindx] = uchangeRewLoc[newindx]
+            #         licks[newindx] = np.sum(ulicks[uVRtimebinned <= after]) > 0
+            #         lickVoltage[newindx] = np.mean(ulickVoltage[uVRtimebinned <= after])
                     
-                elif newindx == len(timedFF)-1:
-                    before = np.mean([timedFF[newindx], timedFF[newindx-1]])
-                    rewards[newindx] = np.sum(urewards[uVRtimebinned > before])
-                    forwardvel[newindx] = np.mean(uforwardvel[uVRtimebinned > before])
-                    ybinned[newindx] = np.mean(uybinned[uVRtimebinned > before])
-                    trialnum[newindx] = np.max(utrialnum[uVRtimebinned > before],
-                                    initial=0)
-                    changeRewLoc[newindx] = np.sum(uchangeRewLoc[uVRtimebinned > before],
-                                    initial=0)
-                    licks[newindx] = np.sum(ulicks[uVRtimebinned > 0])
-                    lickVoltage[newindx] = np.mean(ulickVoltage[uVRtimebinned > before])
+            #     elif newindx == len(timedFF)-1:
+            #         before = np.mean([timedFF[newindx], timedFF[newindx-1]])
+            #         rewards[newindx] = np.sum(urewards[uVRtimebinned > before])
+            #         forwardvel[newindx] = np.mean(uforwardvel[uVRtimebinned > before])
+            #         ybinned[newindx] = np.mean(uybinned[uVRtimebinned > before])
+            #         trialnum[newindx] = np.max(utrialnum[uVRtimebinned > before],
+            #                         initial=0)
+            #         changeRewLoc[newindx] = np.sum(uchangeRewLoc[uVRtimebinned > before],
+            #                         initial=0)
+            #         licks[newindx] = np.sum(ulicks[uVRtimebinned > 0])
+            #         lickVoltage[newindx] = np.mean(ulickVoltage[uVRtimebinned > before])
 
-                else:                                                      
-                    before = np.mean([timedFF[newindx], timedFF[newindx-1]])
-                    after = np.mean([timedFF[newindx], timedFF[newindx+1]])
-                    #idk what these conditions are for
-                    if sum((uVRtimebinned>before) & (uVRtimebinned<=after))==0 and after<=check_imaging_start_before:
-                        rewards[newindx] = urewards[0]
-                        licks[newindx] = ulicks[0]
-                        ybinned[newindx] = uybinned[0]
-                        forwardvel[newindx] = forwardvel[0]
-                        changeRewLoc[newindx] = 0
-                        trialnum[newindx] = utrialnum[0]
-                        lickVoltage[newindx] = ulickVoltage[newindx]
-                    elif sum((uVRtimebinned>before) & (uVRtimebinned<=after))==0 and after>check_imaging_start_before:
-                        rewards[newindx] = rewards[newindx-1]
-                        licks[newindx] = licks[newindx-1]
-                        ybinned[newindx] = ybinned[newindx-1]
-                        forwardvel[newindx] = forwardvel[newindx-1]
-                        changeRewLoc[newindx] = 0
-                        trialnum[newindx] = trialnum[newindx-1]
-                        lickVoltage[newindx] = ulickVoltage[newindx-1]
-                    else: # probably take longer bc of vector wise and
-                        rewards[newindx] = np.sum(urewards[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                        licks[newindx] = np.sum(ulicks[(uVRtimebinned>before) & (uVRtimebinned<=after)])>0
-                        lickVoltage[newindx] = np.mean(ulickVoltage[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                        # try:
-                        if np.min(np.diff(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)]),initial=0) < -50: # added initial cond bc min is allow on zero arrays in matlab
-                            dummymin =  np.min(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            dummymax = np.max(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            dummymean = np.mean(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            ybinned[newindx] = ((dummymean/(dummymax-dummymin))<0.5)*dummymin+((dummymean/(dummymax-dummymin))>=0.5)*dummymax
-                            dummytrialmin =  np.min(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            dummytrialmax = np.max(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            dummytrialmean = np.mean(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            trialnum[newindx] = ((dummytrialmean/(dummytrialmax-dummytrialmin))<0.5)*dummytrialmin+((dummytrialmean/(dummytrialmax-dummytrialmin))>=0.5)*dummytrialmax
-                        else:
-                            ybinned[newindx] = np.mean(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                            trialnum[newindx] = np.max(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
-                        # except Exception as e:
-                        #     print(f"\n some issue with selecting ybinned in early time points? id {newindx}")
+            #     else:                                                      
+            #         before = np.mean([timedFF[newindx], timedFF[newindx-1]])
+            #         after = np.mean([timedFF[newindx], timedFF[newindx+1]])
+            #         #idk what these conditions are for
+            #         if sum((uVRtimebinned>before) & (uVRtimebinned<=after))==0 and after<=check_imaging_start_before:
+            #             rewards[newindx] = urewards[0]
+            #             licks[newindx] = ulicks[0]
+            #             ybinned[newindx] = uybinned[0]
+            #             forwardvel[newindx] = forwardvel[0]
+            #             changeRewLoc[newindx] = 0
+            #             trialnum[newindx] = utrialnum[0]
+            #             lickVoltage[newindx] = ulickVoltage[newindx]
+            #         elif sum((uVRtimebinned>before) & (uVRtimebinned<=after))==0 and after>check_imaging_start_before:
+            #             rewards[newindx] = rewards[newindx-1]
+            #             licks[newindx] = licks[newindx-1]
+            #             ybinned[newindx] = ybinned[newindx-1]
+            #             forwardvel[newindx] = forwardvel[newindx-1]
+            #             changeRewLoc[newindx] = 0
+            #             trialnum[newindx] = trialnum[newindx-1]
+            #             lickVoltage[newindx] = ulickVoltage[newindx-1]
+            #         else: # probably take longer bc of vector wise and
+            #             rewards[newindx] = np.sum(urewards[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #             licks[newindx] = np.sum(ulicks[(uVRtimebinned>before) & (uVRtimebinned<=after)])>0
+            #             lickVoltage[newindx] = np.mean(ulickVoltage[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #             # try:
+            #             if np.min(np.diff(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)]),initial=0) < -50: # added initial cond bc min is allow on zero arrays in matlab
+            #                 dummymin =  np.min(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 dummymax = np.max(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 dummymean = np.mean(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 ybinned[newindx] = ((dummymean/(dummymax-dummymin))<0.5)*dummymin+((dummymean/(dummymax-dummymin))>=0.5)*dummymax
+            #                 dummytrialmin =  np.min(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 dummytrialmax = np.max(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 dummytrialmean = np.mean(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 trialnum[newindx] = ((dummytrialmean/(dummytrialmax-dummytrialmin))<0.5)*dummytrialmin+((dummytrialmean/(dummytrialmax-dummytrialmin))>=0.5)*dummytrialmax
+            #             else:
+            #                 ybinned[newindx] = np.mean(uybinned[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #                 trialnum[newindx] = np.max(utrialnum[(uVRtimebinned>before) & (uVRtimebinned<=after)])
+            #             # except Exception as e:
+            #             #     print(f"\n some issue with selecting ybinned in early time points? id {newindx}")
                         
-                    forwardvel[newindx] = np.mean(uforwardvel[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
-                    changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
+            #         forwardvel[newindx] = np.mean(uforwardvel[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
+            #         changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
             
             # sometimes trial number increases by 1 for 1 frame at the end of an epoch before
             # going to probes. this removes those
@@ -478,8 +489,11 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             urewards_cs = urewards==0.5
             urewards_cs = interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards_cs)
             urewards=urewards_cs>0
-
-            urewards = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards))
+            # fix multiple frames per cs
+            urewards_ = consecutive_stretch(np.where(urewards>0)[0])
+            urewards_ = np.array([min(xx) for xx in urewards_])
+            urewards = np.zeros_like(urewards)
+            urewards[urewards_]=1 # assign cs to boolean
             uimageSync = np.squeeze(VR['imageSync'][scanstart:scanstop]); uimageSync = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uimageSync); 
             uforwardvel = np.hstack(-0.013*VR['ROE'][scanstart:scanstop])/np.diff(np.squeeze(VR['time'][scanstart-1:scanstop]))
             uforwardvel = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uforwardvel)
