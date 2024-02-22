@@ -1,7 +1,9 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas as pd, scipy
+import numpy as np, pandas as pd, scipy, sys
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 import statsmodels.api as sm 
 import os, cv2, pickle
 from PIL import Image, ImageDraw
@@ -9,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
+from projects.DLC_behavior_classification.preprocessing import consecutive_stretch
 ################################FUNCTION DEFINITIONS################################
 
 def nan_helper(y):
@@ -32,7 +35,7 @@ def get_unrewarded_stops(vralign):
     stops = vralign['forwardvel']==0 # 0 velocity
     stop_ind = consecutive_stretch(stops)
     
-def get_area_circumference_from_vralign(pdst, gainf, rewsize):
+def get_area_circumference_from_vralign(pdst, range_val, binsize):
     
     # example on how to open the pickle file
     # pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
@@ -61,8 +64,10 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
         areas.append(area); circumferences.append(circumference)
     areas = np.array(areas); circumferences = np.array(circumferences)
     areas = scipy.signal.savgol_filter(areas,5, 2)
-    vralign['licks'][:-10]=0
-    licks = scipy.signal.savgol_filter(vralign['licks'],10, 2) 
+    centroids_x = scipy.signal.savgol_filter(centroids_x,5, 2)
+    centroids_y = scipy.signal.savgol_filter(centroids_y,5, 2)
+    licks_threshold = vralign['lickVoltage']<=-0.065 # manually threshold licks
+    licks = scipy.signal.savgol_filter(licks_threshold,10, 2) 
     velocity = vralign['forwardvel']
     nans, x = nan_helper(velocity)
     velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
@@ -72,7 +77,9 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     # pad nans
     acc=np.zeros_like(velocity)
     acc[:-1]=acc_
+    acc = scipy.signal.savgol_filter(acc,10, 2)
     speed = abs(velocity)
+    vralign['EyeNorthEast_y'][vralign['EyeNorthEast_likelihood']<0.75]=0 # filter out low prob
     eyelid = vralign['EyeNorthEast_y']
     eyelid = scipy.signal.savgol_filter(eyelid,10, 2)
     speed = abs(vralign['forwardvel'])
@@ -86,36 +93,36 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     model = sm.GLM(y, X, family=sm.families.Gaussian())
     result = model.fit()
     areas_res = result.resid_pearson
-    # areas_pred = result.predict(X)
+    y = centroids_x # Outcome
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    centroids_x_res = result.resid_pearson
+    y = centroids_y # Outcome
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    centroids_y_res = result.resid_pearson
     ############## GLM ##############
-    # run peri reward time & plot
-    range_val = 10 #s
-    binsize = 0.1 
+    # run peri reward time & plot    
     input_peri = areas_res
     rewards = vralign["rewards"]
-    try:    
-        rewards_iind = consecutive_stretch(np.where(rewards)[0])
-        rewards_iind = [min(xx) for xx in rewards_iind]
-        rewards = np.zeros_like(rewards)
-        rewards[rewards_iind]=1
-    except:
-        print("Reward array does not have repeats!")
     normmeanrew_t, meanrew, normrewall_t, \
     rewall = perireward_binned_activity(np.array(input_peri), \
                             rewards.astype(int), 
                             vralign['timedFF'], range_val, binsize)
 
     normmeanlicks_t, meanlicks, normlickall_t, \
-    lickall = perireward_binned_activity(vralign['licks'], \
+    lickall = perireward_binned_activity(licks_threshold, \
                     rewards.astype(int), 
                     vralign['timedFF'], range_val, binsize)
     normmeanvel_t, meanvel, normvelall_t, \
-    velall = perireward_binned_activity(vralign['forwardvel'], \
+    velall = perireward_binned_activity(velocity, \
                     rewards.astype(int), 
                     vralign['timedFF'], range_val, binsize)
 
     
-    return areas, circumferences, centroids_x, centroids_y, \
+    return areas, circumferences, centroids_x_res, centroids_y_res, \
     meanrew, rewall, meanlicks, meanvel
 
 def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \

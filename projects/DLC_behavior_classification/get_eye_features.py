@@ -74,7 +74,7 @@ if __name__ == "__main__": # TODO; compare with diameter
 from sklearn.preprocessing import MinMaxScaler
 
 scaler = MinMaxScaler(feature_range=(0, 1))
-trials = np.hstack(rewall_s[:3]).T
+trials = np.hstack(rewall_s[:1]).T
 trials_norm = scaler.fit_transform(trials)
 fig, ax = plt.subplots()
 ax.imshow(trials_norm)

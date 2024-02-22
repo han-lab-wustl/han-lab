@@ -69,7 +69,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 #%%
 if __name__ == "__main__":
     vrdir =  r"\\storage1.ris.wustl.edu\ebhan\Active\all_vr_data" # copy of vr data, curated to remove badly labeled files
-    dlcfls = r"I:\vids_to_analyze\tail" # h5 and csv files from dlc
+    dlcfls = r"I:\vids_to_analyze\pupil_light_world" # h5 and csv files from dlc
     df = preprocess(0,vrdir,dlcfls)
     # need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
