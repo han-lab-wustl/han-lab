@@ -1,13 +1,12 @@
 # zahra
 # eye centroid and feature detection from vralign.p
-#%%
+
 import numpy as np, pandas as pd, sys, math
 import os, cv2, pickle
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.patches as patches
-from scipy.ndimage import gaussian_filter 
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
@@ -48,8 +47,10 @@ if __name__ == "__main__": # TODO; compare with diameter
     for session in sessions_to_analyze:
         print(session)
         pdst = os.path.join(src, session)
+        range_val = 8
+        binsize = 0.05
         areas, circumferences, centroids_x, centroids_y, \
-        meanrew, rewall, meanlicks, meanvel = eye.get_area_circumference_from_vralign(pdst, 3/2, 10)
+        meanrew, rewall, meanlicks, meanvel = eye.get_area_circumference_from_vralign(pdst, range_val, binsize)
         c_x.append(centroids_x)
         c_y.append(centroids_y)
         lickmean_s.append(meanlicks)
@@ -67,6 +68,7 @@ if __name__ == "__main__": # TODO; compare with diameter
     datadct['perilickmean_all_sessions'] = lickmean_s
     datadct['perivelmean_all_sessions'] = velmean_s
     datadct['circumferences_all_sessions'] = circumferences_s
+
     datadct['areas_all_sessions'] = areas_s    
     with open(r"I:\pupil_data_new_240221.p", "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
@@ -74,10 +76,10 @@ if __name__ == "__main__": # TODO; compare with diameter
 from sklearn.preprocessing import MinMaxScaler
 
 scaler = MinMaxScaler(feature_range=(0, 1))
-trials = np.hstack(rewall_s[:1]).T
+trials = np.hstack(rewall_s)
 trials_norm = scaler.fit_transform(trials)
 fig, ax = plt.subplots()
-ax.imshow(trials_norm)
+ax.imshow(trials_norm.T)
 #%%
 # plot perireward pupil
 range_val = 10 #s
