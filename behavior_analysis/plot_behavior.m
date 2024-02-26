@@ -30,14 +30,14 @@ for day=days
     success_prop{ind} = s/tr;
     fail_prop{ind} = f/tr;
     disp(day);
+    slideId = pptx.addSlide();
+    fprintf('Added slide %d\n',slideId);
     eps = find(mouse.VR.changeRewLoc>0);
     eps = [eps length(mouse.VR.changeRewLoc)]; 
     gainf = 1/mouse.VR.scalingFACTOR;
     rewloc = mouse.VR.changeRewLoc(mouse.VR.changeRewLoc>0)*gainf;
-    rewsize = mouse.VR.settings.rewardZone*gainf;
-    fig = figure('Renderer', 'painters');
-    slideId = pptx.addSlide();
-    fprintf('Added slide %d\n',slideId);
+    rewsize = mouse.VR.settings.rewardZone*gainf;    
+    fig = figure('Renderer', 'painters');    
     ypos = mouse.VR.ypos*(gainf);
     velocity = mouse.VR.ROE(2:end)*-0.013./diff(mouse.VR.time);
     scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on; 

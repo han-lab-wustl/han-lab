@@ -7,11 +7,10 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.patches as patches
-from scipy.ndimage import gaussian_filter 
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
-sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
+from utils.utils import listdir
 mpl.use('TkAgg')
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -20,10 +19,10 @@ mpl.rcParams["ytick.major.size"] = 6
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 if __name__ == "__main__": # TODO; compare with diameter
-    src = r"D:\PupilTraining-Matt-2023-07-07\light world pickles" # path to pickle files you want to analyze
+    src = r"I:\vids_to_analyze\face_and_pupil\pupil" # path to pickle files you want to analyze
     add_to_dct = False # add to previous datadct
     if add_to_dct:
-        with open(r"Z:\pupil_data.p", "rb") as fp: #unpickle
+        with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
             datadct = pickle.load(fp)
         sessions_analyzed = datadct['sessions']
         sessions_to_analyze = [xx for xx in os.listdir(src) if xx not in sessions_analyzed]
@@ -39,44 +38,48 @@ if __name__ == "__main__": # TODO; compare with diameter
         lickall_s = datadct['perilick_all_sessions']
         velall_s = datadct['perivel_all_sessions']
     else:    
-        normall_s = [] # get multiple sessions
-        normlickmean_s = []; lickmean_s = []; lickall_s = []
-        normvelmean_s = []; velmean_s = []; velall_s = []
+        meanrew_s = []; rewall_s = []; lickmean_s = []; lickall_s = []
+        normvelmean_s = []; velmean_s = []; velall_s = []; areas_s = []
         circumferences_s = []
         c_x = []; c_y = []
-        sessions = os.listdir(src)   
+        sessions = listdir(src, ifstring="vr_dlc_align.p")   
         sessions_to_analyze = sessions 
     for session in sessions_to_analyze:
         print(session)
         pdst = os.path.join(src, session)
-        areas, circumferences, centroids_x, centroids_y, normmeanrew_t, \
-            normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \
-            lickall, normmeanvel_t, meanvel, normvelall_t, \
-            velall = eye.get_area_circumference_from_vralign(pdst, 3/2, 10)
+        range_val = 8
+        binsize = 0.05
+        areas, circumferences, centroids_x, centroids_y, \
+        meanrew, rewall, meanlicks, meanvel = eye.get_area_circumference_from_vralign(pdst, range_val, binsize)
         c_x.append(centroids_x)
         c_y.append(centroids_y)
-        normall_s.append(normrewall_t)
-        normlickmean_s.append(normmeanlicks_t)
         lickmean_s.append(meanlicks)
-        lickall_s.append(lickall)
-        normvelmean_s.append(normmeanvel_t)
-        velmean_s.append(meanvel)
-        velall_s.append(velall)
+        velmean_s.append(meanvel)        
         circumferences_s.append(circumferences)
+        areas_s.append(areas)
+        meanrew_s.append(meanrew)
+        rewall_s.append(rewall)
     datadct= {}
     datadct['sessions'] = list(np.hstack(np.array(sessions)))
     datadct['centroids_x_all_sessions'] = c_x
     datadct['centroids_y_all_sessions'] = c_y
-    datadct['perirew_norm_all_sessions'] = normall_s
-    datadct['perilickmean_norm_all_sessions'] = normlickmean_s
+    datadct['perirewall_all_sessions'] = rewall_s
+    datadct['perirewmean_all_sessions'] = meanrew_s
     datadct['perilickmean_all_sessions'] = lickmean_s
-    datadct['perivelmean_norm_all_sessions'] = normvelmean_s
     datadct['perivelmean_all_sessions'] = velmean_s
     datadct['circumferences_all_sessions'] = circumferences_s
-    datadct['perilick_all_sessions'] = lickall_s
-    datadct['perivel_all_sessions'] = velall_s
-    with open(r"I:\pupil_data.p", "wb") as fp:   #Pickling
+
+    datadct['areas_all_sessions'] = areas_s    
+    with open(r"I:\pupil_data_new_240221.p", "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
+#%%
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler(feature_range=(0, 1))
+trials = np.hstack(rewall_s)
+trials_norm = scaler.fit_transform(trials)
+fig, ax = plt.subplots()
+ax.imshow(trials_norm.T)
 #%%
 # plot perireward pupil
 range_val = 10 #s
@@ -134,36 +137,38 @@ lickall=np.vstack(lickall_s)
 # for rew in normall:
 # plot average of individual trials in grey
 # fig, axes = plt.subplots(3,1)#, gridspec_kw={'height_ratios': [3, 1, 1]})
+#%%
 fig, axes = plt.subplots(1,1)
-ax = axes[0]
+ax = axes
 im = ax.imshow(normall)
 ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
 ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-ax.set_xticks([])
+# ax.set_xticks([])
 ax.set_ylabel('Trials')
 divider = make_axes_locatable(ax)
 cax = divider.append_axes('right', size='3%', pad=0.1)
 fig.colorbar(im, cax=cax, orientation='vertical')        
-ax = axes[1]
-im = ax.imshow(lickall, cmap='Reds')
-ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-ax.set_xticks([])
-ax.set_ylabel('Lick \n Rate')
-divider = make_axes_locatable(ax)
-cax = divider.append_axes('right', size='3%', pad=0.1)
-fig.colorbar(im, cax=cax, orientation='vertical')
-ax = axes[2]
-im = ax.imshow(velall, cmap='gist_yarg')
-ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-ax.set_ylabel('Mean \n Velocity \n (cm/s)')
-ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
-ax.set_xticklabels(np.arange(-range_val,range_val+1))
+# ax = axes[1]
+# im = ax.imshow(lickall, cmap='Reds')
+# ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+# ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+# ax.set_xticks([])
+# ax.set_ylabel('Lick \n Rate')
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes('right', size='3%', pad=0.1)
+# fig.colorbar(im, cax=cax, orientation='vertical')
+# ax = axes[2]
+# im = ax.imshow(velall, cmap='gist_yarg')
+# ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+# ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+# ax.set_ylabel('Mean \n Velocity \n (cm/s)')
+# ax.set_xticks(np.arange(0, (((range_val)/binsize)*2)+1,10))
+# ax.set_xticklabels(np.arange(-range_val,range_val+1))
 ax.set_xlabel('Time From Reward (s)')
-divider = make_axes_locatable(ax)
-cax = divider.append_axes('right', size='3%', pad=0.1)
-fig.colorbar(im, cax=cax, orientation='vertical')
+#%%
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes('right', size='3%', pad=0.1)
+# fig.colorbar(im, cax=cax, orientation='vertical')
 
     # plt.savefig(rf"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil_per_trial_{sessions[i][:-15]}.svg", \
     #         bbox_inches='tight',transparent=True)

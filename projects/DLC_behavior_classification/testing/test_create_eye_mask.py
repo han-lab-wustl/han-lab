@@ -28,38 +28,6 @@ def fixcsvcols(csv):
 #     eye_coords.append([(float(df[xx+"_x"].iloc[i]), 
 #                                   float(df[xx+"_y"].iloc[i])) for xx in eye]),
 
-def get_eye_mask(eye_coords, i, dst, eyelbl = False):
-    # eye coords format = list of (x,y) tuples
-    img = Image.new('L', (150, 100), 0) # L is imagetype, 600, 422 is image dim
-
-    ImageDraw.Draw(img).polygon(eye_coords, outline=1, fill=1)
-    mask = np.array(img)
-
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, 
-                        cv2.CHAIN_APPROX_SIMPLE)
-    cnt = contours[0]
-    tifffile.imsave(os.path.join(dst, f"frame{i}.tif"),mask.astype('uint8'))
-
-def get_video_values_of_eye_mask(eye_coords, video):
-    # eye coords format = list of (x,y) tuples
-    img = Image.new('L', (600, 422), 0) # L is imagetype, 600, 422 is image dim
-
-    ImageDraw.Draw(img).polygon(eye_coords, outline=1, fill=1)
-    mask = np.array(img)
-    pixel_values_mask = np.mean(video[mask])
-
-    return pixel_values_mask
-
-
-# get contours
-dfpth = r'I:\eye_videos\230508_E200DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv'
-df = pd.read_csv(dfpth, index_col=None)
-dst = r'I:\labeled_videos'
-eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
-            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
-for i in [497, 9927]: # define df from kmeans script
-    get_eye_mask([(float(df[xx+"_x"].iloc[i]), 
-        float(df[xx+"_y"].iloc[i])) for xx in eye],i,dst)
 
 import time
 pixel_values_mask = []

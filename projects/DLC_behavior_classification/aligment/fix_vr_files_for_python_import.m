@@ -1,5 +1,6 @@
+% zahra's fix to import mat files as h5py in python
 clear all;
-src = 'I:\vids_to_analyze\face_and_pupil';
+src = 'I:\vids_to_analyze\tail'; % path to vr files
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)

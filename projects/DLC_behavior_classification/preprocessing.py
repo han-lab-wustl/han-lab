@@ -60,6 +60,20 @@ def match_eye_to_tail_videos(eyevids,dst, vidpth = r'\\storage1.ris.wustl.edu\eb
             
     return vids2get
 
+def consecutive_stretch(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+
+    if len(break_point) == 0:
+        return [x]
+
+    y = [x[:break_point[0]]]
+    for i in range(1, len(break_point)):
+        y.append(x[break_point[i - 1] + 1:break_point[i]])
+    y.append(x[break_point[-1] + 1:])
+    
+    return y 
+
 def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
     """copies vr files for existing dlc csvs
     essentially do not put a csv into this folder if you don't want it analysed
@@ -103,7 +117,7 @@ def copyvr_dlc(vrdir, dlcfls): #TODO: find a way to do the same for clampex
             datetime_object = datetime.strptime(s[0][0], '%d_%b_%Y')                
             dt = str(datetime_object.date())
             if 'test'.lower() not in xx and 'test'.upper() not in xx and dt in dates:
-                shutil.copy(xx,dlcfls)
+                if not os.path.exists(os.path.join(dlcfls, os.path.basename(xx))): shutil.copy(xx,dlcfls)
                 mouse_vr.append([mouse, xx, dt])
                 
         print(f"\n********* copied vr files to dlc pose data for {mouse} *********")
@@ -168,7 +182,9 @@ def hdf5_to_dict(hdf5_object):
 
 def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
     """zahra's implementation for VRstandendsplit for python dlc pipeline
-
+    automatic alignment
+    saves a png file with the imagesync start and stop so in the end you can corroborate
+    and make sure recording doesnt have multiple imagesync chunks
     Args:
         vrfl (_type_): _description_
         dlccsv (_type_): _description_
@@ -202,8 +218,8 @@ def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
             # assumes there are no additional images after behavior
             # also prints out the imagesync plots if you want to do it manually?
             iinds = np.where(imageSync>1)
-            uscanstart = np.min(iinds)+1
-            uscanstop  = np.max(iinds)+1
+            uscanstart = np.min(iinds)
+            uscanstop  = np.max(iinds)
             print(f'Start of scan: {uscanstart}')
             print(f'End of scan: {uscanstop}')
             print(f'Length of scan is {uscanstop - uscanstart}')
@@ -232,11 +248,12 @@ def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
             #imaging data from before you started VR so sets to 0
 
             # cuts all of the variables from VR
+            # zahra's hack to fix vr variables after interpolation
             urewards = np.squeeze(VR['reward'][scanstart:scanstop]); 
             urewards_cs = np.zeros_like(urewards)
             urewards_cs = urewards==0.5
-            urewards_cs = interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards_cs)
-            urewards=urewards_cs>0 # doesn't have reward variable anymore, so add that if needed (after 500msec)
+            urewards_cs = interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards_cs)            
+            urewards=(urewards_cs>0).astype(int) # doesn't have reward variable anymore, so add that if needed (after 500msec)           
             uimageSync = np.squeeze(VR['imageSync'][scanstart:scanstop]); uimageSync = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uimageSync); 
             uforwardvel = np.hstack(-0.013*VR['ROE'][scanstart:scanstop])/np.diff(np.squeeze(VR['time'][scanstart-1:scanstop]))
             uforwardvel = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uforwardvel)
@@ -249,20 +266,31 @@ def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
             uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
             uchangeRewLoc = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,uchangeRewLoc))
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
-            ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); ulicks=ulicks>0
+            ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); 
+            # skip this for now, can binarize later with lick voltage
+            # ulicks=ulicks>0
             ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])             
             ulickVoltage = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulickVoltage)
             # utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), len(np.arange(uscanstart,uscanstop))) #subsample - then why are we doing this freq
             utimedFF = np.linspace(0, (VR['time'][scanstop]-VR['time'][scanstart]), len(dlcdf)) #subsample - then why are we doing this freq
             timedFF = utimedFF
-            #initialize
-            rewards = np.zeros_like(timedFF)
-            forwardvel = np.zeros_like(timedFF)
-            ybinned = np.zeros_like(timedFF)
-            trialnum = np.zeros_like(timedFF)
-            changeRewLoc = np.zeros_like(timedFF)
-            licks = np.zeros_like(timedFF)
-            lickVoltage = np.zeros_like(timedFF)
+            # interpolate instead!            
+            rewards = urewards
+            forwardvel = uforwardvel
+            ybinned = uybinned
+            trialnum = utrialnum
+            changeRewLoc = uchangeRewLoc
+            licks = ulicks
+            lickVoltage = ulickVoltage
+            
+            # #initialize
+            # rewards = np.zeros_like(timedFF)
+            # forwardvel = np.zeros_like(timedFF)
+            # ybinned = np.zeros_like(timedFF)
+            # trialnum = np.zeros_like(timedFF)
+            # changeRewLoc = np.zeros_like(timedFF)
+            # licks = np.zeros_like(timedFF)
+            # lickVoltage = np.zeros_like(timedFF)
                         
             colssave = [xx for xx in dlcdf.columns if 'bodyparts' not in xx and 'Unnamed' not in xx]
 
@@ -332,6 +360,11 @@ def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
                         
                     forwardvel[newindx] = np.mean(uforwardvel[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
                     changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
+            # fix multiple frames per cs
+            rewards_ = consecutive_stretch(np.where(rewards>0)[0])
+            rewards_ = np.array([min(xx) for xx in rewards_])
+            rewards = np.zeros_like(rewards)
+            rewards[rewards_]=1 # assign cs to boolean
             
             # sometimes trial number increases by 1 for 1 frame at the end of an epoch before
             # going to probes. this removes those
@@ -455,9 +488,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             urewards_cs = np.zeros_like(urewards)
             urewards_cs = urewards==0.5
             urewards_cs = interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards_cs)
-            urewards=urewards_cs>0
-
-            urewards = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,urewards))
+            urewards=(urewards_cs>0).astype(int) # doesn't have reward variable anymore, so add that if needed (after 500msec)           
             uimageSync = np.squeeze(VR['imageSync'][scanstart:scanstop]); uimageSync = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uimageSync); 
             uforwardvel = np.hstack(-0.013*VR['ROE'][scanstart:scanstop])/np.diff(np.squeeze(VR['time'][scanstart-1:scanstop]))
             uforwardvel = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uforwardvel)
@@ -565,6 +596,12 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
                         
                     forwardvel[newindx] = np.mean(uforwardvel[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
                     changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
+            
+            # fix multiple frames per cs
+            rewards_ = consecutive_stretch(np.where(rewards>0)[0])
+            rewards_ = np.array([min(xx) for xx in rewards_])
+            rewards = np.zeros_like(rewards)
+            rewards[rewards_]=1 # assign cs to boolean
             
             # sometimes trial number increases by 1 for 1 frame at the end of an epoch before
             # going to probes. this removes those

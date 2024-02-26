@@ -1,7 +1,9 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas as pd, scipy
+import numpy as np, pandas as pd, scipy, sys
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 import statsmodels.api as sm 
 import os, cv2, pickle
 from PIL import Image, ImageDraw
@@ -9,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
+from projects.DLC_behavior_classification.preprocessing import consecutive_stretch
 ################################FUNCTION DEFINITIONS################################
 
 def nan_helper(y):
@@ -32,7 +35,7 @@ def get_unrewarded_stops(vralign):
     stops = vralign['forwardvel']==0 # 0 velocity
     stop_ind = consecutive_stretch(stops)
     
-def get_area_circumference_from_vralign(pdst, gainf, rewsize):
+def get_area_circumference_from_vralign(pdst, range_val, binsize):
     
     # example on how to open the pickle file
     # pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
@@ -60,53 +63,73 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
         centroids_y.append(centroid_y)
         areas.append(area); circumferences.append(circumference)
     areas = np.array(areas); circumferences = np.array(circumferences)
-    ############## GLM ##############
-    areas = scipy.ndimage.gaussian_filter(areas,1.5)
-    licks = scipy.ndimage.gaussian_filter(vralign['licks'],5)    
+    areas = scipy.signal.savgol_filter(areas,5, 2)
+    centroids_x = scipy.signal.savgol_filter(centroids_x,5, 2)
+    centroids_y = scipy.signal.savgol_filter(centroids_y,5, 2)
+    licks_threshold = vralign['lickVoltage']<=-0.065 # manually threshold licks
+    licks = scipy.signal.savgol_filter(licks_threshold,10, 2) 
     velocity = vralign['forwardvel']
-    velocity = scipy.ndimage.gaussian_filter(vralign['licks'],3)
     nans, x = nan_helper(velocity)
     velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
+    velocity = scipy.signal.savgol_filter(velocity,10, 2)
+    # calculate acceleration
+    acc_ = np.diff(velocity)/np.diff(np.hstack(vralign['timedFF']))
+    # pad nans
+    acc=np.zeros_like(velocity)
+    acc[:-1]=acc_
+    acc = scipy.signal.savgol_filter(acc,10, 2)
+    speed = abs(velocity)
+    vralign['EyeNorthEast_y'][vralign['EyeNorthEast_likelihood']<0.75]=0 # filter out low prob
+    eyelid = vralign['EyeNorthEast_y']
+    eyelid = scipy.signal.savgol_filter(eyelid,10, 2)
     speed = abs(vralign['forwardvel'])
     nans, x = nan_helper(speed)
     speed[nans]= np.interp(x(nans), x(~nans), speed[~nans])
-    # removes repeated frames of reward delivery (to not double the number of trials)
-    rewards = consecutive_stretch(np.where(vralign['rewards']>1)[0])
-    rewards = [min(xx) for xx in rewards]
-    cs = np.zeros_like(vralign['rewards'])
-    cs[rewards] = 1
-    X = np.array([velocity, speed, licks]).T # Predictor(s)
+
+    X = np.array([velocity, speed, acc, licks, eyelid]).T # Predictor(s)
     X = sm.add_constant(X) # Adds a constant term to the predictor(s)
     y = areas # Outcome
     # Fit a regression model
     model = sm.GLM(y, X, family=sm.families.Gaussian())
     result = model.fit()
     areas_res = result.resid_pearson
-    # areas_pred = result.predict(X)
+    y = centroids_x # Outcome
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    centroids_x_res = result.resid_pearson
+    y = centroids_y # Outcome
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    centroids_y_res = result.resid_pearson
     ############## GLM ##############
+<<<<<<< HEAD
     # run peri reward time & plot
     range_val = 10 #s
     binsize = 0.05 #s
+=======
+    # run peri reward time & plot    
+>>>>>>> 04d17cd607da5e527842bbcbba9d096c044e3dd8
     input_peri = areas_res
+    rewards = vralign["rewards"]
     normmeanrew_t, meanrew, normrewall_t, \
     rewall = perireward_binned_activity(np.array(input_peri), \
-                            cs.astype(int), 
+                            rewards.astype(int), 
                             vralign['timedFF'], range_val, binsize)
 
     normmeanlicks_t, meanlicks, normlickall_t, \
-    lickall = perireward_binned_activity(vralign['licks'], \
-                    cs.astype(int), 
+    lickall = perireward_binned_activity(licks_threshold, \
+                    rewards.astype(int), 
                     vralign['timedFF'], range_val, binsize)
     normmeanvel_t, meanvel, normvelall_t, \
-    velall = perireward_binned_activity(vralign['forwardvel'], \
-                    cs.astype(int), 
+    velall = perireward_binned_activity(velocity, \
+                    rewards.astype(int), 
                     vralign['timedFF'], range_val, binsize)
 
-    # TODO: add to pickle structure
-    return areas, circumferences, centroids_x, centroids_y, normmeanrew_t, \
-            normrewall_t, normmeanlicks_t, meanlicks, normlickall_t, \
-            lickall, normmeanvel_t, meanvel, normvelall_t, \
-            velall
+    
+    return areas, circumferences, centroids_x_res, centroids_y_res, \
+    meanrew, rewall, meanlicks, meanvel
 
 def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
     pose_name, savedst, success=True):
