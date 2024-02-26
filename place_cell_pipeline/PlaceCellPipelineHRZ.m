@@ -14,7 +14,7 @@ clear all;
 an = 'e217';
 % individual day analysis 
 % dys = [27:30, 32:3 4,36,38,40:75];
-dys = [13:16];%[37:42];%[33,35:42];
+dys = [20];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
 src = 'X:\vipcre'; % folder where fall is
@@ -87,10 +87,18 @@ for dy=dys % for loop per day
     end
 %     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
 %     else
+        % get place cells only
+        pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
+        pc = logical(iscell(:,1));
+        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
+        bordercells_pc = bordercells(pc); % mask border cells
+        fc3_pc = Fc3(eprng,pc); % only iscell
+        fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
+        fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+
         [tuning_curves, coms] = make_tuning_curves(eps, changeRewLoc, trialnum, rewards, ...
             ybinned, gainf, ntrials,... # makes tuning curves based on last n trials (successful only)
-            licks, forwardvel, thres, Fs, ftol, bin_size, track_length, stat, ...
-            iscell, plns, Fc3, putative_pcs);
+            licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc);
         fprintf('********calculated tuning curves!********\n')
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

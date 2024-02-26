@@ -86,11 +86,7 @@ def get_area_circumference_from_vralign(pdst, gainf, rewsize):
     ############## GLM ##############
     # run peri reward time & plot
     range_val = 10 #s
-<<<<<<< HEAD
     binsize = 0.05 #s
-=======
-    binsize = 0.1 #s
->>>>>>> 13ec67ba743eea6223afb8bfff43a32d53e7c157
     input_peri = areas_res
     normmeanrew_t, meanrew, normrewall_t, \
     rewall = perireward_binned_activity(np.array(input_peri), \
@@ -216,7 +212,8 @@ def consecutive_stretch(x):
 
     y = [x[:break_point[0]]]
     for i in range(1, len(break_point)):
-        y.append(x[break_point[i - 1] + 1:break_point[i]])
+        xx = x[break_point[i - 1] + 1:break_point[i]]
+        y.append(xx)
     y.append(x[break_point[-1] + 1:])
     
     return y

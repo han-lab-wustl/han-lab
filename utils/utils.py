@@ -84,6 +84,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
     #dont copy weeks if not specified
     # if not weeks:
     #     weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
+    if not days: days = []
     days = list(days)
     days.sort()
     # move all converted fmats to separate folder

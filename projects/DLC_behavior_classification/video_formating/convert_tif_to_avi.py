@@ -16,18 +16,11 @@ import SimpleITK as sitk, re
 from avi import read_to_memmap, vidwrite
 if __name__ == "__main__":
     delete_fld = True # deletes tif folder
-<<<<<<< HEAD
-    src = r"F:\240129-240204"
+    src = r"G:\240219-240225"
     # checkdst = r"I:\eye_videos"
     # dst = r"I:\eye_videos"
-    dst = r"K:\tail_videos"
-    checkdst = r"K:\tail_videos"
-=======
-
-    src = r"F:\tail\240205-240211"
     dst = r"Y:\videos_temp\tail"
-    checkdst = r"Y:\videos_temp\tail"#r"\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos"
->>>>>>> 03257286f1285e1a4af2ef484af53f0470f37fb3
+    checkdst = r"Y:\videos_temp\tail"
 
     vids = listdir(src)
     print(vids)

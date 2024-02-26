@@ -92,7 +92,7 @@ def main(**args):
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
         tifspths.sort(); print(tifspths)
         #savedir
-        params["savedir"] = "X:\sstcre_imaging" #TODO: make var
+        params["savedir"] = "X:\weekly_concat" #TODO: make var
         weekdir = os.path.join(params["savedir"],params["mouse_name"], \
             "week"+str(params["week"])); makedir(weekdir)    
         #do suite2p after tifs are made

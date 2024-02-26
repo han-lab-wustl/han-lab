@@ -5,7 +5,7 @@ function [savepth, cellmap2dayacrossweeks] = plot_tracked_cells_week2day(src, an
 % get cells detected in cellreg and do analysis
 % find cells detected in all 4 weeks (transform 1)
 % we want to keep all these cells
-weekdst = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
+weekdst = dir(fullfile(src, sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 weeks = load(fullfile(weekdst.folder,weekdst.name));
 % find cells in all sessions
 [r,c] = find(weeks.cell_registered_struct.cell_to_index_map~=0); % exclude week 1
@@ -20,7 +20,7 @@ end
 % % find those cells that map to atleast 1 day 
 wkcount = 1;
 for week=weeknms % for e201, excluded week 1
-    week2daynm = dir(fullfile(src, "celltrack", sprintf([animal, '_', ...
+    week2daynm = dir(fullfile(src, sprintf([animal, '_', ...
         'week%02d_plane0_to_days'], week), ...
         "Results\*cellRegistered*"));
     week2day = load(fullfile(week2daynm.folder,week2daynm.name));
@@ -42,7 +42,7 @@ for week=weeknms % for e201, excluded week 1
     wkcount=wkcount+1; % add to counter because week numbers do not always start from 1
 end
 
-weektodays = dir(fullfile(src, "celltrack", sprintf([animal, '_', 'week*_to_days'])));
+weektodays = dir(fullfile(src, sprintf([animal, '_', 'week*_to_days'])));
 week_maps = cell(1,length(weeknms));
 wkcount = 1;
 for i=weeknms
@@ -93,8 +93,6 @@ for fl=1:length(fls)
     dy = fls(fl);
     days{fl} = load(fullfile(dy.folder,dy.name)) ; %'ops', 'stat', 'dFF'
 end
-cc=cellmap2dayacrossweeks;
-sessions_total=length(days);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%% figures for validation %%%%%%%%%%%%%%%%%%%%%%

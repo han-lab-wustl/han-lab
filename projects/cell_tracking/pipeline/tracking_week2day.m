@@ -47,9 +47,7 @@ if exist(figures_directory,'dir')~=7
 end
 
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
-fld = sprintf(pthstr, animal, ...
-    week, plane); % make sure week folder exists & is populated
-fls = dir(fullfile(src, fld)); 
+fls = dir(fullfile(pth, pthstr)); 
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 reference_session_index=number_of_sessions; 

@@ -1,10 +1,9 @@
 function [tuning_curves, coms] = make_tuning_curves(eps, changeRewLoc, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, stat, iscell, plns, Fc3, putative_pcs)
+    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc)
 nbins = track_length/bin_size;
 % TODO: incorporate multi planes
 % for pln=plns
 rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
-pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
 tuning_curves = {}; coms = {};
 for ep=1:length(eps)-1
     % per ep
@@ -44,12 +43,6 @@ for ep=1:length(eps)-1
 
         % make bins via suyash method
         %     pc = putative_pcs{1};
-        pc = logical(iscell(:,1));
-        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
-        bordercells_pc = bordercells(pc); % mask border cells
-        fc3_pc = Fc3(eprng,pc); % only iscell
-        fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
-        fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         % smooth
         fc3_pc = smoothdata(fc3_pc, 'gaussian', 3);
         % activity binning
