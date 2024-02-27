@@ -1,9 +1,8 @@
-function [tuning_curves, coms] = make_tuning_curves(eps, changeRewLoc, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc)
+function [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
+    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc)
 nbins = track_length/bin_size;
 % TODO: incorporate multi planes
 % for pln=plns
-rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
 tuning_curves = {}; coms = {};
 for ep=1:length(eps)-1
     % per ep
@@ -47,12 +46,16 @@ for ep=1:length(eps)-1
         fc3_pc = smoothdata(fc3_pc, 'gaussian', 3);
         % activity binning
         cell_activity = zeros(nbins, size(fc3_pc,2));
+        % to get accurate coms
+        cell_activity_dff = zeros(nbins, size(fc3_pc,2));
         for i = 1:size(fc3_pc,2)
             for bin = 1:nbins
                 cell_activity(bin,i) = mean(fc3_pc(time_in_bin{bin},i));
+                cell_activity_dff(bin,i) = mean(dff_pc(time_in_bin{bin},i));
             end
         end
         cell_activity(isnan(cell_activity)) = 0;
+        cell_activity_dff(isnan(cell_activity_dff)) = 0;
 
         %             if ep == 1 % sort by ep 1
         %                 %         % sort by max value
@@ -74,8 +77,20 @@ for ep=1:length(eps)-1
         %             end
     end
     % overwrite ep with previous ep if eprng does not exist
-    tuning_curves{ep} = cell_activity;
-    coms{ep} = calc_COM_EH(cell_activity',bin_size);
+    tuning_curves{ep} = cell_activity';
+    median_com = calc_COM_EH(cell_activity',bin_size);
+    % sort by max value
+    peak = zeros(1, size(cell_activity,2));
+    for c=1:size(cell_activity,2)
+    f = cell_activity(:,c);
+    if sum(f)>0
+        [peakval,peakbin] = max(f);
+        peak(c) = peakbin*bin_size;
+    else
+        peak(c) = 0;
+    end
+    end
+    coms{ep} = median_com;
 end
 % end
 end
