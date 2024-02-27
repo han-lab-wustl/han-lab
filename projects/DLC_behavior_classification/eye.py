@@ -104,13 +104,9 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
     result = model.fit()
     centroids_y_res = result.resid_pearson
     ############## GLM ##############
-<<<<<<< HEAD
     # run peri reward time & plot
     range_val = 10 #s
     binsize = 0.05 #s
-=======
-    # run peri reward time & plot    
->>>>>>> 04d17cd607da5e527842bbcbba9d096c044e3dd8
     input_peri = areas_res
     rewards = vralign["rewards"]
     normmeanrew_t, meanrew, normrewall_t, \

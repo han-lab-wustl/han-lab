@@ -1,4 +1,4 @@
-function [tuning_curves, coms] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
+function [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc)
 nbins = track_length/bin_size;
 % TODO: incorporate multi planes
@@ -43,6 +43,8 @@ for ep=1:length(eps)-1
         % make bins via suyash method
         %     pc = putative_pcs{1};
         % smooth
+        fc3_pc = fc3_pc(eprng,:); 
+        dff_pc = 
         fc3_pc = smoothdata(fc3_pc, 'gaussian', 3);
         % activity binning
         cell_activity = zeros(nbins, size(fc3_pc,2));
@@ -78,18 +80,19 @@ for ep=1:length(eps)-1
     end
     % overwrite ep with previous ep if eprng does not exist
     tuning_curves{ep} = cell_activity';
-    coms{ep} = calc_COM_EH(cell_activity',bin_size);
+    median_com = calc_COM_EH(cell_activity',bin_size);
     % sort by max value
     peak = zeros(1, size(cell_activity,2));
     for c=1:size(cell_activity,2)
     f = cell_activity(:,c);
     if sum(f)>0
         [peakval,peakbin] = max(f);
-        peak(c) = peakbin;
+        peak(c) = peakbin*bin_size;
     else
-        peak(c) = 1;
+        peak(c) = 0;
     end
     end
+    coms{ep} = median_com;
 end
 % end
 end

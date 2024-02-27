@@ -1,5 +1,5 @@
 function [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc)
+    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3, dff)
 nbins = track_length/bin_size;
 % TODO: incorporate multi planes
 % for pln=plns
@@ -43,7 +43,9 @@ for ep=1:length(eps)-1
         % make bins via suyash method
         %     pc = putative_pcs{1};
         % smooth
-        fc3_pc = smoothdata(fc3_pc, 'gaussian', 3);
+        fc3_pc = fc3(eprng,:); 
+        dff_pc = dff(eprng, :);
+        % fc3_pc = smoothdata(fc3_pc, 'gaussian', 3);
         % activity binning
         cell_activity = zeros(nbins, size(fc3_pc,2));
         % to get accurate coms

@@ -9,17 +9,17 @@
 % make tuning curves, etc. uses median com
 
 % this run script mostly makes plots but calls other functions
-% add han-lab and han-lab-archive repos to path!
+% add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e217';
+an = 'e218';
 % individual day analysis 
 % dys = [27:30, 32:3 4,36,38,40:75];
-dys = [20];%[37:42];%[33,35:42];
+dys = [20:50];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
-src = 'X:\vipcre'; % folder where fall is
+% src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-% src = 'Y:\sstcre_analysis\fmats';
+src = 'Y:\analysis\fmats';
 % pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
@@ -30,8 +30,8 @@ pptx    = exportToPPTX('', ... % make new file
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-%     pth = dir(fullfile(src, an, 'days', sprintf('*_day%03d*plane0*', dy)));
+    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -92,13 +92,13 @@ for dy=dys % for loop per day
         pc = logical(iscell(:,1));
         [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
         bordercells_pc = bordercells(pc); % mask border cells
-        fc3_pc = Fc3(eprng,pc); % only iscell
-        fc3_pc = fc3_pc(:,~bordercells_pc); % remove border cells
+        fc3_pc = Fc3(:,~bordercells_pc); % remove border cells
         fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        dff_pc = dFF(:,~bordercells_pc); % remove border cells
+        dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
 
-        [tuning_curves, coms] = make_tuning_curves(eps, changeRewLoc, trialnum, rewards, ...
-            ybinned, gainf, ntrials,... # makes tuning curves based on last n trials (successful only)
-            licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc);
+        [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
+    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc);
         fprintf('********calculated tuning curves!********\n')
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -111,8 +111,8 @@ for dy=dys % for loop per day
             pvals  = ep_comp_pval(:,3);
             p = pvals(i);
         else
-            [p,h,s,~,~] = do_tuning_curve_ranksum_test(tuning_curves{comparison(1)}', ...
-                tuning_curves{comparison(2)}');
+            [p,h,s,~,~] = do_tuning_curve_ranksum_test(tuning_curves{comparison(1)}, ...
+                tuning_curves{comparison(2)});
             pvals(i) = p;
         end
         disp(p)        
@@ -121,7 +121,7 @@ for dy=dys % for loop per day
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 1%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         fig = figure('Renderer', 'painters');
         subplot(1,2,1)
-        plt = tuning_curves{comparison(1)}';
+        plt = tuning_curves{comparison(1)};
         [~,sorted_idx] = sort(coms{comparison(1)}); % sorts first tuning curve rel to another
         imagesc(normalize(plt(sorted_idx,:),2));
         % plot rectangle of rew loc
@@ -135,7 +135,7 @@ for dy=dys % for loop per day
         title(sprintf('epoch %i', comparison(1)))
         hold on;
         subplot(1,2,2)
-        plt = tuning_curves{comparison(2)}';
+        plt = tuning_curves{comparison(2)};
         imagesc(normalize(plt(sorted_idx,:),2));
         % plot rectangle of rew loc
         % everything divided by 3 (bins of 3cm)
@@ -176,7 +176,7 @@ for dy=dys % for loop per day
     fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
     for ep=1:length(eps)-1
         subplot(1,length(eps)-1,ep)
-        plt = tuning_curves{ep}';
+        plt = tuning_curves{ep};
         % sort all by ep 1
         [~,sorted_idx] = sort(coms{1});
         imagesc(normalize(plt(sorted_idx,:),2));

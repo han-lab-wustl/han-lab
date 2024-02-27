@@ -12,15 +12,15 @@ tracked_dys = [1 2 3 4 16:26 28:31]; % corresponding to days analysing
 opto_ep = [-1 -1 -1 -1 3 0 1 2 0 1 3 0 1 2 0 3 0 1 2];
 
 mouse_name = 'e216';
-dys = [37 38 39 40 41 42 43 44 45 46 47 48 50:63, 65];
-tracked_dys = [5:16,18:32];
-opto_ep = [2 -1 0 1 3 -1 -1 -1 0 1 1 2 3 0 1 2 3 0 1 2 0 1 3 0 2 0 2]; % corresponding to days analysing
+dys = [37 38 39 40 41 42 43 44 45 46 47 48 50:53, 55:63, 65];
+tracked_dys = [5:16,18:21, 23:32];
+opto_ep = [2 -1 0 1 3 -1 -1 -1 0 1 1 2 3 0 1 2 0 1 2 0 1 3 0 2 0 2]; % corresponding to days analysing
 %%
 for dy=1:length(dys)
     clearvars -except dy src mouse_name dys cc opto_ep tracked_dys
     daypth = dir(fullfile(src, mouse_name, 'days', sprintf('%s_day%03d*.mat', mouse_name, dys(dy)))); 
     load(fullfile(daypth.folder,daypth.name));
-    if exist('tracked_cells_dff_fc3_table', 'var')~=1
+    % if exist('tracked_cells_dff_fc3_table', 'var')~=1
     pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
     tracked_cells = cc(:,tracked_dys(dy));    
     % get activity on opto ep
@@ -51,7 +51,7 @@ for dy=1:length(dys)
     % previous ep
     optoep = optoep-1;
     eprng = eps(optoep):eps(optoep+1);    
-    eprng = eprng(ybinned(eprng)<rewlocs(optoep+1)-rewsize); % compare to ybinned of the opto ep
+    eprng = eprng(ybinned(eprng)<rewlocs(optoep)-rewsize); % compare to pre-reward of previous epoch
     tracked_cell_iind = 1:length(tracked_cells);
     tracked_cells_this_day_iind = tracked_cell_iind(tracked_cells>0); % important var to save
     dff_tracked_cells = dFF(eprng,  tracked_cells(tracked_cells>0));
@@ -68,7 +68,7 @@ for dy=1:length(dys)
         'auc_transients_per_cell_opto'});
     save(fullfile(daypth.folder,daypth.name), 'tracked_cells_dff_fc3_table', '-append')
     disp(fullfile(daypth.folder,daypth.name))
-    end
+    % end
     % pciind = 1:size(dFF,2);
     % pc = logical(iscell(:,1));
     % pciind = pciind(pc);
@@ -156,8 +156,8 @@ title('Control Sessions')
 sgtitle('Ordered by max difference in opto sessions')
 %%
 iind_to_test = 1:length(diffmatopto);
-iind_to_test = iind_to_test(sum(diffmatopto<0,2,'omitnan')>=dim_opto/2); % ctrl is higher
-save('X:\vip_tracked_cells_diff_neg_e218.mat', 'iind_to_test')
+iind_to_test = iind_to_test(sum(diffmatopto>0,2,'omitnan')>=3); % ctrl is higher
+save('X:\vip_tracked_cells_diff_pos_e218.mat', 'iind_to_test')
 load('X:\vip_tracked_cells_diff_pos_e218.mat')
 % for ii=iind_to_test%size(mat_,1)
 %     prev = optomat(ii,1:dim_opto); opto = optomat(ii,dim_opto+1:dim_opto+dim_opto);
@@ -170,8 +170,10 @@ load('X:\vip_tracked_cells_diff_pos_e218.mat')
 % end
 % yticks(1:length(sortidx)); yticklabels(sortidx)
 %%
+% TDO: fix com median code to prevent nans
+% TODO: look at cells with coms 40 cm pre-reward and compare
 close all
-mouse_name = 'e218';
+mouse_name = 'e216';
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
     'Title','tuning curves of decreased activity cells', ...
@@ -270,4 +272,4 @@ for dy=1:length(dys)
     coms_tracked_cells_pos{dy} = coms;
     save(fullfile(daypth.folder,daypth.name), 'tuning_curves_tracked_cells_pos', 'coms_tracked_cells_pos', '-append');   
 end
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_tracked_cells_decreased_inopto',mouse_name)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_tracked_cells_increased_inopto',mouse_name)));
