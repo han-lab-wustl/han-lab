@@ -6,6 +6,37 @@ import numpy as np
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import auc
+
+def get_rewzones(rewlocs, gainf):
+    # Initialize the reward zone numbers array with zeros
+    rewzonenum = np.zeros(len(rewlocs))
+    
+    # Iterate over each reward location to determine its reward zone
+    for kk, loc in enumerate(rewlocs):
+        if loc <= 86 * gainf:
+            rewzonenum[kk] = 1  # Reward zone 1
+        elif 101 * gainf <= loc <= 120 * gainf:
+            rewzonenum[kk] = 2  # Reward zone 2
+        elif loc >= 135 * gainf:
+            rewzonenum[kk] = 3  # Reward zone 3
+            
+    return rewzonenum
+
+def consecutive_stretch(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+
+    if len(break_point) == 0:
+        return [x]
+
+    y = [x[:break_point[0]]]
+    for i in range(1, len(break_point)):
+        xx = x[break_point[i - 1] + 1:break_point[i]]
+        y.append(xx)
+    y.append(x[break_point[-1] + 1:])
+    
+    return y
 
 def normalize_tuning_curve(tuning_curve):
     """
@@ -22,8 +53,7 @@ def normalize_tuning_curve(tuning_curve):
     normalized = (tuning_curve - min_val) / (max_val - min_val)
     return normalized
 
-
-def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshold):
+def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """
     Identify cells that are differentially inactivated between two conditions.
     
@@ -35,9 +65,53 @@ def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshol
     Returns:
     np.ndarray: Indices of cells considered differentially inactivated.
     """
-    # Calculate the mean activity across bins for each cell in each condition
-    mean_activity1 = np.mean(tuning_curve1, axis=1)
-    mean_activity2 = np.mean(tuning_curve2, axis=1)
+    # Calculate the AUC across bins for each cell in each condition
+    auc_tc1 = []; auc_tc2 = []
+    for cll in range(tuning_curve1.shape[0]):
+        transients = consecutive_stretch(np.where(tuning_curve1[cll,:]>0)[0])
+        transients = [xx for xx in transients if len(xx)>0]
+        auc_tc1.append(np.nanmean([np.trapz(tuning_curve1[cll,tr],dx=binsize) for tr in transients]))
+    for cll in range(tuning_curve2.shape[0]):
+        transients = consecutive_stretch(np.where(tuning_curve2[cll,:]>0)[0])
+        transients = [xx for xx in transients if len(xx)>0]
+        auc_tc2.append(np.nanmean([np.trapz(tuning_curve2[cll,tr],dx=binsize) for tr in transients]))
+    
+    mean_activity1 = np.array(auc_tc1)
+    mean_activity2 = np.array(auc_tc2)
+    
+    # Find the difference in mean activity between conditions
+    activity_diff = mean_activity1 - mean_activity2
+    
+    differentially_activated_cells = np.where(activity_diff < -threshold)[0]
+    
+    return differentially_activated_cells
+
+
+def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
+    """
+    Identify cells that are differentially inactivated between two conditions.
+    
+    Parameters:
+    tuning_curve1 (np.ndarray): Tuning curve for condition 1 (cells x bins).
+    tuning_curve2 (np.ndarray): Tuning curve for condition 2 (cells x bins).
+    threshold (float): The threshold for considering a cell differentially inactivated.
+    
+    Returns:
+    np.ndarray: Indices of cells considered differentially inactivated.
+    """
+    # Calculate the AUC across bins for each cell in each condition
+    auc_tc1 = []; auc_tc2 = []
+    for cll in range(tuning_curve1.shape[0]):
+        transients = consecutive_stretch(np.where(tuning_curve1[cll,:]>0)[0])
+        transients = [xx for xx in transients if len(xx)>0]
+        auc_tc1.append(np.nanmean([np.trapz(tuning_curve1[cll,tr],dx=binsize) for tr in transients]))
+    for cll in range(tuning_curve2.shape[0]):
+        transients = consecutive_stretch(np.where(tuning_curve2[cll,:]>0)[0])
+        transients = [xx for xx in transients if len(xx)>0]
+        auc_tc2.append(np.nanmean([np.trapz(tuning_curve2[cll,tr],dx=binsize) for tr in transients]))
+    
+    mean_activity1 = np.array(auc_tc1)
+    mean_activity2 = np.array(auc_tc2)
     
     # Find the difference in mean activity between conditions
     activity_diff = mean_activity1 - mean_activity2
@@ -47,23 +121,6 @@ def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshol
     
     return differentially_inactivated_cells
 
-def plot_differential_activity(cells, tuning_curve1, tuning_curve2):
-    """
-    Plot tuning curves of differentially inactivated cells for visual inspection.
-    
-    Parameters:
-    cells (np.ndarray): Indices of cells to plot.
-    tuning_curve1, tuning_curve2 (np.ndarray): The two tuning curves (conditions).
-    """
-    for cell in cells:
-        plt.figure(figsize=(10, 4))
-        plt.plot(tuning_curve1[cell], label='Condition 1')
-        plt.plot(tuning_curve2[cell], label='Condition 2', linestyle='--')
-        plt.title(f'Cell {cell} Activity Comparison')
-        plt.xlabel('Spatial Bin')
-        plt.ylabel('Normalized Fluorescence')
-        plt.legend()
-        plt.show()
         
 def calculate_difference(tuning_curve1, tuning_curve2):
     """
@@ -155,13 +212,7 @@ if __name__ == "__main__":
     com = calc_COM_EH(spatial_act, bin_width)
     print("Interpolated COM of each cell's spatial activity in cm:", com)
 
-def consecutive_stretch(data):
-    """
-    Identifies consecutive stretches of numbers in a list.
-    """
-    return np.split(data, np.where(np.diff(data) != 1)[0]+1)
-
-def get_moving_time_V3(velocity, thres, Fs, ftol):
+def get_moving_time(velocity, thres, Fs, ftol):
     """
     Returns time points when the animal is considered moving based on the change in y position.
     """
@@ -208,9 +259,9 @@ def make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials, licks, f
         rew = rewards[eprng] > 0.5
         
         strials = np.full(len(np.unique(trn)), np.nan)
-        for trial in np.unique(trn):
+        for ii,trial in enumerate(np.unique(trn)):
             if trial >= 3 and trial >= max(trn) - ntrials:
-                strials[trial] = trial
+                strials[ii] = trial
         
         strials = strials[~np.isnan(strials)]
         mask = np.isin(trn, strials)
@@ -218,7 +269,7 @@ def make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials, licks, f
         
         if len(eprng) > 0:
             ypos = ybinned[eprng]
-            ypos = np.ceil(ypos * gainf)
+            ypos = ypos * gainf
             fv = forwardvel[eprng]
             time_moving, _ = get_moving_time_V3(fv, thres, Fs, ftol)
             ypos_mov = ypos[time_moving]
@@ -230,12 +281,11 @@ def make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials, licks, f
             
             cell_activity = np.zeros((nbins, fc3_pc.shape[1]))
             cell_activity_dff = np.zeros((nbins, fc3_pc.shape[1]))
-            
             for i in range(fc3_pc.shape[1]):
                 for bin_idx in range(nbins):
                     if len(time_in_bin[bin_idx]) > 0:
-                        cell_activity[bin_idx, i] = np.mean(fc3_pc[time_in_bin[bin_idx], i])
-                        cell_activity_dff[bin_idx, i] = np.mean(dff_pc[time_in_bin[bin_idx], i])
+                        cell_activity[bin_idx, i] = np.nanmean(fc3_pc[time_in_bin[bin_idx], i])
+                        cell_activity_dff[bin_idx, i] = np.nanmean(dff_pc[time_in_bin[bin_idx], i])
                     else:
                         cell_activity[bin_idx, i] = np.nan
                         cell_activity_dff[bin_idx, i] = np.nan

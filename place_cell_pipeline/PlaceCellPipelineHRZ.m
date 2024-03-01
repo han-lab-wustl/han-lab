@@ -11,15 +11,15 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e218';
+an = 'e217';
 % individual day analysis 
 % dys = [27:30, 32:3 4,36,38,40:75];
-dys = [20:50];%[37:42];%[33,35:42];
+dys = [23 24];%[37:42];%[33,35:42];
 % dys = [4:7,9:11];
 % dys = [1:51];
-% src = 'X:\vipcre'; % folder where fall is
+src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-src = 'Y:\analysis\fmats';
+% src = 'Y:\analysis\fmats';
 % pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
 pptx    = exportToPPTX('', ... % make new file
     'Dimensions',[12 6], ...
@@ -30,8 +30,8 @@ pptx    = exportToPPTX('', ... % make new file
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -54,7 +54,7 @@ for dy=dys % for loop per day
     thres = 5; % 5 cm/s is the velocity filter, only get
     % frames when the animal is moving faster than that
     ftol = 10; % number of frames length minimum to be considered stopped
-    ntrials = 8; % e.g. last 8 trials to compare    
+    ntrials = 5; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%
@@ -99,6 +99,9 @@ for dy=dys % for loop per day
 
         [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc);
+        % early trials
+        [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned, gainf,...
+    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
         fprintf('********calculated tuning curves!********\n')
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -195,12 +198,14 @@ for dy=dys % for loop per day
     sgtitle(sprintf(['animal %s, day %i'], an, dy))
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);        
-
+    close(fig)
+    tuning_curves_late_trials = tuning_curves;
     % also append fall with tables    
     ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...
         'VariableNames', {'ep_comparison1', 'ep_comparison2', 'cs_ranksum_pval', 'rewloc1', ...
         'rewloc2', 'rewzone_ep1', 'rewzone_ep2'});
-    save(fullfile(pth.folder,pth.name), 'ep_comp_pval', 'coms','tuning_curves', '-append')
+    save(fullfile(pth.folder,pth.name), 'ep_comp_pval', 'coms','tuning_curves_early_trials', ...
+        'tuning_curves_late_trials', 'coms_early_trials', '-append')
 end
 
 % save ppt

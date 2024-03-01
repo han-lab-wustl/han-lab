@@ -25,3 +25,18 @@ close all
 % pr_dir=uipickfiles;
 % run dff
 [params] = extract_dff_from_ROI_dopamine(pr_dir);
+%% - step 4 - align to behavior
+% based on zahra's directory structure
+% for dopamine
+clear all
+mouse_name = "e232";
+days = [11];
+src = "Z:\chr2_grabda";
+
+for day=days
+    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
+%     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
+    savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    disp(savepthfmat)
+end

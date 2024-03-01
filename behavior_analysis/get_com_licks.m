@@ -10,7 +10,7 @@ for tr=1:length(trials)
     lick = licks(trialnum==trials(tr));
     ypos = ybinned(trialnum==trials(tr));
     rew = rewards(trialnum==trials(tr));
-    % get position of rew
+        % get position of rew
     if success==1
         yposafterrew = ypos(find(rew==1,1));
         yposlick = ypos(lick(ypos<=yposafterrew));
