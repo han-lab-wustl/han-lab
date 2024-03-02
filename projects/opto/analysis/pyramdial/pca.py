@@ -10,10 +10,11 @@ from placecell import get_rewzones
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 #%%
 
-days_cnt_an1 = 10; days_cnt_an2=9
-animals = np.hstack([['e218']*(days_cnt_an1), ['e216']*(days_cnt_an2)])
-days = np.array([20,21,22,23, 35, 38, 41, 44, 47,50,7,8,9,37, 41, 48, 50, 54,57])#[20,21,22,23]#
-optoep = np.array([-1,-1,-1,-1, 3, 2, 3, 2,3, 2,-1,-1,-1,2, 3, 3, 2, 3,2])#[2,3,2,3]
+days_cnt_an1 = 10; days_cnt_an2=9; days_cnt_an3=8
+animals = np.hstack([['e218']*(days_cnt_an1), ['e216']*(days_cnt_an2), \
+                    ['e201']*(days_cnt_an3)])
+days = np.array([20,21,22,23, 35, 38, 41, 44, 47,50,7,8,9,37, 41, 48, 50, 54,57,52,53,54,55,56,57,58,59])#[20,21,22,23]#
+optoep = np.array([-1,-1,-1,-1, 3, 2, 3, 2,3, 2,-1,-1,-1,2, 3, 3, 2, 3,2,-1, -1, -1, 2, 3, 0, 2, 3])#[2,3,2,3]
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
 # corresponding to days analysing
@@ -107,29 +108,33 @@ plt.figure()
 ax = sns.stripplot(x="condition", y="frac_pc", hue="opto", data=bigdf)
 ax.tick_params(axis='x', labelrotation=90)
 
-from scipy.stats import ttest_rel, ttest_ind
+import scipy
+from scipy.stats import ttest_rel, ttest_ind, ranksums
 plt.figure()
 ax = sns.stripplot(x="opto", y="frac_pc", hue='rewzones', data=bigdf)
-ttest_rel(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
-ttest_ind(bigdf[(bigdf.opto==True) & (bigdf.rewzones=='rz_1.0')].frac_pc.values, bigdf[(bigdf.opto==False) &  (bigdf.rewzones=='rz_1.0')].frac_pc.values)
+scipy.stats.ttest_rel(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
+scipy.stats.mannwhitneyu(bigdf[(bigdf.opto==True) & (bigdf.rewzones=='rz_1.0')].frac_pc.values, bigdf[(bigdf.opto==False) &  (bigdf.rewzones=='rz_1.0')].frac_pc.values)
 
 #%%
 # plot coms of enriched cells    
-import matplotlib.pyplot as plt
+dcts_opto = np.array(dcts)[optoep>1]
+
 dfs=[]; dfs_diff = []
-for ii,dct in enumerate(dcts):
+for ii,dct in enumerate(dcts_opto):
     diff_rel_coms1=(dct['rel_coms1'][dct['difftc1']>1e-3])
     diff_rel_coms2=(dct['rel_coms2'][dct['difftc2']>1e-3])    
     df = pd.DataFrame(np.hstack([diff_rel_coms1, diff_rel_coms2]), columns = ['relative_com'])
     df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
     df['rewzones'] = np.hstack([[f'rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
-    if optoep[ii]>1:    
-        df['opto'] = np.hstack([[False]*len(diff_rel_coms1),[True]*len(diff_rel_coms2)])
-    else: 
-        df['opto'] = [False]*len(df)
+    df['animal'] = animals[optoep>1][ii]
+    # if optoep[ii]>1:    
+    df['opto'] = np.hstack([[False]*len(diff_rel_coms1),[True]*len(diff_rel_coms2)])
+    # else: 
+    #     df['opto'] = [False]*len(df)
     dfs.append(df)
 bigdf = pd.concat(dfs)
 # test 
+ttest_ind(bigdf[(bigdf.opto==True) & (bigdf.rewzones=='rz_1.0')].relative_com.values, bigdf[(bigdf.opto==False) &  (bigdf.rewzones=='rz_1.0')].relative_com.values)
     
 
 plt.figure()
@@ -139,8 +144,8 @@ ax.tick_params(axis='x', labelrotation=90)
 ax.axhline(0, color = 'slategray', linestyle='--')
 
 plt.figure()
-ax = sns.stripplot(x="condition", y="relative_com", hue="opto", data=bigdf, size=1)
-ax = sns.boxplot(x="condition", y="relative_com", hue="opto", data=bigdf, color='w')
+ax = sns.stripplot(x="animal", y="relative_com", hue="opto", data=bigdf, size=1)
+ax = sns.boxplot(x="animal", y="relative_com", hue="opto", data=bigdf, color='w')
 ax.tick_params(axis='x', labelrotation=90)
 ax.axhline(0, color = 'slategray', linestyle='--')
 #%%

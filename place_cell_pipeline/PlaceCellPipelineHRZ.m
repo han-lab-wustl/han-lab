@@ -11,17 +11,13 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e217';
+an = 'e186';
 % individual day analysis 
-% dys = [27:30, 32:3 4,36,38,40:75];
-dys = [23 24];%[37:42];%[33,35:42];
-% dys = [4:7,9:11];
-% dys = [1:51];
-src = 'X:\vipcre'; % folder where fall is
+dys = [2:5,31,32,33];
+% src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-% src = 'Y:\analysis\fmats';
-% pptx    = exportToPPTX(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_opto',an)));
-pptx    = exportToPPTX('', ... % make new file
+src = 'Y:\analysis\fmats';
+pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
     'Author','zahra', ...
@@ -30,8 +26,8 @@ pptx    = exportToPPTX('', ... % make new file
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -58,6 +54,7 @@ for dy=dys % for loop per day
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%
+    %% step 1 - calculate dff
     if exist('dFF', 'var')==1
     else % make dff and fc3
         fprintf('********calculating dFF and Fc3********\n')
@@ -77,6 +74,7 @@ for dy=dys % for loop per day
     eps = [eps length(changeRewLoc)];    
     rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
     rewzonenum = get_rewzones(rewlocs, gainf); % get rew zone identity too:  a=[{67:86} {101:120} {135:154}];
+    %% step 2 - get places cells per ep
     if exist('putative_pcs', 'var')==1
     else % run place cell shuffle on only iscell and excludes bordercells
         fprintf('******** \n calculating place cells based on spatial  info shuffle, \n this may take a while...\n********')
@@ -106,6 +104,7 @@ for dy=dys % for loop per day
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % do per ep comparison
+    %% step 3 - compare epochs
     comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
     rewloccomp = zeros(size(comparisons,1),2); rewzonecomp = zeros(size(comparisons,1),2);
     for i=1:size(comparisons,1)
@@ -174,6 +173,7 @@ for dy=dys % for loop per day
         rewzonecomp(i,:) = [rewzonenum(comparison(1)) rewzonenum(comparison(2))]';
     end    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 3%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% step 4 - make summary fig for epoch comparisons
     slideId = pptx.addSlide();
     fprintf('Added slide %d\n',slideId);
     fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
