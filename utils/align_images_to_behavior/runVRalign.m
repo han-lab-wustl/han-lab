@@ -46,11 +46,11 @@ end
 
 clear all;
 mouse_name = "e201";
-days = [32:34,36,38,40:43];
+days = [53,54];
 % days = [55:75];
 % src = "Z:\sstcre_imaging";
-src = "G:\sstcre_imaging";
-fmatsrc = "Y:\sstcre_analysis\fmats";
+src = "Z:\sstcre_imaging";
+fmatsrc = "Y:\analysis\fmats";
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 

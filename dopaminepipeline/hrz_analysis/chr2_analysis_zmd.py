@@ -30,17 +30,18 @@ plt.close('all')
 
 src = r"Z:\chr2_grabda\e232"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(os.path.dirname(src),"peri_analysis.pdf"))
-days = [4,5,6,8,9,10,11]
+days = [10,11,12]
 rewloc = 123*1.5
 newrewloc = rewloc
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 for day in days: 
     if day>8: newrewloc = 65*1.5
-    if day>10: rewloc = 65*1.5 # memory rew loc
+    if day>11: rewloc = 65*1.5 # memory rew loc
     # for each plane
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
         params = scipy.io.loadmat(path)
+        gainf = params['VR']
         planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
         pln = int(planenum[-1])
         layer = planelut[pln]
@@ -77,7 +78,7 @@ for day in days:
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = eye.perireward_binned_activity(dff[:firstrew], rews_centered, timedFF[:firstrew], range_val, binsize)
         
-        # peri reward
+        # peri reward initial probes
         fig, axes = plt.subplots(nrows=2,ncols=1)#,gridspec_kw={'width_ratios':[4,1]})
         ax = axes[0]
         ax.imshow(normrewdFF)
@@ -97,6 +98,9 @@ for day in days:
         min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
         rews_centered = np.zeros_like(ybinned)
         rews_centered[min_iind]=1
+
+        #TODO: peri reward fails 
+        #TODO: peri reward catch trials
 
         # all subsequent rews
         normmeanrewdFF, meanrewdFF, normrewdFF, \

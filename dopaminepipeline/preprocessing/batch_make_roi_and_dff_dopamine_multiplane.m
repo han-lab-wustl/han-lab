@@ -30,7 +30,7 @@ close all
 % for dopamine
 clear all
 mouse_name = "e232";
-days = [11];
+days = [12];
 src = "Z:\chr2_grabda";
 
 for day=days
