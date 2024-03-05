@@ -22,6 +22,7 @@ set_reference_polygons_dopamine(pr_dir, pr_dirref, days_check, ref_exists)
 close all
 % extract base mean from all rois selected before
 % if you wanna pick files again, run the commented out line below
+% otherwise, runs on dir select for roi selection above
 % pr_dir=uipickfiles;
 % run dff
 [params] = extract_dff_from_ROI_dopamine(pr_dir);
@@ -30,7 +31,7 @@ close all
 % for dopamine
 clear all
 mouse_name = "e232";
-days = [12];
+days = [13];
 src = "Z:\chr2_grabda";
 
 for day=days

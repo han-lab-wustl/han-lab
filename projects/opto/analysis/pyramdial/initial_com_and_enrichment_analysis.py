@@ -10,17 +10,24 @@ from placecell import get_rewzones, find_differentially_activated_cells, find_di
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 #%%
 
-days_cnt_an1 = 10; days_cnt_an2=9; days_cnt_an3=24; days_cnt_an4=11; days_cnt_an5=8; days_cnt_an6=9
+days_cnt_an1 = 10; days_cnt_an2=9; days_cnt_an3=24; days_cnt_an4=11; days_cnt_an5=7; days_cnt_an6=9
+days_cnt_an7=19
 animals = np.hstack([['e218']*(days_cnt_an1), ['e216']*(days_cnt_an2), \
-                    ['e201']*(days_cnt_an3), ['e186']*(days_cnt_an4), ['e190']*(days_cnt_an5), ['e189']*(days_cnt_an6)])
+                    ['e201']*(days_cnt_an3), ['e186']*(days_cnt_an4), ['e190']*(days_cnt_an5), ['e189']*(days_cnt_an6), \
+                        ['e200']*days_cnt_an7])
 in_type = np.hstack([['vip']*(days_cnt_an1), ['vip']*(days_cnt_an2), \
-                    ['sst']*(days_cnt_an3), ['pv']*(days_cnt_an4), ['ctrl']*(days_cnt_an5), ['ctrl']*(days_cnt_an6)])
+                    ['sst']*(days_cnt_an3), ['pv']*(days_cnt_an4), ['ctrl']*(days_cnt_an5), ['ctrl']*(days_cnt_an6), \
+                        ['sst']*days_cnt_an7])
 days = np.array([20,21,22,23, 35, 38, 41, 44, 47,50,7,8,9,37, 41, 48, \
                 50, 54,57,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,\
-                2,3,4,5,31,32,33,34,36,37,40,33,34,35,40,41,42,43,45,35,36,37,38,39,40,41,42,44])#[20,21,22,23]#
-optoep = np.array([-1,-1,-1,-1, 3, 2, 3, 2,3, 2,-1,-1,-1,2, 3, 3, 2, 3,2, \
-                -1,-1,-1,2,3,0,2,3,0,2,3,0,2,3,0,2,3,0,2,3,0,2,3,3,-1,-1,-1,-1,2,3,2,3,2,3,2,-1, \
-        -1,-1,3,0,1,2,3,-1,-1,-1,-1,2,3, 2, 0, 2])#[2,3,2,3]
+                2,3,4,5,31,32,33,34,36,37,40,33,34,35,40,41,42,45,35,36,37,38,39,40,41,42,44, \
+                    65,66,67,68,69,70,72,73,74,76,81,82,83,84,85,86,87,88,89])#[20,21,22,23]#
+optoep = np.array([-1, -1, -1, -1,  3,  2,  3,  2,  3,  2, -1, -1, -1,  2,  3,  3,  2,
+        3,  2, -1, -1, -1,  2,  3,  0,  2,  3,  0,  2,  3,  0,  2,  3,  0,
+        2,  3,  0,  2,  3,  0,  2,  3,  3, -1, -1, -1, -1,  2,  3,  2,  3,
+        2,  3,  2, -1, -1, -1,  3,  0,  1,  3, -1, -1, -1, -1,  2,  3,  2,
+        0,  2,  2,  3,  0,  2,  3,  0,  3,  0,  2,  0,  2,  3,  0,  2,  3,
+        0,  2,  3,  0])#[2,3,2,3]
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
 # corresponding to days analysing
@@ -150,12 +157,18 @@ bigdf = pd.concat(dfs)
 # test 
 scipy.stats.ttest_ind(bigdf[(bigdf.opto==True) & (bigdf.rewzones=='rz_1.0')].relative_com.values, bigdf[(bigdf.opto==False) &  (bigdf.rewzones=='rz_1.0')].relative_com.values)
     
-
 plt.figure()
 ax = sns.stripplot(x="rewzones", y="relative_com", hue="opto", data=bigdf[bigdf.in_type == 'sst'], size=1)
 ax = sns.boxplot(x="rewzones", y="relative_com", hue="opto",fill=False, data=bigdf[bigdf.in_type == 'sst'])
 ax.tick_params(axis='x', labelrotation=90)
 ax.axhline(0, color = 'slategray', linestyle='--')
+
+plt.figure()
+ax = sns.stripplot(x="animal", y="relative_com", hue="opto", data=bigdf, size=1)
+ax = sns.boxplot(x="animal", y="relative_com", hue="opto", data=bigdf, fill=False)
+ax.tick_params(axis='x', labelrotation=90)
+ax.axhline(0, color = 'slategray', linestyle='--')
+
 
 plt.figure()
 ax = sns.stripplot(x="in_type", y="relative_com", hue="opto", data=bigdf, size=1)

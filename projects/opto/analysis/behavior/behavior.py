@@ -2,6 +2,32 @@ import numpy as np
 
 import numpy as np
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+def get_behavior_tuning_curve(ybinned, beh, bins=270):
+    """
+    Plot a lick tuning curve given a dataframe with position and lick columns.
+    
+    Parameters:
+    - df: pandas DataFrame containing the data.
+    - position_col: name of the column in df that contains the position data.
+    - lick_col: name of the column in df that contains the lick binary variable (1 for lick, 0 for no lick).
+    - bins: number of bins to divide the position data into for the curve.
+    """
+    df = pd.DataFrame()
+    df['position'] = ybinned
+    df['beh'] = beh
+    # Discretize the position data into bins
+    df['position_bin'] = pd.cut(df['position'], bins=bins, labels=False)
+    
+    # Calculate the lick probability for each bin
+    grouped = df.groupby('position_bin')['beh'].agg(['mean', 'count']).reset_index()
+    beh_probability = grouped['mean']  # This is the mean of the binary lick variable, which represents probability
+    
+    return grouped['position_bin'], beh_probability
+
 def get_rewzones(rewlocs, gainf):
     # Initialize the reward zone numbers array with zeros
     rewzonenum = np.zeros(len(rewlocs))
@@ -17,8 +43,8 @@ def get_rewzones(rewlocs, gainf):
             
     return rewzonenum
 
-def get_performance(opto_ep, epind, eps, trialnum, rewards, licks, \
-    ybinned, rewlocs):
+def get_performance(opto_ep, eps, trialnum, rewards, licks, \
+    ybinned, rewlocs, forwardvel, rewsize):
     # opto ep    
     eptotest = opto_ep-1 # matlab index (+1)
     eprng = range(eps[eptotest], eps[eptotest+1])
@@ -26,22 +52,30 @@ def get_performance(opto_ep, epind, eps, trialnum, rewards, licks, \
     reward_ = rewards[eprng]
     licks_ = licks[eprng]
     ybinned_ = ybinned[eprng]
-    rewloc = rewlocs[eptotest]    
+    forwardvel_ = forwardvel[eprng]
+    rewloc = np.ceil(rewlocs[eptotest]).astype(int)
     # Simulate the get_success_failure_trials, get_lick_selectivity, and get_com_licks functionality
-    success, fail, str, ftr, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
+    success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_opto = success / total_trials
+    pos_bin_opto, lick_probability_opto = get_behavior_tuning_curve(ybinned_, licks_)
+    # split into pre, rew, and post
+    lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize):int(rewloc+20)], \
+                    lick_probability_opto[int(rewloc+20):]]
     # previous ep
     eprng = range(eps[eptotest-1], eps[eptotest])
     trialnum_ = trialnum[eprng]
     reward_ = rewards[eprng]
     licks_ = licks[eprng]
     ybinned_ = ybinned[eprng]
-    rewloc = rewlocs[eptotest]
+    rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
     success, fail, str, ftr, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_prev = success / total_trials
-
+    pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
+    # split into pre, rew, and post
+    lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize)], lick_probability_prev[int(rewloc-rewsize):int(rewloc+20)], \
+                    lick_probability_prev[int(rewloc+20)::]]
     # Return a dictionary or multiple dictionaries containing your results
-    return rate_opto, rate_prev
+    return rate_opto, rate_prev, lick_prob_opto, lick_prob_prev
 
 
 

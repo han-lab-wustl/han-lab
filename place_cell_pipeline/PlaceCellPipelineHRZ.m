@@ -11,12 +11,12 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e200';
+an = '';
 % individual day analysis 
-dys = [65:70,72,73,74,76,81,82,83,84,85,86,87,88,89,80]; % opto = [-1 -1 -1 -1 2 3 2 3 2 3 2]
-% src = 'X:\vipcre'; % folder where fall is
+dys = [2:11]; % opto = [-1 -1 -1 -1 2 3 2 3 2 3 2]
+src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-src = 'Y:\analysis\fmats';
+% src = 'Y:\analysis\fmats';
 pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -26,8 +26,8 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
