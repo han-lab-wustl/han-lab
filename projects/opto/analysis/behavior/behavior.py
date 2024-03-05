@@ -70,7 +70,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
     success, fail, str, ftr, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_prev = success / total_trials
-    pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
+    pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_, 135)
     # split into pre, rew, and post
     lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize)], lick_probability_prev[int(rewloc-rewsize):int(rewloc+20)], \
                     lick_probability_prev[int(rewloc+20)::]]
@@ -81,7 +81,6 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
 
 def get_success_failure_trials(trialnum, reward):
     """
-    Convert MATLAB function to Python.
     Counts the number of success and failure trials.
 
     Parameters:

@@ -29,15 +29,13 @@ close all
 %% - step 4 - align to behavior
 % based on zahra's directory structure
 % for dopamine
-clear all
-mouse_name = "e232";
-days = [13];
-src = "Z:\chr2_grabda";
+close all
 
-for day=days
-    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
+for dy=1:length(pr_dir)
+    src = fileparts(pr_dir{dy});
+    daypth = dir(fullfile(src, "**\behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
+    fmatfl = dir(fullfile(src, '**\params.mat')); 
     savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end

@@ -172,7 +172,7 @@ ax.axhline(0, color = 'slategray', linestyle='--')
 
 plt.figure()
 ax = sns.stripplot(x="in_type", y="relative_com", hue="opto", data=bigdf, size=1)
-ax = sns.boxplot(x="in_type", y="relative_com", hue="opto", data=bigdf, fill=False)
+ax = sns.boxplot(x="animal", y="relative_com", hue="opto", data=bigdf, fill=False)
 ax.tick_params(axis='x', labelrotation=90)
 ax.axhline(0, color = 'slategray', linestyle='--')
 #%%
@@ -255,7 +255,7 @@ scipy.stats.kruskal(bigdf.loc[bigdf.in_type=='vip', 'inactive_frac'].values, \
                     bigdf.loc[bigdf.in_type=='vip', 'active_frac'].values, \
                     bigdf.loc[bigdf.in_type!='vip', 'inactive_frac'].values, \
                     bigdf.loc[bigdf.in_type!='vip', 'active_frac'].values)
-bi
+
 import scikit_posthocs as sp
 # using the posthoc_dunn() function
 p_values= sp.posthoc_dunn([bigdf.loc[bigdf.in_type=='vip', 'inactive_frac'].values, \
