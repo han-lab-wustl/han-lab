@@ -30,7 +30,7 @@ plt.close('all')
 
 src = r"Z:\chr2_grabda\e232"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(os.path.dirname(src),"peri_analysis.pdf"))
-days = [4,5,6,8,9,10,11,12,13,14]
+days = [4,5,6,8,9,10,11,12,13,14,15]
 rewloc = 123*1.5
 newrewloc = rewloc
 range_val = 10; binsize=0.2
@@ -38,6 +38,7 @@ planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 for day in days: 
     if day>8: newrewloc = 65*1.5
     if day>11: rewloc = 65*1.5 # memory rew loc
+    if day>14: rewloc = 91*1.5 # memory rew loc
     # for each plane
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
         params = scipy.io.loadmat(path)
@@ -57,7 +58,7 @@ for day in days:
         # plot pre-first reward dop activity    
         firstrew = np.where(rewards==1)[0][0]
         rews_centered = np.zeros_like(ybinned[:firstrew])
-        rews_centered[(ybinned[:firstrew] > rewloc-2) & (ybinned[:firstrew] < rewloc+2)]=1
+        rews_centered[(ybinned[:firstrew] >= rewloc-3) & (ybinned[:firstrew] <= rewloc+3)]=1
         rews_iind = consecutive_stretch(np.where(rews_centered)[0])
         min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
         rews_centered = np.zeros_like(ybinned[:firstrew])

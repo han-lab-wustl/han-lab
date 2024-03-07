@@ -5,7 +5,7 @@ Created on Fri Feb 24 15:45:37 2023
 @author: Zahra
 """
 
-import os, sys, shutil, tifffile, ast, time
+import os, sys, shutil, tifffile, ast, time, re
 import argparse   
 import pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
@@ -49,10 +49,7 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-        # temp
         ops["roidetect"]=0      
-        # test for e216
-        # ops["allow_overlap"] = True
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -68,7 +65,16 @@ def main(**args):
 
         # run one experiment
         opsEnd = suite2p.run_s2p(ops=ops, db=db)
+        # fix reg tif order -_- TODO: make into function
+        for npln in ops['nplanes']:
+            pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
+            fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
+            order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])
+            for i,fl in enumerate(fls):
+                os.rename(fl,os.path.join(pth,f'file{order[i]:06d}.tif'))
+        print(f"\n ************Fixed reg tif order for dopamine!************")
         save_params(params, imagingflnm)
+
 
     elif args["stepid"] == 3:
         #####################RUN DAY CELL DETECTION IN A LOOP#####################
@@ -121,6 +127,14 @@ def main(**args):
 
             # run one experiment
             opsEnd = suite2p.run_s2p(ops=ops, db=db)
+            # fix reg tif order -_- TODO: make into function
+            for npln in ops['nplanes']:
+                pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
+                fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
+                order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])
+                for i,fl in enumerate(fls):
+                    os.rename(fl,os.path.join(pth,f'file{order[i]:06d}.tif'))
+            print(f"\n ************Fixed reg tif order for dopamine!************")
             save_params(params, imagingflnm)
         return False
         #save_params(params, )
