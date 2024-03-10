@@ -1,4 +1,4 @@
-function  = convert_fall_suite2p_cnmf(file_names,files_path,input_format)
+function  convert_fall_suite2p_cnmf(file_names,files_path,input_format)
 %% Converting the outputs from CNMF-e or Suite2p to the required input format for CellReg
 
 

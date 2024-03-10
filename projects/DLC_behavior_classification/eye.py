@@ -104,7 +104,9 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
     result = model.fit()
     centroids_y_res = result.resid_pearson
     ############## GLM ##############
-    # run peri reward time & plot    
+    # run peri reward time & plot
+    range_val = 10 #s
+    binsize = 0.05 #s
     input_peri = areas_res
     rewards = vralign["rewards"]
     normmeanrew_t, meanrew, normrewall_t, \
@@ -229,7 +231,8 @@ def consecutive_stretch(x):
 
     y = [x[:break_point[0]]]
     for i in range(1, len(break_point)):
-        y.append(x[break_point[i - 1] + 1:break_point[i]])
+        xx = x[break_point[i - 1] + 1:break_point[i]]
+        y.append(xx)
     y.append(x[break_point[-1] + 1:])
     
     return y

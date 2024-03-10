@@ -40,10 +40,12 @@ memory_efficient_run = 1;
 % we need to find the path up-two levels - that is where fmats will be
 pth = 'Y:\analysis\fmats'; % CHANGE
 [fileroot,~,~] = fileparts(pth);
+planes = [0];
+for plane=planes
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e145'; % CHANGE
-results_directory= fullfile(pth,sprintf('%s_daily_tracking',animal), 'Results') ; % CHANGE WEEK NO
+animal = 'e189'; % CHANGE
+results_directory= fullfile(pth,sprintf('%s_daily_tracking_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
 if exist(figures_directory,'dir')~=7
@@ -51,9 +53,8 @@ if exist(figures_directory,'dir')~=7
 end
 
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
-
 % define path of sample data
-fls = dir(fullfile(pth, sprintf("%s\\days\\*converted*.mat", animal))); %format to your folder structure
+fls = dir(fullfile(pth, sprintf("%s\\days\\converted*plane%i*.mat", animal, plane))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 
@@ -422,4 +423,5 @@ disp('End of cell registration procedure')
 
 if memory_efficient_run
     rmdir(temp_dir,'s');
+end
 end

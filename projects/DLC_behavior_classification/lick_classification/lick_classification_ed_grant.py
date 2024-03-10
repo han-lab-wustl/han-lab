@@ -91,13 +91,17 @@ ym[:,~np.array(y_)]=0
 rew = np.hstack(vralign['rewards'])#[x_]
 lick = np.hstack(vralign['licks'])#[x_]
 lick = lick>0
+lick_fix = consecutive_stretch(np.where(lick>0)[0])
+lick_mask = np.zeros(lick.shape)
+lick_ind = [min(xx) for xx in lick_fix if len(xx)>0]
+lick_mask[lick_ind] = 1
 
 areas = []
 for i in range(xm.shape[1]):
     pgon = Polygon(zip(xm[:,i], ym[:,i])) # Assuming the OP's x,y coordinates
     areas.append(pgon.area)
 areas = np.array(areas)
-areas[areas>3000]=0
+areas[areas>2000]=0
 areas = scipy.ndimage.gaussian_filter(areas,2)
 
 
@@ -107,12 +111,20 @@ r = np.random.randint(1000, len(areas))
 plt.figure; 
 # plt.plot(vralign['TongueTip_y'][r:r+1500])
 # plt.plot(vralign['TongueBottom_y'][r:r+1500])
+<<<<<<< HEAD
 plt.plot(((lick)*1000)[r:r+1500]) 
 plt.plot(areas[r:r+1500])
 plt.plot(((rew>0.5)*1500)[r:r+1500],'k', color='slategray')
+=======
+plt.plot(((lick_mask)*1000)[r:r+500]) 
+plt.plot(areas[r:r+500])
+plt.plot(((rew)*1500)[r:r+500], 'k')
+>>>>>>> 5fa0d2b5f6395bd866247b27fbdb894265ad24a9
 plt.ylim([0, 2000])
 
+
 normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF = perireward_binned_activity(areas, rew==1, \
+<<<<<<< HEAD
             np.hstack(vralign['timedFF']), 5, 0.2)
 plt.figure; 
 r = 3000
@@ -120,3 +132,14 @@ plt.plot(((lick)*1000)[r:r+1500])
 plt.plot(areas[r:r+1500])
 plt.plot(((rew>0.5)*1500)[r:r+1500],'k', color='slategray')
 plt.ylim([0, 2000])
+=======
+            np.hstack(vralign['timedFF']), 8, 0.2)
+_, meanrewlick, __, rewlick = perireward_binned_activity(lick_mask, rew==1, \
+            np.hstack(vralign['timedFF']), 8, 0.2)
+plt.figure; plt.imshow(rewdFF.T/rewlick.T, cmap = 'Reds')
+plt.figure; plt.imshow(rewlick.T)
+fig, axes = plt.subplots(nrows=2,ncols=1)
+axes[0].plot(meanrewdFF) 
+# axes[1].plot(meanrewlick) 
+# ax.plot(meanrewlick)
+>>>>>>> 5fa0d2b5f6395bd866247b27fbdb894265ad24a9

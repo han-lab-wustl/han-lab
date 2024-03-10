@@ -3,9 +3,10 @@
 % 2) red if there are no cells within a 100 pix radius
 clear all
 weeknm = 12;
+animal = 'e201';
 wknml = 1;  % which number in seq
-fls = dir(fullfile('Y:\sstcre_analysis\fmats\e201', ...
-    'days','*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+fls = dir(fullfile('Y:\analysis\fmats\e201', ...
+    'days',sprintf('%s_day*_Fall.mat',animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
@@ -14,7 +15,7 @@ for fl=1:length(fls)
 end
 % cc=days{1}.cc;
 %%
-wkfl = dir(fullfile('Y:\sstcre_analysis\fmats\e201', sprintf('week%02d_plane0', weeknm), 'e201_week*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+wkfl = dir(fullfile('Y:\analysis\fmats\e201', sprintf('week%02d_plane0', weeknm), 'e201_week*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 wk = load(fullfile(wkfl.folder,wkfl.name), 'stat', 'ops');
 % IMPORTANT
 daynm_of_total_tracked = [1 2 3 4 5]; % out of total days
@@ -119,12 +120,17 @@ for ss=1:sessions_total
                 end
             end
         end
+        
         if sum(xybool)>num_cells 
-            plot(wk.stat{1,missing_cell_in_week(ii)}.xpix, ...
-                wk.stat{1,missing_cell_in_week(ii)}.ypix, 'y');
+            x = double(wk.stat{1,missing_cell_in_week(ii)}.xpix);
+            y = double(wk.stat{1,missing_cell_in_week(ii)}.ypix);           
+            k=boundary(x,y);
+            plot(x(k),y(k), 'y');            
         else
-            plot(wk.stat{1,missing_cell_in_week(ii)}.xpix, ...
-                wk.stat{1,missing_cell_in_week(ii)}.ypix, 'r');
+            x = double(wk.stat{1,missing_cell_in_week(ii)}.xpix);
+            y = double(wk.stat{1,missing_cell_in_week(ii)}.ypix);           
+            k=boundary(x,y);
+            plot(x(k),y(k), 'r');
         end
     end
 

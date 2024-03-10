@@ -5,9 +5,9 @@
 close all; clear all;
 
 % select files
-sessions = [dir("Y:\hrz_consolidation\behavior\rewloc1\*.mat"); dir("Y:\hrz_consolidation\behavior\rewloc3\*.mat")];
-prevrewloc = [ones(1,length(dir("Y:\hrz_consolidation\behavior\rewloc1\*.mat")))*101 ones(1,length(dir("Y:\hrz_consolidation\behavior\rewloc3\*.mat")))*151]; 
-newrewloc = [ones(1,length(dir("Y:\hrz_consolidation\behavior\rewloc1\*.mat")))*101 ones(1,length(dir("Y:\hrz_consolidation\behavior\rewloc3\*.mat")))*151]; 
+sessions = [dir("Z:\chr2_grabda\e232_behavior\rewloc1\*.mat"); dir("Z:\chr2_grabda\e232_behavior\rewloc2\*.mat")];
+prevrewloc = [ones(1,length(dir("Z:\chr2_grabda\e232_behavior\rewloc1\*.mat")))*184.5 ones(1,length(dir("Z:\chr2_grabda\e232_behavior\rewloc2\*.mat")))*184.5]; 
+newrewloc = [ones(1,length(dir("Z:\chr2_grabda\e232_behavior\rewloc1\*.mat")))*184.5 ones(1,length(dir("Z:\chr2_grabda\e232_behavior\rewloc2\*.mat")))*65*1.5]; 
 ind = 1;
 % days = filename;
 grayColor = [.7 .7 .7]; coms_init = {}; coms_btwn = {}; coms_learn = {};
@@ -57,7 +57,7 @@ for dy=1:length(sessions)
     eps = find(mouse.VR.changeRewLoc>0);
     eps = [eps length(mouse.VR.changeRewLoc)];
     trialnum = mouse.VR.trialNum(eps(1):eps(2)); reward = mouse.VR.reward(eps(1):eps(2));    
-    licks = mouse.VR.lick(eps(1):eps(2)); ypos = mouse.VR.ypos(eps(1):eps(2));
+    licks = mouse.VR.lick(eps(1):eps(2)); ypos = mouse.VR.ypos(eps(1):eps(2))*(gainf);
     [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum,reward);
     % get regular coms?
     trials = ttr; % all trials (non probes)
@@ -86,7 +86,7 @@ for dy=1:length(sessions)
     % get ep1 probe coms
     if length(eps)>2
         trialnum = mouse.VR.trialNum(eps(2):eps(3)); reward = mouse.VR.reward(eps(2):eps(3));
-        licks = mouse.VR.lick(eps(2):eps(3)); ypos = mouse.VR.ypos(eps(2):eps(3));
+        licks = mouse.VR.lick(eps(2):eps(3)); ypos = mouse.VR.ypos(eps(2):eps(3))*(gainf);
         [success,fail,str, ftr, ttr, total_trials] = get_success_failure_trials(trialnum,reward);
         trials = unique(trialnum(trialnum<3)); % get trials before first successful trial
         % get trials only when the mouse licks
@@ -97,7 +97,8 @@ for dy=1:length(sessions)
             end
             trind=trind+1;
         end
-        [com] = get_com_licks(trialnum, reward, trials, logical(licks), ypos, newrewloc(dy), ...
+        success = 0;
+        [com] = get_com_licks(trialnum, reward, trials_, logical(licks), ypos, newrewloc(dy), ...
             rewsize, success);
         coms_btwn{ind} = mean(com, 'omitnan');
     end
@@ -119,7 +120,7 @@ randomsess = unique(randi([1 length(nulldist)],1,15));
 nulldist = nulldist(randomsess);
 % plot com in initial probes vs. b/wn epoch probes    
 figure;
-means = [mean(nulldist, 'omitnan')  mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false)))) ... % mean of all trials
+means = [mean(nulldist, 'omitnan')  mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_init, 'UniformOutput', false))), 'omitnan') ... % mean of all trials
     mean(abs(cell2mat(cellfun(@(x) mean(x, 'omitnan'), coms_learn, 'UniformOutput', false)))) ...% mean of all trials
     mean(abs(cell2mat(coms_btwn)))];
 bar(means, 'FaceColor', 'w'); hold on

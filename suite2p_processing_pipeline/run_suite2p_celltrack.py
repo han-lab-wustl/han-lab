@@ -49,11 +49,8 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-        # temp
         ops["threshold_scaling"]=1 #TODO: make modular
         ops["max_iterations"]=30
-        # test for e216
-        # ops["allow_overlap"] = True
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -92,7 +89,7 @@ def main(**args):
         tifspths = [os.path.join(imgpth, xx) for imgpth in imgpths for xx in os.listdir(imgpth) if ".tif" in xx]
         tifspths.sort(); print(tifspths)
         #savedir
-        params["savedir"] = "X:\sstcre_imaging" #TODO: make var
+        params["savedir"] = "X:\weekly_concat" #TODO: make var
         weekdir = os.path.join(params["savedir"],params["mouse_name"], \
             "week"+str(params["week"])); makedir(weekdir)    
         #do suite2p after tifs are made

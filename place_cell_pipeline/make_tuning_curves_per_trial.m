@@ -1,5 +1,5 @@
-function [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3, dff)
+function [tuning_curves, coms, median_com, peak] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned, gainf, ...
+    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3, dff, trials)
 nbins = track_length/bin_size;
 % TODO: incorporate multi planes
 % for pln=plns
@@ -13,15 +13,7 @@ for ep=1:length(eps)-1
     % trn>=3 & trn<8;
     % no probes
     % mask1 = trn>=8;
-    strials = ones(1, length(unique(trn)))*NaN; % only get successful trials
-    for trial=unique(trn)
-        if trial>=3 && trial>=max(trn)-ntrials%trial>min(trn)+ntrials%trial>=max(trn)-ntrials % trial < 3, probe trial
-            %                 if sum(rew(trn==trial)==1)>0 % if reward was found in the trial
-            %                     strials(trial)=trial;
-            %                 end
-            strials(trial)=trial; % successful and fail trials
-        end
-    end
+    strials = trials;
     strials = strials(~isnan(strials)); % only uses successful trials
     mask = ismember(trn, strials);
 

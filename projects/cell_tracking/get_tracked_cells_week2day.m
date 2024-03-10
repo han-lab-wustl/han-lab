@@ -99,15 +99,19 @@ save(fullfile(weekdst.folder, ...
 %%
 
 % load mats from all days
-fls = dir(fullfile(src, "fmats",animal, 'days', '*day*_Fall.mat'));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
+fls = dir(fullfile(src, "fmats",animal, 'days', sprintf('%s*day*_Fall.mat',animal)));%dir('Z:\cellreg1month_Fmats\*YC_Fall.mat');
 days = cell(1, length(fls));
 for fl=1:length(fls)
     disp(fl);
     dy = fls(fl);
-    days{fl} = load(fullfile(dy.folder,dy.name)) ; %'ops', 'stat', 'dFF'
+    days{fl} = load(fullfile(dy.folder,dy.name), 'ops', 'stat') ; %'ops', 'stat', 'dFF'
 end
+
+load(fullfile(weekdst.folder, ...
+    "commoncells_atleastoneactivedayperweek_4weeks_week2daymap.mat"), "cellmap2dayacrossweeks")
 cc=cellmap2dayacrossweeks;
 sessions_total=length(days);
+
 
 %%
 %%%%%%%%%%%%%%%%%%%%%% figures for validation %%%%%%%%%%%%%%%%%%%%%%
@@ -116,23 +120,26 @@ sessions_total=length(days);
 % remember this is the cell index, so you have to find the cell in the
 % original F mat
 ctab = hsv(length(cc));
-
-cells_to_plot = [456];
+cells_to_plot = [87];
 for i=[cells_to_plot]
     %multi plot of cell mask across all 5 days
-    figure(i); 
+    figure('Renderer','painters')
     axs=cell(1,sessions_total);
     for ss=1:sessions_total        
         day=days(ss);day=day{1};
-        axs{ss}=subplot(6,6,ss); % 2 rows, 3 column, 1 pos; 20 days
+        axs{ss}=subplot(6,6,ss); % 2 rows, 3 column, 1 pos; 20 days 
         imagesc(day.ops.meanImg) %meanImg or max_proj
         colormap('gray')
         hold on;
         try
-            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 1]);
+            x = double(day.stat{1,cc(i,ss)}.xpix');
+            y = double(day.stat{1,cc(i,ss)}.ypix');           
+            k=boundary(x,y);
+            plot(x(k),y(k), 'y');
+        catch
         end
         axis off
-        title(sprintf('day %i', ss)) %sprintf('day %i', ss)
+        title(sprintf('Day %i', ss)) %sprintf('day %i', ss)
         %title(axes{ss},sprintf('Cell %0d4', i))
     end
     linkaxes([axs{:}], 'xy')
@@ -143,17 +150,20 @@ end
 % colormap to iterate thru
 cc=cellmap2dayacrossweeks;
 ctab = hsv(length(cc));
-figure;
+figure('Renderer','painters')
 axesnm=zeros(1,sessions_total);
 for ss=1:sessions_total
-    day=days(ss);day=day{1};
-    axesnm(ss)=subplot(6,6,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    day=days{ss};
+    axes(ss)=subplot(ceil(sqrt(sessions)), ceil(sqrt(sessions)),ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;
     for i=1:length(cc)
         try
-            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', [ctab(i,:) 0.1]);
+            x = double(day.stat{1,cc(i,ss)}.xpix');
+            y = double(day.stat{1,cc(i,ss)}.ypix');
+            k=boundary(x,y);
+            plot(x(k),y(k), 'y');
         end
     end
     axis off

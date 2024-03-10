@@ -78,12 +78,14 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         weeks (list of strings): specify list of weeks(string, e.g. 'week4') corresponding to fld name
     """
     src = os.path.join(src, animal) #src="X:\sstcre_imaging"
-    dst = makedir(os.path.join(dst, animal)) #dst='Y:\\sstcre_analysis\\fmats'
+    makedir(os.path.join(dst, animal))
+    dst = makedir(os.path.join(dst, animal, 'days')) #dst='Y:\\sstcre_analysis\\fmats'
     if weekdir: weekdir = os.path.join(weekdir, animal)
     # get only days, not week fmats
     #dont copy weeks if not specified
     # if not weeks:
     #     weeks = [xx for xx in os.listdir(src) if  "week" in xx and "ref" not in xx]
+    # if days==False: days = []
     days = list(days)
     days.sort()
     # move all converted fmats to separate folder
@@ -248,7 +250,7 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
 
 if __name__ == "__main__":
     usb = r"I:\2023-2024_ZD_VR"
-    drives = [r'X:\vipcre',r'X:\vipcre',r'X:\vipcre',r'X:\grabda_sparse']
-    animals = ['e218', 'e216', 'e217', 'e228']
+    drives = [r'X:\vipcre',r'X:\vipcre',r'X:\vipcre',r'Z:\chr2_grabda']
+    animals = ['e218', 'e216', 'e217', 'e232']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

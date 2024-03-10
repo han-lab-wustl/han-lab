@@ -3,8 +3,8 @@
 
 clear all
 src = 'Y:\analysis\'; % main folder for analysis
-animal = 'e200';
-weekfld = 'week09-12_plane0';
+animal = 'e218';
+weekfld = 'week01-06_plane0';
 pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
@@ -45,19 +45,21 @@ ctab = hsv(length(cc));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 % align all cells across all days in 1 fig
-figure;
+figure('Renderer','painters')
 axes=zeros(1,sessions);
 cells_to_plot = [1:size(cc,1)];
 for ss=1:sessions
     day=days(ss);day=day{1};
-    axes(ss)=subplot(2,3,ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
+    axes(ss)=subplot(ceil(sqrt(sessions)), ceil(sqrt(sessions)),ss);%(4,5,ss); % 2 rows, 3 column, 1 pos; 20 days
     imagesc(day.ops.meanImg)
     colormap('gray')
     hold on;
     for i=cells_to_plot%length(commoncells)
         try % in case selecting cells that do not exist in every week
-            plot(day.stat{1,cc(i,ss)}.xpix, day.stat{1,cc(i,ss)}.ypix, 'Color', ...
-                [ctab(i,:) 0.3]);
+            x = double(day.stat{1,cc(i,ss)}.xpix');
+            y = double(day.stat{1,cc(i,ss)}.ypix');
+            k=boundary(x,y);
+            plot(x(k),y(k), 'y');
         end
     end
     axis off    

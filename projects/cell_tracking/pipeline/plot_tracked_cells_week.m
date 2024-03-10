@@ -2,7 +2,7 @@ function [savepth, commoncells] = plot_tracked_cells_week(src, animal, weekfld, 
  % Zahra
 % get cells detected in cellreg and do analysis
 
-pth = dir(fullfile(src, "celltrack", sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
+pth = dir(fullfile(src, sprintf([animal, '_', weekfld]), "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
 % find cells in all sessions
 [r,~] = find(cell_registered_struct.cell_to_index_map~=0);
@@ -14,7 +14,7 @@ for ci=1:length(cindex)
     commoncells(ci,:)=cell_registered_struct.cell_to_index_map(cindex(ci),:);
 end
 % save cells common across all days
-savpth = fullfile(pth.folder,'commoncells.mat');
+savepth = fullfile(pth.folder,'commoncells.mat');
 save(savepth, 'commoncells')
 p_same_mat = cell_registered_struct.p_same_registered_pairs(cindex) ;
 for i=1:length(p_same_mat)
@@ -23,7 +23,7 @@ end
 mean_Psame_mat = cell2mat(mean_Psame)';
 cc=commoncells;
 % calculate average p-same for validation of probabilistic model
-
+fprintf("************** number of common cells: %i **************", size(commoncells,1))
 % load mats from all weeks
 days = cell(1, length(fls));
 for fl=1:length(fls)
