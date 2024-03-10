@@ -416,7 +416,7 @@ def VRalign_automatic(vrfl, dlccsv, savedst, only_add_experiment=False):
 
     return 
 
-def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
+def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
     """zahra's implementation for VRstandendsplit for python dlc pipeline
 
     Args:
@@ -475,7 +475,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             uscanstop  = plt.ginput(1)
             uscanstop = int(round(uscanstop[0][0]))
             print(f'Length of scan is {uscanstop - uscanstart}')
-            print(f'Time of scan is {VR["time"][:][uscanstop] - VR["time"][:][uscanstart]}')
+            print(f'Time of scan is {(VR["time"][:][uscanstop] - VR["time"][:][uscanstart])/60} minutes')
 
             plt.close('all')
             scanstart = uscanstart
@@ -496,10 +496,19 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             unumframes = len(range(scanstart,scanstop))
             uVRtimebinned = np.squeeze(VR['time'][scanstart:scanstop] - check_imaging_start_before - VR['time'][scanstart])
             uVRtimebinned = interpolate_vrdata(uscanstop,uscanstart,dlcdf,uVRtimebinned) 
-            utrialnum = np.squeeze(VR['trialNum'][scanstart:scanstop]); utrialnum = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,utrialnum))
-            uchangeRewLoc = np.squeeze(VR['changeRewLoc'][scanstart:scanstop])
-            uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
-            uchangeRewLoc = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,uchangeRewLoc))
+            try:
+                utrialnum = np.squeeze(VR['trialNum'][scanstart:scanstop]); utrialnum = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,utrialnum))
+            except Exception as e:
+                print('\n********** MRT VR align using trials var **********')
+                utrialnum = np.squeeze(VR['trials'][scanstart:scanstop]); utrialnum = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,utrialnum))
+            if not mrzt:
+                uchangeRewLoc = np.squeeze(VR['changeRewLoc'][scanstart:scanstop])
+                uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
+                uchangeRewLoc = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,uchangeRewLoc))
+            else:
+                uchangeRewLoc = np.hstack(np.squeeze(VR['changeRewLoc']))
+                uchangeRewLoc= np.hstack(uchangeRewLoc)
+                uchangeRewLoc_original = np.hstack([np.ravel(VR[uchangeRewLoc[xx]][:]) for xx in range(len(uchangeRewLoc))]) # temp taking mean of all rew zones                
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
             ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); ulicks=ulicks>0
             ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])             
@@ -538,7 +547,10 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
                     forwardvel[newindx] = np.mean(uforwardvel[uVRtimebinned <= after])
                     ybinned[newindx] = np.mean(uybinned[uVRtimebinned <= after])
                     trialnum[newindx] = np.max(utrialnum[uVRtimebinned <= after])
-                    changeRewLoc[newindx] = uchangeRewLoc[newindx]
+                    if mrzt:
+                        changeRewLoc[newindx] = 0
+                    else:
+                        changeRewLoc[newindx] = uchangeRewLoc[newindx]
                     licks[newindx] = np.sum(ulicks[uVRtimebinned <= after]) > 0
                     lickVoltage[newindx] = np.mean(ulickVoltage[uVRtimebinned <= after])
                     
@@ -549,8 +561,11 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
                     ybinned[newindx] = np.mean(uybinned[uVRtimebinned > before])
                     trialnum[newindx] = np.max(utrialnum[uVRtimebinned > before],
                                     initial=0)
-                    changeRewLoc[newindx] = np.sum(uchangeRewLoc[uVRtimebinned > before],
-                                    initial=0)
+                    if mrzt:
+                        changeRewLoc[newindx] = 0
+                    else:
+                        changeRewLoc[newindx] = np.sum(uchangeRewLoc[uVRtimebinned > before],
+                                        initial=0)
                     licks[newindx] = np.sum(ulicks[uVRtimebinned > 0])
                     lickVoltage[newindx] = np.mean(ulickVoltage[uVRtimebinned > before])
 
@@ -595,7 +610,10 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
                         #     print(f"\n some issue with selecting ybinned in early time points? id {newindx}")
                         
                     forwardvel[newindx] = np.mean(uforwardvel[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
-                    changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
+                    if mrzt:
+                        changeRewLoc[newindx] = 0
+                    else:
+                        changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
             
             # fix multiple frames per cs
             rewards_ = consecutive_stretch(np.where(rewards>0)[0])
@@ -618,16 +636,18 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             # yposition goes back to the start, not 1 frame before or after
             ypos = ybinned.copy()
             trialsplit = np.where(np.diff(np.squeeze(trialnum)))[0]
-            ypossplit = np.where(np.diff(np.squeeze(ypos)) < -50)[0]
-                
-            # doing the same thing but with changerewloc
-            rewlocsplit = np.where(changeRewLoc)[0]
-            for c in range(1, len(rewlocsplit)): # 1 because the first is always the first index
-                if (rewlocsplit[c]-1 not in ypossplit):
-                    idx = np.argmin(np.abs(ypossplit+1-rewlocsplit[c]))
-                    changeRewLoc[ypossplit[idx]+1] = changeRewLoc[rewlocsplit[c]]
-                    changeRewLoc[rewlocsplit[c]] = 0                                    
-            # fix string to int conversion when importing mat
+            try: # need this to make it work with random reward vr
+                ypossplit = np.where(np.diff(np.squeeze(ypos)) < -50)[0]
+                # doing the same thing but with changerewloc
+                rewlocsplit = np.where(changeRewLoc)[0]
+                for c in range(1, len(rewlocsplit)): # 1 because the first is always the first index
+                    if (rewlocsplit[c]-1 not in ypossplit):
+                        idx = np.argmin(np.abs(ypossplit+1-rewlocsplit[c]))
+                        changeRewLoc[ypossplit[idx]+1] = changeRewLoc[rewlocsplit[c]]
+                        changeRewLoc[rewlocsplit[c]] = 0                                    
+            except Exception as e:
+                print(e)
+                # fix string to int conversion when importing mat
             experiment = str(bytes(np.ravel(VR['settings']['name']).tolist()))[2:-1]
             vralign = {}
             vralign['experiment']=experiment
@@ -639,6 +659,8 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False):
             vralign['trialnum']=np.hstack(trialnum)
             vralign['timedFF']=np.hstack(timedFF)
             vralign['lickVoltage']=np.hstack(lickVoltage)
+            if uchangeRewLoc_original:
+                vralign['uchangeRewLoc_original'] = uchangeRewLoc_original
             for col in colssave:
                 vralign[col] = dlcdf[col].values.astype(float)
             vralign['start_stop']=(uscanstart, uscanstop)

@@ -12,14 +12,14 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\vids to analyze\Trial2\240126_E228DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
-        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\vids to analyze\Trial2\E228_26_Jan_2024_time(14_32_29).mat"]
+        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test\230321_E201DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
+        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test\E201_21_Mar_2023.mat"]
         #dlccsv = [r"I:\dlc_inference\230502_E201DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
         #vrfl = [r"D:\adina_vr_files\VR_data\E201_02_May_2023_time(09_16_02).mat"]
         savedst = r"D:\PupilTraining-Matt-2023-07-07"
         #savedst = r"I:\pupil_pickles"
         for i in range(len(dlccsv)): # align beh with video data
-                VRalign(vrfl[i], dlccsv[i], savedst)
+                VRalign(vrfl[i], dlccsv[i], savedst, mrzt=True)
 
         # example on how to open the pickle file
         pdst = os.path.join(savedst, "E200_08_May_2023_vr_dlc_align.p")
@@ -121,3 +121,4 @@ if __name__ == "__main__":
         axs.set_title(os.path.basename(pdst))
         axs.plot(dist, label ='y distance between paws')
         axs.legend()
+        

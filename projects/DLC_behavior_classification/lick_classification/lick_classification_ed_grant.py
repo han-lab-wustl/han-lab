@@ -67,12 +67,12 @@ def consecutive_stretch(x):
 
 ## cell 
 
-vralign = r"Y:\DLC\dlc_mixedmodel2\E201_02_May_2023_vr_dlc_align.p"
+vralign = r"D:\MixedMouse_trial_2\E200_21_Jun_2023_vr_dlc_align.p"
 with open(vralign, "rb") as fp: #unpickle
     vralign = pickle.load(fp)
 
-# plt.figure; plt.plot(area)
-threshold = 1e-3
+# plt.figure; plt.plot(area)1e-3
+threshold = 0.2
 vralign['TongueTop_x'][vralign['TongueTop_likelihood'].astype('float32') < threshold] = 0
 vralign['TongueTop_y'][vralign['TongueTop_likelihood'].astype('float32') < threshold] = 0
 vralign['TongueTip_x'][vralign['TongueTip_likelihood'].astype('float32') < threshold] = 0
@@ -109,8 +109,14 @@ plt.figure;
 # plt.plot(vralign['TongueBottom_y'][r:r+1500])
 plt.plot(((lick)*1000)[r:r+1500]) 
 plt.plot(areas[r:r+1500])
-plt.plot(((rew==0.5)*1500)[r:r+1500], 'k')
+plt.plot(((rew>0.5)*1500)[r:r+1500],'k', color='slategray')
 plt.ylim([0, 2000])
 
 normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF = perireward_binned_activity(areas, rew==1, \
             np.hstack(vralign['timedFF']), 5, 0.2)
+plt.figure; 
+r = 3000
+plt.plot(((lick)*1000)[r:r+1500]) 
+plt.plot(areas[r:r+1500])
+plt.plot(((rew>0.5)*1500)[r:r+1500],'k', color='slategray')
+plt.ylim([0, 2000])

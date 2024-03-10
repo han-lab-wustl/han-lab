@@ -4,11 +4,11 @@ import numpy as np, scipy
 from eye import get_area_circumference_from_vralign, perireward_binned_activity, consecutive_stretch, nan_helper
 import statsmodels.api as sm
 
-pdst = r"D:\PupilTraining-Matt-2023-07-07\light world pickles\E217-updated\E217_18_Jan_2024_vr_dlc_align.p"
+pdst = r"D:\PupilTraining-Matt-2023-07-07\E200_23_Mar_2023_vr_dlc_align.p"
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
 
-range_val = 5
+range_val = 10
 binsize = 0.05
 areas, circumferences, centroids_x, centroids_y, \
         meanrew, rewall, meanlicks, meanvel = get_area_circumference_from_vralign(pdst, range_val, binsize)
@@ -23,59 +23,59 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 trials_norm = scaler.fit_transform(rewall)
 meanrew_norm = scaler.fit_transform(meanrew.reshape(-1,1))
 axes[0].imshow(trials_norm.T)
-axes[0].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
-axes[0].set_xticklabels(range(-range_val, range_val+1, 2))
+axes[0].set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,40))
+axes[0].set_xticklabels(np.arange(-range_val, range_val+1, 2))
 axes[1].plot(np.hstack(meanrew_norm))
-axes[1].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
+axes[1].set_xticks(range(0, (int(range_val/binsize)*2)+1,40))
 axes[1].set_xticklabels(range(-range_val, range_val+1, 2))
 axes[1].spines['top'].set_visible(False)
 axes[1].spines['right'].set_visible(False)
 axes[1].set_title('Mean of Trials')
 #%%
-# look at centroid
-input_peri = centroids_x
+# # look at centroid
+# input_peri = centroids_x
 rewards = vralign["rewards"]
-range_val=5; binsize=0.05 # s
-normmeanrew_t, meanrew, normrewall_t, \
-rewall = perireward_binned_activity(np.array(input_peri), \
-                        rewards.astype(int), 
-                        vralign['timedFF'], range_val, binsize)
+# range_val=5; binsize=0.05 # s
+# normmeanrew_t, meanrew, normrewall_t, \
+# rewall = perireward_binned_activity(np.array(input_peri), \
+#                         rewards.astype(int), 
+#                         vralign['timedFF'], range_val, binsize)
 
-fig, axes=plt.subplots(2,1)
-from sklearn.preprocessing import MinMaxScaler
+# fig, axes=plt.subplots(2,1)
+# from sklearn.preprocessing import MinMaxScaler
 
-scaler = MinMaxScaler(feature_range=(0, 1))
-# normalize
-trials_norm = scaler.fit_transform(rewall)
-meanrew_norm = scaler.fit_transform(meanrew.reshape(-1,1))
-axes[0].imshow(trials_norm.T)
-# axes[0].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
-# axes[0].set_xticklabels(range(-range_val, range_val+1, 2))
-axes[1].plot(np.hstack(meanrew_norm))
-axes[1].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
-axes[1].set_xticklabels(range(-range_val, range_val+1, 2))
-axes[1].spines['top'].set_visible(False)
-axes[1].spines['right'].set_visible(False)
-axes[1].set_title('Mean of Trials')
+# scaler = MinMaxScaler(feature_range=(0, 1))
+# # normalize
+# trials_norm = scaler.fit_transform(rewall)
+# meanrew_norm = scaler.fit_transform(meanrew.reshape(-1,1))
+# axes[0].imshow(trials_norm.T)
+# # axes[0].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
+# # axes[0].set_xticklabels(range(-range_val, range_val+1, 2))
+# axes[1].plot(np.hstack(meanrew_norm))
+# axes[1].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
+# axes[1].set_xticklabels(range(-range_val, range_val+1, 2))
+# axes[1].spines['top'].set_visible(False)
+# axes[1].spines['right'].set_visible(False)
+# axes[1].set_title('Mean of Trials')
 
 #%%
 
 normmeanlicks_t, meanlicks, normlickall_t, \
 lickall = perireward_binned_activity(vralign['licks'], \
-                cs.astype(int),
+                rewards.astype(int),
                 vralign['timedFF'], range_val, binsize)
 normmeanvel_t, meanvel, normvelall_t, \
 velall = perireward_binned_activity(vralign['forwardvel'], \
-                cs.astype(int),
+                rewards.astype(int),
                 vralign['timedFF'], range_val, binsize)
- 
+
 normmeanvel_t, meanvel, normvelall_t, \
 velall = perireward_binned_activity(vralign['forwardvel'], \
-                cs.astype(int), 
+                rewards.astype(int), 
                 vralign['timedFF'], range_val, binsize)
 plt.figure(); plt.imshow(normlickall_t, cmap="Reds")
-plt.figure(); plt.imshow(normvelall_t, cmap="Greys")
-plt.figure(); plt.plot(normmeanrew_t)
+# plt.figure(); plt.imshow(normvelall_t, cmap="Greys")
+plt.figure(); plt.imshow(trials_norm.T)
 #%%
 plt.figure()
 r = np.random.randint(1000, len(areas))
