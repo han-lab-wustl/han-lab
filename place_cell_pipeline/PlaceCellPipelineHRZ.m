@@ -11,9 +11,9 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e218';
+an = 'e217';
 % individual day analysis 
-dys = [75 76]; % opto = [-1 -1 -1 -1 2 3 2 3 2 3 2]
+dys = [30]; % opto = [-1 -1 -1 -1 2 3 2 3 2 3 2]
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\analysis\fmats';

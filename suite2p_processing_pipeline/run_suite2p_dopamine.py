@@ -21,6 +21,8 @@ def main(**args):
         ###############################MAKE FOLDERS#############################
         #check to see if day directory exists
         preprocessing.makeflds(params["datadir"], params["mouse_name"], params["day"])
+        ##########################TRANSFER (COPY) DATA##########################
+        preprocessing.copy_folder(params["transferdir"], os.path.join(params["datadir"], params["mouse_name"], params["day"]))
 
     elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
@@ -66,7 +68,7 @@ def main(**args):
         # run one experiment
         opsEnd = suite2p.run_s2p(ops=ops, db=db)
         # fix reg tif order -_- TODO: make into function
-        for npln in ops['nplanes']:
+        for npln in range(ops['nplanes']):
             pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
             fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
             order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])
@@ -139,7 +141,7 @@ def main(**args):
         return False
         #save_params(params, )
 
-def fill_params(mouse_name, day, days, datadir, reg_tif, nplanes, delete_bin,
+def fill_params(mouse_name, day, days, datadir, transferdir, reg_tif, nplanes, delete_bin,
                 move_bin, stepid, save_mat, crop_opto,
                 days_of_week, week, cell_detect_only):
 
@@ -152,6 +154,7 @@ def fill_params(mouse_name, day, days, datadir, reg_tif, nplanes, delete_bin,
     params["datadir"]       = datadir           #main dir
     params["mouse_name"]    = mouse_name        #mouse name w/in main dir
     params["day"]           = day               #session no. w/in mouse name  
+    params["transferdir"]   = transferdir       #name of external mounted on comp
     try: #TODO: fix error
         params["days_of_week"]  = days_of_week[0]   #days to put together for analysis of that week
     except:
@@ -191,6 +194,9 @@ if __name__ == "__main__":
                         help="e.g. E200")
     parser.add_argument("datadir", type=str,
                         help="Main directory with mouse names and days")
+    parser.add_argument("--transferdir", type=str,
+                    help="External where you are transfering data from, has to be full path to folder \n\
+                        e.g. H:\imaging_backups\ 240306_ZD\ 240306_ZD_000_000")
     parser.add_argument("--day", type=str, default = '1',
                         help="day of imaging")
     parser.add_argument("--days", nargs="+", action = "append",

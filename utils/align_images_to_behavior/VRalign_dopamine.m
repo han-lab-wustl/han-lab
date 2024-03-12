@@ -134,14 +134,23 @@ end
 unrew_sol=zeros(size(urewards));
 unrew_sol(nids)=1;
 
+% ZD changed!!! only applies to pavlov
 %%%% US (reward) without CS
 nids=[];
 idxsol2=find(sol2==1);
 for jj=1:length(idxsol2)
-    ex1=sol1(idxsol2(jj)-50:idxsol2(jj)+50);
-    if isempty(find(ex1>0))
-%         idxsol1(jj)
-        nids=[nids idxsol2(jj)];
+    try
+        ex1=sol1(idxsol2(jj)-50:idxsol2(jj)+50);
+        if isempty(find(ex1>0))
+    %         idxsol1(jj)
+            nids=[nids idxsol2(jj)];
+        end
+    catch
+        ex1=sol1(idxsol2(jj)-50:idxsol2(jj)); % if index exceeds rec - ZD
+        if isempty(find(ex1>0))
+    %         idxsol1(jj)
+            nids=[nids idxsol2(jj)];
+        end
     end
 end
 rew_us_sol=zeros(size(urewards));

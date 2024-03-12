@@ -58,8 +58,11 @@ for dd,day in enumerate(conddf.days.values):
     # # Define a threshold for differential inactivation (e.g., 0.2 difference in normalized mean activity)
     threshold = 5   # 15 for e218? 
     # Find differentially inactivated cells
-    differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
-    differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    # differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    # differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
+    differentially_activated_cells = find_differentially_activated_cells(tc1_late, tc2_late, threshold, bin_size)
+    
     rewloc_shift = rewlocs[comp[1]]-rewlocs[comp[0]]
     com_shift = [np.nanmean(coms[comp[1]][differentially_inactivated_cells]-coms[comp[0]][differentially_inactivated_cells]), \
                 np.nanmean(coms[comp[1]][differentially_activated_cells]-coms[comp[0]][differentially_activated_cells]), \
@@ -83,6 +86,7 @@ for dd,day in enumerate(conddf.days.values):
     dct['com_shift'] = com_shift
     dct['inactive'] = differentially_inactivated_cells
     dct['active'] = differentially_activated_cells
+    dct['rewlocs_comp'] = rewlocs[comp]
     # rewlocs[comp[0]]
     dcts.append(dct)
 #%%
@@ -221,6 +225,8 @@ bigdf[(bigdf.opto==False) &  (bigdf.vip_cond=='ctrl')].relative_com.values)
 # ax.tick_params(axis='x', labelrotation=90)
 #%%
 # com shift
+optoep = conddf.optoep.values
+in_type = conddf.in_type.values
 in_type_cond = 'vip'
 optoep_in = np.array([xx for ii,xx in enumerate(optoep) if in_type[ii]==in_type_cond])
 com_shift = np.array([dct['com_shift'] for ii,dct in enumerate(dcts) if in_type[ii]==in_type_cond])
@@ -231,14 +237,14 @@ ax.scatter(com_shift[optoep_in>=2, 0], rewloc_shift[optoep_in>=2], label = 'VIP 
 slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[optoep_in>=2, 0][~np.isnan(com_shift[optoep_in>=2, 0])],rewloc_shift[optoep_in>=2][~np.isnan(com_shift[optoep_in>=2, 0])])
 x_vals = np.array(ax.get_xlim())
 y_vals = intercept + slope * x_vals
-ax.plot(x_vals, y_vals, color = 'r')
+# ax.plot(x_vals, y_vals, color = 'r')
 ax.scatter(com_shift[optoep_in<0, 1], rewloc_shift[optoep_in<0], label = 'Control Active', color = 'darkgoldenrod')
 ax.scatter(com_shift[optoep_in>=2, 1], rewloc_shift[optoep_in>=2], label = 'VIP Active', color = 'maroon')
 slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[optoep_in>=2, 1][~np.isnan(com_shift[optoep_in>=2, 1])],rewloc_shift[optoep_in>=2][~np.isnan(com_shift[optoep_in>=2, 1])])
 x_vals = np.array(ax.get_xlim())
 y_vals = intercept + slope * x_vals
-ax.plot(x_vals, y_vals, color = 'maroon')
-ax.set_ylim(-150,200)
+# ax.plot(x_vals, y_vals, color = 'maroon')
+# ax.set_ylim(-150,200)
 # plt.scatter(com_shift[optoep_in<2, 2], rewloc_shift[optoep_in<2], label = 'Control All')
 
 # plt.scatter(com_shift[optoep_in>=2, 2], rewloc_shift[optoep_in>=2], label = 'SST All')
@@ -259,9 +265,9 @@ for ii,dct in enumerate(dcts_opto):
     df = pd.DataFrame(np.hstack([inactive_frac]), columns = ['inactive_frac'])
     df['active_frac'] = active_frac
     df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']])
-    df['animal'] = animals[ii]
-    df['in_type'] = in_type[ii]    
-    df['opto'] = bool(optoep[ii]>1) # true vs. false
+    df['animal'] = conddf.animals.values[ii]
+    df['in_type'] = conddf.in_type.values[ii]    
+    df['opto'] = bool(conddf.optoep.values[ii]>1) # true vs. false
     if df['in_type'].values[0] =='vip':
         df['vip_cond'] = 'vip'
     elif df['in_type'].values[0] =='sst':
@@ -298,5 +304,97 @@ scipy.stats.mannwhitneyu(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True),
 
 scipy.stats.mannwhitneyu(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'active_frac'].values,
                     bigdf.loc[(bigdf.vip_cond=='ctrl') & (bigdf.opto==True), 'active_frac'].values)
+
+# %%
+# check inactive vs. active cell tuning
+dd = 4
+day = conddf.days.values[dd]
+animal = conddf.animals.values[dd]
+params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
+    'tuning_curves_late_trials', 'coms_early_trials'])
+changeRewLoc = np.hstack(fall['changeRewLoc'])
+eptest = conddf.optoep.values[dd]
+if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
+eps = np.where(changeRewLoc>0)[0]
+rewlocs = changeRewLoc[eps]*1.5
+rewzones = get_rewzones(rewlocs, 1.5)
+eps = np.append(eps, len(changeRewLoc))    
+if len(eps)<4: eptest = 2 # if no 3 epochs
+comp = [eptest-2,eptest-1] # eps to compare    
+bin_size = 3    
+tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[0]]]))
+tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[1]]]))
+tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[0]]]))
+tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[1]]]))    
+# replace nan coms
+peak = np.nanmax(tc1_late,axis=1)
+coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+peak = np.nanmax(tc2_late,axis=1)
+coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+coms = fall['coms'][0]
+coms1 = np.hstack(coms[comp[0]])
+coms2 = np.hstack(coms[comp[1]])
+coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
+coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
+# take fc3 in area around com
+difftc1 = tc1_late-tc1_early
+coms1_bin = np.floor(coms1/bin_size).astype(int)
+difftc1 = np.array([np.nanmean(difftc1[ii,com-2:com+2]) for ii,com in enumerate(coms1_bin)])
+difftc2 = tc2_late-tc2_early
+coms2_bin = np.floor(coms2/bin_size).astype(int)
+difftc2 = np.array([np.nanmean(difftc2[ii,com-2:com+2]) for ii,com in enumerate(coms2_bin)])
+
+#%%
+# compare early vs. late tuning
+dct = dcts[dd]
+arr_early = dct['learning_tc2'][0][dct['inactive']]
+arr_late = dct['learning_tc2'][1][dct['inactive']]
+arr_early = arr_early[np.argsort(dct['coms2'][dct['inactive']])]
+arr_late = arr_late[np.argsort(dct['coms2'][dct['inactive']])]
+fig, axes = plt.subplots(2,1)
+axes[0].imshow(arr_early); axes[0].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w')
+axes[0].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w', linestyle='--'); 
+axes[1].imshow(arr_late); axes[1].axvline(dct['rewlocs_comp'][1]/bin_size, color = 'w'); 
+axes[1].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w', linestyle='--'); 
+axes[1].set_xlabel('Spatial bins')
+axes[0].set_ylabel('Cells')
+
+# comparse previous ep vs. next ep tuning (late)
+arr_prev_ep_late = dct['learning_tc1'][1][dct['inactive']]
+arr_prev_ep_late = arr_prev_ep_late[np.argsort(dct['coms1'][dct['inactive']])]
+fig, axes = plt.subplots(2,1)
+axes[0].imshow(arr_prev_ep_late); axes[0].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w')
+axes[1].imshow(arr_late); axes[1].axvline(dct['rewlocs_comp'][1]/bin_size, color = 'w'); 
+axes[1].set_xlabel('Spatial bins')
+axes[0].set_ylabel('Cells')
+
+#%%
+# enriched cells
+arr_early = dct['learning_tc2'][0][dct['active']]
+arr_late = dct['learning_tc2'][1][dct['active']]
+arr_early = arr_early[np.argsort(dct['coms2'][dct['active']])]
+arr_late = arr_late[np.argsort(dct['coms2'][dct['active']])]
+plt.figure(); plt.imshow(arr_early); plt.axvline(dct['rewlocs_comp'][1]/bin_size, color = 'w'); plt.axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w', linestyle='--'); 
+plt.figure(); plt.imshow(arr_late); plt.axvline(dct['rewlocs_comp'][1]/bin_size, color = 'w'); plt.axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w', linestyle='--'); 
+# prev epoch
+arr_early = dct['learning_tc1'][0][dct['active']]
+arr_late = dct['learning_tc1'][1][dct['active']]
+arr_early = arr_early[np.argsort(dct['coms1'][dct['active']])]
+arr_late = arr_late[np.argsort(dct['coms1'][dct['active']])]
+plt.figure(); plt.imshow(arr_early); plt.axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w'); 
+plt.figure(); plt.imshow(arr_late); plt.axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w'); 
+
+#%%
+other_ep_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][0]]))
+other_ep_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][0]]))    
+# other epoch
+arr_early = other_ep_early[dct['active']]
+arr_late = other_ep_late[dct['active']]
+arr_early = arr_early[np.argsort(np.hstack(coms[0][dct['active']]))]
+arr_late = arr_late[np.argsort(np.hstack(coms[0][dct['active']]))]
+plt.figure(); plt.imshow(arr_early); plt.axvline(rewlocs[0]/bin_size, color = 'w'); 
+plt.figure(); plt.imshow(arr_late); plt.axvline(rewlocs[0]/bin_size, color = 'w'); 
+
 
 # %%

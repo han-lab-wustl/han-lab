@@ -1,7 +1,7 @@
 # Zahra
 # preprocessing sbx into tifs (cropping, accounting for multiple planes, etc.)
 
-import os , numpy as np, tifffile, SimpleITK as sitk, sys
+import os , numpy as np, tifffile, SimpleITK as sitk, sys, shutil
 from math import ceil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir
@@ -21,6 +21,38 @@ def makeflds(datadir, mouse_name, day):
         makedir(os.path.join(datadir,mouse_name, day, "eye"))
         makedir(os.path.join(datadir,mouse_name, day, "tail")) 
         print("\n****Made folders!****\n")
+
+
+def copy_folder(src_folder, dest_folder):
+    """
+    Copies a folder from src_folder to dest_folder, including all subfolders and files.
+
+    Parameters:
+    - src_folder: The path to the source folder to be copied.
+    - dest_folder: The destination path where the folder should be copied.
+
+    Returns:
+    - None
+    """
+    try:
+        # Check if the source folder exists
+        if not os.path.exists(src_folder):
+            print(f"The source folder '{src_folder}' does not exist.")
+            return
+        
+        # Ensure the destination folder exists; if not, create it
+        makedir(dest_folder)
+        makedir(os.path.join(dest_folder,os.path.basename(src_folder)))
+        print(f"\n************Folder '{src_folder}' copying to '{os.path.join(dest_folder,os.path.basename(src_folder))}'************")
+        # Copy the entire folder structure and files
+        shutil.copytree(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)), dirs_exist_ok=True)
+        print(f"\n************Folder '{src_folder}' has been copied to '{os.path.join(dest_folder,os.path.basename(src_folder))}' successfully ;)************")
+        
+    except shutil.Error as e:
+        print(f"Error: {e}")
+    except OSError as e:
+        print(f"Error: {e.strerror}")
+
 
 def getmeanimg(pth):
     """coverts tif to mean img
