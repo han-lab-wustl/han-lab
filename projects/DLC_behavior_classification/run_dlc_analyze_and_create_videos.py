@@ -1,8 +1,8 @@
 import deeplabcut, os, pandas as pd
 
-config_path = r"D:\Tail_Demo-Adina-2023-11-09\config.yaml"
+config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
 # path to videos here
-vids = r'I:\vids_to_analyze\tail'
+vids = r'D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test'
 vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
 #vid = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E217.avi"]
 
@@ -21,7 +21,7 @@ import deeplabcut, os, pandas as pd
 
 config_path = r"D:\MixedMouse_trial_2\MixedModel_trial_2-Adina-2023-03-27\config.yaml"
 # path to videos here
-vids = r"I:\vids_to_analyze\face_and_pupil"
+vids = r"D:\PupilTraining-Matt-2023-07-07\Pavlov vids"
 vids = [os.path.join(vids,xx) for xx in os.listdir(vids) if 'avi' in xx]
 
 deeplabcut.analyze_videos(config_path, vids, shuffle=1, #rrcsv.video.values
@@ -31,9 +31,10 @@ deeplabcut.create_labeled_video(config_path,vids[20],
         videotype='.avi',draw_skeleton=True,
         displaycropped=True)
 #%%
+import deeplabcut, os, pandas as pd
 config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
 # path to videos here
-vids = r'D:\PupilTraining-Matt-2023-07-07\vids to analyze\Trial2'
+vids = r'D:\PupilTraining-Matt-2023-07-07\Pavlov vids'
 vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
 #vid = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E217.avi"]
 
@@ -47,3 +48,6 @@ deeplabcut.analyze_videos(config_path, vids, shuffle=1, #rrcsv.video.values
 deeplabcut.create_labeled_video(config_path,vids,
         videotype='.avi',draw_skeleton=True,
         displaycropped=True)
+
+
+ffmpeg -i D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test\230321_E201.avi -c:v rawvideo D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test\230321_E201_conv.avi

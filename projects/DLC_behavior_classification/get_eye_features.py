@@ -74,12 +74,23 @@ if __name__ == "__main__": # TODO; compare with diameter
         pickle.dump(datadct, fp)
 #%%
 from sklearn.preprocessing import MinMaxScaler
-
-scaler = MinMaxScaler(feature_range=(0, 1))
+with open(r"I:\pupil_data_new_240221.p", "wb") as fp:   #Pickling
+    df = pickle.load(fp)
+# all trials
+scaler = MinMaxScaler(feature_range=(0, 1)) # normalize
 trials = np.hstack(rewall_s)
 trials_norm = scaler.fit_transform(trials)
 fig, ax = plt.subplots()
 ax.imshow(trials_norm.T)
+#%%
+# per mouse
+for i in range(len(rewall_s)):
+    scaler = MinMaxScaler(feature_range=(0, 1)) # normalize
+    trials = rewall_s[i]
+    trials_norm = scaler.fit_transform(trials)
+    fig, ax = plt.subplots()
+    ax.imshow(trials_norm.T)
+    ax.set_title(os.path.basename(sessions[i]))
 #%%
 # plot perireward pupil
 range_val = 10 #s
