@@ -4,7 +4,7 @@
 import os , numpy as np, tifffile, SimpleITK as sitk, sys, shutil
 from math import ceil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
-from utils.utils import makedir
+from utils.utils import makedir, listdir
 
 def makeflds(datadir, mouse_name, day):
     if not os.path.exists(os.path.join(datadir,mouse_name)): #first make mouse dir
@@ -45,8 +45,13 @@ def copy_folder(src_folder, dest_folder):
         makedir(os.path.join(dest_folder,os.path.basename(src_folder)))
         print(f"\n************Folder '{src_folder}' copying to '{os.path.join(dest_folder,os.path.basename(src_folder))}'************")
         # Copy the entire folder structure and files
-        shutil.copytree(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)), dirs_exist_ok=True)
-        print(f"\n************Folder '{src_folder}' has been copied to '{os.path.join(dest_folder,os.path.basename(src_folder))}' successfully ;)************")
+        if not os.path.exists(os.path.join(dest_folder,os.path.basename(src_folder))):
+            shutil.copytree(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)))
+        # copy excel sheet
+        xlsx = os.path.dirname(src_folder)
+        xlsx = [xx for xx in listdir(xlsx, ifstring='xlsx')][0]
+        shutil.copy(xlsx, os.path.join(dest_folder))
+        print(f"\n******Folder {src_folder} and excel sheet has been copied to {os.path.join(dest_folder,os.path.basename(src_folder))} successfully ;)******")
         
     except shutil.Error as e:
         print(f"Error: {e}")

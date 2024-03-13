@@ -43,7 +43,7 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
     if not days:
         days = listdir(os.path.join(drive, animal.lower())) # assumes drive > per animal folder structure
         days = [xx for xx in days if "week" not in xx and ".mat" not in xx] #excludes weeks        
-    dates = [];
+    dates = []
     for day in days:
         print(day)
         fls = listdir(day)
@@ -62,6 +62,31 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
             print(f"*******Copied {vrfls[flnm]} to {dst}*******\n")
     
     return
+
+def ig_f(dir, files):
+    return [f for f in files if os.path.isfile(os.path.join(dir, f))]
+
+def copydopaminefldstruct(src, dst, overwrite=False):
+    """useful for sharing dopamine data
+    """
+    makedir(dst)
+    days = listdir(src)
+    # move all converted fmats to separate folder
+    for day in days:  
+        dst_day = os.path.join(dst,os.path.basename(day))
+        shutil.copytree(day, dst_day, ignore=ig_f)
+        imgfl = [os.path.join(day, xx) for xx in os.listdir(day) if "suite2p" in xx][0]
+        planes = range(len([xx for xx in listdir(imgfl) if "plane" in xx]))
+        # imgfl = pth
+        for plane in planes:
+            mat = os.path.join(imgfl, f"plane{plane}", "reg_tif", "params.mat") 
+            if os.path.exists(mat):
+                copypth = os.path.join(dst_day, "suite2p", f"plane{plane}", "reg_tif", "params.mat")
+                if os.path.exists(copypth) and overwrite==False:
+                    print(f"*********Paramas file for day {i} already exists in {dst}*********")    
+                else:
+                    shutil.copy(mat, copypth)            
+                    print(f"*********Copied {day} Paramas file to {dst_day}*********")
 
 
 def copyfmats(src, dst, animal, overwrite=False, days=False, 

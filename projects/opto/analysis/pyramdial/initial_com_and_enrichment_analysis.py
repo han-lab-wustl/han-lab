@@ -5,7 +5,8 @@ import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
 import seaborn as sns
-from placecell import get_rewzones, find_differentially_activated_cells, find_differentially_inactivated_cells
+from placecell import get_rewzones, find_differentially_activated_cells, \
+find_differentially_inactivated_cells, convert_com_to_radians
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 #%%
@@ -67,12 +68,13 @@ for dd,day in enumerate(conddf.days.values):
     com_shift = [np.nanmean(coms[comp[1]][differentially_inactivated_cells]-coms[comp[0]][differentially_inactivated_cells]), \
                 np.nanmean(coms[comp[1]][differentially_activated_cells]-coms[comp[0]][differentially_activated_cells]), \
                     np.nanmean(coms[comp[1]]-coms[comp[0]])]
-    # pre and post reward relative is diff
-    rel_coms1 = np.hstack([(coms1[coms1<=rewlocs[comp[0]]]-rewlocs[comp[0]])/rewlocs[comp[0]],(coms1[coms1>rewlocs[comp[0]]]-rewlocs[comp[0]])/(track_length-rewlocs[comp[0]])])
-    rel_coms2 = np.hstack([(coms2[coms2<=rewlocs[comp[1]]]-rewlocs[comp[1]])/rewlocs[comp[1]],(coms2[coms2>rewlocs[comp[1]]]-rewlocs[comp[1]])/(track_length-rewlocs[comp[1]])])
+    # circular alignment
+    rel_coms1 = [convert_com_to_radians(com, rewlocs[comp[0]], track_length) for com in coms1]
+    rel_coms2 = [convert_com_to_radians(com, rewlocs[comp[1]], track_length) for com in coms2]
+    # rel_coms2 = np.hstack([(coms2[coms2<=rewlocs[comp[1]]]-rewlocs[comp[1]])/rewlocs[comp[1]],(coms2[coms2>rewlocs[comp[1]]]-rewlocs[comp[1]])/(track_length-rewlocs[comp[1]])])
     # rel_coms2 = (coms2-rewlocs[comp[1]])/rewlocs[comp[1]]
-    dct['rel_coms1'] = rel_coms1
-    dct['rel_coms2'] = rel_coms2
+    dct['rel_coms1'] = np.array(rel_coms1)
+    dct['rel_coms2'] = np.array(rel_coms2)
     dct['learning_tc1'] = [tc1_early, tc1_late]
     dct['learning_tc2'] = [tc2_early, tc2_late]
     dct['difftc1'] = difftc1
@@ -93,6 +95,7 @@ for dd,day in enumerate(conddf.days.values):
 # plot fraction of place cells
 optoep = conddf.optoep.values; animals = conddf.animals.values; in_type = conddf.in_type.values
 dcts_opto = np.array(dcts)[optoep>1]
+
 dfs=[]; dfs_diff = []
 for ii,dct in enumerate(dcts_opto):
     diff_rel_coms1=[dct['frac_place_cells_tc1']]
@@ -102,6 +105,7 @@ for ii,dct in enumerate(dcts_opto):
     df['in_type'] = in_type[optoep>1][ii]
     df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
     df['rewzones'] = np.hstack([[f'rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
+    df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
     # if optoep[ii]>1:    
     df['opto'] = np.hstack([[False]*len(diff_rel_coms1),[True]*len(diff_rel_coms2)])
     # else: 
@@ -110,15 +114,9 @@ for ii,dct in enumerate(dcts_opto):
 bigdf = pd.concat(dfs)    
 bigdf.groupby(['in_type','opto', 'rewzones']).mean()
 
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="condition", y="frac_pc", hue="opto", data=bigdf)
-ax.tick_params(axis='x', labelrotation=90)
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
 in_type_cond = 'vip'
 fig,ax = plt.subplots()
-ax = sns.stripplot(x="opto", y="frac_pc", hue='rewzones', data=bigdf[bigdf.in_type == in_type_cond],
+ax = sns.stripplot(x="opto", y="frac_pc", hue='rewzones_transition', data=bigdf[bigdf.in_type == in_type_cond],
             palette='rocket')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
@@ -129,7 +127,7 @@ scipy.stats.ttest_rel(bigdf[(bigdf.opto==True)].frac_pc.values, \
 scipy.stats.ranksums(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
 
 #%%
-# plot coms of enriched cells    
+# plot coms of de-enriched cells    
 dcts_opto = np.array(dcts)[optoep>1]
 
 dfs=[]; dfs_diff = []
@@ -139,6 +137,7 @@ for ii,dct in enumerate(dcts_opto):
     df = pd.DataFrame(np.hstack([diff_rel_coms1, diff_rel_coms2]), columns = ['relative_com'])
     df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
     df['rewzones'] = np.hstack([[f'rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
+    df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
     df['animal'] = animals[optoep>1][ii]
     df['in_type'] = in_type[optoep>1][ii]
     if in_type[optoep>1][ii]=='vip':
@@ -151,12 +150,13 @@ for ii,dct in enumerate(dcts_opto):
     #     df['opto'] = [False]*len(df)
     dfs.append(df)
 bigdf = pd.concat(dfs)
+bigdf= bigdf.sort_values('rewzones_transition')
 
-intype = 'sst'
+intype = 'vip'
 fig,ax = plt.subplots()
-ax = sns.stripplot(x="rewzones", y="relative_com", hue="opto", 
+ax = sns.stripplot(x="rewzones_transition", y="relative_com", hue="opto", 
     data=bigdf[bigdf.in_type == intype], size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="rewzones", y="relative_com", hue="opto",
+ax = sns.boxplot(x="rewzones_transition", y="relative_com", hue="opto",
 fill=False, data=bigdf[bigdf.in_type == intype], palette={False: "slategray", True: "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.axhline(0, color = 'slategray', linestyle='--')
@@ -186,6 +186,7 @@ sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
 # look at specific animals
 an = 'e200'
+bigdf = bigdf.sort_values('rewzones')
 fig,ax = plt.subplots()
 ax = sns.stripplot(x="rewzones", y="relative_com", hue="opto", 
     data=bigdf[bigdf.animal == an], size=1, palette={False: "slategray", True: "red"})
@@ -196,8 +197,8 @@ ax.axhline(0, color = 'slategray', linestyle='--')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
-scipy.stats.ranksums(bigdf[(bigdf.opto==True) & (bigdf.vip_cond=='ctrl')].relative_com.values, 
-bigdf[(bigdf.opto==False) &  (bigdf.vip_cond=='ctrl')].relative_com.values)
+scipy.stats.ranksums(bigdf[(bigdf.opto==True) & (bigdf.vip_cond=='vip')].relative_com.values, 
+bigdf[(bigdf.opto==False) &  (bigdf.vip_cond=='vip')].relative_com.values)
 
 #%%
 # # average enrichment
@@ -270,17 +271,20 @@ for ii,dct in enumerate(dcts_opto):
     df['opto'] = bool(conddf.optoep.values[ii]>1) # true vs. false
     if df['in_type'].values[0] =='vip':
         df['vip_cond'] = 'vip'
-    elif df['in_type'].values[0] =='sst':
+    # else:
+    #     df['vip_cond'] = 'ctrl'
+    elif (df['in_type'].values[0] =='sst') or df['in_type'].values[0] =='pv':
         df['vip_cond'] = 'ctrl'
     # if optoep[ii]>1:        
     # else: 
     # df['opto'] = [False]*len(df)
     dfs_diff.append(df)
-bigdf = pd.concat(dfs_diff,ignore_index=False) 
-bigdf.reset_index(drop=True, inplace=True)   
+bigdf_org = pd.concat(dfs_diff,ignore_index=False) 
+bigdf_org.reset_index(drop=True, inplace=True)   
 #%%
 # plot fraction of inactivated vs. activated cells
 plt.figure()
+bigdf = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean()
 ax = sns.barplot(x="opto", y="inactive_frac",hue='vip_cond', data=bigdf,fill=False,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax = sns.stripplot(x="opto", y="inactive_frac",hue='vip_cond', data=bigdf,
@@ -299,15 +303,21 @@ ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 # sig
-scipy.stats.mannwhitneyu(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'inactive_frac'].values,
-                    bigdf.loc[(bigdf.vip_cond=='ctrl') & (bigdf.opto==True), 'inactive_frac'].values)
+scipy.stats.ttest_ind(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values,
+                    bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='ctrl') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values)
+# vip led off vs. on
+scipy.stats.ttest_rel(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values,
+                    bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==False), 'inactive_frac'].values)
 
-scipy.stats.mannwhitneyu(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'active_frac'].values,
-                    bigdf.loc[(bigdf.vip_cond=='ctrl') & (bigdf.opto==True), 'active_frac'].values)
+scipy.stats.ttest_rel(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'active_frac'].values,
+                    bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==False), 'active_frac'].values)
 
 # %%
-# check inactive vs. active cell tuning
-dd = 4
+# look at enriched cells across rewlocs
+# only in control days
+# quantify mean activity in late trials for each epoch
+# for the same set of 'activated' cells
+dd = 1
 day = conddf.days.values[dd]
 animal = conddf.animals.values[dd]
 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
@@ -323,6 +333,12 @@ eps = np.append(eps, len(changeRewLoc))
 if len(eps)<4: eptest = 2 # if no 3 epochs
 comp = [eptest-2,eptest-1] # eps to compare    
 bin_size = 3    
+tcs_early = []; tcs_late = []
+for ii,tc in enumerate(fall['tuning_curves_early_trials'][0]):
+    tcs_early.append(np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tc])))
+    tcs_late.append(np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][ii]])))
+tcs_early = np.array(tcs_early)
+tcs_late = np.array(tcs_late)
 tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[0]]]))
 tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[1]]]))
 tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[0]]]))
@@ -337,37 +353,37 @@ coms1 = np.hstack(coms[comp[0]])
 coms2 = np.hstack(coms[comp[1]])
 coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
 coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
-# take fc3 in area around com
-difftc1 = tc1_late-tc1_early
-coms1_bin = np.floor(coms1/bin_size).astype(int)
-difftc1 = np.array([np.nanmean(difftc1[ii,com-2:com+2]) for ii,com in enumerate(coms1_bin)])
-difftc2 = tc2_late-tc2_early
-coms2_bin = np.floor(coms2/bin_size).astype(int)
-difftc2 = np.array([np.nanmean(difftc2[ii,com-2:com+2]) for ii,com in enumerate(coms2_bin)])
+threshold=5
+differentially_activated_cells = find_differentially_activated_cells(tc1_early, tc1_late, threshold, bin_size)
+rel_coms1 = np.array([convert_com_to_radians(com, rewlocs[comp[0]], track_length) for com in coms1])
+rel_coms2 = np.array([convert_com_to_radians(com, rewlocs[comp[1]], track_length) for com in coms2])
 
+activated_cells_dff_ratio_across_ep = np.array([np.nanmean(xx[differentially_activated_cells,:],axis=1) for xx in tcs_late])-np.array([np.nanmean(xx[differentially_activated_cells,:],axis=1) for xx in tcs_early])
 #%%
 # compare early vs. late tuning
-dct = dcts[dd]
-arr_early = dct['learning_tc2'][0][dct['inactive']]
-arr_late = dct['learning_tc2'][1][dct['inactive']]
-arr_early = arr_early[np.argsort(dct['coms2'][dct['inactive']])]
-arr_late = arr_late[np.argsort(dct['coms2'][dct['inactive']])]
+arr_early = tc1_early[differentially_activated_cells]
+arr_late = tc1_late[differentially_activated_cells]
+arr_early = arr_early[np.argsort(rel_coms1[differentially_activated_cells])]
+arr_late = arr_late[np.argsort(rel_coms1[differentially_activated_cells])]
 fig, axes = plt.subplots(2,1)
-axes[0].imshow(arr_early); axes[0].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w')
-axes[0].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w', linestyle='--'); 
-axes[1].imshow(arr_late); axes[1].axvline(dct['rewlocs_comp'][1]/bin_size, color = 'w'); 
-axes[1].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w', linestyle='--'); 
+axes[0].imshow(arr_early); axes[0].axvline(rewlocs[comp[0]]/bin_size, color = 'w')
+axes[1].imshow(arr_late); axes[1].axvline(rewlocs[comp[0]]/bin_size, color = 'w'); 
 axes[1].set_xlabel('Spatial bins')
 axes[0].set_ylabel('Cells')
+fig.suptitle("Enriched cells TC1, early vs. late trials")
 
-# comparse previous ep vs. next ep tuning (late)
-arr_prev_ep_late = dct['learning_tc1'][1][dct['inactive']]
-arr_prev_ep_late = arr_prev_ep_late[np.argsort(dct['coms1'][dct['inactive']])]
+# compare activated cells in next epoch
+arr_early = tc2_early[differentially_activated_cells]
+arr_late = tc2_late[differentially_activated_cells]
+arr_early = arr_early[np.argsort(rel_coms2[differentially_activated_cells])]
+arr_late = arr_late[np.argsort(rel_coms2[differentially_activated_cells])]
 fig, axes = plt.subplots(2,1)
-axes[0].imshow(arr_prev_ep_late); axes[0].axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w')
-axes[1].imshow(arr_late); axes[1].axvline(dct['rewlocs_comp'][1]/bin_size, color = 'w'); 
+axes[0].imshow(arr_early); axes[0].axvline(rewlocs[comp[1]]/bin_size, color = 'w')
+axes[1].imshow(arr_late); axes[1].axvline(rewlocs[comp[1]]/bin_size, color = 'w'); 
 axes[1].set_xlabel('Spatial bins')
 axes[0].set_ylabel('Cells')
+fig.suptitle("Enriched cells TC2, early vs. late trials")
+
 
 #%%
 # enriched cells
@@ -384,17 +400,5 @@ arr_early = arr_early[np.argsort(dct['coms1'][dct['active']])]
 arr_late = arr_late[np.argsort(dct['coms1'][dct['active']])]
 plt.figure(); plt.imshow(arr_early); plt.axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w'); 
 plt.figure(); plt.imshow(arr_late); plt.axvline(dct['rewlocs_comp'][0]/bin_size, color = 'w'); 
-
-#%%
-other_ep_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][0]]))
-other_ep_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][0]]))    
-# other epoch
-arr_early = other_ep_early[dct['active']]
-arr_late = other_ep_late[dct['active']]
-arr_early = arr_early[np.argsort(np.hstack(coms[0][dct['active']]))]
-arr_late = arr_late[np.argsort(np.hstack(coms[0][dct['active']]))]
-plt.figure(); plt.imshow(arr_early); plt.axvline(rewlocs[0]/bin_size, color = 'w'); 
-plt.figure(); plt.imshow(arr_late); plt.axvline(rewlocs[0]/bin_size, color = 'w'); 
-
 
 # %%

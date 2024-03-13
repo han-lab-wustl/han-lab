@@ -30,7 +30,7 @@ plt.close('all')
 
 src = r"Z:\chr2_grabda\e232"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(os.path.dirname(src),"peri_analysis.pdf"))
-days = [8,9,10,11,12,13,14,15,16,17]
+days = [15,16,17,18]
 rewloc = 123*1.5
 newrewloc = rewloc
 range_val = 10; binsize=0.2

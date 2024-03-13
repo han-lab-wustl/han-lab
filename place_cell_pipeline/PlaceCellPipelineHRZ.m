@@ -11,12 +11,17 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e217';
+an = 'e218';an='e200';
 % individual day analysis 
-dys = [30]; % opto = [-1 -1 -1 -1 2 3 2 3 2 3 2]
-src = 'X:\vipcre'; % folder where fall is
+dys = [20:50]; 
+dys = [7:10, 32,33,35:63,65];
+dys = [2:20, 26,27];
+dys = [32,33,34,36,38,40:55];
+dys = [76, 80:90];
+% dys = [1:51];
+% src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-% src = 'Y:\analysis\fmats';
+src = 'Y:\analysis\fmats';
 pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -26,8 +31,8 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -91,9 +96,9 @@ for dy=dys % for loop per day
         [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
         bordercells_pc = bordercells(pc); % mask border cells
         fc3_pc = Fc3(:,~bordercells_pc); % remove border cells
-        fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         dff_pc = dFF(:,~bordercells_pc); % remove border cells
-        dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
 
         [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc);

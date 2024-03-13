@@ -1,13 +1,112 @@
-import numpy as np
+import numpy as np, math
 from scipy.ndimage import gaussian_filter1d
-import numpy as np
-
-import numpy as np
-
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc
 
+def calculate_mean_fluorescence_in_place_field(tuning_curve, bin_centers, threshold=0.5):
+    """
+    Calculate the mean fluorescence within a place field of a place cell from a tuning curve.
+
+    Args:
+        tuning_curve (numpy.ndarray): 1D array containing the tuning curve values.
+        bin_centers (numpy.ndarray): 1D array containing the bin centers corresponding to the tuning curve values.
+        threshold (float, optional): Threshold for determining the place field boundaries (default: 0.5).
+
+    Returns:
+        float: Mean fluorescence within the place field.
+        None: If no place field is detected.
+    """
+    # Normalize the tuning curve to [0, 1] range
+    tuning_curve = (tuning_curve - np.min(tuning_curve)) / (np.max(tuning_curve) - np.min(tuning_curve))
+
+    # Find the indices where the tuning curve crosses the threshold
+    above_threshold = tuning_curve >= threshold
+    crossings = np.where(np.diff(above_threshold.astype(int)))[0]
+
+    # If there are no crossings or an odd number of crossings, no place field is detected
+    if len(crossings) == 0 or len(crossings) % 2 != 0:
+        return None
+
+    # Find the bin centers corresponding to the place field boundaries
+    field_boundaries = []
+    for i in range(0, len(crossings), 2):
+        boundary_left = crossings[i]
+        boundary_right = crossings[i + 1]
+        field_boundaries.append((boundary_left, boundary_right))
+
+    # Calculate the mean fluorescence within the place field
+    mean_fluorescence = []
+    for left, right in field_boundaries:
+        place_field_values = tuning_curve[left:right + 1]
+        mean_fluorescence.append(np.mean(place_field_values))
+
+    # Return the maximum mean fluorescence (in case of multiple place fields)
+    return max(mean_fluorescence)
+
+def evaluate_place_field_width(tuning_curve, bin_centers, threshold=0.5):
+    """
+    Evaluate the width of a place field from a tuning curve calculated from calcium imaging data.
+
+    Args:
+        tuning_curve (numpy.ndarray): 1D array containing the tuning curve values.
+        bin_centers (numpy.ndarray): 1D array containing the bin centers corresponding to the tuning curve values.
+        threshold (float, optional): Threshold for determining the place field boundaries (default: 0.5).
+
+    Returns:
+        float: Width of the place field in the same units as bin_centers.
+        None: If no place field is detected.
+    """
+    # Normalize the tuning curve to [0, 1] range
+    tuning_curve = (tuning_curve - np.min(tuning_curve)) / (np.max(tuning_curve) - np.min(tuning_curve))
+
+    # Find the indices where the tuning curve crosses the threshold
+    above_threshold = tuning_curve >= threshold
+    crossings = np.where(np.diff(above_threshold.astype(int)))[0]
+
+    # If there are no crossings or an odd number of crossings, no place field is detected
+    if len(crossings) == 0 or len(crossings) % 2 != 0:
+        return None
+
+    # Find the bin centers corresponding to the place field boundaries
+    field_boundaries = []
+    for i in range(0, len(crossings), 2):
+        boundary_left = bin_centers[crossings[i]]
+        boundary_right = bin_centers[crossings[i + 1]]
+        field_boundaries.append((boundary_left, boundary_right))
+
+    # Calculate the width of the place field as the difference between the boundaries
+    place_field_widths = [right - left for left, right in field_boundaries]
+
+    # Return the maximum width (in case of multiple place fields)
+    return max(place_field_widths)
+
+
+def convert_com_to_radians(com, reward_location, track_length):
+    """
+    Convert the center of mass of pyramidal cell activity from 0 to 270 cm
+    to -pi to pi radians, centered at the reward location.
+
+    Args:
+        com (float): Center of mass of pyramidal cell activity in cm (0 to 270).
+        reward_location (float): Reward location in cm (0 to 270).
+
+    Returns:
+        float: Center of mass in radians (-pi to pi), centered at the reward location.
+    """
+    # Convert com and reward_location to radians
+    com_radians = com * (2 * math.pi / track_length)
+    reward_radians = reward_location * (2 * math.pi / track_length)
+
+    # Center com_radians around reward_radians
+    centered_com_radians = com_radians - reward_radians
+
+    # Wrap the centered_com_radians to -pi to pi range
+    while centered_com_radians > math.pi:
+        centered_com_radians -= 2 * math.pi
+    while centered_com_radians < -math.pi:
+        centered_com_radians += 2 * math.pi
+
+    return centered_com_radians
 def get_rewzones(rewlocs, gainf):
     # Initialize the reward zone numbers array with zeros
     rewzonenum = np.zeros(len(rewlocs))

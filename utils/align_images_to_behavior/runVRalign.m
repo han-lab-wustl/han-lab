@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e217";
-days = [30];
+days = [31];
 src = "X:\vipcre";
 
 for day=days
@@ -45,8 +45,8 @@ end
 % for aligned fmats
 
 clear all;
-mouse_name = "e201";
-days = [53,54];
+mouse_name = "e200";
+days = [90];
 % days = [55:75];
 % src = "Z:\sstcre_imaging";
 src = "Z:\sstcre_imaging";
