@@ -284,7 +284,7 @@ bigdf_org.reset_index(drop=True, inplace=True)
 #%%
 # plot fraction of inactivated vs. activated cells
 plt.figure()
-bigdf = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean()
+bigdf = bigdf_org#.groupby(['animal', 'vip_cond', 'opto']).mean()
 ax = sns.barplot(x="opto", y="inactive_frac",hue='vip_cond', data=bigdf,fill=False,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax = sns.stripplot(x="opto", y="inactive_frac",hue='vip_cond', data=bigdf,
@@ -302,7 +302,13 @@ ax = sns.stripplot(x="opto", y="active_frac",hue='vip_cond', data=bigdf,
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+
 # sig
+scipy.stats.ttest_rel(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'inactive_frac'].values,
+                    bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==False), 'inactive_frac'].values)
+
+
+# sig # per animal
 scipy.stats.ttest_ind(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values,
                     bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='ctrl') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values)
 # vip led off vs. on
