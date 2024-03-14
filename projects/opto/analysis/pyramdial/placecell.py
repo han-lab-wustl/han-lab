@@ -1,47 +1,12 @@
-import numpy as np, math
+import numpy as np, math, scipy
 from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc
 
-def calculate_mean_fluorescence_in_place_field(tuning_curve, bin_centers, threshold=0.5):
-    """
-    Calculate the mean fluorescence within a place field of a place cell from a tuning curve.
+import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
+import pickle, seaborn as sns, random
+from sklearn.cluster import KMeans
 
-    Args:
-        tuning_curve (numpy.ndarray): 1D array containing the tuning curve values.
-        bin_centers (numpy.ndarray): 1D array containing the bin centers corresponding to the tuning curve values.
-        threshold (float, optional): Threshold for determining the place field boundaries (default: 0.5).
-
-    Returns:
-        float: Mean fluorescence within the place field.
-        None: If no place field is detected.
-    """
-    # Normalize the tuning curve to [0, 1] range
-    tuning_curve = (tuning_curve - np.min(tuning_curve)) / (np.max(tuning_curve) - np.min(tuning_curve))
-
-    # Find the indices where the tuning curve crosses the threshold
-    above_threshold = tuning_curve >= threshold
-    crossings = np.where(np.diff(above_threshold.astype(int)))[0]
-
-    # If there are no crossings or an odd number of crossings, no place field is detected
-    if len(crossings) == 0 or len(crossings) % 2 != 0:
-        return None
-
-    # Find the bin centers corresponding to the place field boundaries
-    field_boundaries = []
-    for i in range(0, len(crossings), 2):
-        boundary_left = crossings[i]
-        boundary_right = crossings[i + 1]
-        field_boundaries.append((boundary_left, boundary_right))
-
-    # Calculate the mean fluorescence within the place field
-    mean_fluorescence = []
-    for left, right in field_boundaries:
-        place_field_values = tuning_curve[left:right + 1]
-        mean_fluorescence.append(np.mean(place_field_values))
-
-    # Return the maximum mean fluorescence (in case of multiple place fields)
-    return max(mean_fluorescence)
 
 def evaluate_place_field_width(tuning_curve, bin_centers, threshold=0.5):
     """
@@ -169,11 +134,11 @@ def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold,
     for cll in range(tuning_curve1.shape[0]):
         transients = consecutive_stretch(np.where(tuning_curve1[cll,:]>0)[0])
         transients = [xx for xx in transients if len(xx)>0]
-        auc_tc1.append(np.nanmean([np.trapz(tuning_curve1[cll,tr],dx=binsize) for tr in transients]))
+        auc_tc1.append(np.nanquantile([np.trapz(tuning_curve1[cll,tr],dx=binsize) for tr in transients],0.75))
     for cll in range(tuning_curve2.shape[0]):
         transients = consecutive_stretch(np.where(tuning_curve2[cll,:]>0)[0])
         transients = [xx for xx in transients if len(xx)>0]
-        auc_tc2.append(np.nanmean([np.trapz(tuning_curve2[cll,tr],dx=binsize) for tr in transients]))
+        auc_tc2.append(np.nanquantile([np.trapz(tuning_curve2[cll,tr],dx=binsize) for tr in transients],0.75))
     
     mean_activity1 = np.array(auc_tc1)
     mean_activity2 = np.array(auc_tc2)
@@ -184,7 +149,6 @@ def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold,
     differentially_activated_cells = np.where(activity_diff < -threshold)[0]
     
     return differentially_activated_cells
-
 
 def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """
@@ -302,15 +266,6 @@ def calc_COM_EH(spatial_act, bin_width):
 
     return com
 
-# Example usage
-if __name__ == "__main__":
-    # Example spatial activity data and bin width
-    spatial_act = np.random.rand(10, 20)  # 10 cells x 20 bins
-    bin_width = 5  # in cm
-
-    com = calc_COM_EH(spatial_act, bin_width)
-    print("Interpolated COM of each cell's spatial activity in cm:", com)
-
 def get_moving_time(velocity, thres, Fs, ftol):
     """
     Returns time points when the animal is considered moving based on the change in y position.
@@ -401,6 +356,77 @@ def make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials, licks, f
     
     return tuning_curves, coms, median_com, peak
 
+def get_pyr_metrics_opto(conddf, dd, day, threshold=5):
+    track_length = 270
+    dct = {}
+    animal = conddf.animals.values[dd]
+    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
+        'tuning_curves_late_trials', 'coms_early_trials'])
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    eptest = conddf.optoep.values[dd]
+    if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
+    eps = np.where(changeRewLoc>0)[0]
+    rewlocs = changeRewLoc[eps]*1.5
+    rewzones = get_rewzones(rewlocs, 1.5)
+    eps = np.append(eps, len(changeRewLoc))    
+    if len(eps)<4: eptest = 2 # if no 3 epochs
+    comp = [eptest-2,eptest-1] # eps to compare    
+    bin_size = 3    
+    tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[0]]]))
+    tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[1]]]))
+    tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[0]]]))
+    tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[1]]]))    
+    # replace nan coms
+    peak = np.nanmax(tc1_late,axis=1)
+    coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+    peak = np.nanmax(tc2_late,axis=1)
+    coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+    coms = fall['coms'][0]
+    coms1 = np.hstack(coms[comp[0]])
+    coms2 = np.hstack(coms[comp[1]])
+    coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
+    coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
+    # take fc3 in area around com
+    difftc1 = tc1_late-tc1_early
+    coms1_bin = np.floor(coms1/bin_size).astype(int)
+    difftc1 = np.array([np.nanmean(difftc1[ii,com-2:com+2]) for ii,com in enumerate(coms1_bin)])
+    difftc2 = tc2_late-tc2_early
+    coms2_bin = np.floor(coms2/bin_size).astype(int)
+    difftc2 = np.array([np.nanmean(difftc2[ii,com-2:com+2]) for ii,com in enumerate(coms2_bin)])
+
+    # Find differentially inactivated cells
+    # differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    # differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
+    differentially_activated_cells = find_differentially_activated_cells(tc1_late, tc2_late, threshold, bin_size)
+    # tc1_pc_width = evaluate_place_field_width(tc1_late, bin_centers, threshold=0.5)
+    rewloc_shift = rewlocs[comp[1]]-rewlocs[comp[0]]
+    com_shift = [np.nanmean(coms[comp[1]][differentially_inactivated_cells]-coms[comp[0]][differentially_inactivated_cells]), \
+                np.nanmean(coms[comp[1]][differentially_activated_cells]-coms[comp[0]][differentially_activated_cells]), \
+                    np.nanmean(coms[comp[1]]-coms[comp[0]])]
+    # circular alignment
+    rel_coms1 = [convert_com_to_radians(com, rewlocs[comp[0]], track_length) for com in coms1]
+    rel_coms2 = [convert_com_to_radians(com, rewlocs[comp[1]], track_length) for com in coms2]
+    # rel_coms2 = np.hstack([(coms2[coms2<=rewlocs[comp[1]]]-rewlocs[comp[1]])/rewlocs[comp[1]],(coms2[coms2>rewlocs[comp[1]]]-rewlocs[comp[1]])/(track_length-rewlocs[comp[1]])])
+    # rel_coms2 = (coms2-rewlocs[comp[1]])/rewlocs[comp[1]]
+    dct['rel_coms1'] = np.array(rel_coms1)
+    dct['rel_coms2'] = np.array(rel_coms2)
+    dct['learning_tc1'] = [tc1_early, tc1_late]
+    dct['learning_tc2'] = [tc2_early, tc2_late]
+    dct['difftc1'] = difftc1
+    dct['difftc2'] = difftc2
+    dct['rewzones_comp'] = rewzones[comp]
+    dct['coms1'] = coms1
+    dct['coms2'] = coms2
+    dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-(track_length*.07))) & (coms1<(rewlocs[comp[0]])+5))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
+    dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-(track_length*.07))) & (coms2<(rewlocs[comp[1]])+5))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
+    dct['rewloc_shift'] = rewloc_shift
+    dct['com_shift'] = com_shift
+    dct['inactive'] = differentially_inactivated_cells
+    dct['active'] = differentially_activated_cells
+    dct['rewlocs_comp'] = rewlocs[comp]
+    return dct
 
 # # Example usage
 # if __name__ == "__main__":

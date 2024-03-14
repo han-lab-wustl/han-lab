@@ -11,14 +11,16 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e218';an='e200';
+an = 'e190';%an='e189';
 % individual day analysis 
-dys = [20:50]; 
-dys = [7:10, 32,33,35:63,65];
-dys = [2:20, 26,27];
-dys = [32,33,34,36,38,40:55];
-dys = [76, 80:90];
-% dys = [1:51];
+% dys = [20:50]; % e218
+% dys = [7:10, 32,33,35:63,65]; % e216
+% dys = [2:20, 26,27]; %e217
+% dys = [27:30, 32,33,34,36,38,40:75]; % e201
+% dys = [62:70, 72,73,74, 76, 80:90]; % e200
+% dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
+dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
+% dys = [1:51]; % e186
 % src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 src = 'Y:\analysis\fmats';
@@ -92,12 +94,11 @@ for dy=dys % for loop per day
 %     else
         % get place cells only
         pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
-        pc = logical(iscell(:,1));
+        pc = logical(iscell(:,1))';
         [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
-        bordercells_pc = bordercells(pc); % mask border cells
-        fc3_pc = Fc3(:,~bordercells_pc); % remove border cells
+        fc3_pc = Fc3(:,(pc & ~bordercells)); % remove border cells
         % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-        dff_pc = dFF(:,~bordercells_pc); % remove border cells
+        dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
 
         [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
