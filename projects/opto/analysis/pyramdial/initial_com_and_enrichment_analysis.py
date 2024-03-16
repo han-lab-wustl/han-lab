@@ -330,7 +330,7 @@ for dy,dct in enumerate(dcts):
 
         # else:
         #     axcom.scatter(dct['coms1'][dct['active']]-dct['rewlocs_comp'][0], dct['coms2'][dct['active']]-dct['rewlocs_comp'][1], s=5, color='red')
-axcom.plot(axcom.get_xlim(), axcom.get_ylim(), color='slategray')
+axcom.plot(axcom.get_xlim(), axcom.get_ylim(), color='slategray', linestyle='--')
 axcom.spines['top'].set_visible(False)
 axcom.spines['right'].set_visible(False)
 axcom.set_ylabel('COM - Reward Loc, LED on')
