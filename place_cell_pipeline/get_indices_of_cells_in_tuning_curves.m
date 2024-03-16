@@ -15,11 +15,11 @@ dys_per_an = {[20:50], [7:10, 32,33,35:63,65],  [2:20, 26,27], [27:30, 32,33,34,
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % an = 'e190'; dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:45]; % e190
 % dys = [1:51]; % e186
-for ii=1:length(anms)
+for ii=2:length(anms)
     an = anms(ii); dys = dys_per_an{ii};
     src = 'Y:\analysis\fmats';
     for dy=dys % for loop per day
-        clearvars -except an dys dy src
+        clearvars -except an dys dy src anms dys_per_an
         pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
         % load vars
         load(fullfile(pth.folder,pth.name), 'Fc3', 'stat', 'iscell')

@@ -7,7 +7,58 @@ import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
 
+def convert_coordinates(coordinates, center_location, track_length=270):
+    """
+    Convert track coordinates from 0 to track_length (default: 270 cm) to -pi to pi radians,
+    centered at a specified location.
 
+    Args:
+        coordinates (numpy.ndarray): 1D array of track coordinates in cm.
+        center_location (float): Location to center the coordinates at, in cm.
+        track_length (float, optional): Length of the track in cm (default: 270).
+
+    Returns:
+        numpy.ndarray: Converted coordinates in radians, centered at the specified location.
+    """
+    # Convert coordinates and center_location to radians
+    coordinates_radians = coordinates * (2 * np.pi / track_length)
+    center_radians = center_location * (2 * np.pi / track_length)
+
+    # Center coordinates_radians around center_radians
+    centered_coordinates_radians = coordinates_radians - center_radians
+
+    # Wrap the centered_coordinates_radians to -pi to pi range
+    centered_coordinates_radians = (centered_coordinates_radians + np.pi) % (2 * np.pi) - np.pi
+
+    return centered_coordinates_radians
+
+
+def intersect_arrays(*arrays):
+    """
+    Find the intersection between multiple NumPy arrays.
+
+    Args:
+        *arrays: Variable number of NumPy arrays.
+
+    Returns:
+        numpy.ndarray: Array containing the intersection of all input arrays.
+    """
+    # Convert arguments to a list of arrays
+    arrays = list(arrays)
+
+    # Base case: If there is only one array, return it
+    if len(arrays) == 1:
+        return arrays[0]
+
+    # Find the intersection between the first two arrays
+    intersection = np.intersect1d(arrays[0], arrays[1])
+
+    # Find the intersection between the result and the remaining arrays
+    for arr in arrays[2:]:
+        intersection = np.intersect1d(intersection, arr)
+
+    return intersection
+    
 def evaluate_place_field_width(tuning_curve, bin_centers, threshold=0.5):
     """
     Evaluate the width of a place field from a tuning curve calculated from calcium imaging data.
