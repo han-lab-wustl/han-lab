@@ -11,7 +11,7 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e216';
+an = 'e217';
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218
@@ -21,7 +21,7 @@ an = 'e216';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [68];
+dys = [28 29 30 31 32];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -102,9 +102,10 @@ for dy=dys % for loop per day
         % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-
+        nbins = track_length/bin_size;
         [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc);
+    licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins);
+        
         % early trials
         [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned, gainf,...
     licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch

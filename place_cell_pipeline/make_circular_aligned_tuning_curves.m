@@ -13,14 +13,14 @@
 clear all;
 % an = 'e190';%an='e189';
 % individual day analysis 
-% an = 'e218'; dys = [20:50]; % e218
+an = 'e218'; dys = [20:50]; % e218
 % an = 'e216';  dys = [7:10, 32,33,35:63,65]; % e216
 % an = 'e217'; dys = [2:20, 26,27]; %e217
 % an = 'e201'; dys = [27:30, 32,33,34,36,38,40:75]; % e201
 % an = 'e200'; dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % an = 'e189'; dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % an = 'e190'; dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-an = 'e186'; dys = [1:51]; % e186
+% an = 'e186'; dys = [1:51]; % e186
 % src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 src = 'Y:\analysis\fmats';
@@ -80,16 +80,16 @@ for dy=dys % for loop per day
         pc = logical(iscell(:,1))';
         [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
         fc3_pc = Fc3(:,(pc & ~bordercells)); % remove border cells
-        % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
-        % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         nbins = 90;
         bin_size = 2*pi/nbins;
     [ybinned_circ] = convert_ypos_to_circular_coords_per_ep(ybinned*gainf, rewlocs, eps, track_length);
-        [tuning_curves_circular_late_trials, coms_circular_late_trials, median_com, peak] = make_circular_tuning_curves(eps, trialnum, rewards, ybinned_circ+pi, gainf, ntrials,...
+        [tuning_curves_pc_circular_late_trials, coms_pc_circular_late_trials, median_com, peak] = make_circular_tuning_curves(eps, trialnum, rewards, ybinned_circ+pi, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins);
         % early trials
-        [tuning_curves_circular_early_trials, coms_circular_early_trials, ~,~] = make_circular_tuning_curves_per_trial(eps, trialnum, rewards, ybinned_circ+pi, gainf,...
+        [tuning_curves_pc_circular_early_trials, coms_pc_circular_early_trials, ~,~] = make_circular_tuning_curves_per_trial(eps, trialnum, rewards, ybinned_circ+pi, gainf,...
     licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins, [1,2,3]); % first 3 trials of epoch
         fprintf('********calculated tuning curves!********\n')
 %     end
@@ -100,9 +100,9 @@ for dy=dys % for loop per day
     fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
     for ep=1:length(eps)-1
         subplot(1,length(eps)-1,ep)
-        plt = tuning_curves_circular_late_trials{ep};
+        plt = tuning_curves_pc_circular_late_trials{ep};
         % sort all by ep 1
-        [~,sorted_idx] = sort(coms_circular_late_trials{1});
+        [~,sorted_idx] = sort(coms_pc_circular_late_trials{1});
         imagesc(normalize(plt(sorted_idx,:),2));
         hold on;
         colormap jet        
@@ -112,9 +112,9 @@ for dy=dys % for loop per day
     sgtitle(sprintf(['animal %s, day %i, circular coordinates'], an, dy))
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);   
-    save(fullfile(pth.folder,pth.name), 'tuning_curves_circular_early_trials', 'coms_circular_early_trials', ...
-        'tuning_curves_circular_late_trials', 'coms_circular_late_trials', 'ybinned_circ','-append')
+    save(fullfile(pth.folder,pth.name), 'tuning_curves_pc_circular_early_trials', 'coms_pc_circular_early_trials', ...
+        'tuning_curves_pc_circular_late_trials', 'coms_pc_circular_late_trials', 'ybinned_circ','-append')
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_circ',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_circ_pc',an)));

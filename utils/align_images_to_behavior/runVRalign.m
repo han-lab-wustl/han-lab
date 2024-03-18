@@ -3,8 +3,8 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e216";
-days = [68];
+mouse_name = "e217";
+days = [33];
 src = "X:\vipcre";
 
 for day=days
@@ -18,7 +18,7 @@ end
 % for dopamine
 clear all
 mouse_name = "e232";
-days = [5:6];
+days = [21];
 src = "Z:\chr2_grabda";
 
 for day=days

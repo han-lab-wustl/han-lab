@@ -13,22 +13,17 @@ from behavior import get_success_failure_trials, consecutive_stretch
 #%%
 plt.close('all')
 # save to pdf
-
+condrewloc = pd.read_csv(r"Z:\chr2_grab.csv", index_col = None)
 src = r"Z:\chr2_grabda\e232"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(os.path.dirname(src),"peri_analysis.pdf"))
-days = [11,12,13,14,15,16,17,20]
-rewloc = 123*1.5
-newrewloc = rewloc
+days = [15,16,17,18,19,20,22]
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
+optodays = [18, 19, 22]
+learning_date = {}
 for day in days: 
-    if day>8: newrewloc = 65*1.5
-    if day>11: rewloc = 65*1.5 # memory rew loc
-    if day>14: newrewloc = 91*1.5 
-    if day>15: rewloc = 91*1.5 # memory rew loc
-    if day>17: newrewloc = 155*1.5 
-    if day>18: rewloc = 155*1.5 # memory rew loc
-    if day>19: newrewloc = 70*1.5 # memory rew loc
+    newrewloc = condrewloc.loc[condrewloc.Day==day, 'RewLoc'].values[0]
+    rewloc = condrewloc.loc[condrewloc.Day==day, 'PrevRewLoc'].values[0]
     # for each plane
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
         params = scipy.io.loadmat(path)
@@ -40,6 +35,17 @@ for day in days:
         keys = params['params'].dtype
         # dff is in row 7 - roibasemean3/basemean
         dff = np.hstack(params['params'][0][0][6][0][0])/np.hstack(params['params'][0][0][9])
+        # temp remove artifacts
+        if day in optodays:
+            mean = np.mean(dff)
+            std = np.std(dff)
+            z_scores = np.abs((dff - mean) / std)
+            artifact_mask = z_scores > artifact_threshold
+
+            # Remove artifacts by setting them to NaN
+            clean_data = dff.copy()
+            clean_data[artifact_mask] = np.nan
+            dff = clean_data
         dffdf = pd.DataFrame({'dff': dff})
         dff = np.hstack(dffdf.rolling(2).mean().values)
         rewards = np.hstack(params['solenoid2'])
@@ -67,10 +73,14 @@ for day in days:
 
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = eye.perireward_binned_activity(dff[:firstrew], rews_centered, timedFF[:firstrew], range_val, binsize)
-        # peri reward initial probes
+        # peri reward initial probes        
+        # Find the rows that contain NaNs
+        rows_with_nans = np.any(np.isnan(normrewdFF), axis=1)
+        # Select rows that do not contain any NaNs
+        clean_arr = normrewdFF[~rows_with_nans]
         fig, axes = plt.subplots(nrows=3,ncols=1)#,gridspec_kw={'width_ratios':[4,1]})
         ax = axes[0]
-        ax.imshow(normrewdFF)
+        ax.imshow(clean_arr)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Probe Trials (Centered by prev. rewloc)')
@@ -104,9 +114,13 @@ for day in days:
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = eye.perireward_binned_activity(dff[failtr_bool],
             rews_centered, timedFF[failtr_bool], range_val, binsize)
+        # Find the rows that contain NaNs
+        rows_with_nans = np.any(np.isnan(normrewdFF), axis=1)
+        # Select rows that do not contain any NaNs
+        clean_arr = normrewdFF[~rows_with_nans]
         # peri reward failed + catch trials
         ax = axes[1]
-        ax.imshow(normrewdFF)
+        ax.imshow(clean_arr)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Failed / Catch Trials (Centered by rewloc)')
@@ -120,8 +134,12 @@ for day in days:
         # all subsequent rews
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = eye.perireward_binned_activity(dff, rewards, timedFF, range_val, binsize)
+        # Find the rows that contain NaNs
+        rows_with_nans = np.any(np.isnan(normrewdFF), axis=1)
+        # Select rows that do not contain any NaNs
+        clean_arr = normrewdFF[~rows_with_nans]        
         ax = axes[2]
-        ax.imshow(normrewdFF)
+        ax.imshow(clean_arr)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Successful Trials (Centered by CS)')
@@ -131,6 +149,11 @@ for day in days:
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         fig.suptitle(f'Peri CS/Rew Loc, Day {day}, {layer}')
         fig2.suptitle(f'Mean of Trials, Peri CS/Rew Loc, Day {day}, {layer}')
+        iind = str(int(condrewloc.loc[condrewloc.Day==day, 'learning_date'].values[0]))
+        if iind not in learning_date.keys():
+            learning_date[iind] = []        
+        # save dff/per successful trial across learning
+        learning_date[iind].append(clean_arr)
 
         pdf.savefig(fig)
         pdf.savefig(fig2)

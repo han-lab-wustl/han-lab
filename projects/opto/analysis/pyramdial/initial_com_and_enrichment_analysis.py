@@ -238,8 +238,8 @@ bigdf_org = pd.concat(dfs_diff,ignore_index=False)
 bigdf_org.reset_index(drop=True, inplace=True)   
 
 # plot fraction of inactivated vs. activated cells
-bigdf = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).quantile(.75)
-bigdf = bigdf_org[bigdf_org.vip_cond=='ctrl'].groupby(['animal', 'opto', 'rewzones_transition']).quantile(.75)
+bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).quantile(.75)
+bigdf = bigdf_org[bigdf_org.vip_cond=='vip'].groupby(['animal', 'opto', 'rewzones_transition']).quantile(.75)
 plt.figure()
 ax = sns.barplot(x="opto", y="inactive_frac",hue='rewzones_transition', data=bigdf,fill=False)
 ax = sns.stripplot(x="opto", y="inactive_frac",hue='rewzones_transition', data=bigdf)
@@ -269,14 +269,14 @@ sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
 
 # sig # per animal
-scipy.stats.ttest_ind(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values,
-                    bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='ctrl') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values)
+scipy.stats.ttest_ind(bigdf_test.loc[(bigdf_test.index.get_level_values('vip_cond')=='vip') & (bigdf_test.index.get_level_values('opto')==True), 'inactive_frac'].values,
+                    bigdf_test.loc[(bigdf_test.index.get_level_values('vip_cond')=='ctrl') & (bigdf_test.index.get_level_values('opto')==True), 'inactive_frac'].values)
 # vip led off vs. on
-scipy.stats.ttest_ind(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'inactive_frac'].values,
-                    bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==False), 'inactive_frac'].values)
-
-scipy.stats.ttest_ind(bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==True), 'active_frac'].values,
-                    bigdf.loc[(bigdf.index.get_level_values('vip_cond')=='vip') & (bigdf.index.get_level_values('opto')==False), 'active_frac'].values)
+scipy.stats.ttest_ind(bigdf_test.loc[(bigdf_test.index.get_level_values('vip_cond')=='vip') & (bigdf_test.index.get_level_values('opto')==True), 'inactive_frac'].values,
+                    bigdf_test.loc[(bigdf_test.index.get_level_values('vip_cond')=='vip') & (bigdf_test.index.get_level_values('opto')==False), 'inactive_frac'].values)
+# active cells
+scipy.stats.ttest_ind(bigdf_test.loc[(bigdf_test.index.get_level_values('vip_cond')=='vip') & (bigdf_test.index.get_level_values('opto')==True), 'active_frac'].values,
+                    bigdf_test.loc[(bigdf_test.index.get_level_values('vip_cond')=='vip') & (bigdf_test.index.get_level_values('opto')==False), 'active_frac'].values)
 
 # %%
 # understand inactive cell tuning
@@ -302,7 +302,8 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(r'Z:\inactive_cells_tuning_curves
 bin_size = 3
 figcom, axcom = plt.subplots() 
 for dy,dct in enumerate(dcts):   
-    if conddf.in_type.values[dy]!='vip':
+    if conddf.in_type.values[dy]=='vip':
+        # TODO plot with circular coms (import here)
     # dct = dcts[dy]
         arr = dct['learning_tc2'][1][dct['active']]
         tc2 = arr[np.argsort(dct['coms2'][dct['active']])]

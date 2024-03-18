@@ -59,7 +59,7 @@ def intersect_arrays(*arrays):
 
     return intersection
     
-def evaluate_place_field_width(tuning_curve, bin_centers, threshold=0.5):
+def evaluate_place_field_width(tuning_curve, bin_centers, threshold=0.3):
     """
     Evaluate the width of a place field from a tuning curve calculated from calcium imaging data.
 
