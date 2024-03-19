@@ -17,6 +17,7 @@ import datetime
 import quantify_grooms_hrz
 from collections import Counter
 from mpl_toolkits.axes_grid1 import make_axes_locatable 
+
 vrdir =  r'Y:\DLC\VR_data\dlc' # copy of vr data, curated to remove badly labeled files
 dlcfls = r'Y:\DLC\dlc_mixedmodel2'#\for_analysis'
 

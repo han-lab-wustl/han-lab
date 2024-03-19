@@ -12,6 +12,11 @@ import matplotlib as mpl
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter 
 from projects.DLC_behavior_classification.preprocessing import consecutive_stretch
+mpl.rcParams['svg.fonttype'] = 'none'
+mpl.rcParams["xtick.major.size"] = 6
+mpl.rcParams["ytick.major.size"] = 6
+import matplotlib.pyplot as plt
+plt.rcParams["font.family"] = "Arial"
 ################################FUNCTION DEFINITIONS################################
 
 def nan_helper(y):
@@ -68,6 +73,7 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
     centroids_y = scipy.signal.savgol_filter(centroids_y,5, 2)
     licks_threshold = vralign['lickVoltage']<=-0.065 # manually threshold licks
     licks = scipy.signal.savgol_filter(licks_threshold,10, 2) 
+    rewards = vralign['rewards']
     velocity = vralign['forwardvel']
     nans, x = nan_helper(velocity)
     velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
@@ -78,15 +84,11 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
     acc=np.zeros_like(velocity)
     acc[:-1]=acc_
     acc = scipy.signal.savgol_filter(acc,10, 2)
-    speed = abs(velocity)
     vralign['EyeNorthEast_y'][vralign['EyeNorthEast_likelihood']<0.75]=0 # filter out low prob
     eyelid = vralign['EyeNorthEast_y']
     eyelid = scipy.signal.savgol_filter(eyelid,10, 2)
-    speed = abs(vralign['forwardvel'])
-    nans, x = nan_helper(speed)
-    speed[nans]= np.interp(x(nans), x(~nans), speed[~nans])
 
-    X = np.array([velocity, speed, acc, licks, eyelid]).T # Predictor(s)
+    X = np.array([velocity, acc, licks, eyelid]).T # Predictor(s)
     X = sm.add_constant(X) # Adds a constant term to the predictor(s)
     y = areas # Outcome
     # Fit a regression model
@@ -105,8 +107,6 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
     centroids_y_res = result.resid_pearson
     ############## GLM ##############
     # run peri reward time & plot
-    range_val = 10 #s
-    binsize = 0.05 #s
     input_peri = areas_res
     rewards = vralign["rewards"]
     normmeanrew_t, meanrew, normrewall_t, \
@@ -236,6 +236,7 @@ def consecutive_stretch(x):
     y.append(x[break_point[-1] + 1:])
     
     return y
+
 
 def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize):
     """adaptation of gerardo's code to align IN BOTH TIME AND POSITION, dff or pose data to 

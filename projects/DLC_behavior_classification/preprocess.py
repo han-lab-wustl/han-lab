@@ -21,7 +21,7 @@ def preprocess(step,vrdir, dlcfls,columns=False,
     if step == 1: # align to vr
         with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
             df = pickle.load(fp)
-        [preprocessing.VRalign_automatic(os.path.join(dlcfls,row["VR"]), 
+        [preprocessing.VRalign(os.path.join(dlcfls,row["VR"]), 
                     os.path.join(dlcfls,row["DLC"]),dlcfls, only_add_experiment=only_add_experiment) for i,row in df.iterrows()]
             
     if step == 2: # collect clustering vars
@@ -69,8 +69,8 @@ def preprocess(step,vrdir, dlcfls,columns=False,
 #%%
 if __name__ == "__main__":
     vrdir =  r"\\storage1.ris.wustl.edu\ebhan\Active\all_vr_data" # copy of vr data, curated to remove badly labeled files
-    dlcfls = r"I:\vids_to_analyze\tail" # h5 and csv files from dlc
-    df = preprocess(0,vrdir,dlcfls)
+    dlcfls = r"I:\vids_to_analyze\face_and_pupil\pupil" # h5 and csv files from dlc
+    # df = preprocess(0,vrdir,dlcfls)
     # need to fix vr mat files separately in matlab, lol
     # will not work otherwise!!!
     # you would want to run `fix_vr_data...` on the whole VR_data folder to avoid 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     # (do not need to remake vr_align.p as you have just deleted some mice)
     with open(os.path.join(dlcfls,"mouse_df.p"), "rb") as fp: #unpickle
         df = pickle.load(fp)
-    # makes vr align picklesuite
+    # makes vr align pickle
     preprocess(1,vrdir,dlcfls) # savedst = dlcfls
 #     # gets clustering vars
 #     dfs = preprocess(2,vrdir,dlcfls)

@@ -2,8 +2,8 @@ import deeplabcut, os, pandas as pd
 
 config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
 # path to videos here
-vids = r'D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test'
-vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
+vids = r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\230406_E200.avi"
+#vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
 #vid = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E217.avi"]
 
 deeplabcut.analyze_videos(config_path, vids, shuffle=1, #rrcsv.video.values
@@ -50,4 +50,4 @@ deeplabcut.create_labeled_video(config_path,vids,
         displaycropped=True)
 
 
-ffmpeg -i D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test\230321_E201.avi -c:v rawvideo D:\PupilTraining-Matt-2023-07-07\Multi reward vids\test\230321_E201_conv.avi
+ffmpeg -i D:\PupilTraining-Matt-2023-07-07\Pavlov-vids\E215\240223_E215.avi -c:v rawvideo D:\PupilTraining-Matt-2023-07-07\Pavlov-vids\E215\240223_E215_conv.avi

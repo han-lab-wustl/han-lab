@@ -11,9 +11,8 @@ by Zahra
 import tifffile as tif, numpy as np, os, sys, shutil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
-from utils.utils import listdir
 import SimpleITK as sitk, re
-from avi import read_to_memmap, vidwrite
+from avi import read_to_memmap, vidwrite, listdir
 import argparse, ast   
 
 def main(**args):

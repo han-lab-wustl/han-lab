@@ -1,6 +1,7 @@
-import SimpleITK as sitk
+import SimpleITK as sitk, os
 import numpy as np
 import ffmpeg
+
 
 def vidwrite(fn, images, framerate=31.25*2, vcodec='libx264'):
     if not isinstance(images, np.ndarray):
@@ -30,3 +31,20 @@ def read_to_memmap(arr, ii, fl):
     arr.flush(); del arr
     if ii%10000==0: print(ii, flush=True)
     return
+
+
+def listdir(pth, ifstring=None):
+    """prints out complete path of list in directory
+
+    Args:
+        pth (_type_): _description_
+        ifstring (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        list: list of items in directory with their complete path
+    """
+    if not ifstring==None:
+        lst = [os.path.join(pth, xx) for xx in os.listdir(pth) if ifstring in xx]
+    else:
+        lst = [os.path.join(pth, xx) for xx in os.listdir(pth)]
+    return lst
