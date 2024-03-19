@@ -21,7 +21,7 @@ an = 'e217';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [28 29 30 31 32];
+dys = [34];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -40,8 +40,7 @@ for dy=dys % for loop per day
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
-        'forwardvel', 'licks', 'trialnum', 'rewards', 'tuning_curves', 'coms', ...
-        'putative_pcs', 'VR')
+        'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
     % vars to get com and tuning curves
     bin_size = 3; % cm
     try
@@ -103,12 +102,12 @@ for dy=dys % for loop per day
         dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         nbins = track_length/bin_size;
-        [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
+        [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned*gainf, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins);
         
         % early trials
-        [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned, gainf,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
+        [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned*gainf, ...
+            gainf,licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
         fprintf('********calculated tuning curves!********\n')
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

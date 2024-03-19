@@ -22,7 +22,7 @@ figcom4, axcom4 = plt.subplots()
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     day = conddf.days.values[ii]
-    if conddf.in_type.values[ii]=='ctrl':
+    if conddf.in_type.values[ii]=='vip':
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_circular_early_trials',
             'tuning_curves_pc_circular_late_trials', 'coms_pc_circular_late_trials'])
@@ -70,7 +70,7 @@ axcom.spines['top'].set_visible(False)
 axcom.spines['right'].set_visible(False)
 axcom.set_ylabel('Circular COM Ep 2')
 axcom.set_xlabel('Circular COM Ep 1')
-axcom.set_title('Inactivated cells, Control')
+axcom.set_title('Inactivated cells, LED off')
 
 axcom2.plot(axcom2.get_xlim(), axcom2.get_ylim(), color='k', linestyle='--')
 axcom2.axvline(0, color='slategray', linestyle='--')
@@ -88,7 +88,7 @@ axcom3.spines['top'].set_visible(False)
 axcom3.spines['right'].set_visible(False)
 axcom3.set_ylabel('Circular COM Ep 2')
 axcom3.set_xlabel('Circular COM Ep 1')
-axcom3.set_title('Activated cells, Control')
+axcom3.set_title('Activated cells, LED off')
 
 axcom4.plot(axcom4.get_xlim(), axcom4.get_ylim(), color='k', linestyle='--')
 axcom4.axvline(0, color='slategray', linestyle='--')

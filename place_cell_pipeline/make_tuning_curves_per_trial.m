@@ -20,7 +20,6 @@ for ep=1:length(eps)-1
     eprng = eprng(mask);
     if ~isempty(eprng)
         ypos = ybinned(eprng);
-        ypos = ceil(ypos*(gainf));
         lick = licks(eprng);
         fv = forwardvel(eprng);
         % updated how we get moving time to be consistent with dop pipeline
