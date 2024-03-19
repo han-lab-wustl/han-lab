@@ -13,7 +13,7 @@ plt.rcParams["font.family"] = "Arial"
 
 
 # path to pickle
-pdst = r"D:\PupilTraining-Matt-2023-07-07\e216_20_Oct_2023_vr_dlc_align.p"
+pdst = r"D:\PupilTraining-Matt-2023-07-07\E200_06_Apr_2023_vr_dlc_align.p"
 
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
@@ -49,7 +49,7 @@ axes[1].set_xticklabels(range(-range_val, range_val+1, 2))
 axes[1].spines['top'].set_visible(False)
 axes[1].spines['right'].set_visible(False)
 axes[1].set_title('Mean of Trials')
-axes[1].set_xlabel('Seconds from CS')
+axes[1].set_xlabel('Time from CS (s)')
 axes[0].axvline(int(range_val/binsize), color = 'w', linestyle = '--')
 axes[0].axvline(int(range_val/binsize)+5, color = 'lightgrey', linestyle = '--')
 divider = make_axes_locatable(axes[0])
@@ -59,8 +59,9 @@ plt.show()
 # fig.savefig(r'C:\Users\workstation2\Box\neuro_phd_stuff\han_2023-\thesis_proposal\pupil.jpg', bbox_inches='tight')
 
 #%%
+licks = vralign['lickVoltage']<=-0.065 # manually threshold licks
 normmeanlicks_t, meanlicks, normlickall_t, \
-lickall = perireward_binned_activity(vralign['licks'], \
+lickall = perireward_binned_activity(licks, \
                 rewards.astype(int),
                 vralign['timedFF'], range_val, binsize)
 velocity = vralign['forwardvel']
@@ -73,13 +74,19 @@ velall = perireward_binned_activity(velocity, \
                 vralign['timedFF'], range_val, binsize)
 #%%
 # plot all
-fig, axes=plt.subplots(3,1)
-axes[0].imshow(trials_norm.T)
+fig, axes=plt.subplots(3,1,sharex=True)
+axes[0].imshow(trials_norm.T, cmap='cividis')
 axes[1].imshow(normlickall_t, cmap="Reds")
 # plt.figure(); plt.imshow(normvelall_t, cmap="Greys")
 axes[2].imshow(normvelall_t, cmap="Greys")
+axes[0].axvline(int(range_val/binsize), color = 'w', linestyle = '--')
+axes[0].axvline(int(range_val/binsize)+5, color = 'lightgrey', linestyle = '--')
 
-
+axes[1].set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
+axes[1].set_xticklabels(range(-range_val, range_val+1, 2))
+axes[2].set_xlabel('Time from CS (s)')
+fig.suptitle('Norm pupil, licks, and velocity')
+fig.tight_layout()
 #%%
 # look at centroid
 input_peri = centroids_x
