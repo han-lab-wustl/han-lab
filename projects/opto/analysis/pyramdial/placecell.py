@@ -153,21 +153,6 @@ def consecutive_stretch(x):
     
     return y
 
-def normalize_tuning_curve(tuning_curve):
-    """
-    Normalize a tuning curve to have values between 0 and 1.
-    
-    Parameters:
-    tuning_curve (numpy.ndarray): The tuning curve to normalize.
-    
-    Returns:
-    numpy.ndarray: Normalized tuning curve.
-    """
-    min_val = np.min(tuning_curve)
-    max_val = np.max(tuning_curve)
-    normalized = (tuning_curve - min_val) / (max_val - min_val)
-    return normalized
-
 def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """
     Identify cells that are differentially inactivated between two conditions.
@@ -200,6 +185,17 @@ def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold,
     differentially_activated_cells = np.where(activity_diff < -threshold)[0]
     
     return differentially_activated_cells
+
+def normalize_2d_array(arr):
+    # Calculate the minimum and maximum values in the array
+    arr_min = np.nanmin(arr)
+    arr_max = np.nanmax(arr)
+    arr_range = arr_max - arr_min
+
+    # Normalize the array
+    normalized_arr = (arr - arr_min) / arr_range
+
+    return normalized_arr
 
 def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """

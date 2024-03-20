@@ -43,7 +43,7 @@ for day in days:
         # dff is in row 7 - roibasemean3/basemean
         dff = np.hstack(params['params'][0][0][6][0][0])/np.hstack(params['params'][0][0][9])
         # temp remove artifacts
-        artifact_threshold = 1.5
+        artifact_threshold = 1.1
         if day in optodays:
             mean = np.mean(dff)
             std = np.std(dff)
@@ -170,28 +170,27 @@ plt.rc('font', size=16)          # controls default text sizes
 
 # average across learning
 colors = ['k', 'lime', 'orangered']
-colorsl = ['slategray', 'darkgreen', 'red']
+color_opto = ['slategray', 'darkgreen', 'red']
 
-fig, axes = plt.subplots(4,1,sharex=True, figsize=(10,15))
+fig, axes = plt.subplots(4,3,sharex=True, figsize=(20,15))
 for k,v in day_date_dff.items():
     day = int(k)
     if day>8:
         learning_day = condrewloc.loc[condrewloc.Day==day, 'learning_date'].values[0]-1    
         if learning_day<3:
             colorl = colors[int(learning_day)]
-            if learning_day==2:
-            # if day in optodays: #if learning_day==2:
-                # colorl=color_opto
-                for pln in range(len(v)):
-                    meandff = v[pln]
-                    ax = axes[pln]
-                    ax.plot(meandff, color=colorl, label = learning_day)
-                    ax.spines['top'].set_visible(False)
-                    ax.spines['right'].set_visible(False)
-                    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-                    ax.set_xticklabels(range(-range_val, range_val+1, 1))
-                    ax.set_title(planelut[pln])
-                    ax.axvline(range_val/binsize, color='slategray', linestyle='--')
+            if day in optodays: #if learning_day==2:
+                colorl=color_opto[int(learning_day)]
+            for pln in range(len(v)):
+                meandff = v[pln]
+                ax = axes[pln, int(learning_day)]
+                ax.plot(meandff, color=colorl, label = learning_day)
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.set_title(planelut[pln])
+                ax.axvline(range_val/binsize, color='slategray', linestyle='--')                    
                     
 plt.xlabel('Time from CS (s)')
 plt.ylabel('dF/F')
