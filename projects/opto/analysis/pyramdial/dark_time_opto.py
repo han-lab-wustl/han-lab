@@ -59,80 +59,6 @@ scipy.stats.ttest_rel(bigdf[(bigdf.opto==True)].frac_pc.values, \
             bigdf[(bigdf.opto==False)].frac_pc.values)
 scipy.stats.ranksums(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
 
-#%%
-# plot coms of de-enriched cells    
-dcts_opto = np.array(dcts)[optoep>1]
-
-dfs=[]; dfs_diff = []
-for ii,dct in enumerate(dcts_opto):
-    diff_rel_coms1=(dct['rel_coms1'][dct['difftc1']<0])
-    diff_rel_coms2=(dct['rel_coms2'][dct['difftc2']<0])    
-    df = pd.DataFrame(np.hstack([diff_rel_coms1, diff_rel_coms2]), columns = ['relative_com'])
-    df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
-    df['rewzones'] = np.hstack([[f'rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
-    df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
-    df['animal'] = animals[optoep>1][ii]
-    df['in_type'] = in_type[optoep>1][ii]
-    if in_type[optoep>1][ii]=='vip':
-        df['vip_cond'] = 'vip'
-    else:
-        df['vip_cond'] = "ctrl"
-    # if optoep[ii]>1:    
-    df['opto'] = np.hstack([[False]*len(diff_rel_coms1),[True]*len(diff_rel_coms2)])
-    # else: 
-    #     df['opto'] = [False]*len(df)
-    dfs.append(df)
-bigdf = pd.concat(dfs)
-bigdf= bigdf.sort_values('rewzones_transition')
-
-intype = 'vip'
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="rewzones_transition", y="relative_com", hue="opto", 
-    data=bigdf[bigdf.in_type == intype], size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="rewzones_transition", y="relative_com", hue="opto",
-fill=False, data=bigdf[bigdf.in_type == intype], palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="animal", y="relative_com", 
-    hue="opto", data=bigdf, size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="animal", y="relative_com", hue="opto", 
-    data=bigdf, fill=False, palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="in_type", y="relative_com", 
-    hue="opto", data=bigdf, size=1, palette={False: "slategray", True: "red"})
-ax = sns.barplot(x="in_type", y="relative_com", hue="opto", 
-    data=bigdf, fill=False, palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
-
-# look at specific animals
-an = 'e200'
-bigdf = bigdf.sort_values('rewzones')
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="rewzones", y="relative_com", hue="opto", 
-    data=bigdf[bigdf.animal == an], size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="rewzones", y="relative_com", hue="opto",
-fill=False, data=bigdf[bigdf.animal == an], palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-scipy.stats.ranksums(bigdf[(bigdf.opto==True) & (bigdf.vip_cond=='vip')].relative_com.values, 
-bigdf[(bigdf.opto==False) &  (bigdf.vip_cond=='vip')].relative_com.values)
-
 # %%
 # average enrichment
 dcts_opto = np.array(dcts)[optoep>1]
@@ -228,7 +154,7 @@ for ii,dct in enumerate(dcts_opto):
     # else:
     #     df['vip_cond'] = 'ctrl'
 
-    elif (df['in_type'].values[0] =='sst'):# or df['in_type'].values[0] =='pv':
+    elif (df['in_type'].values[0] =='sst') or df['in_type'].values[0] =='pv':
         df['vip_cond'] = 'ctrl'
     # if optoep[ii]>1:        
     # else: 
