@@ -25,7 +25,7 @@ dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
     threshold = 10
-    pc = False
+    pc = True
     dct = get_pyr_metrics_opto(conddf, dd, day, threshold=threshold, pc=pc)
     dcts.append(dct)
 #%%
@@ -54,7 +54,7 @@ for ii,dct in enumerate(dcts_opto):
     dfs.append(df)
 bigdf = pd.concat(dfs)    
 
-bigdf=bigdf.groupby(['animal', 'vip_ctrl','opto']).mean()
+bigdf=bigdf.groupby(['animal', 'vip_ctrl','opto', 'in_type']).median(numeric_only=True)
 
 in_type_cond = 'vip'
 fig,ax = plt.subplots()
@@ -67,9 +67,9 @@ ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
-bigdf = bigdf[bigdf.in_type == in_type_cond]
-scipy.stats.ttest_rel(bigdf[(bigdf.opto==True)].frac_pc.values, \
-            bigdf[(bigdf.opto==False)].frac_pc.values)
+bigdf = bigdf[bigdf.index.get_level_values('in_type') == in_type_cond]
+scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, \
+            bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
 scipy.stats.ranksums(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
 # %%
 # average enrichment

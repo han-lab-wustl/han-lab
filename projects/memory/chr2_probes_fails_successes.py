@@ -21,8 +21,9 @@ plt.close('all')
 # save to pdf
 condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
 src = r"Z:\chr2_grabda\e232"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(os.path.dirname(src),"peri_analysis.pdf"))
-days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"peri_analysis.pdf"))
+days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 optodays = [18, 19, 22, 23,24]
@@ -141,10 +142,15 @@ for day in days:
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Failed / Catch Trials (Centered by rewloc)')
         
-
+        # for opto days, plot opto trials only // vs. non opto
+        if day in optodays:
+            mask = trialnum%2==1
+        else:
+            mask = (np.ones_like(trialnum)*True).astype(bool)
         # all subsequent rews
         normmeanrewdFF, meanrewdFF, normrewdFF, \
-            rewdFF = eye.perireward_binned_activity(dff, rewards, timedFF, range_val, binsize)
+            rewdFF = eye.perireward_binned_activity(dff[mask], rewards[mask], timedFF[mask], 
+                                    range_val, binsize)
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
         # Select rows that do not contain any NaNs

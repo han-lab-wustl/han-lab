@@ -315,16 +315,16 @@ bigdf = pd.concat(dfs)
 bigdf.reset_index(drop=True, inplace=True)   
 
 # %%
-
+# plot
 bigdf_plot = bigdf#[(bigdf.in_type.str.contains('vip'))]
-bigdf_plot = bigdf_plot.groupby(['animal', 'in_type']).quantile(.75)
+bigdf_plot = bigdf_plot.groupby(['animal', 'in_type']).mean()
 # bigdf_plot.sort_values('lick_condition')
 plt.figure()
-ax = sns.barplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type', data=bigdf_plot,
+ax = sns.barplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type', data=bigdf_plot,
     palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
             'vip_ledoff': "slategray"}, 
     errorbar=('ci', 68), fill=False)
-ax = sns.stripplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type',data=bigdf_plot,
+ax = sns.stripplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type',data=bigdf_plot,
                 palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
             'vip_ledoff': "slategray"})
 ax.tick_params(axis='x', labelrotation=90)

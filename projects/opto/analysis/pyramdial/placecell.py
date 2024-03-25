@@ -435,14 +435,14 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
     tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))    
     # replace nan coms
-    peak = np.nanmax(tc1_late,axis=1)
-    coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
-    peak = np.nanmax(tc2_late,axis=1)
-    coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])    
+    # peak = np.nanmax(tc1_late,axis=1)
+    # coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+    # peak = np.nanmax(tc2_late,axis=1)
+    # coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])    
     coms1 = np.hstack(coms[comp[0]])
     coms2 = np.hstack(coms[comp[1]])
-    coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
-    coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
+    # coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
+    # coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
     # take fc3 in area around com
     difftc1 = tc1_late-tc1_early
     coms1_bin = np.floor(coms1/bin_size).astype(int)

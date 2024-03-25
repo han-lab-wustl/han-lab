@@ -2,7 +2,7 @@
 % sst individual cell profiles
 clear all; close all
 an = 'e136';
-dy = 7;
+dy = 6;
 load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln0 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln1 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane1_Fall.mat", an, dy)));
@@ -19,7 +19,7 @@ nbins = track_length/bin_size;
 rewlocs = changeRewLoc(changeRewLoc>0);
 rewsize = 10; %cm
 grayColor = [.7 .7 .7];
-savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data\sst';
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data\sst';
 %%
 % params to export to ppt
 pptx    = exportToPPTX('', ...
@@ -56,7 +56,7 @@ for plane=1:planes
         xline(median(1:size(allbins,2)), 'b--', 'LineWidth', 1.5) % mark reward
         xticks(0:25:size(allbins,2))
         xticklabels(-range:5:range)
-        xlabel('Seconds (s) from Reward')
+        xlabel('Time (s) from Reward')
         if cll==size(dff,2)+1
             for rewind = 1:size(rewvel,2)
                 plot(rewvel(:,rewind), 'k'); hold on % plot each trial
@@ -70,7 +70,7 @@ for plane=1:planes
 
     sgtitle(sprintf('All successful trials, plane %i', plane))
     pptx.addPicture(fig);
-    export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_peri_reward_plane%i', an, plane)), '-jpg')
+    % export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_peri_reward_plane%i', an, plane)), '-jpg')
     close(fig)
 end
 % save ppt

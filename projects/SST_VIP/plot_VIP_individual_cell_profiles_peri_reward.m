@@ -4,7 +4,7 @@ clear all; close all
 load("Z:\VIP_intswanalysisv9.mat")
 an = 'vip';
 %%
-dy = 3; % day
+dy = 2; % day
 fall = VIP_ints(1).NR.day{1,dy}.all;
 plns = fall.Falls;
 planes = 3;
@@ -54,7 +54,7 @@ for pln=1:planes
         xline(median(1:size(allbins,2)), 'b--', 'LineWidth', 1.5) % mark reward
         xticks(0:25:size(allbins,2))
         xticklabels(-range:5:range)
-        xlabel('Seconds (s) from Reward')
+        xlabel('Time (s) from Reward')
         if cll==size(dff,2)+1
             for rewind = 1:size(rewvel,2)
                 plot(rewvel(:,rewind), 'k'); hold on % plot each trial
@@ -66,7 +66,7 @@ for pln=1:planes
         end
     end
 
-    sgtitle(sprintf('All successful trials, plane %i', plane))
+    sgtitle(sprintf('All successful trials, plane %i', pln))
     pptx.addPicture(fig);
     close(fig)
 end

@@ -18,7 +18,7 @@ nbins = track_length/bin_size;
 rewlocs = changeRewLoc(changeRewLoc>0);
 rewsize = 10; %cm
 grayColor = [.7 .7 .7]; purple = [0.4940, 0.1840, 0.5560];
-savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\figure_data\sst';
+savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data\sst';
 %%
 % params to export to ppt
 pptx    = exportToPPTX('', ...
@@ -92,7 +92,7 @@ for ep = 1:length(eps)-1 % for each epoch
         end
         sgtitle(sprintf('failed trials \n plane %i, epoch %i', pln, ep))        
         pptx.addPicture(fig);
-        export_fig(fullfile(savedst, sprintf('%s_failed_trials_cell_profiles_pln%i_ep%i', an, pln, ep)), '-jpg')
+        % export_fig(fullfile(savedst, sprintf('%s_failed_trials_cell_profiles_pln%i_ep%i', an, pln, ep)), '-jpg')
         close(fig)
         end
     end
