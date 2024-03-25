@@ -505,10 +505,15 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
                 uchangeRewLoc = np.squeeze(VR['changeRewLoc'][scanstart:scanstop])
                 uchangeRewLoc[0] = np.squeeze(VR['changeRewLoc'][0])
                 uchangeRewLoc = np.round(interpolate_vrdata(uscanstop,uscanstart,dlcdf,uchangeRewLoc))
+                uchangeRewLoc_original = []
             else:
-                uchangeRewLoc = np.hstack(np.squeeze(VR['changeRewLoc']))
-                uchangeRewLoc= np.hstack(uchangeRewLoc)
-                uchangeRewLoc_original = np.hstack([np.ravel(VR[uchangeRewLoc[xx]][:]) for xx in range(len(uchangeRewLoc))]) # temp taking mean of all rew zones                
+                try:
+                    uchangeRewLoc = np.hstack(np.squeeze(VR['changeRewLoc']))
+                    uchangeRewLoc= np.hstack(uchangeRewLoc)
+                    uchangeRewLoc_original = np.hstack([np.ravel(VR[uchangeRewLoc[xx]][:]) for xx in range(len(uchangeRewLoc))]) # temp taking mean of all rew zones                
+                except: #ifrewzones are not saved? fucked up save format
+                    print('\n********** NOT saving changeRewLoc for VR! Cannot be imported from MRZT file **********')
+                    uchangeRewLoc_original = np.zeros_like(uVRtimebinned)
             ulicks = np.squeeze(VR['lick'][scanstart:scanstop])
             ulicks = interpolate_vrdata(uscanstop,uscanstart,dlcdf,ulicks); ulicks=ulicks>0
             ulickVoltage = np.squeeze(VR['lickVoltage'][scanstart:scanstop])             
@@ -648,7 +653,10 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
             except Exception as e:
                 print(e)
                 # fix string to int conversion when importing mat
-            experiment = str(bytes(np.ravel(VR['settings']['name']).tolist()))[2:-1]
+            if not mrzt:
+                experiment = str(bytes(np.ravel(VR['settings']['name']).tolist()))[2:-1]
+            else:
+                experiment = 'MultipleRewZoneTraining'
             vralign = {}
             vralign['experiment']=experiment
             vralign['ybinned']=np.hstack(ybinned)
@@ -659,7 +667,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
             vralign['trialnum']=np.hstack(trialnum)
             vralign['timedFF']=np.hstack(timedFF)
             vralign['lickVoltage']=np.hstack(lickVoltage)
-            if uchangeRewLoc_original:
+            if len(uchangeRewLoc_original)>0:
                 vralign['uchangeRewLoc_original'] = uchangeRewLoc_original
             for col in colssave:
                 vralign[col] = dlcdf[col].values.astype(float)
