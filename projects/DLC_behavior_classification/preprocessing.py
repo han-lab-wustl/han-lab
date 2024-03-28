@@ -6,6 +6,24 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import listdir
 
+def consecutive_stretch_vralign(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+    y = []
+    start = 0
+    
+    for i in range(len(break_point) + 1):
+        if i == len(break_point):
+            end = len(x)
+        else:
+            end = break_point[i] + 1
+        
+        stretch = x[start:end]
+        y.append(stretch)
+        start = end
+    
+    return y
+
 def get_videos_from_hrz_csv(csvpth, dst, vidpth=r'\\storage1.ris.wustl.edu\ebhan\Active\new_eye_videos'):
     """
     csv = path of hrz vr behavior
@@ -621,7 +639,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
                         changeRewLoc[newindx] = np.sum(uchangeRewLoc[(uVRtimebinned>before) & (uVRtimebinned<=after)]);
             
             # fix multiple frames per cs
-            rewards_ = consecutive_stretch(np.where(rewards>0)[0])
+            rewards_ = consecutive_stretch_vralign(np.where(rewards>0)[0])
             rewards_ = np.array([min(xx) for xx in rewards_])
             rewards = np.zeros_like(rewards)
             rewards[rewards_]=1 # assign cs to boolean

@@ -72,4 +72,4 @@ def get_crop_and_edit_config_file(vidpth, yaml_file):
 
     print(f"Edited {yaml_file} at lines {lines_to_edit}")
     
-    return x1,x2,y1,y2
+    return rect_coords
