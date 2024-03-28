@@ -21,11 +21,11 @@ for i in range(len(vralign['BackLeftHeel_x'])):
     y = [backleftheely, backrightheely]
     dist.append(get_dist(x, y))
 fig, axs = plt.subplots()
-axs.plot(area[10000:11000])
+#axs.plot(area[10000:11000])
 axs.plot((vralign['rewards']==0.5)[10000:11000]*3000)
 reward = np.hstack(vralign['rewards'])
 axs.plot(vralign['rewards'])
-plt.figure(); plt.plot(area[10000:12000])
+#plt.figure(); plt.plot(area[10000:12000])
 axs.plot(reward[10000:120000])
 diff = abs(np.diff(dist))
 plt.figure()
@@ -54,9 +54,13 @@ x3, y3 = 5, 6
 avg_slope = average_slope(x1, y1, x2, y2, x3, y3)
 print("Average slope:", avg_slope)
 #slope of upper back
+vralign['UpperBack_x'][vralign['UpperBack_likelihood'].astype('float32')<0.9]=np.nan
+vralign['UpperBack_y'][vralign['UpperBack_likelihood'].astype('float32')<0.9]=np.nan
+vralign['MidBack_x'][vralign['MidBack_likelihood'].astype('float32')<0.9]=np.nan
+vralign['MidBack_y'][vralign['MidBack_likelihood'].astype('float32')<0.9]=np.nan
 def get_slope(x, y):
     slope = (y[0] - y[1]) /(x[0] - x[1])
-    return int(slope)
+    return slope
 slope = []
 for i in range(len(vralign['UpperBack_x'])):
     upperbackx,upperbacky, = vralign['UpperBack_x'][i], vralign['UpperBack_y'][i]
@@ -81,5 +85,6 @@ plt.plot(slope_1)
 r = np.random.randint(1000, len(slope))
 plt.figure()
 
-plt.plot((vralign['rewards']==0.5)[r:r+1000])
+plt.plot((vralign['rewards']==0.5)[r:r+1000]*10)
+plt.plot(vralign['forwardvel'][r:r+1000]/4)
 plt.plot((slope)[r:r+1000])

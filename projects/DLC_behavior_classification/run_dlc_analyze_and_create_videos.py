@@ -2,16 +2,16 @@ import deeplabcut, os, pandas as pd
 
 config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
 # path to videos here
-vids = r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\230406_E200.avi"
+vids = r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2"
 #vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
 #vid = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E217.avi"]
 
 deeplabcut.analyze_videos(config_path, vids, shuffle=1, #rrcsv.video.values
         save_as_csv=True, gputouse=0)
-# crop : # x1: 160
-# x2: 250
+# crop : # x1: 168
+# x2: 305
 # y1: 50
-# y2: 170
+# y2: 200
 #vid = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E228.avi"]
 deeplabcut.create_labeled_video(config_path,vids,
         videotype='.avi',draw_skeleton=True,
@@ -50,4 +50,4 @@ deeplabcut.create_labeled_video(config_path,vids,
         displaycropped=True)
 
 
-ffmpeg -i D:\PupilTraining-Matt-2023-07-07\Pavlov-vids\E215\240223_E215.avi -c:v rawvideo D:\PupilTraining-Matt-2023-07-07\Pavlov-vids\E215\240223_E215_conv.avi
+ffmpeg -i D:\PupilTraining-Matt-2023-07-07\opto-vids\240201_E217.avi -c:v rawvideo D:\PupilTraining-Matt-2023-07-07\opto-vids\240201_E217_conv.avi

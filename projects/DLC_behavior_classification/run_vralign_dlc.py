@@ -12,8 +12,8 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\230406_E200DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
-        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\E200_06_Apr_2023.mat"]
+        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\230407_E200DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
+        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\Multi reward vids\E200_07_Apr_2023.mat"]
         #dlccsv = [r"I:\dlc_inference\230502_E201DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
         #vrfl = [r"D:\adina_vr_files\VR_data\E201_02_May_2023_time(09_16_02).mat"]
         savedst = r"D:\PupilTraining-Matt-2023-07-07"

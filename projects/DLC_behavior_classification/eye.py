@@ -124,7 +124,7 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
                     vralign['timedFF'], range_val, binsize)
 
     
-    return areas, circumferences, centroids_x_res, centroids_y_res, \
+    return areas, areas_res, circumferences, centroids_x_res, centroids_y_res, \
     meanrew, rewall, meanlicks, meanvel
 
 def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
