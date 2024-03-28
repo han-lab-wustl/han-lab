@@ -9,11 +9,14 @@ config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
 # path to videos here
 vids = [r"I:\vids_to_analyze\pupil_light_world\240202_E217.avi"]
 
+# note that we have to run in the for loop like this since
+# the config file needs to edited separately for each video
 for vid in vids:
         # get cropping params and edit config file
         x1,x2,y1,y2 = get_crop_and_edit_config_file(vid,config_path)
         # how to use:
-        # draw a rectangle around eye
+        # a new window will pop up of the mouse face
+        # click and drag to draw a rectangle around eye
         # press q when done drawing
         # run analyze videos (if needed)
         deeplabcut.analyze_videos(config_path, vid, shuffle=1, #rrcsv.video.values
