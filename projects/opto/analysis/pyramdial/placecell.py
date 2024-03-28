@@ -153,21 +153,6 @@ def consecutive_stretch(x):
     
     return y
 
-def normalize_tuning_curve(tuning_curve):
-    """
-    Normalize a tuning curve to have values between 0 and 1.
-    
-    Parameters:
-    tuning_curve (numpy.ndarray): The tuning curve to normalize.
-    
-    Returns:
-    numpy.ndarray: Normalized tuning curve.
-    """
-    min_val = np.min(tuning_curve)
-    max_val = np.max(tuning_curve)
-    normalized = (tuning_curve - min_val) / (max_val - min_val)
-    return normalized
-
 def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """
     Identify cells that are differentially inactivated between two conditions.
@@ -200,6 +185,17 @@ def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold,
     differentially_activated_cells = np.where(activity_diff < -threshold)[0]
     
     return differentially_activated_cells
+
+def normalize_2d_array(arr):
+    # Calculate the minimum and maximum values in the array
+    arr_min = np.nanmin(arr)
+    arr_max = np.nanmax(arr)
+    arr_range = arr_max - arr_min
+
+    # Normalize the array
+    normalized_arr = (arr - arr_min) / arr_range
+
+    return normalized_arr
 
 def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """
@@ -407,13 +403,23 @@ def make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials, licks, f
     
     return tuning_curves, coms, median_com, peak
 
-def get_pyr_metrics_opto(conddf, dd, day, threshold=5):
+def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     track_length = 270
     dct = {}
     animal = conddf.animals.values[dd]
     params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
-        'tuning_curves_late_trials', 'coms_early_trials'])
+    if not pc:
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
+            'tuning_curves_late_trials', 'coms_early_trials'])
+        coms = fall['coms'][0]
+        tcs_early = fall['tuning_curves_early_trials'][0]
+        tcs_late = fall['tuning_curves_late_trials'][0]
+    else:
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms_pc_late_trials', 'changeRewLoc', 'tuning_curves_pc_early_trials',\
+            'tuning_curves_pc_late_trials', 'coms_pc_early_trials'])
+        coms = fall['coms_pc_late_trials'][0]
+        tcs_early = fall['tuning_curves_pc_early_trials'][0]
+        tcs_late = fall['tuning_curves_pc_late_trials'][0]
     changeRewLoc = np.hstack(fall['changeRewLoc'])
     eptest = conddf.optoep.values[dd]
     if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
@@ -424,20 +430,19 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5):
     if len(eps)<4: eptest = 2 # if no 3 epochs
     comp = [eptest-2,eptest-1] # eps to compare    
     bin_size = 3    
-    tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[0]]]))
-    tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][comp[1]]]))
-    tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[0]]]))
-    tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][comp[1]]]))    
+    tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[0]]]))
+    tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[1]]]))
+    tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
+    tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))    
     # replace nan coms
-    peak = np.nanmax(tc1_late,axis=1)
-    coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
-    peak = np.nanmax(tc2_late,axis=1)
-    coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
-    coms = fall['coms'][0]
+    # peak = np.nanmax(tc1_late,axis=1)
+    # coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+    # peak = np.nanmax(tc2_late,axis=1)
+    # coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])    
     coms1 = np.hstack(coms[comp[0]])
     coms2 = np.hstack(coms[comp[1]])
-    coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
-    coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
+    # coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
+    # coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
     # take fc3 in area around com
     difftc1 = tc1_late-tc1_early
     coms1_bin = np.floor(coms1/bin_size).astype(int)

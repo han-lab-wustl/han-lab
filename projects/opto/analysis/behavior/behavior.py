@@ -42,6 +42,8 @@ def get_rewzones(rewlocs, gainf):
             rewzonenum[kk] = 3  # Reward zone 3
             
     return rewzonenum
+    
+    return trials_before_success
 
 def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     ybinned, rewlocs, forwardvel, rewsize):
@@ -54,12 +56,12 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     ybinned_ = ybinned[eprng]
     forwardvel_ = forwardvel[eprng]
     rewloc = np.ceil(rewlocs[eptotest]).astype(int)
-    # Simulate the get_success_failure_trials, get_lick_selectivity, and get_com_licks functionality
     success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_opto = success / total_trials
+    trials_bwn_success_opto =  np.diff(np.array(strials))
     pos_bin_opto, lick_probability_opto = get_behavior_tuning_curve(ybinned_, licks_)
     # split into pre, rew, and post
-    lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize):int(rewloc+20)], \
+    lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize-10):int(rewloc+20)], \
                     lick_probability_opto[int(rewloc+20):]]
     # previous ep
     eprng = range(eps[eptotest-1], eps[eptotest])
@@ -68,15 +70,15 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     licks_ = licks[eprng]
     ybinned_ = ybinned[eprng]
     rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
-    success, fail, str, ftr, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
-    rate_prev = success / total_trials
-    pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_, 135)
+    success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
+    rate_prev = success / total_trials 
+    trials_bwn_success_prev =  np.diff(np.array(strials))
+    pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
     # split into pre, rew, and post
-    lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize)], lick_probability_prev[int(rewloc-rewsize):int(rewloc+20)], \
-                    lick_probability_prev[int(rewloc+20)::]]
+    lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize)], lick_probability_prev[int(rewloc-rewsize-10):int(rewloc+20)], \
+                    lick_probability_prev[int(rewloc+20):]]
     # Return a dictionary or multiple dictionaries containing your results
-    return rate_opto, rate_prev, lick_prob_opto, lick_prob_prev
-
+    return rate_opto, rate_prev, lick_prob_opto, lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev
 
 
 def get_success_failure_trials(trialnum, reward):

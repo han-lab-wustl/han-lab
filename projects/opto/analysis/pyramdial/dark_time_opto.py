@@ -12,7 +12,7 @@ import matplotlib.backends.backend_pdf
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
-conddf = pd.read_csv(r"Z:\conddf_neural_dark_time_only.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\conddf_dark_time_only.csv", index_col=None)
 
 #%%
 
@@ -59,80 +59,6 @@ scipy.stats.ttest_rel(bigdf[(bigdf.opto==True)].frac_pc.values, \
             bigdf[(bigdf.opto==False)].frac_pc.values)
 scipy.stats.ranksums(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
 
-#%%
-# plot coms of de-enriched cells    
-dcts_opto = np.array(dcts)[optoep>1]
-
-dfs=[]; dfs_diff = []
-for ii,dct in enumerate(dcts_opto):
-    diff_rel_coms1=(dct['rel_coms1'][dct['difftc1']<0])
-    diff_rel_coms2=(dct['rel_coms2'][dct['difftc2']<0])    
-    df = pd.DataFrame(np.hstack([diff_rel_coms1, diff_rel_coms2]), columns = ['relative_com'])
-    df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
-    df['rewzones'] = np.hstack([[f'rz_{dct["rewzones_comp"][0]}']*len(diff_rel_coms1), [f'rz_{dct["rewzones_comp"][1]}']*len(diff_rel_coms2)])
-    df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
-    df['animal'] = animals[optoep>1][ii]
-    df['in_type'] = in_type[optoep>1][ii]
-    if in_type[optoep>1][ii]=='vip':
-        df['vip_cond'] = 'vip'
-    else:
-        df['vip_cond'] = "ctrl"
-    # if optoep[ii]>1:    
-    df['opto'] = np.hstack([[False]*len(diff_rel_coms1),[True]*len(diff_rel_coms2)])
-    # else: 
-    #     df['opto'] = [False]*len(df)
-    dfs.append(df)
-bigdf = pd.concat(dfs)
-bigdf= bigdf.sort_values('rewzones_transition')
-
-intype = 'vip'
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="rewzones_transition", y="relative_com", hue="opto", 
-    data=bigdf[bigdf.in_type == intype], size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="rewzones_transition", y="relative_com", hue="opto",
-fill=False, data=bigdf[bigdf.in_type == intype], palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="animal", y="relative_com", 
-    hue="opto", data=bigdf, size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="animal", y="relative_com", hue="opto", 
-    data=bigdf, fill=False, palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="in_type", y="relative_com", 
-    hue="opto", data=bigdf, size=1, palette={False: "slategray", True: "red"})
-ax = sns.barplot(x="in_type", y="relative_com", hue="opto", 
-    data=bigdf, fill=False, palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
-
-# look at specific animals
-an = 'e200'
-bigdf = bigdf.sort_values('rewzones')
-fig,ax = plt.subplots()
-ax = sns.stripplot(x="rewzones", y="relative_com", hue="opto", 
-    data=bigdf[bigdf.animal == an], size=1, palette={False: "slategray", True: "red"})
-ax = sns.boxplot(x="rewzones", y="relative_com", hue="opto",
-fill=False, data=bigdf[bigdf.animal == an], palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.axhline(0, color = 'slategray', linestyle='--')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-scipy.stats.ranksums(bigdf[(bigdf.opto==True) & (bigdf.vip_cond=='vip')].relative_com.values, 
-bigdf[(bigdf.opto==False) &  (bigdf.vip_cond=='vip')].relative_com.values)
-
 # %%
 # average enrichment
 dcts_opto = np.array(dcts)[optoep>1]
@@ -141,21 +67,22 @@ dfs_diff = []
 for ii,dct in enumerate(dcts_opto):
     diff1=dct['difftc1'][dct['difftc1']>1e-5]
     diff2=dct['difftc2'][dct['difftc1']>1e-5]
-    df = pd.DataFrame(np.hstack([diff1, diff2]), columns = ['tc_diff'])
-    df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff2)])
+    df = pd.DataFrame(np.hstack([diff1, diff2]).astype(float), columns = ['tc_diff'])
     df['animal'] = animals[optoep>1][ii]
-    df['in_type'] = in_type[optoep>1][ii]
     # if optoep[ii]>1:    
     df['opto'] = np.hstack([[False]*len(diff1),[True]*len(diff2)])
     # else: 
     # df['opto'] = [False]*len(df)
-    if df['in_type'].values[0] =='vip':
+    if in_type[optoep>1][ii] =='vip':
         df['vip_cond'] = 'vip'
-    elif df['in_type'].values[0] !='pv':
+    elif in_type[optoep>1][ii] !='pv':
         df['vip_cond'] = 'ctrl'
     dfs_diff.append(df)
 bigdf = pd.concat(dfs_diff,ignore_index=False) 
 bigdf.reset_index(drop=True, inplace=True)   
+bigdf['vip_cond'] = bigdf['vip_cond'].astype(str)
+bigdf['opto']= bigdf['opto'].astype(bool)
+bigdf['animal'] = bigdf['animal'].astype(str)
 # ax = sns.stripplot(x="condition", y="relative_com", hue="opto", data=bigdf, size=1)
 # ax = sns.stripplot(x="opto", y="tc_diff", hue="in_type",data=bigdf)
 # ax.tick_params(axis='x', labelrotation=90)
@@ -168,9 +95,11 @@ comp2 = bigdf_test[(bigdf_test.index.get_level_values('opto')==False) &  (bigdf_
 diff_offon_ctrl = comp1-comp2
 t,pval=scipy.stats.ranksums(diff_offon_vip, diff_offon_ctrl)
 
+import itertools
 plt.figure()
 df = pd.DataFrame(np.concatenate([diff_offon_vip, diff_offon_ctrl]), columns = ['tc_diff_ledoff-on'])
-df['condition']=np.concatenate(np.array([['vip']*len(diff_offon_vip), ['ctrl']*len(diff_offon_ctrl)]))
+cond = [['vip']*len(diff_offon_vip), ['ctrl']*len(diff_offon_ctrl)]
+df['condition']=np.array(list(itertools.chain(*cond)))
 ax = sns.barplot(x="condition", y="tc_diff_ledoff-on",data=df, fill=False, color='k')
 sns.stripplot(x="condition", y="tc_diff_ledoff-on",data=df, color='k')
 plt.title(f"p-value = {pval:03f}")
@@ -218,17 +147,15 @@ for ii,dct in enumerate(dcts_opto):
     active_frac = len(dct['active'])/len(dct['coms1'])    
     df = pd.DataFrame(np.hstack([inactive_frac]), columns = ['inactive_frac'])
     df['active_frac'] = active_frac
-    df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']])
     df['animal'] = conddf.animals.values[ii]
-    df['in_type'] = conddf.in_type.values[ii]    
     df['opto'] = bool(conddf.optoep.values[ii]>1) # true vs. false
     df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
-    if df['in_type'].values[0] =='vip':
+    if conddf.in_type.values[ii]     =='vip':
         df['vip_cond'] = 'vip'
     # else:
     #     df['vip_cond'] = 'ctrl'
 
-    elif (df['in_type'].values[0] =='sst'):# or df['in_type'].values[0] =='pv':
+    elif (conddf.in_type.values[ii]     =='sst') or conddf.in_type.values[ii]     =='pv':
         df['vip_cond'] = 'ctrl'
     # if optoep[ii]>1:        
     # else: 
@@ -238,8 +165,18 @@ bigdf_org = pd.concat(dfs_diff,ignore_index=False)
 bigdf_org.reset_index(drop=True, inplace=True)   
 
 # plot fraction of inactivated vs. activated cells
-bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).quantile(.75)
-bigdf = bigdf_org[bigdf_org.vip_cond=='vip'].groupby(['animal', 'opto', 'rewzones_transition']).quantile(.75)
+bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).quantile(.75,numeric_only=True)
+bigdf = bigdf_org[bigdf_org.vip_cond=='vip'].groupby(['animal', 'opto', 'rewzones_transition']).quantile(.75,numeric_only=True)
+
+plt.figure()
+ax = sns.barplot(x="opto", y="inactive_frac",hue='vip_cond', data=bigdf_test,fill=False)
+ax = sns.stripplot(x="opto", y="inactive_frac",hue='vip_cond', data=bigdf_test)
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+
+
 plt.figure()
 ax = sns.barplot(x="opto", y="inactive_frac",hue='rewzones_transition', data=bigdf,fill=False)
 ax = sns.stripplot(x="opto", y="inactive_frac",hue='rewzones_transition', data=bigdf)
@@ -280,7 +217,7 @@ scipy.stats.ttest_ind(bigdf_test.loc[(bigdf_test.index.get_level_values('vip_con
 
 # %%
 # understand inactive cell tuning
-dy=18
+dy=8 
 
 bin_size = 3
 dct = dcts[dy]
