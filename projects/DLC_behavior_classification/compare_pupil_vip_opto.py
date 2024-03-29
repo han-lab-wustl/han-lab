@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 from eye import consecutive_stretch_vralign, get_area_circumference_opto, perireward_binned_activity
 # path to pickle
-pdst = r"I:\vids_to_analyze\face_and_pupil\pupil\E201_22_Apr_2023_vr_dlc_align.p"
+pdst = r'D:\PupilTraining-Matt-2023-07-07\E216_09_Jan_2024_vr_dlc_align.p'
 range_val=5
 binsize=0.05
 with open(pdst, "rb") as fp: #unpickle
@@ -57,7 +57,7 @@ for i in range(len(eps)-1):
     ax.axvline(int(range_val/binsize)+5, color = 'gray', linestyle = '--')
 fig.suptitle("Residual pupil area / trial")
 
-comparison = [1,2]
+comparison = [0,1]
 fig, ax = plt.subplots()
 df = pd.DataFrame()
 df['pupil'] = np.concatenate([pre_reward[comparison[0]], pre_reward[comparison[1]]])
