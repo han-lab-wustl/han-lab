@@ -283,4 +283,76 @@ def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize):
     normmeanrewdFF = (meanrewdFF-np.min(meanrewdFF)) / (np.max(meanrewdFF) - np.min(meanrewdFF))
     normrewdFF = np.array([(xx-np.min(xx))/((np.max(xx)-np.min(xx))) for xx in rewdFF.T])
     return normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF
+
+def get_area_circumference_opto(pdst, range_val, binsize):
+    # example on how to open the pickle file
+    # pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
+    with open(pdst, "rb") as fp: #unpickle
+            vralign = pickle.load(fp)
+    # edit name of eye points
+    eye_pnts = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
+            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
+
+    #eye centroids, area, perimeter
+    centroids_x = []; centroids_y = []
+    areas = []; circumferences = []
+    for i in range(len(vralign['EyeNorthWest_y'])):
+        eye_x = np.array([vralign[xx+"_x"][i] for xx in eye_pnts])
+        eye_y = np.array([vralign[xx+"_y"][i] for xx in eye_pnts])
+        eye_coords = np.array([eye_x, eye_y]).astype(float)
+        centroid_x, centroid_y = eye.centeroidnp(eye_coords)
+        area, circumference = eye.get_eye_features([(vralign[xx+"_x"][i], 
+                                    vralign[xx+"_y"][i]) for xx in eye_pnts])
+        centroids_x.append(centroid_x)
+        centroids_y.append(centroid_y)
+        areas.append(area); circumferences.append(circumference)
+    areas = np.array(areas); circumferences = np.array(circumferences)
+    areas = scipy.signal.savgol_filter(areas,5, 2)
+    centroids_x = scipy.signal.savgol_filter(centroids_x,5, 2)
+    centroids_y = scipy.signal.savgol_filter(centroids_y,5, 2)
+    licks_threshold = vralign['lickVoltage']<=-0.065 # manually threshold licks
+    licks = scipy.signal.savgol_filter(licks_threshold,10, 2) 
+    rewards = vralign['rewards']
+    velocity = vralign['forwardvel']
+    nans, x = nan_helper(velocity)
+    velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
+    velocity = scipy.signal.savgol_filter(velocity,10, 2)
+    # calculate acceleration
+    acc_ = np.diff(velocity)/np.diff(np.hstack(vralign['timedFF']))
+    # pad nans
+    acc=np.zeros_like(velocity)
+    acc[:-1]=acc_
+    acc = scipy.signal.savgol_filter(acc,10, 2)
+    vralign['EyeNorthEast_y'][vralign['EyeNorthEast_likelihood']<0.75]=0 # filter out low prob
+    eyelid = vralign['EyeNorthEast_y']
+    eyelid = scipy.signal.savgol_filter(eyelid,10, 2)
+
+    X = np.array([velocity, licks, eyelid]).T # Predictor(s)
+    X = sm.add_constant(X) # Adds a constant term to the predictor(s)
+    y = areas # Outcome
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    areas_res = result.resid_pearson
+    
+    return areas, areas_res
+
+def consecutive_stretch_vralign(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+    y = []
+    start = 0
+    
+    for i in range(len(break_point) + 1):
+        if i == len(break_point):
+            end = len(x)
+        else:
+            end = break_point[i] + 1
+        
+        stretch = x[start:end]
+        y.append(stretch)
+        start = end
+    
+    return y
+
 ################################FUNCTION DEFINITIONS################################

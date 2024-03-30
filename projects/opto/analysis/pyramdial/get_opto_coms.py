@@ -1,19 +1,25 @@
 """plot regular coms - rewloc
 for opto vs. ledoff epochs
 """
-
-
+#%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
 import seaborn as sns
 from placecell import get_rewzones, find_differentially_activated_cells, \
-find_differentially_inactivated_cells, convert_com_to_radians, get_pyr_metrics_opto, normalize_2d_array
+find_differentially_inactivated_cells, convert_com_to_radians, get_pyr_metrics_opto
 import matplotlib.backends.backend_pdf
+import matplotlib as mpl
+mpl.rcParams['svg.fonttype'] = 'none'
+mpl.rcParams["xtick.major.size"] = 8
+mpl.rcParams["ytick.major.size"] = 8
+import matplotlib.pyplot as plt
+plt.rc('font', size=16)          # controls default text sizes
+plt.rcParams["font.family"] = "Arial"
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
-conddf = pd.read_csv(r"Z:\conddf_neural_dark_time_only.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com.csv", index_col=None)
 #%%
 figcom, axcom = plt.subplots()
 figcom2, axcom2 = plt.subplots()
@@ -23,13 +29,15 @@ figcom4, axcom4 = plt.subplots()
 inactive = []
 active = []
 pre_post_tc = []
+cells_remap = []
 rewzones_comps = []
+
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     day = conddf.days.values[ii]
-    if conddf.in_type.values[ii]=='vip':# and conddf.animals.values[ii]!='e217':
-        
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+    if conddf.in_type.values[ii]=='vip': #and conddf.animals.values[ii]=='e218':#and conddf.optoep.values[ii]==2:# and conddf.animals.values[ii]=='e218':
+        plane=0 #TODO: make modular        
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
         # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
         #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
         fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
@@ -52,9 +60,9 @@ for ii in range(len(conddf)):
         tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
         tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))        
         # Find differentially inactivated cells
-        threshold=10
-        differentially_inactivated_cells = find_differentially_inactivated_cells((tc1_late[:, :int(rewlocs[comp[1]]/bin_size)]), (tc2_late[:, :int(rewlocs[comp[1]]/bin_size)]), threshold, bin_size)
-        differentially_activated_cells = find_differentially_activated_cells((tc1_late[:, :int(rewlocs[comp[1]]/bin_size)]),(tc2_late[:, :int(rewlocs[comp[1]]/bin_size)]), threshold, bin_size)
+        threshold=7
+        differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
+        differentially_activated_cells = find_differentially_activated_cells(tc1_late,tc2_late, threshold, bin_size)
         # coms = fall['coms_pc_late_trials'][0]
         # coms_early = fall['coms_pc_early_trials'][0]
         coms = fall['coms'][0]
@@ -63,6 +71,40 @@ for ii in range(len(conddf)):
         coms2 = np.hstack(coms[comp[1]])
         coms1_early = np.hstack(coms_early[comp[0]])
         coms2_early = np.hstack(coms_early[comp[1]])
+        com_remap = (coms1-rewlocs[comp[0]])-(coms2-rewlocs[comp[1]])
+        remap = np.where((com_remap<10) & (com_remap>-10))[0]
+        stable = np.where(((coms1-coms2)<10) & ((coms1-coms2)>-10))[0]
+        # cells_remap.append(remap)
+        # TODO: apply to inactive vs. active cells
+        # TODO: look at trial by trial tuning
+        for cl in remap:            
+            if np.nanmax(tc1_late[cl,:])>0.1:
+                fig, ax = plt.subplots()           
+                ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
+                ax.plot(tc2_late[cl,:],color='red',label='led_on')
+                
+                ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
+                ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
+                
+                # ax.set_axis_off()  
+                ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}')
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False) 
+                ax.legend()
+        for cl in stable:
+            if np.nanmax(tc1_late[cl,:])>0.1:
+                fig, ax = plt.subplots()           
+                ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
+                ax.plot(tc2_late[cl,:],color='red',label='led_on')
+                
+                ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
+                ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
+                
+                # ax.set_axis_off()  
+                ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}')
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False) 
+                ax.legend()
         # # replace nan coms
         # for jj,tc in enumerate(fall['tuning_curves_circular_late_trials'][0]):
         #     peak = np.nanmax(tc,axis=1)

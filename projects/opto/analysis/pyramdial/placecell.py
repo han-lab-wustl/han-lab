@@ -6,6 +6,86 @@ from sklearn.metrics import auc
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
+import numpy as np
+from scipy.signal import gaussian
+
+def get_moving_time(velocity, thres, Fs, ftol):
+    """
+    Returns time points when the animal is considered moving based on animal's change in y position.
+
+    Parameters:
+    velocity (numpy.ndarray): forward velocity
+    thres (float): Threshold speed in cm/s
+    Fs (int): number of frames length minimum to be considered stopped
+    ftol (int): frame tolerance (e.g., 10 frames)
+
+    Returns:
+    numpy.ndarray: moving_middle (time points when the animal is considered moving)
+    numpy.ndarray: stop (time points when the animal is considered stopped)
+    """
+
+    vr_speed = velocity
+    vr_thresh = thres
+
+    moving = np.where(vr_speed > vr_thresh)[0]
+    stop = np.where(vr_speed <= vr_thresh)[0]
+
+    stop_time_stretch = consecutive_stretch(stop)
+    stop_time_length = [len(stretch) for stretch in stop_time_stretch]
+    delete_idx = np.array(stop_time_length) < Fs
+    stop_time_stretch = ([np.array(stretch) for i, stretch in enumerate(stop_time_stretch) if not delete_idx[i]])
+
+    if len(stop_time_stretch) > 0:
+        for s in range(len(stop_time_stretch) - 1):
+            if s + 1 < len(stop_time_stretch):
+                if not np.isnan(stop_time_stretch[s + d]).any():
+                    while (abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol) and s + d < len(stop_time_stretch):
+                        stop_time_stretch[s] = np.concatenate((stop_time_stretch[s], np.arange(stop_time_stretch[s][-1] + 1, stop_time_stretch[s + d][0]), stop_time_stretch[s + d]))
+
+        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).any()]
+        stop = np.concatenate(stop_time_stretch)
+        moving_time = np.ones(len(vr_speed), dtype=int)
+        moving_time[stop] = 0
+    else:
+        moving_time = np.ones(len(vr_speed), dtype=int)
+
+    moving = np.where(moving_time == 1)[0]
+    moving_middle = moving
+
+    return moving_middle, stop
+
+def get_spatial_info_per_cell(Fc3, fv, thres, ftol, position, Fs, nBins, track_length):
+    """
+    Fc3: dFF of 1 cell
+    position: position of animal on track
+    Fs: Frame rate of acquisition
+    nBins: number of bins in which you want to divide the track into
+    track_length: Length of track
+    """
+
+    time_moving, _ = get_moving_time(fv, thres, Fs, ftol)
+    bin_size = track_length / nBins
+    pos_moving = position[time_moving]
+
+    time_in_bin = {i: time_moving[np.logical_and(pos_moving > (i - 1) * bin_size, pos_moving <= i * bin_size)] for i in range(1, nBins + 1)}
+
+    cell_activity = np.array([np.mean(Fc3[time_in_bin[bin]]) for bin in range(1, nBins + 1)])
+    # cell_activity = gaussian(cell_activity, 5)  # Uncomment if you want to apply Gaussian smoothing
+
+    lambda_all = np.mean(Fc3[time_moving])
+    time_fraction = np.array([len(time_in_bin[bin]) / len(time_moving) for bin in range(1, nBins + 1)])
+
+    temp = time_fraction * cell_activity * np.log2(cell_activity / lambda_all)
+    temp[np.isinf(temp)] = 0
+    temp[np.isnan(temp)] = 0
+
+    info = np.sum(temp / lambda_all)
+
+    if np.isnan(info):
+        info = 0
+
+    return info
+
 
 def convert_coordinates(coordinates, center_location, track_length=270):
     """
@@ -186,17 +266,6 @@ def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold,
     
     return differentially_activated_cells
 
-def normalize_2d_array(arr):
-    # Calculate the minimum and maximum values in the array
-    arr_min = np.nanmin(arr)
-    arr_max = np.nanmax(arr)
-    arr_range = arr_max - arr_min
-
-    # Normalize the array
-    normalized_arr = (arr - arr_min) / arr_range
-
-    return normalized_arr
-
 def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """
     Identify cells that are differentially inactivated between two conditions.
@@ -244,164 +313,6 @@ def calculate_difference(tuning_curve1, tuning_curve2):
     """
     diff = tuning_curve1 - tuning_curve2
     return diff
-
-def plot_tuning_curves(tuning_curve1, tuning_curve2, difference):
-    """
-    Plot two tuning curves and their difference.
-    
-    Parameters:
-    tuning_curve1, tuning_curve2, difference (numpy.ndarray): The two tuning curves and their difference.
-    """
-    plt.figure(figsize=(12, 4))
-    
-    plt.subplot(1, 3, 1)
-    plt.plot(tuning_curve1, label='Tuning Curve 1')
-    plt.title('Tuning Curve 1')
-    plt.xlabel('Spatial Bin')
-    plt.ylabel('Normalized Fluorescence')
-    
-    plt.subplot(1, 3, 2)
-    plt.plot(tuning_curve2, label='Tuning Curve 2')
-    plt.title('Tuning Curve 2')
-    plt.xlabel('Spatial Bin')
-    
-    plt.subplot(1, 3, 3)
-    plt.plot(difference, label='Difference', color='red')
-    plt.title('Difference in Tuning Curves')
-    plt.xlabel('Spatial Bin')
-    
-    plt.tight_layout()
-    plt.show()
-
-def calc_COM_EH(spatial_act, bin_width):
-    """
-    Calculate the interpolated center of mass (COM) of spatial activity for each cell.
-
-    Parameters:
-    spatial_act (numpy.ndarray): 2D array representing the spatial activity (tuning curve) of cells across spatial bins.
-    Shape is #cells x #bins.
-    bin_width (float): The width of each spatial bin in cm.
-
-    Returns:
-    numpy.ndarray: The interpolated COM of each cell's spatial activity in cm.
-    """
-    num_cells, _ = spatial_act.shape
-    bin_indices = np.zeros(num_cells)  # First bin above mid-point for each cell
-    frac = np.zeros(num_cells)  # Fraction for interpolated COM
-    com = np.zeros(num_cells)  # Interpolated COM in cm
-
-    # Calculate cumulative sums and mid-points
-    sum_spatial_act = np.nansum(spatial_act, axis=1)  # Total fluorescence from tuning curve, omitting NaN
-    mid_sum = sum_spatial_act / 2  # Mid-point of total fluorescence
-    spatial_act_cum_sum = np.nancumsum(spatial_act, axis=1)  # Cumulative sum of fluorescence in tuning curve
-
-    # Find the bins above the mid-point of fluorescence
-    idx_above_mid = spatial_act_cum_sum >= mid_sum[:, None]
-
-    for i in range(num_cells):
-        if not np.isnan(sum_spatial_act[i]):
-            bin_indices[i] = np.argmax(idx_above_mid[i, :]) + 1  # Find index of first bin above mid-point, adjusting for Python indexing
-            if bin_indices[i] == 1:  # If mid-point is in the first bin
-                frac[i] = (spatial_act_cum_sum[i, int(bin_indices[i]-1)] - mid_sum[i]) / spatial_act_cum_sum[i, int(bin_indices[i]-1)]
-                com[i] = frac[i] * bin_width
-            else:
-                frac[i] = (spatial_act_cum_sum[i, int(bin_indices[i]-1)] - mid_sum[i]) / \
-                        (spatial_act_cum_sum[i, int(bin_indices[i]-1)] - spatial_act_cum_sum[i, int(bin_indices[i]-2)])
-                com[i] = ((bin_indices[i]-1) + frac[i]) * bin_width
-        else:
-            com[i] = np.NaN
-
-    return com
-
-def get_moving_time(velocity, thres, Fs, ftol):
-    """
-    Returns time points when the animal is considered moving based on the change in y position.
-    """
-    vr_speed = velocity
-    vr_thresh = thres
-    moving = np.where(vr_speed > vr_thresh)[0]
-    stop = np.where(vr_speed <= vr_thresh)[0]
-
-    stop_time_stretch = consecutive_stretch(stop)
-
-    stop_time_length = [len(stretch) for stretch in stop_time_stretch]
-    stop_time_stretch = [stretch for stretch, length in zip(stop_time_stretch, stop_time_length) if length >= Fs]
-
-    if len(stop_time_stretch) > 0:
-        s = 0
-        while s < len(stop_time_stretch) - 1:
-            d = 1
-            while s + d < len(stop_time_stretch) and abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol:
-                stop_time_stretch[s] = np.concatenate([stop_time_stretch[s], np.arange(stop_time_stretch[s][-1] + 1, stop_time_stretch[s + d][0]), stop_time_stretch[s + d]])
-                stop_time_stretch[s + d] = np.array([np.nan])  # Mark for deletion
-                d += 1
-
-            s += 1
-
-        # Filter out NaN arrays
-        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).all()]
-        stop = np.concatenate(stop_time_stretch)
-        moving_time = np.ones(len(vr_speed), dtype=int)
-        moving_time[stop.astype(int)] = 0
-    else:
-        moving_time = np.ones(len(vr_speed), dtype=int)
-
-    moving_middle = np.where(moving_time == 1)[0]
-    return moving_middle, stop
-
-def make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials, licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3, dff):
-    nbins = int(track_length / bin_size)
-    tuning_curves = []
-    coms = []
-
-    for ep in range(len(eps)-1):
-        eprng = np.arange(eps[ep], eps[ep+1])
-        trn = trialnum[eprng]
-        rew = rewards[eprng] > 0.5
-        
-        strials = np.full(len(np.unique(trn)), np.nan)
-        for ii,trial in enumerate(np.unique(trn)):
-            if trial >= 3 and trial >= max(trn) - ntrials:
-                strials[ii] = trial
-        
-        strials = strials[~np.isnan(strials)]
-        mask = np.isin(trn, strials)
-        eprng = eprng[mask]
-        
-        if len(eprng) > 0:
-            ypos = ybinned[eprng]
-            ypos = ypos * gainf
-            fv = forwardvel[eprng]
-            time_moving, _ = get_moving_time_V3(fv, thres, Fs, ftol)
-            ypos_mov = ypos[time_moving]
-            
-            time_in_bin = [time_moving[(ypos_mov >= (i-1)*bin_size) & (ypos_mov < i*bin_size)] for i in range(1, nbins+1)]
-            
-            fc3_pc = fc3[eprng, :]
-            dff_pc = dff[eprng, :]
-            
-            cell_activity = np.zeros((nbins, fc3_pc.shape[1]))
-            cell_activity_dff = np.zeros((nbins, fc3_pc.shape[1]))
-            for i in range(fc3_pc.shape[1]):
-                for bin_idx in range(nbins):
-                    if len(time_in_bin[bin_idx]) > 0:
-                        cell_activity[bin_idx, i] = np.nanmean(fc3_pc[time_in_bin[bin_idx], i])
-                        cell_activity_dff[bin_idx, i] = np.nanmean(dff_pc[time_in_bin[bin_idx], i])
-                    else:
-                        cell_activity[bin_idx, i] = np.nan
-                        cell_activity_dff[bin_idx, i] = np.nan
-            
-            cell_activity[np.isnan(cell_activity)] = 0
-            cell_activity_dff[np.isnan(cell_activity_dff)] = 0
-            
-        tuning_curves.append(cell_activity.T)
-        
-        median_com = calc_COM_EH(cell_activity.T, bin_size)
-        coms.append(median_com)
-        
-        peak = np.array([bin_size * np.argmax(cell_activity[:, i]) if np.sum(cell_activity[:, i]) > 0 else 0 for i in range(cell_activity.shape[1])])
-    
-    return tuning_curves, coms, median_com, peak
 
 def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     track_length = 270

@@ -21,7 +21,7 @@ an = 'e217';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [36];
+dys = [38 39 40];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -36,7 +36,7 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -184,7 +184,26 @@ for dy=dys % for loop per day
     %% step 4 - make summary fig for epoch comparisons
     slideId = pptx.addSlide();
     fprintf('Added slide %d\n',slideId);
- 
+    fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
+    for ep=1:length(eps)-1
+        subplot(1,length(eps)-1,ep)
+        plt = tuning_curves{ep};
+        % sort all by ep 1
+        [~,sorted_idx] = sort(coms{1});
+        imagesc(normalize(plt(sorted_idx,:),2));
+        hold on;
+        % plot rectangle of rew loc
+        % everything divided by 3 (bins of 3cm)
+        rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
+            rew_zone/bin_size size(plt,1)], ... 
+            'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
+        colormap jet
+        xticks([0:bin_size:ceil(track_length/bin_size)])
+        xticklabels([0:bin_size*bin_size:track_length])
+        title(sprintf('epoch %i', ep))
+    end
+    sgtitle(sprintf(['animal %s, day %i'], an, dy))
+
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);        
     close(fig)
