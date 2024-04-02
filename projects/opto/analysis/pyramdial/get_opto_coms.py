@@ -29,13 +29,16 @@ figcom4, axcom4 = plt.subplots()
 inactive = []
 active = []
 pre_post_tc = []
-cells_remap = []
+inactive_cells_remap = []
+inactive_cells_stable = []
+active_cells_remap = []
+active_cells_stable = []
 rewzones_comps = []
 
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     day = conddf.days.values[ii]
-    if conddf.in_type.values[ii]=='vip': #and conddf.animals.values[ii]=='e218':#and conddf.optoep.values[ii]==2:# and conddf.animals.values[ii]=='e218':
+    if True:#conddf.in_type.values[ii]=='vip': #and conddf.animals.values[ii]=='e218':#and conddf.optoep.values[ii]==2:# and conddf.animals.values[ii]=='e218':
         plane=0 #TODO: make modular        
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
         # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
@@ -72,44 +75,72 @@ for ii in range(len(conddf)):
         coms1_early = np.hstack(coms_early[comp[0]])
         coms2_early = np.hstack(coms_early[comp[1]])
         com_remap = (coms1-rewlocs[comp[0]])-(coms2-rewlocs[comp[1]])
-        remap = np.where((com_remap<10) & (com_remap>-10))[0]
-        stable = np.where(((coms1-coms2)<10) & ((coms1-coms2)>-10))[0]
-        # cells_remap.append(remap)
-        # TODO: apply to inactive vs. active cells
+        window = 5 # cm
+        # get proportion of remapping vs. stable cells
+        remap = np.where((com_remap<window) & (com_remap>-window))[0]
+        remap = np.array([cl for cl in remap if np.nanmax(tc1_late[cl,:])>0.2])
+        stable = np.where(((coms1-coms2)<window) & ((coms1-coms2)>-window))[0]
+        stable = np.array([cl for cl in stable if np.nanmax(tc1_late[cl,:])>0.2])
+        inactive_stable = [xx for xx in stable if xx in differentially_inactivated_cells]
+        if len(inactive_stable)>0:
+            inactive_stable_prop = len(inactive_stable)/len(differentially_inactivated_cells)
+        else:
+            inactive_stable_prop = 0
+        inactive_remap = [xx for xx in remap if xx in differentially_inactivated_cells]
+        if len(inactive_remap)>0:
+            inactive_remap_prop = len(inactive_remap)/len(differentially_inactivated_cells)
+        else:
+            inactive_remap_prop = 0
+    
+        active_stable = [xx for xx in stable if xx in differentially_activated_cells]
+        if len(active_stable)>0:
+            active_stable_prop = len(active_stable)/len(differentially_activated_cells)
+        else:
+            active_stable_prop = 0
+        active_remap = [xx for xx in remap if xx in differentially_activated_cells]
+        if len(active_remap)>0:
+            active_remap_prop = len(active_remap)/len(differentially_activated_cells)
+        else:
+            active_remap_prop = 0       
+        active_cells_stable.append(active_stable_prop)
+        active_cells_remap.append(active_remap_prop)
+
+        stable_prop = len(stable)/len(coms1)
+        remap_prop = len(remap)/len(coms1)
+        inactive_cells_stable.append([stable_prop, inactive_stable_prop])
+        inactive_cells_remap.append([remap_prop, inactive_remap_prop])
         # TODO: look at trial by trial tuning
-        for cl in remap:            
-            if np.nanmax(tc1_late[cl,:])>0.1:
-                fig, ax = plt.subplots()           
-                ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
-                ax.plot(tc2_late[cl,:],color='red',label='led_on')
-                
-                ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
-                ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
-                
-                # ax.set_axis_off()  
-                ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}')
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False) 
-                ax.legend()
-        for cl in stable:
-            if np.nanmax(tc1_late[cl,:])>0.1:
-                fig, ax = plt.subplots()           
-                ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
-                ax.plot(tc2_late[cl,:],color='red',label='led_on')
-                
-                ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
-                ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
-                
-                # ax.set_axis_off()  
-                ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}')
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False) 
-                ax.legend()
+        if conddf.animals.values[ii]=='e216':
+            # per trial examples
+            # for cl in inactive_remap:            
+            #     if np.nanmax(tc1_late[cl,:])>0.2:
+            #         fig, ax = plt.subplots()           
+            #         ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
+            #         ax.plot(tc2_late[cl,:],color='red',label='led_on')
+                    
+            #         ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
+            #         ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
+                    
+            #         # ax.set_axis_off()  
+            #         ax.set_title(f'Goal remap cell \n animal: {animal}, day: {day}, optoep: {conddf.optoep.values[ii]}')
+            #         ax.spines['top'].set_visible(False)
+            #         ax.spines['right'].set_visible(False) 
+            #         ax.legend()
+            # for cl in inactive_stable:
+            #     if np.nanmax(tc1_late[cl,:])>0.2:
+            #         fig, ax = plt.subplots()           
+            #         ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
+            #         ax.plot(tc2_late[cl,:],color='red',label='led_on')
+                    
+            #         ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
+            #         ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
+                    
+            #         # ax.set_axis_off()  
+            #         ax.set_title(f'Stable tuning cell \n animal: {animal}, day: {day}, optoep: {conddf.optoep.values[ii]}')
+            #         ax.spines['top'].set_visible(False)
+            #         ax.spines['right'].set_visible(False) 
+            #         ax.legend()
         # # replace nan coms
-        # for jj,tc in enumerate(fall['tuning_curves_circular_late_trials'][0]):
-        #     peak = np.nanmax(tc,axis=1)
-        #     coms_max = np.array([np.where(tc[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
-        #     coms[jj][np.isnan(coms[jj])]=coms_max[np.isnan(coms[jj])]
         if len(differentially_inactivated_cells)>0 and len(differentially_activated_cells)>0:
             pre = sum((((coms1[differentially_inactivated_cells]-rewlocs[comp[0]])<=0) & ((coms2[differentially_inactivated_cells]-rewlocs[comp[1]])<=0)))/len(coms2[differentially_inactivated_cells])
             pre_post = sum((((coms1[differentially_inactivated_cells]-rewlocs[comp[0]])<=0) & ((coms2[differentially_inactivated_cells]-rewlocs[comp[1]])>0)))/len(coms2[differentially_inactivated_cells])
@@ -176,40 +207,128 @@ axcom4.set_xlabel('Prev Ep COM')
 axcom4.set_ylabel('Target Ep COM')
 axcom4.set_title('Activated cells, LED on')
 #%%
-inactive_opto = np.array(inactive)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
-active_opto = np.array(active)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
-intypecond = (conddf.in_type.values=='vip')
+inactive_cells_remap = np.array(inactive_cells_remap)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
+inactive_cells_stable = np.array(inactive_cells_stable)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
 rewzones_comp = np.array(rewzones_comps)
-df = pd.DataFrame(inactive_opto, columns = ['pre', 'pre_post', 'post', 'post_pre'])
-df['opto'] = conddf.optoep.values[intypecond]>1
-df['animal'] = conddf.animals.values[intypecond]
-df['cond'] = ['inactive']*len(df)
+df = pd.DataFrame(inactive_cells_remap[:,1], columns = ['inactive_remap_prop'])
+df['remap_prop'] = inactive_cells_remap[:,0]
+df['stable_prop'] = inactive_cells_stable[:,0]
+df['inactive_stable_prop'] = inactive_cells_stable[:,1]
+df['active_stable_prop'] = active_cells_stable
+df['active_remap_prop'] = active_cells_remap
+df['opto'] = conddf.optoep.values>1
+df['animal'] = conddf.animals.values
+cond = conddf.in_type.values=="vip"
+cond = [['vip']*xx if xx==True else ['ctrl'] for xx in cond]
+df['cond'] = np.concatenate(cond)
 df['rewzones_transition'] = [f'{int(xx[0])}_{int(xx[1])}' for xx in rewzones_comps]
-df2 = pd.DataFrame(active_opto, columns = ['pre', 'pre_post', 'post', 'post_pre'])
-df2['opto'] = conddf.optoep.values[intypecond]>1
-df2['animal'] = conddf.animals.values[intypecond]
-df2['cond'] = ['active']*len(df2)
-df2['rewzones_transition'] = [f'{int(xx[0])}_{int(xx[1])}' for xx in rewzones_comps]
-dforg = pd.concat([df,df2])
-dforg.reset_index(drop=True, inplace=True) 
-#%%  
+
+fig, ax = plt.subplots()
+ax.scatter(conddf.days.values[conddf.optoep.values<2], inactive_cells_remap[:,0][conddf.optoep.values<2], color='limegreen', label='goal_remapping')
+ax.scatter(conddf.days.values[conddf.optoep.values<2], inactive_cells_stable[:,0][conddf.optoep.values<2], color='k', label='track_relative')
+ax.legend()
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.set_xlabel('Days of recording')
+ax.set_ylabel('Proportion of all cells')
+
+df = df.groupby(['animal', 'opto', 'cond']).mean(numeric_only=True)
+
+# diff_remap_prop_ctrl = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')==False)), 
+#         'inactive_remap_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')==False)), 'inactive_remap_prop']).values
+# diff_remap_prop_vip = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')==True)), 
+#         'inactive_remap_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')==True)), 'inactive_remap_prop']).values
+# df2 = pd.DataFrame()
+# df2['diff_remap_prop'] = np.concatenate([diff_remap_prop_ctrl, diff_remap_prop_vip])
+# df2['condition'] = np.concatenate([['ctrl']*len(diff_remap_prop_ctrl), ['vip']*len(diff_remap_prop_vip)])
+# plt.figure()
+# ax = sns.barplot(x="condition", y='diff_remap_prop',hue='condition', data=df2,fill=False)
+# ax = sns.stripplot(x="condition", y='diff_remap_prop',hue='condition', data=df2)
+# ax.tick_params(axis='x', labelrotation=90)
+# ax.spines['top'].set_visible(False)
+# ax.spines['right'].set_visible(False)
+
+# scipy.stats.ttest_ind(diff_remap_prop_ctrl, diff_remap_prop_vip)
+
+# #%%
+# diff_stable_prop_ctrl = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')==False)), 
+#         'inactive_stable_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & \
+#         (df.index.get_level_values('cond')==False)), 'inactive_stable_prop']).values
+# diff_stable_prop_vip = (df.loc[((df.index.get_level_values('opto')==True) & \
+#     (df.index.get_level_values('cond')==True)), 
+#         'inactive_stable_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')==True)), 'inactive_stable_prop']).values
+# df2 = pd.DataFrame()
+# df2['diff_stable_prop'] = np.concatenate([diff_stable_prop_ctrl, diff_stable_prop_vip])
+# df2['condition'] = np.concatenate([['ctrl']*len(diff_remap_prop_ctrl), ['vip']*len(diff_remap_prop_vip)])
+# plt.figure()
+# ax = sns.barplot(x="condition", y='diff_stable_prop',hue='condition', data=df2,fill=False)
+# ax = sns.stripplot(x="condition", y='diff_stable_prop',hue='condition', data=df2)
+# ax.tick_params(axis='x', labelrotation=90)
+# ax.spines['top'].set_visible(False)
+# ax.spines['right'].set_visible(False)
+
 plt.figure()
-df = dforg.groupby(['animal', 'cond','opto']).mean()
-quadrant = 'post_pre'
-ax = sns.barplot(x="opto", y=quadrant,hue='cond', data=df,fill=False)
-ax = sns.stripplot(x="opto", y=quadrant,hue='cond', data=df)
+ax = sns.barplot(x="opto", y='inactive_stable_prop',hue='cond', data=df,fill=False,
+        errorbar='se',palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="opto", y='inactive_stable_prop',hue='cond', data=df,
+    palette={'ctrl': "slategray", 'vip': "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
-pre_post_1 = df.loc[(df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')=='active'), quadrant].values
-pre_post_2 = df.loc[(df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')=='active'), quadrant].values
+plt.figure()
+ax = sns.barplot(x="opto", y='inactive_remap_prop',hue='cond', data=df,fill=False,
+    errorbar='se', palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="opto", y='inactive_remap_prop',hue='cond', data=df,
+    palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
-# pre_post_1 = df.loc[(df.opto==True) & (df.cond=='inactive'), quadrant].values
-# pre_post_2 = df.loc[(df.opto==False) & (df.cond=='inactive'), quadrant].values
+plt.figure()
+ax = sns.barplot(x="opto", y='active_stable_prop',hue='cond', data=df,fill=False,
+        errorbar='se',palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="opto", y='active_stable_prop',hue='cond', data=df,
+    palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+
+plt.figure()
+ax = sns.barplot(x="opto", y='active_remap_prop',hue='cond', data=df,fill=False,
+    errorbar='se', palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="opto", y='active_remap_prop',hue='cond', data=df,
+    palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+
+plt.figure()
+ax = sns.barplot(x="opto", y='remap_prop',hue='cond', data=df,fill=False,
+        errorbar='se',palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="opto", y='remap_prop',hue='cond', data=df,
+        palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
 
-scipy.stats.ttest_ind(pre_post_1[~np.isnan(pre_post_1)], pre_post_2[~np.isnan(pre_post_2)])
+plt.figure()
+ax = sns.barplot(x="opto", y='stable_prop',hue='cond', data=df,fill=False,
+        errorbar='se',palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="opto", y='stable_prop',hue='cond', data=df,palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+
+inactive_remap_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == True)), 'inactive_remap_prop'].values
+inactive_remap_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == True)), 'inactive_remap_prop'].values
+scipy.stats.ttest_ind(inactive_remap_t, inactive_remap_f)
 
 # %%
