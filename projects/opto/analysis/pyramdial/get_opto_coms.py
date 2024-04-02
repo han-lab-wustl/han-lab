@@ -20,6 +20,8 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com.csv", index_col=None)
+pdf = matplotlib.backends.backend_pdf.PdfPages(r'Z:\opto_analysis_stable_vs_remap.pdf')
+
 #%%
 figcom, axcom = plt.subplots()
 figcom2, axcom2 = plt.subplots()
@@ -53,7 +55,8 @@ for ii in range(len(conddf)):
         rewzones = get_rewzones(rewlocs, 1.5)        
         eps = np.append(eps, len(changeRewLoc))    
         if len(eps)<4: eptest = 2 # if no 3 epochs
-        comp = [eptest-2,eptest-1] # eps to compare    
+        comp = [eptest-2,eptest-1] # eps to compare 
+        other_eps = [xx for xx in range(len(eps)-1) if xx not in comp]   
         rewzones_comps.append(rewzones[comp])
         bin_size = 3    
         tcs_early = fall['tuning_curves_early_trials'][0]
@@ -111,7 +114,44 @@ for ii in range(len(conddf)):
         inactive_cells_remap.append([remap_prop, inactive_remap_prop])
         # TODO: look at trial by trial tuning
         if conddf.animals.values[ii]=='e216':
-            # per trial examples
+            # tuning curves for goal remap vs. stable cells
+            for other_ep in other_eps:
+                tc_other = tcs_late[other_ep]
+                coms_other = coms[other_ep]
+                tc_other = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tc_other]))        
+
+            arr = tc_other[remap]
+            tc3 = arr[np.argsort(coms1[remap])] # np.hstack(coms_other)
+            arr = tc2_late[remap]    
+            tc2 = arr[np.argsort(coms1[remap])]
+            arr = tc1_late[remap]
+            tc1 = arr[np.argsort(coms1[remap])]
+            fig, ax1 = plt.subplots()            
+            if other_ep>comp[1]:
+                ax1.imshow(np.concatenate([tc1,tc2,tc3]),cmap = 'jet')
+                ax1.axvline(rewlocs[comp[0]]/bin_size, color='w', linestyle='--')
+                ax1.axvline(rewlocs[comp[1]]/bin_size, color='w')
+                ax1.axvline(rewlocs[other_ep]/bin_size, color='w', linestyle='dotted')
+                ax1.axhline(tc1.shape[0], color='yellow')
+                ax1.axhline(tc1.shape[0]+tc2.shape[0], color='yellow')
+                ax1.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]} \n goal remapping cells')
+                ax1.set_ylabel('Cells')
+                ax1.set_xlabel('Spatial bins (3cm)')
+                fig.tight_layout()                
+            else:
+                ax1.imshow(np.concatenate([tc3,tc1,tc2]),cmap = 'jet')
+                ax1.axvline(rewlocs[comp[0]]/bin_size, color='w', linestyle='--')
+                ax1.axvline(rewlocs[comp[1]]/bin_size, color='w')
+                ax1.axvline(rewlocs[other_ep]/bin_size, color='w', linestyle='dotted')
+                ax1.axhline(tc3.shape[0], color='yellow')
+                ax1.axhline(tc3.shape[0]+tc1.shape[0], color='yellow')
+                ax1.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}\n previous (top) x 2 vs. opto (bottom), inactive cells, last 5 trials')
+                ax1.set_ylabel('Cells')
+                ax1.set_xlabel('Spatial bins (3cm)')
+                fig.tight_layout()
+            pdf.savefig(fig)
+                    
+            # per cell examples
             # for cl in inactive_remap:            
             #     if np.nanmax(tc1_late[cl,:])>0.2:
             #         fig, ax = plt.subplots()           
@@ -206,6 +246,14 @@ axcom4.spines['right'].set_visible(False)
 axcom4.set_xlabel('Prev Ep COM')
 axcom4.set_ylabel('Target Ep COM')
 axcom4.set_title('Activated cells, LED on')
+
+pdf.savefig(figcom)
+pdf.savefig(figcom2)
+pdf.savefig(figcom3)
+pdf.savefig(figcom4)
+
+pdf.close()
+plt.close('all')
 #%%
 inactive_cells_remap = np.array(inactive_cells_remap)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
 inactive_cells_stable = np.array(inactive_cells_stable)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
