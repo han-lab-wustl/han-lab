@@ -1,0 +1,181 @@
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+import sys
+np.set_printoptions(threshold=sys.maxsize)
+import scipy, pandas as pd
+
+class LSTMModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim = 256, output_dim = 1, num_layers = 1):
+        super(LSTMModel, self).__init__()
+        # Initialize the LSTM, Hidden Layer, and Output Layer
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, dropout = 0.0, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # Initialize hidden state and cell state
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
+
+        # Forward propagate the LSTM
+        out, _ = self.lstm(x, (h0, c0))
+
+        # Pass the output of the last time step to the classifier
+        out = self.fc(out[:, -1, :])
+        return out
+
+def create_subsequences(time_series, subsequence_length=20):
+    num_subsequences = len(time_series) - subsequence_length + 1
+    subsequences = [time_series[i:i+subsequence_length] for i in range(num_subsequences)]
+    return np.array(subsequences)
+
+class CreateTimeSeriesData(Dataset):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, i):
+        return self.x[i], self.y[i]
+
+
+'''
+Training Data is a N*T*n tensor, N is the number of samples, T is the interval,
+n is number of neurons.
+Training Data is a N*1*1 tensor, N is the number of samples, 1*1 represents the
+output dimension, which is the position of last time point.
+Testing Data is a N'*T*n tensor.
+Testing label is a N*1*1 tensor.
+E.g.,
+TrainingData = create_subsequences(np.transpose(X, TimeInterval))
+TrainingLabel = Y[TimeInterval-1:].reshape(-1,1)
+X is dFF, Y is corresponding position.
+'''
+# import raw data
+with open("Z:\dcts_com_opto.p", "rb") as fp: #unpickle
+        dcts = pickle.load(fp)
+dd=5
+conddf = pd.read_csv(r"Z:\condition_df\conddf_neural.csv", index_col=None)
+day=conddf.days.values[dd]
+animal = conddf.animals.values[dd]
+params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel', 'ybinned', 'iscell',
+                            'trialnum', 'bordercells', 'changeRewLoc'])
+inactive = dcts[dd]['inactive']
+eptest = conddf.optoep.values[dd]
+if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)   
+changeRewLoc = np.hstack(fall['changeRewLoc']) 
+trialnum = np.hstack(fall['trialnum'])
+eps = np.where(changeRewLoc>0)[0]
+rewlocs = changeRewLoc[eps]*1.5
+eps = np.append(eps, len(changeRewLoc))    
+if len(eps)<4: eptest = 2 # if no 3 epochs
+comp = [eptest-2,eptest-1] # eps to compare    
+
+# filter iscell
+dff = fall['dFF'][:,(fall['iscell'][:,0].astype(bool)) & (~fall['bordercells'][0].astype(bool))]
+dff_per_ep = [dff[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
+trialnum_per_ep = [trialnum[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
+# get a subset of trials
+dff_per_ep_trials = [dff_per_ep[ii][(trialnum_per_ep[ii]>2) & (trialnum_per_ep[ii]<=12)] for ii in range(len(eps)-1)]
+dff_per_ep_trials_test = [dff_per_ep[ii][(trialnum_per_ep[ii]>12)] for ii in range(len(eps)-1)]
+position = fall['ybinned'][0]*1.5
+position_per_ep = [position[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
+# get a subset of trials
+position_per_ep_trials = [position_per_ep[ii][(trialnum_per_ep[ii]>2) & (trialnum_per_ep[ii]<=12)] for ii in range(len(eps)-1)]
+position_per_ep_trials_test = [position_per_ep[ii][(trialnum_per_ep[ii]>12)] for ii in range(len(eps)-1)]
+
+train = dff_per_ep_trials[comp[0]]
+test = dff_per_ep_trials_test[comp[0]]
+# TODO: use a couple trials from same ep as testing
+# use different epochs for further testing
+train_pos = position_per_ep_trials[comp[0]]
+test_pos = position_per_ep_trials_test[comp[0]]
+
+TimeInterval = 10 # frames
+TrainingData = create_subsequences(train,TimeInterval)
+batch_size = 128
+input_size = TrainingData.shape[-1] # number of cells
+output_size = 1
+
+Train_dataset = CreateTimeSeriesData(TrainingData, train_pos)
+Train_loader = DataLoader(dataset=Train_dataset, batch_size=batch_size, shuffle=True, drop_last = True)
+# Validation_loader = DataLoader(dataset=Train_dataset, batch_size=batch_size, shuffle=False, drop_last = True)
+# when predicting, set shuffle = False
+
+TestData = create_subsequences(test,TimeInterval)
+Test_dataset = CreateTimeSeriesData(TestData, test_pos)
+Test_loader = DataLoader(dataset=Test_dataset, batch_size=batch_size, shuffle=False)
+
+model = LSTMModel(input_size, output_dim = output_size)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
+model = model.to(device)
+criterion = nn.MSELoss()  # For regression tasks
+# criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay = 1e-9)
+
+# Example training loop
+l = []
+val_l = []
+num_epochs = 3000
+for epoch in range(num_epochs):
+    train_loss = 0.0
+    for inputs, targets in Train_loader:
+        # Forward pass
+        inputs, targets = inputs.to(device).float(), targets.to(device).float()
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        train_loss += loss.item()
+
+    l.append(train_loss/len(Train_loader))
+    if epoch % 20 == 0:
+        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, num_epochs, train_loss/len(Train_loader)))
+        val_loss = 0.0
+        for inputs, targets in Test_loader:
+            # Forward pass
+            inputs, targets = inputs.to(device).float(), targets.to(device).float()
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+            val_loss += loss.item()
+            val_l.append(val_loss/len(Test_loader))
+        print('Validation Loss: {:.4f}'.format(val_loss/len(Test_loader)))
+
+# use model to predict position
+dff = dff_per_ep_trials_test[comp[0]]
+# TODO: use a couple trials from same ep as testing
+# use different epochs for further testing
+pos = position_per_ep_trials_test[comp[0]]
+
+TimeInterval = 10 # frames
+TestData = create_subsequences(dff,TimeInterval)
+batch_size = 128
+input_size = TestData.shape[-1] # number of cells
+output_size = 1
+
+Test_dataset = CreateTimeSeriesData(TestData, pos)
+Test_loader = DataLoader(dataset=Test_dataset, batch_size=batch_size, 
+                        shuffle=False, drop_last = True)
+predict = []
+for inputs, targets in Test_loader:
+    # Forward pass
+    inputs, targets = inputs.to(device).float(), targets.to(device).float()
+    predict.append(model(inputs))
+    loss = criterion(outputs, targets)
+    val_loss += loss.item()
+    val_l.append(val_loss/len(Test_loader))
+print('Validation Loss: {:.4f}'.format(val_loss/len(Test_loader)))

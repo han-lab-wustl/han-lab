@@ -78,9 +78,10 @@ for ii in range(len(conddf)):
         coms1_early = np.hstack(coms_early[comp[0]])
         coms2_early = np.hstack(coms_early[comp[1]])
         com_remap = (coms1-rewlocs[comp[0]])-(coms2-rewlocs[comp[1]])
-        window = 10 # cm
+        window = 30 # cm
+        goal_window = 10 # cm
         # get proportion of remapping vs. stable cells
-        remap = np.where((com_remap<window) & (com_remap>-window))[0]
+        remap = np.where((com_remap<goal_window) & (com_remap>-goal_window))[0]
         remap = np.array([cl for cl in remap if np.nanmax(tc1_late[cl,:])>0.2])
         stable = np.where(((coms1-coms2)<window) & ((coms1-coms2)>-window))[0]
         stable = np.array([cl for cl in stable if np.nanmax(tc1_late[cl,:])>0.2])
@@ -203,7 +204,7 @@ axcom.spines['top'].set_visible(False)
 axcom.spines['right'].set_visible(False)
 axcom.set_xlabel('Prev Ep COM')
 axcom.set_ylabel('Target Ep COM')
-axcom.set_title('Goal remapping, LED off')
+axcom.set_title('Distance-to-goal coding, LED off')
 figcom.tight_layout()
 axcom2.plot(axcom2.get_xlim(), axcom2.get_ylim(), color='k', linestyle='--')
 axcom2.axvline(0, color='slategray', linestyle='--')
@@ -212,7 +213,7 @@ axcom2.spines['top'].set_visible(False)
 axcom2.spines['right'].set_visible(False)
 axcom2.set_xlabel('Prev Ep COM')
 axcom2.set_ylabel('Target Ep COM')
-axcom2.set_title('Goal remapping, LED on')
+axcom2.set_title('Distance-to-goal coding, LED on')
 figcom2.tight_layout()
 axcom3.plot(axcom3.get_xlim(), axcom3.get_ylim(), color='orange', linestyle='--')
 axcom3.axvline(0, color='yellow', linestyle='--')

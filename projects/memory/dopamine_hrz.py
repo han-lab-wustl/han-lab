@@ -20,12 +20,16 @@ plt.rcParams["font.family"] = "Arial"
 plt.close('all')
 # save to pdf
 src = r"Z:\chr2_grabda\e232"
+# src = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\HRZ\E168HRZparams"
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"hrz.pdf"))
-days = [30]
-range_val = 8; binsize=0.2
+days = []
+# days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
+#         'Day_7', 'Day_8']
+days = [30,31,32,33,34]
+range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-
+old = False
 day_date_dff = {}
 for day in days: 
     plndff = []
@@ -39,7 +43,10 @@ for day in days:
         params_keys = params.keys()
         keys = params['params'].dtype
         # dff is in row 7 - roibasemean3/basemean
-        dff = np.hstack(params['params'][0][0][6][0][0])/np.hstack(params['params'][0][0][9])
+        if old:
+            dff = np.hstack(params['params'][0][0][7][0][0])/np.hstack(params['params'][0][0][11])
+        else:
+            dff = np.hstack(params['params'][0][0][6][0][0])/np.hstack(params['params'][0][0][9])
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
         dff = np.hstack(dffdf.rolling(3).mean().values)
@@ -49,6 +56,13 @@ for day in days:
         licks = np.hstack(params['licks'])
         # plot pre-first reward dop activity  
         timedFF = np.hstack(params['timedFF'])
+        # mask out dark time
+        dff = dff[ybinned>3]
+        rewards = rewards[ybinned>3]
+        trialnum = trialnum[ybinned>3]
+        licks = licks[ybinned>3]
+        timedFF = timedFF[ybinned>3]
+        ybinned = ybinned[ybinned>3]
         # plot behavior
         if pln==0:
             fig, ax = plt.subplots()
@@ -81,8 +95,9 @@ for day in days:
         ax = axes[1]
         ax.plot(meanrewdFF)   
         xmin,xmax = ax.get_xlim()     
-        ax.fill_between(range(0,int(range_val/binsize)*2), meanrewdFF-scipy.stats.sem(rewdFF,axis=1),
-                meanrewdFF+scipy.stats.sem(rewdFF,axis=1), alpha=0.5)
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         fig.suptitle(f'Peri CS/Rew Loc, Day {day}, {layer}')
