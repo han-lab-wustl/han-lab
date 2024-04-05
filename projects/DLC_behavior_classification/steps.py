@@ -89,11 +89,14 @@ plt.plot((vralign['rewards']==0.5)[r:r+1000]*10)
 plt.plot(vralign['forwardvel'][r:r+1000]/4)
 plt.plot((slope)[r:r+1000])
 
-def get_avg_tail(x, y):
-    avg_tail_x = ([x[0]+x[1]+x[2]]/3)
-    avg_tail_y = ([y[0]+y[1]+y[2]]/3)
-    return (avg_tail_x, avg_tail_y)
-avg_tail_x =[]
+
+def get_avg_tail_x(x):
+    avg_tail_x = (x[0] + x[1] + x[2]) / 3
+    return avg_tail_x
+def get_avg_tail_y(y):
+    avg_tail_y = (y[0] + y[1] + y[2]) / 3
+    return avg_tail_y
+avg_tail_x = []
 avg_tail_y =[]
 slope_1 = []
 for i in range(len(vralign['TailBase_x'])):
@@ -102,5 +105,17 @@ for i in range(len(vralign['TailBase_x'])):
     tailtipx,tailtipy, = vralign['TailTip_x'][i], vralign['TailTip_y'][i]
     x = [midtailx,tailbasex, tailtipx]
     y = [midtaily,tailbasey, tailtipx]
-    avg_tail_x.append(get_avg_tail(x, y))
-    avg_tail_y.append(get_avg_tail(x,y))
+    avg_tail_x.append(get_avg_tail_x(x))
+    avg_tail_y.append(get_avg_tail_y(y))
+angles = []
+for i in range(len(avg_tail_x)):
+    angle = np.arctan2(avg_tail_y[i], avg_tail_x[i])
+    angles.append(angle)
+
+
+plt.figure()
+plt.plot(avg_tail_x)
+plt.figure()
+plt.plot(avg_tail_y)
+plt.plot()
+plt.plot(angles)
