@@ -300,8 +300,13 @@ def get_area_circumference_opto(pdst, range_val, binsize):
         eye_x = np.array([vralign[xx+"_x"][i] for xx in eye_pnts])
         eye_y = np.array([vralign[xx+"_y"][i] for xx in eye_pnts])
         eye_coords = np.array([eye_x, eye_y]).astype(float)
+<<<<<<< HEAD
         centroid_x, centroid_y = centeroidnp(eye_coords)
         area, circumference = get_eye_features([(vralign[xx+"_x"][i], 
+=======
+        centroid_x, centroid_y = eye.centeroidnp(eye_coords)
+        area, circumference = eye.get_eye_features([(vralign[xx+"_x"][i], 
+>>>>>>> fd3ccbb86e36a7c3a1330f1e99223a05b4de523d
                                     vralign[xx+"_y"][i]) for xx in eye_pnts])
         centroids_x.append(centroid_x)
         centroids_y.append(centroid_y)
