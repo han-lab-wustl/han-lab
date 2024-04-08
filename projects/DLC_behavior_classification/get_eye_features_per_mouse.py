@@ -11,7 +11,7 @@ mpl.rcParams["ytick.major.size"] = 6
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 # path to pickle
-pdst = r"D:\PupilTraining-Matt-2023-07-07\E200_07_Apr_2023_vr_dlc_align.p"
+pdst = r"D:\PupilTraining-Matt-2023-07-07\E217_05_Mar_2024_vr_dlc_align.p"
 
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
