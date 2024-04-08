@@ -26,7 +26,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"hrz.pdf"))
 days = []
 # days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
 #         'Day_7', 'Day_8']
-days = [30,31,32,33,34]
+days = [30,31,32,33,34,35]
 range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False

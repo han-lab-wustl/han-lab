@@ -49,12 +49,13 @@ for ii in range(len(conddf)):
             'tuning_curves_late_trials', 'coms', 'coms_early_trials'])        
         changeRewLoc = np.hstack(fall['changeRewLoc'])
         eptest = conddf.optoep.values[ii]
-        if conddf.optoep.values[ii]<2: eptest = random.randint(2,3)    
         eps = np.where(changeRewLoc>0)[0]
         rewlocs = changeRewLoc[eps]*1.5
         rewzones = get_rewzones(rewlocs, 1.5)        
         eps = np.append(eps, len(changeRewLoc))    
-        if len(eps)<4: eptest = 2 # if no 3 epochs
+        if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs   
         comp = [eptest-2,eptest-1] # eps to compare 
         other_eps = [xx for xx in range(len(eps)-1) if xx not in comp]   
         rewzones_comps.append(rewzones[comp])

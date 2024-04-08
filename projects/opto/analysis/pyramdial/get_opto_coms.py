@@ -49,12 +49,13 @@ for ii in range(len(conddf)):
             'tuning_curves_late_trials', 'coms', 'coms_early_trials'])        
         changeRewLoc = np.hstack(fall['changeRewLoc'])
         eptest = conddf.optoep.values[ii]
-        if conddf.optoep.values[ii]<2: eptest = random.randint(2,3)    
         eps = np.where(changeRewLoc>0)[0]
         rewlocs = changeRewLoc[eps]*1.5
         rewzones = get_rewzones(rewlocs, 1.5)        
-        eps = np.append(eps, len(changeRewLoc))    
-        if len(eps)<4: eptest = 2 # if no 3 epochs
+        eps = np.append(eps, len(changeRewLoc))   
+        if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs          
         comp = [eptest-2,eptest-1] # eps to compare 
         other_eps = [xx for xx in range(len(eps)-1) if xx not in comp]   
         rewzones_comps.append(rewzones[comp])
@@ -85,6 +86,7 @@ for ii in range(len(conddf)):
         remap = np.array([cl for cl in remap if np.nanmax(tc1_late[cl,:])>0.2])
         stable = np.where(((coms1-coms2)<window) & ((coms1-coms2)>-window))[0]
         stable = np.array([cl for cl in stable if np.nanmax(tc1_late[cl,:])>0.2])
+        # active vs in active cells
         inactive_stable = [xx for xx in stable if xx in differentially_inactivated_cells]
         if len(inactive_stable)>0:
             inactive_stable_prop = len(inactive_stable)/len(differentially_inactivated_cells)
@@ -393,11 +395,15 @@ ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.get_legend().set_visible(False)
 
-inactive_remap_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == 'vip')), 'inactive_remap_prop'].values
-inactive_remap_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == 'vip')), 'inactive_remap_prop'].values
+inactive_remap_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == 'vip')), 'remap_prop'].values
+inactive_remap_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == 'vip')), 'remap_prop'].values
 scipy.stats.ttest_rel(inactive_remap_t, inactive_remap_f)
 
 stable_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == 'vip')), 'stable_prop'].values
 stable_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == 'vip')), 'stable_prop'].values
 scipy.stats.ttest_rel(stable_t, stable_f)
+# ctrl
+# stable_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == 'ctrl')), 'stable_prop'].values
+# stable_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == 'ctrl')), 'stable_prop'].values
+# scipy.stats.ttest_rel(stable_t, stable_f)
 # %%
