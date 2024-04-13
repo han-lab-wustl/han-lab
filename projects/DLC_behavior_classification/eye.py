@@ -1,7 +1,7 @@
 # zahra
 # eye centroid and feature detection from vralign.p
 
-import numpy as np, pandas as pd, scipy, sys
+import numpy as np, pandas as pd, scipy, sys, h5py
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 import statsmodels.api as sm 
@@ -35,6 +35,41 @@ def nan_helper(y):
         """
 
         return np.isnan(y), lambda z: z.nonzero()[0]
+
+def get_success_failure_trials(trialnum, reward):
+    """
+    Quantify successful and failed trials based on trial numbers and rewards.
+
+    Args:
+        trialnum (numpy.ndarray): Array of trial numbers.
+        reward (numpy.ndarray): Array of rewards (0 or 1) corresponding to each trial.
+
+    Returns:
+        int: Number of successful trials.
+        int: Number of failed trials.
+        list: List of successful trial numbers.
+        list: List of failed trial numbers.
+        numpy.ndarray: Array of trial numbers, excluding probe trials (trial < 3).
+        int: Total number of trials, excluding probe trials.
+    """
+    success = 0
+    fail = 0
+    str_trials = []
+    ftr_trials = []
+
+    for trial in np.unique(trialnum):
+        if trial >= 3:  # Exclude probe trials (trial < 3)
+            if np.sum(reward[trialnum == trial] == 1) > 0:  # If reward was found in the trial
+                success += 1
+                str_trials.append(trial)
+            else:
+                fail += 1
+                ftr_trials.append(trial)
+
+    total_trials = np.sum(np.unique(trialnum) >= 3)
+    ttr = np.unique(trialnum)[np.unique(trialnum) > 2]  # Remove probe trials
+
+    return success, fail, str_trials, ftr_trials, ttr, total_trials
 
 def get_unrewarded_stops(vralign):
     stops = vralign['forwardvel']==0 # 0 velocity
@@ -284,6 +319,112 @@ def perireward_binned_activity(dFF, rewards, timedFF, range_val, binsize):
     normrewdFF = np.array([(xx-np.min(xx))/((np.max(xx)-np.min(xx))) for xx in rewdFF.T])
     return normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF
 
+def get_area_circumference_from_vralign_with_fails(pdst, vrfl,
+                    range_val, binsize,fs=62.5):
+
+    with open(pdst, "rb") as fp: #unpickle
+            vralign = pickle.load(fp)
+    f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
+    VR = f['VR']
+    # edit name of eye points
+    eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest',
+            'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
+    # for e in eye: #optional: threshold points
+    #     vralign[e+'_x'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
+    #     vralign[e+'_y'][vralign[e+'_likelihood'].astype('float32')<0.9]=0
+    #eye centroids, area, perimeter
+    centroids_x = []; centroids_y = []
+    areas = []; circumferences = []
+    for i in range(len(vralign['EyeNorthWest_y'])):
+        eye_x = np.array([vralign[xx+"_x"][i] for xx in eye])
+        eye_y = np.array([vralign[xx+"_y"][i] for xx in eye])
+        eye_coords = np.array([eye_x, eye_y]).astype(float)
+        centroid_x, centroid_y = centeroidnp(eye_coords)
+        area, circumference = get_eye_features([(vralign[xx+"_x"][i],
+                                    vralign[xx+"_y"][i]) for xx in eye])
+        centroids_x.append(centroid_x)
+        centroids_y.append(centroid_y)
+        areas.append(area); circumferences.append(circumference)
+    areas = np.array(areas); circumferences = np.array(circumferences)
+    areas = scipy.signal.savgol_filter(areas,5, 2)
+    centroids_x = scipy.signal.savgol_filter(centroids_x,5, 2)
+    centroids_y = scipy.signal.savgol_filter(centroids_y,5, 2)
+    licks_threshold = vralign['lickVoltage']<=-0.065 # manually threshold licks
+    licks = scipy.signal.savgol_filter(licks_threshold,10, 2)
+    rewards = vralign['rewards']
+    velocity = vralign['forwardvel']
+    nans, x = nan_helper(velocity)
+    velocity[nans]= np.interp(x(nans), x(~nans), velocity[~nans])
+    velocity = scipy.signal.savgol_filter(velocity,10, 2)
+    # calculate acceleration
+    acc_ = np.diff(velocity)/np.diff(np.hstack(vralign['timedFF']))
+    # pad nans
+    acc=np.zeros_like(velocity)
+    acc[:-1]=acc_
+    acc = scipy.signal.savgol_filter(acc,10, 2)
+    vralign['EyeNorthEast_y'][vralign['EyeNorthEast_likelihood']<0.75]=0 # filter out low prob
+    eyelid = vralign['EyeNorthEast_y']
+    eyelid = scipy.signal.savgol_filter(eyelid,10, 2)
+    X = np.array([velocity, acc, licks, eyelid]).T # Predictor(s)
+    X = sm.add_constant(X) # Adds a constant term to the predictor(s)
+    y = areas # Outcome
+    ############## GLM ##############
+    # Fit a regression model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())
+    result = model.fit()
+    areas_res = result.resid_pearson
+
+    # run peri reward time & plot  
+    # successful trials
+    rewards = vralign["rewards"]
+    input_peri = areas_res
+    time = vralign['timedFF']
+    normmeanrew_t, meanrew, normrewall_t, \
+    rewall = perireward_binned_activity(np.array(input_peri), \
+                            rewards.astype(int),
+                            time, range_val, binsize)
+    # failed
+    trialnum = vralign['trialnum']
+    ybinned = vralign['ybinned']
+    rewlocs = VR['changeRewLoc'][:][VR['changeRewLoc'][:]>0]
+    changeRewLoc = vralign["changeRewLoc"]
+    crl = consecutive_stretch_vralign(np.where(changeRewLoc>0)[0])
+    crl = np.array([min(xx) for xx in crl])
+    eps = np.array([xx for ii,xx in enumerate(crl[1:]) if np.diff(np.array([crl[ii],xx]))[0]>5000])
+    eps = np.append(eps, 0)
+    eps = np.append(eps, len(changeRewLoc))
+    eps = np.sort(eps)
+    rewallfail = []; meanrewfail = []
+    for ep in range(len(eps)-1):
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eps[ep]:eps[ep+1]], rewards[eps[ep]:eps[ep+1]])
+        failtr_bool = np.array([any(yy==xx for yy in ftr_trials) for xx in trialnum[eps[ep]:eps[ep+1]]])
+        failed_trialnum = trialnum[eps[ep]:eps[ep+1]][failtr_bool]
+        rews_centered = np.zeros_like(failed_trialnum)
+        ypos = ybinned[eps[ep]:eps[ep+1]]
+        rews_centered[(ypos[failtr_bool] >= rewlocs[ep]-5) & (ypos[failtr_bool] <= rewlocs[ep]+5)]=1
+        rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+        min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+        rews_centered = np.zeros_like(failed_trialnum)
+        rews_centered[min_iind]=1
+        rewards_ep = rews_centered
+        # fake time var
+        time_ep = np.arange(0,rewards_ep.shape[0]/fs,1/fs)
+        licks_threshold_ep = licks_threshold[eps[ep]:eps[ep+1]][failtr_bool]
+        velocity_ep = velocity[eps[ep]:eps[ep+1]][failtr_bool]
+        input_peri = areas_res[eps[ep]:eps[ep+1]][failtr_bool]
+        normmeanrew_t, meanrew_ep, normrewall_t, \
+        rewall_ep = perireward_binned_activity(np.array(input_peri), \
+                                rewards_ep.astype(int),
+                                time_ep, range_val, binsize)
+        rewallfail.append(rewall_ep.T)
+        meanrewfail.append(meanrew_ep)
+    rewallfail = np.concatenate(rewallfail)
+    meanrewfail = np.mean(np.array(meanrewfail),axis=0)
+
+    return areas, areas_res, circumferences, meanrew, rewall, meanrewfail, rewallfail
+
+
 def get_area_circumference_opto(pdst, range_val, binsize):
     # example on how to open the pickle file
     # pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
@@ -300,13 +441,8 @@ def get_area_circumference_opto(pdst, range_val, binsize):
         eye_x = np.array([vralign[xx+"_x"][i] for xx in eye_pnts])
         eye_y = np.array([vralign[xx+"_y"][i] for xx in eye_pnts])
         eye_coords = np.array([eye_x, eye_y]).astype(float)
-<<<<<<< HEAD
         centroid_x, centroid_y = centeroidnp(eye_coords)
         area, circumference = get_eye_features([(vralign[xx+"_x"][i], 
-=======
-        centroid_x, centroid_y = eye.centeroidnp(eye_coords)
-        area, circumference = eye.get_eye_features([(vralign[xx+"_x"][i], 
->>>>>>> fd3ccbb86e36a7c3a1330f1e99223a05b4de523d
                                     vralign[xx+"_y"][i]) for xx in eye_pnts])
         centroids_x.append(centroid_x)
         centroids_y.append(centroid_y)

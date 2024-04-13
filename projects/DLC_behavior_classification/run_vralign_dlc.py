@@ -12,14 +12,8 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\240304_E217DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv",
-                r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\240208_E217DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv",
-                r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\240205_E217DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv",
-                r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\240202_E217DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
-        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\E217_04_Mar_2024_time(07_40_28).mat",
-                r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\E217_08_Feb_2024_time(07_42_19).mat",
-                r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\E217_05_Feb_2024_time(09_27_34).mat",
-                r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\E217_02_Feb_2024_time(13_53_42).mat"]
+        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\240214_E228DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
+        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\E228_14_Feb_2024_time(08_57_19).mat"]
         #dlccsv = [r"I:\dlc_inference\230502_E201DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
         #vrfl = [r"D:\adina_vr_files\VR_data\E201_02_May_2023_time(09_16_02).mat"]
         savedst = r"D:\PupilTraining-Matt-2023-07-07"

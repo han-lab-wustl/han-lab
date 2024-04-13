@@ -61,13 +61,13 @@ TrainingLabel = Y[TimeInterval-1:].reshape(-1,1)
 X is dFF, Y is corresponding position.
 '''
 # import raw data
-with open("Z:\dcts_com_opto.p", "rb") as fp: #unpickle
+with open(r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\analysis\decoding_lstm\dcts_com_opto.p", "rb") as fp: #unpickle
         dcts = pickle.load(fp)
 dd=5
-conddf = pd.read_csv(r"Z:\condition_df\conddf_neural.csv", index_col=None)
+conddf = pd.read_csv(r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\analysis\decoding_lstm\conddf_neural.csv", index_col=None)
 day=conddf.days.values[dd]
 animal = conddf.animals.values[dd]
-params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+params_pth = rf"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\analysis\decoding_lstm\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
 fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel', 'ybinned', 'iscell',
                             'trialnum', 'bordercells', 'changeRewLoc'])
 inactive = dcts[dd]['inactive']
@@ -78,11 +78,13 @@ trialnum = np.hstack(fall['trialnum'])
 eps = np.where(changeRewLoc>0)[0]
 rewlocs = changeRewLoc[eps]*1.5
 eps = np.append(eps, len(changeRewLoc))    
-if len(eps)<4: eptest = 2 # if no 3 epochs
+# if len(eps)<4: eptest = 2 # if no 3 epochs
 comp = [eptest-2,eptest-1] # eps to compare    
 
 # filter iscell
 dff = fall['dFF'][:,(fall['iscell'][:,0].astype(bool)) & (~fall['bordercells'][0].astype(bool))]
+# remove cells with nan?
+dff[:,np.where(sum(np.isnan(dff))>0)] = 0
 dff_per_ep = [dff[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 trialnum_per_ep = [trialnum[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 # get a subset of trials

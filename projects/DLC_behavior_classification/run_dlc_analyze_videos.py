@@ -10,7 +10,10 @@ import deeplabcut, os, pandas as pd
 from video_formating.get_crop import get_crop_and_edit_config_file
 config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
 # path to videos here
-vids = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2\231129_E218.avi"]
+vids = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\240210_E228.avi",
+        r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\240212_E228.avi",
+        r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\240213_E228.avi",
+        r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\240214_E228.avi"]
 
 # note that we have to run in the for loop like this since
 # the config file needs to edited separately for each video
