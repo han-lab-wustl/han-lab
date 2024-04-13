@@ -1,6 +1,6 @@
 
 """
-zahra's analysis for clustering/dimensionality reduction of pyramidal cell data
+zahra's analysis for initial com and enrichment of pyramidal cell data
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -26,7 +26,7 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_neural.csv", index_col=None)
 dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
-    threshold = 10
+    threshold = 7
     pc = False
     dct = get_pyr_metrics_opto(conddf, dd, day, threshold=threshold, pc=pc)
     dcts.append(dct)
@@ -62,7 +62,7 @@ in_type_cond = 'vip'
 fig,ax = plt.subplots()
 ax = sns.barplot(x="opto", y="frac_pc", hue = 'vip_ctrl', data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                ci=68, fill=False)
+                errorbar='se', fill=False)
 ax = sns.stripplot(x="opto", y="frac_pc", hue = 'vip_ctrl', data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax.spines['top'].set_visible(False)
@@ -72,7 +72,7 @@ sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 bigdf = bigdf[bigdf.index.get_level_values('in_type') == in_type_cond]
 scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, \
             bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
-scipy.stats.ranksums(bigdf[(bigdf.opto==True)].frac_pc.values, bigdf[(bigdf.opto==False)].frac_pc.values)
+scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
 # %%
 # average enrichment
 # not as robust effect with 3 mice
@@ -100,7 +100,7 @@ bigdf.reset_index(drop=True, inplace=True)
 # ax = sns.stripplot(x="condition", y="relative_com", hue="opto", data=bigdf, size=1)
 # ax = sns.stripplot(x="opto", y="tc_diff", hue="in_type",data=bigdf)
 # ax.tick_params(axis='x', labelrotation=90)
-bigdf_test = bigdf.groupby(['animal', 'vip_cond', 'opto']).mean()
+bigdf_test = bigdf.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
 comp1 = bigdf_test[(bigdf_test.index.get_level_values('opto')==True) & (bigdf_test.index.get_level_values('vip_cond')=='vip')].tc_diff.values; comp1=comp1[~np.isnan(comp1)]
 comp2 = bigdf_test[(bigdf_test.index.get_level_values('opto')==False) &  (bigdf_test.index.get_level_values('vip_cond')=='vip')].tc_diff.values; comp2=comp2[~np.isnan(comp2)]
 diff_offon_vip = comp1-comp2
@@ -111,7 +111,7 @@ t,pval=scipy.stats.ranksums(diff_offon_vip, diff_offon_ctrl)
 
 plt.figure()
 df = pd.DataFrame(np.concatenate([diff_offon_vip, diff_offon_ctrl]), columns = ['tc_diff_ledoff-on'])
-df['condition']=np.concatenate(np.array([['vip']*len(diff_offon_vip), ['ctrl']*len(diff_offon_ctrl)]))
+df['condition']=np.concatenate([['vip']*len(diff_offon_vip), ['ctrl']*len(diff_offon_ctrl)])
 ax = sns.barplot(x="condition", y="tc_diff_ledoff-on",data=df, fill=False, color='k')
 sns.stripplot(x="condition", y="tc_diff_ledoff-on",data=df, color='k')
 plt.title(f"p-value = {pval:03f}")
@@ -126,25 +126,36 @@ scipy.stats.t.interval(alpha=0.95, df=len(df[df.condition=='ctrl'])-1,
 
 #%%
 # com shift
+# control vs. vip led on
+# com_shift col 0 = inactive; 1 = active; 0 = all
 optoep = conddf.optoep.values
 in_type = conddf.in_type.values
-in_type_cond = 'vip'
-optoep_in = np.array([xx for ii,xx in enumerate(optoep) if in_type[ii]==in_type_cond])
-com_shift = np.array([dct['com_shift'] for ii,dct in enumerate(dcts) if in_type[ii]==in_type_cond])
-rewloc_shift = np.array([dct['rewloc_shift'] for ii,dct in enumerate(dcts) if in_type[ii]==in_type_cond ])
+
+optoep_in = np.array([xx for ii,xx in enumerate(optoep)])
+com_shift = np.array([dct['com_shift'] for ii,dct in enumerate(dcts)])
+rewloc_shift = np.array([dct['rewloc_shift'] for ii,dct in enumerate(dcts)])
 fig, ax = plt.subplots()
-ax.scatter(com_shift[optoep_in<0, 0], rewloc_shift[optoep_in<0], label = 'Control Inactive', color = 'gold')
-ax.scatter(com_shift[optoep_in>=2, 0], rewloc_shift[optoep_in>=2], label = 'VIP Inactive', color = 'red')
-slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[optoep_in>=2, 0][~np.isnan(com_shift[optoep_in>=2, 0])],rewloc_shift[optoep_in>=2][~np.isnan(com_shift[optoep_in>=2, 0])])
+ax.scatter(com_shift[((optoep_in>=2) & (in_type=='vip')), 0], rewloc_shift[((optoep_in>=2) & (in_type=='vip'))], label = 'VIP Inactive', color = 'red')
+ax.scatter(com_shift[((optoep_in>=2) & (in_type=='sst')), 0], rewloc_shift[((optoep_in>=2) & (in_type=='sst'))], label = 'Control Inactive', color = 'gold')
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[((optoep_in>=2) & (in_type=='vip')), 0][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='vip')), 0])],rewloc_shift[((optoep_in>=2) & (in_type=='vip'))][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='vip')), 0])])
 x_vals = np.array(ax.get_xlim())
 y_vals = intercept + slope * x_vals
-# ax.plot(x_vals, y_vals, color = 'r')
-ax.scatter(com_shift[optoep_in<0, 1], rewloc_shift[optoep_in<0], label = 'Control Active', color = 'darkgoldenrod')
-ax.scatter(com_shift[optoep_in>=2, 1], rewloc_shift[optoep_in>=2], label = 'VIP Active', color = 'maroon')
-slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[optoep_in>=2, 1][~np.isnan(com_shift[optoep_in>=2, 1])],rewloc_shift[optoep_in>=2][~np.isnan(com_shift[optoep_in>=2, 1])])
+ax.plot(x_vals, y_vals, color = 'r')
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[((optoep_in>=2) & (in_type=='sst')), 0][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='sst')), 0])],rewloc_shift[((optoep_in>=2) & (in_type=='sst'))][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='sst')), 0])])
 x_vals = np.array(ax.get_xlim())
 y_vals = intercept + slope * x_vals
-# ax.plot(x_vals, y_vals, color = 'maroon')
+ax.plot(x_vals, y_vals, color = 'gold')
+
+ax.scatter(com_shift[((optoep_in>=2) & (in_type=='vip')), 1], rewloc_shift[((optoep_in>=2) & (in_type=='vip'))], label = 'VIP Active', color = 'maroon')
+ax.scatter(com_shift[((optoep_in>=2) & (in_type=='sst')), 1], rewloc_shift[((optoep_in>=2) & (in_type=='sst'))], label = 'Control Active', color = 'darkgoldenrod')
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[((optoep_in>=2) & (in_type=='vip')), 1][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='vip')), 1])],rewloc_shift[((optoep_in>=2) & (in_type=='vip'))][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='vip')), 1])])
+x_vals = np.array(ax.get_xlim())
+y_vals = intercept + slope * x_vals
+ax.plot(x_vals, y_vals, color = 'maroon')
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(com_shift[((optoep_in>=2) & (in_type=='sst')), 1][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='sst')), 1])],rewloc_shift[((optoep_in>=2) & (in_type=='sst'))][~np.isnan(com_shift[((optoep_in>=2) & (in_type=='sst')), 1])])
+x_vals = np.array(ax.get_xlim())
+y_vals = intercept + slope * x_vals
+ax.plot(x_vals, y_vals, color = 'darkgoldenrod')
 # ax.set_ylim(-150,200)
 # plt.scatter(com_shift[optoep_in<2, 2], rewloc_shift[optoep_in<2], label = 'Control All')
 
@@ -174,7 +185,7 @@ for ii,dct in enumerate(dcts_opto):
         df['vip_cond'] = 'vip'
     # else:
     #     df['vip_cond'] = 'ctrl'
-    elif (df['in_type'].values[0] =='sst') or df['animal'].values[0] =='e190':
+    elif (df['in_type'].values[0] =='sst') or (df['in_type'].values[0] =='ctrl'):
         df['vip_cond'] = 'ctrl'
 
     dfs_diff.append(df)
@@ -211,7 +222,6 @@ ax.spines['right'].set_visible(False)
 
 # sig # per animal
 scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'ledoff-on'].astype(float).values, df.loc[(df.condition=='ctrl'), 'ledoff-on'].astype(float).values)
-
 
 # %%
 # save pickle of dcts
@@ -281,7 +291,7 @@ for dd,day in enumerate(conddf.days.values):
     pearsonr_per_cell = []
     dct = dcts[dd]
     animal = conddf.animals.values[dd]
-    if conddf.in_type.values[dd]=='vip' and conddf.in_type.values[dd]=='vip':
+    if conddf.in_type.values[dd]=='vip':#and conddf.in_type.values[dd]=='vip':
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
                     'tuning_curves_late_trials', 'coms_early_trials'])
@@ -290,12 +300,14 @@ for dd,day in enumerate(conddf.days.values):
         tcs_late = fall['tuning_curves_late_trials'][0]
         changeRewLoc = np.hstack(fall['changeRewLoc'])
         eptest = conddf.optoep.values[dd]
-        if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
+        if conddf.optoep.values[dd]<2: 
+            eptest = random.randint(2,3)    
+            if len(eps)<4: eptest = 2 # if no 3 epochs
         eps = np.where(changeRewLoc>0)[0]
         rewlocs = changeRewLoc[eps]*1.5
         rewzones = get_rewzones(rewlocs, 1.5)
         eps = np.append(eps, len(changeRewLoc))    
-        if len(eps)<4: eptest = 2 # if no 3 epochs
+        
         comp = [eptest-2,eptest-1] # eps to compare    
         other_eps = [xx for xx in range(len(eps)-1) if xx not in comp]
         for other_ep in other_eps:

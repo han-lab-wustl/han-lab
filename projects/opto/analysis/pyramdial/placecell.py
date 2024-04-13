@@ -332,13 +332,14 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
         tcs_early = fall['tuning_curves_pc_early_trials'][0]
         tcs_late = fall['tuning_curves_pc_late_trials'][0]
     changeRewLoc = np.hstack(fall['changeRewLoc'])
-    eptest = conddf.optoep.values[dd]
-    if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
+    eptest = conddf.optoep.values[dd]    
     eps = np.where(changeRewLoc>0)[0]
     rewlocs = changeRewLoc[eps]*1.5
     rewzones = get_rewzones(rewlocs, 1.5)
-    eps = np.append(eps, len(changeRewLoc))    
-    if len(eps)<4: eptest = 2 # if no 3 epochs
+    eps = np.append(eps, len(changeRewLoc))  
+    if conddf.optoep.values[dd]<2: 
+        eptest = random.randint(2,3)      
+        if len(eps)<4: eptest = 2 # if no 3 epochs
     comp = [eptest-2,eptest-1] # eps to compare    
     bin_size = 3    
     tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[0]]]))
@@ -363,10 +364,10 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     difftc2 = np.array([np.nanmean(difftc2[ii,com-2:com+2]) for ii,com in enumerate(coms2_bin)])
 
     # Find differentially inactivated cells
-    # differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
-    # differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
-    differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
-    differentially_activated_cells = find_differentially_activated_cells(tc1_late, tc2_late, threshold, bin_size)
+    differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    # differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
+    # differentially_activated_cells = find_differentially_activated_cells(tc1_late, tc2_late, threshold, bin_size)
     # tc1_pc_width = evaluate_place_field_width(tc1_late, bin_centers, threshold=0.5)
     rewloc_shift = rewlocs[comp[1]]-rewlocs[comp[0]]
     com_shift = [np.nanmean(coms[comp[1]][differentially_inactivated_cells]-coms[comp[0]][differentially_inactivated_cells]), \
@@ -386,8 +387,8 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     dct['rewzones_comp'] = rewzones[comp]
     dct['coms1'] = coms1
     dct['coms2'] = coms2
-    dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-(track_length*.07))) & (coms1<(rewlocs[comp[0]])+5))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
-    dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-(track_length*.07))) & (coms2<(rewlocs[comp[1]])+5))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
+    dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-(track_length*.1))) & (coms1<(rewlocs[comp[0]])+5))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
+    dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-(track_length*.1))) & (coms2<(rewlocs[comp[1]])+5))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
     dct['rewloc_shift'] = rewloc_shift
     dct['com_shift'] = com_shift
     dct['inactive'] = differentially_inactivated_cells
