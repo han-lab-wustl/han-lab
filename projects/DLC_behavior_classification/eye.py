@@ -420,7 +420,7 @@ def get_area_circumference_from_vralign_with_fails(pdst, vrfl,
         rewallfail.append(rewall_ep.T)
         meanrewfail.append(meanrew_ep)
     rewallfail = np.concatenate(rewallfail)
-    meanrewfail = np.mean(np.array(meanrewfail),axis=0)
+    meanrewfail = np.nanmean(np.array(meanrewfail),axis=0)
 
     return areas, areas_res, circumferences, meanrew, rewall, meanrewfail, rewallfail
 

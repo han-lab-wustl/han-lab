@@ -1,5 +1,5 @@
 clear all;
-src = 'D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2';
+src = 'I:\pupil_pickles';
 fls = dir(fullfile(src, '*time*.mat'));
 
 for i=1:length(fls)

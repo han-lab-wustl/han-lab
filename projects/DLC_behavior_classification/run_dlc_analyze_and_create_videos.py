@@ -1,8 +1,8 @@
 import deeplabcut, os, pandas as pd
-
-config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
+# face videos
+config_path = r"D:\MixedMouse_trial_2\MixedModel_trial_2-Adina-2023-03-27\config.yaml"
 # path to videos here
-vids = r"D:\PupilTraining-Matt-2023-07-07\opto-vids\Trial 2"
+vids = r"I:\DAvideoLickAnalysis"
 #vids = [os.path.join(vids,xx) for xx in os.listdir(vids)]
 #vid = [r"D:\PupilTraining-Matt-2023-07-07\videos\Adina Videos\240120_E217.avi"]
 

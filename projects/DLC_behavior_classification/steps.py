@@ -6,7 +6,7 @@ import scipy, matplotlib.pyplot as plt, re
 import h5py, pickle
 import matplotlib
 
-vralign = r"D:\Tail_E186\Tail_221029_E186-Adina-2023-01-19\E200_08_May_2023_vr_dlc_align.p"
+vralign = r"D:\Tail_E186\E200_08_May_2023_vr_dlc_align.p"
 with open(vralign, "rb") as fp: #unpickle
     vralign = pickle.load(fp)
 vralign.keys()
@@ -120,14 +120,12 @@ plt.plot(avg_tail_y)
 plt.plot()
 plt.plot(angles)
 
-r = np.random.randint(1000, len(angles))
+r = np.random.randint(500, len(angles))
 
 plt.figure()
-plt.plot((vralign['rewards'] == 0.5)[r:r+1000]*2)
-plt.plot(vralign['forwardvel'][r:r+1000] /50)
-
-plt.plot(np.array(slope)[r:r+1000])
+plt.plot((vralign['rewards'] == 0.5)[r:r+500]*2)
+plt.plot(vralign['forwardvel'][r:r+500] /50)
+plt.plot(vralign['licks'][r:r+500])
+plt.plot(np.array(angles)[r:r+500])
 
 plt.show()
-
-plt.plot(vralign['licks'][r:r+1000])
