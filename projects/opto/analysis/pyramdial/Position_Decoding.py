@@ -63,31 +63,54 @@ TrainingLabel = Y[TimeInterval-1:].reshape(-1,1)
 X is dFF, Y is corresponding position.
 '''
 # import raw data
-with open("Z:\dcts_com_opto.p", "rb") as fp: #unpickle
+with open(r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\analysis\decoding_lstm\dcts_com_opto.p", "rb") as fp: #unpickle
         dcts = pickle.load(fp)
+<<<<<<< HEAD
 dd=4
+=======
+<<<<<<< HEAD
+dd=5
+conddf = pd.read_csv(r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\analysis\decoding_lstm\conddf_neural.csv", index_col=None)
+=======
+dd=0
+>>>>>>> 9058892a5635bedb0bbd627b6e2a0f65388cd902
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural.csv", index_col=None)
+>>>>>>> af8cebabd6db6fa3b783487cf35f3eb52b2e2b2b
 day=conddf.days.values[dd]
 animal = conddf.animals.values[dd]
-params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+params_pth = rf"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\analysis\decoding_lstm\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
 fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel', 'ybinned', 'iscell',
                             'trialnum', 'bordercells', 'changeRewLoc'])
 inactive = dcts[dd]['inactive']
 changeRewLoc = np.hstack(fall['changeRewLoc']) 
 eptest = conddf.optoep.values[dd]
 eps = np.where(changeRewLoc>0)[0]
+<<<<<<< HEAD
 rewlocs = changeRewLoc[eps]
+=======
+rewlocs = changeRewLoc[eps]*1.5
+<<<<<<< HEAD
+eps = np.append(eps, len(changeRewLoc))    
+# if len(eps)<4: eptest = 2 # if no 3 epochs
+=======
+>>>>>>> 9058892a5635bedb0bbd627b6e2a0f65388cd902
 eps = np.append(eps, len(changeRewLoc)) 
 if conddf.optoep.values[dd]<2: 
     eptest = random.randint(2,3)   
     if len(eps)<4: eptest = 2 # if no 3 epochs
 trialnum = np.hstack(fall['trialnum'])
+>>>>>>> af8cebabd6db6fa3b783487cf35f3eb52b2e2b2b
 comp = [eptest-2,eptest-1] # eps to compare    
 other_ep = [xx for xx in range(len(eps)-1) if xx not in comp]
 # filter iscell
 dff = fall['dFF'][:,(fall['iscell'][:,0].astype(bool)) & (~fall['bordercells'][0].astype(bool))]
+<<<<<<< HEAD
+# remove cells with nan?
+dff[:,np.where(sum(np.isnan(dff))>0)] = 0
+=======
 # remove nans
 dff[:, sum(np.isnan(dff))>0] = 0
+>>>>>>> af8cebabd6db6fa3b783487cf35f3eb52b2e2b2b
 dff_per_ep = [dff[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 trialnum_per_ep = [trialnum[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 # get a subset of trials

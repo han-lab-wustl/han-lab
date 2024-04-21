@@ -14,7 +14,7 @@ vr_thresh = thres;
 moving = find(vr_speed > vr_thresh);
 stop = find(vr_speed <= vr_thresh);
 
-stop_time_stretch =consecutive_stretch(stop);
+stop_time_stretch =consecutive_stretch(stop');
 
 for i = 1:length(stop_time_stretch)
     stop_time_length(i) = length(stop_time_stretch{i});
