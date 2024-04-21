@@ -11,7 +11,7 @@ mpl.rcParams["ytick.major.size"] = 6
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 # path to pickle
-pdst = r"D:\PupilTraining-Matt-2023-07-07\E217_05_Mar_2024_vr_dlc_align.p"
+pdst = r"Z:\E201_26_Apr_2023_vr_dlc_align.p"
 
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
@@ -21,12 +21,16 @@ binsize = 0.1 #s
 areas, areas_res, circumferences, centroids_x, centroids_y, \
         meanrew, rewall, meanlicks, meanvel = get_area_circumference_from_vralign(pdst, range_val, binsize)
 
+areas, areas_res, circumferences, centroids_x, centroids_y, \
+        meanrew_fail, rewall_fail, meanlicks_fail, meanvel_fail = get_area_circumference_from_vralign(pdst, range_val, binsize, fails=True)
+
 vralign['areas_residual'] = areas_res
 with open(pdst, "wb") as fp: #unpickle
         pickle.dump(vralign, fp)
 
 nans, x= nan_helper(rewall)
 rewall[nans]= np.interp(x(nans), x(~nans), rewall[~nans])
+rewall_fail[nans]= np.interp(x(nans), x(~nans), rewall_fail[~nans])
 # removes repeated frames of reward delivery (to not double the number of trials)
 #%%
 # plot peri reward

@@ -23,10 +23,11 @@ condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
 src = r"Z:\chr2_grabda\e232"
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"peri_analysis.pdf"))
-days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+# days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+days = [40,41,42]
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-optodays = [18, 19, 22, 23,24]
+optodays = [42]
 day_date_dff = {}
 for day in days: 
     newrewloc = condrewloc.loc[condrewloc.Day==day, 'RewLoc'].values[0]
@@ -46,7 +47,7 @@ for day in days:
         fig, ax = plt.subplots()
         ax.plot(dff)
         # temp remove artifacts
-        artifact_threshold = 1+np.std(dff)*12
+        artifact_threshold = 1+np.std(dff)*200
         if day in optodays:
             mean = np.mean(dff)
             std = np.std(dff)
@@ -64,6 +65,14 @@ for day in days:
         trialnum = np.hstack(params['trialnum'])
         ybinned = np.hstack(params['ybinned'])/(2/3)
         licks = np.hstack(params['licks'])
+        timedFF = np.hstack(params['timedFF'])
+        # mask out dark time
+        dff = dff[ybinned>3]
+        rewards = rewards[ybinned>3]
+        trialnum = trialnum[ybinned>3]
+        licks = licks[ybinned>3]
+        timedFF = timedFF[ybinned>3]
+        ybinned = ybinned[ybinned>3]
         # plot pre-first reward dop activity    
         firstrew = np.where(rewards==1)[0][0]
         rews_centered = np.zeros_like(ybinned[:firstrew])
@@ -72,7 +81,7 @@ for day in days:
         min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
         rews_centered = np.zeros_like(ybinned[:firstrew])
         rews_centered[min_iind]=1
-        timedFF = np.hstack(params['timedFF'])
+        
         # plot behavior
         fig, ax = plt.subplots()
         ax.plot(ybinned)
@@ -99,7 +108,11 @@ for day in days:
         ax.set_title('Probe Trials (Centered by prev. rewloc)')
         fig2, axes2 = plt.subplots(nrows=3,ncols=1)#,gridspec_kw={'width_ratios':[4,1]})
         ax = axes2[0]
-        ax.plot(meanrewdFF)
+        ax.plot(meanrewdFF)   
+        xmin,xmax = ax.get_xlim()     
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)                
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Probe Trials (Centered by prev. rewloc)')
@@ -137,7 +150,11 @@ for day in days:
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Failed / Catch Trials (Centered by rewloc)')
         ax = axes2[1]
-        ax.plot(meanrewdFF)
+        ax.plot(meanrewdFF)   
+        xmin,xmax = ax.get_xlim()     
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Failed / Catch Trials (Centered by rewloc)')
@@ -161,7 +178,11 @@ for day in days:
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Successful Trials (Centered by CS)')
         ax = axes2[2]
-        ax.plot(meanrewdFF)
+        ax.plot(meanrewdFF)   
+        xmin,xmax = ax.get_xlim()     
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)        
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         fig.suptitle(f'Peri CS/Rew Loc, Day {day}, {layer}')

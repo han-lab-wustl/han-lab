@@ -65,7 +65,7 @@ X is dFF, Y is corresponding position.
 # import raw data
 with open("Z:\dcts_com_opto.p", "rb") as fp: #unpickle
         dcts = pickle.load(fp)
-dd=0
+dd=4
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural.csv", index_col=None)
 day=conddf.days.values[dd]
 animal = conddf.animals.values[dd]
@@ -74,10 +74,9 @@ fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel', 'ybinne
                             'trialnum', 'bordercells', 'changeRewLoc'])
 inactive = dcts[dd]['inactive']
 changeRewLoc = np.hstack(fall['changeRewLoc']) 
-
 eptest = conddf.optoep.values[dd]
 eps = np.where(changeRewLoc>0)[0]
-rewlocs = changeRewLoc[eps]*1.5
+rewlocs = changeRewLoc[eps]
 eps = np.append(eps, len(changeRewLoc)) 
 if conddf.optoep.values[dd]<2: 
     eptest = random.randint(2,3)   
@@ -93,23 +92,21 @@ dff_per_ep = [dff[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 trialnum_per_ep = [trialnum[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 # get a subset of trials
 # normalize from 0 to 1
-dff_per_ep_trials = [dff_per_ep[ii][(trialnum_per_ep[ii]>2) & (trialnum_per_ep[ii]!=14) & (trialnum_per_ep[ii]!=13) & (trialnum_per_ep[ii]!=12)] for ii in range(len(eps)-1)]
-dff_per_ep_trials_test = [dff_per_ep[ii][(trialnum_per_ep[ii]==14) | (trialnum_per_ep[ii]==13) | (trialnum_per_ep[ii]==12)] for ii in range(len(eps)-1)]
-dff_per_ep_trials_norm = [np.array([(xx-np.nanmin(xx))/(np.nanmax(xx)-np.nanmin(xx)) for xx in yy.T]).T for yy in dff_per_ep_trials]
-dff_per_ep_trials_test_norm = [np.array([(xx-np.nanmin(xx))/(np.nanmax(xx)-np.nanmin(xx)) for xx in yy.T]).T for yy in dff_per_ep_trials_test]
+dff_per_ep_trials = [dff_per_ep[ii][((trialnum_per_ep[ii]>2) & (trialnum_per_ep[ii]<=10)) | (trialnum_per_ep[ii]>15)] for ii in range(len(eps)-1)]
+dff_per_ep_trials_test = [dff_per_ep[ii][(trialnum_per_ep[ii]>10) & (trialnum_per_ep[ii]<16)] for ii in range(len(eps)-1)]
 
 # normalize by training data
 # dff_per_ep_trials_test_norm = [(xx-np.nanmin(dff_per_ep_trials[ii]))/(np.nanmax(dff_per_ep_trials[ii])-np.nanmin(dff_per_ep_trials[ii])) for ii,xx in enumerate(dff_per_ep_trials_test)]
-position = fall['ybinned'][0]*1.5
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaler = scaler.fit(position.reshape(-1,1))
-# normalize the dataset and print
-position = np.squeeze(scaler.transform(position.reshape(-1,1)))
+position = fall['ybinned'][0]
+# scaler = MinMaxScaler(feature_range=(0, 1))
+# scaler = scaler.fit(position.reshape(-1,1))
+# # normalize the dataset and print
+# position = np.squeeze(scaler.transform(position.reshape(-1,1)))
 
 position_per_ep = [position[eps[xx]:eps[xx+1]] for xx in range(len(eps)-1)]
 # get a subset of trials
-position_per_ep_trials = [position_per_ep[ii][(trialnum_per_ep[ii]>2) & (trialnum_per_ep[ii]!=14) & (trialnum_per_ep[ii]!=13) & (trialnum_per_ep[ii]!=12)] for ii in range(len(eps)-1)]
-position_per_ep_trials_test = [position_per_ep[ii][(trialnum_per_ep[ii]==14) | (trialnum_per_ep[ii]==13) | (trialnum_per_ep[ii]==12)] for ii in range(len(eps)-1)]
+position_per_ep_trials = [position_per_ep[ii][((trialnum_per_ep[ii]>2) & (trialnum_per_ep[ii]<=10)) | (trialnum_per_ep[ii]>15)] for ii in range(len(eps)-1)]
+position_per_ep_trials_test = [position_per_ep[ii][(trialnum_per_ep[ii]>10) & (trialnum_per_ep[ii]<16)] for ii in range(len(eps)-1)]
 
 TimeInterval = 10 # frames
 
@@ -178,19 +175,27 @@ for epoch in range(num_epochs):
         print('Validation Loss: {:.4f}'.format(val_loss/len(Test_loader)))
 
 # save
-savepth = r'Z:\\model_dd0_conddct.pt'
+savepth = rf'Z:\\model_dd{dd}_conddct.pt'
 torch.save(model.state_dict(), savepth)
 
+# reload model
+model = LSTMModel(input_size, output_dim = output_size)
+model.load_state_dict(torch.load(savepth))
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
+model = model.to(device)
+criterion = nn.MSELoss()  # For regression tasks
+# criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay = 1e-9)
+
 # use model to predict position
-dff_test = dff_per_ep_trials_test_norm[comp[0]]
+dff_test = dff_per_ep_trials_test[comp[1]]
 # TODO: use a couple trials from same ep as testing
 # use different epochs for further testing
-pos = position_per_ep_trials_test[comp[0]]
+pos = position_per_ep_trials_test[comp[1]]
 pos = pos[TimeInterval-1:].reshape(-1,1)
 
-TimeInterval = 10 # frames
 TestData = create_subsequences(dff_test,TimeInterval)
-batch_size = 128
 input_size = TestData.shape[-1] # number of cells
 output_size = 1
 
@@ -198,11 +203,15 @@ Test_dataset = CreateTimeSeriesData(TestData, pos)
 Test_loader = DataLoader(dataset=Test_dataset, batch_size=batch_size, 
                         shuffle=False, drop_last = True)
 predict = []
+val_loss = 0
 for inputs, targets in Test_loader:
     # Forward pass
     inputs, targets = inputs.to(device).float(), targets.to(device).float()
-    predict.append(model(inputs))
+    outputs = model(inputs)
+    predict.append(outputs)
     loss = criterion(outputs, targets)
     val_loss += loss.item()
-    val_l.append(val_loss/len(Test_loader))
 print('Validation Loss: {:.4f}'.format(val_loss/len(Test_loader)))
+predict = np.concatenate([xx.cpu().detach().numpy() for xx in predict])
+plt.plot(pos)
+plt.plot(predict)

@@ -45,6 +45,9 @@ def get_rewzones(rewlocs, gainf):
     
     return trials_before_success
 
+def get_mean_velocity_per_ep(forwardvel):
+    return np.nanmean(forwardvel)
+
 def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     ybinned, rewlocs, forwardvel, rewsize):
     # opto ep    
@@ -63,22 +66,28 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     # split into pre, rew, and post
     lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize-10):int(rewloc+20)], \
                     lick_probability_opto[int(rewloc+20):]]
+    vel_opto = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc]) # pre-reward
     # previous ep
     eprng = range(eps[eptotest-1], eps[eptotest])
     trialnum_ = trialnum[eprng]
     reward_ = rewards[eprng]
     licks_ = licks[eprng]
     ybinned_ = ybinned[eprng]
+    forwardvel_ = forwardvel[eprng]
     rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
     success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_prev = success / total_trials 
     trials_bwn_success_prev =  np.diff(np.array(strials))
     pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
     # split into pre, rew, and post
-    lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize)], lick_probability_prev[int(rewloc-rewsize-10):int(rewloc+20)], \
+    lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize-20)], 
+                    lick_probability_prev[int(rewloc-rewsize-20):int(rewloc-rewsize/2)], \
                     lick_probability_prev[int(rewloc+20):]]
     # Return a dictionary or multiple dictionaries containing your results
-    return rate_opto, rate_prev, lick_prob_opto, lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev
+    vel_prev = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc])
+    return rate_opto, rate_prev, lick_prob_opto, \
+    lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev, \
+    vel_opto, vel_prev
 
 
 def get_success_failure_trials(trialnum, reward):

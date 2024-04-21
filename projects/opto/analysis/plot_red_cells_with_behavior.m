@@ -5,14 +5,14 @@ clear all; close all
 % cells_to_plot = {[141, 17,20,7]+1, [453,63,26,38]+1, [111,41,65,2]+1, [72,41,27,14]+1,...
 %     [301 17 13 320]+1, [98 33 17 3]+1, [92 20 17 26]+1, [17, 23, 36, 10]+1, [6, 114, 11, 24]+1,...
 %      [49 47 6 37]+1, [434,19,77,5]+1}; % indices of red cells from suite2p per day
-mice = {"e216", "e218"};
+mice = {"e216", "e217", "e218"};
 % mice = {"e186"};%{"e201"};
 % dys_s = {[2:5,31,32,33,36, 38 40 41]};%{[52:65]};
-dys_s = {[37 41 57 60],...
+dys_s = {[37 41 57 60],[14, 26, 27],...
     [35,38,41,44,47,50]};
-opto_ep_s = {[2 3 2 3],...
+opto_ep_s = {[2 3 2 3],[2,3,3],...
     [3 2 3 2 3 2]};
-cells_to_plot_s = {{135+1,1655+1,780,2356+1}, ...
+cells_to_plot_s = {{135+1,1655+1,780,2356+1},{16+1,6+1,9+1} ...
     {[453,63,26,38]+1,...
     [301 17 13 320]+1, [17, 23, 36, 10]+1, [6, 114, 11, 24]+1,...
     [49 47 6 37]+1, [434,19,77,5]+1}}; % indices of red cells from suite2p per day
@@ -107,8 +107,48 @@ for dy=days
 end
 end
 %%
+meandff_opto = cell2mat(cellfun(@(x) mean(x{1}{1}, 'omitnan'), dffs_cp_dys, ...
+        'UniformOutput', false));
+meandff_prev = cell2mat(cellfun(@(x) mean(x{1}{2}, 'omitnan'), dffs_cp_dys, ...
+        'UniformOutput', false));
+
+meandff_opto = cell2mat(cellfun(@(x) mean(x{1}{1}), dffs_cp_dys, ...
+        'UniformOutput', false));
+meandff_prev = cell2mat(cellfun(@(x) mean(x{1}{2}), dffs_cp_dys, ...
+        'UniformOutput', false));
+
+fig = figure('Renderer', 'painters'); 
+bar([mean(meandff_prev), mean(meandff_opto)],'FaceColor', 'w','LineWidth',2); hold on
+
+x_ = [ones(1,size(meandff_prev,2)), ones(1,size(meandff_opto,2))*2];
+y_ = [meandff_prev, meandff_opto];
+swarmchart(x_,y_, 'ko','LineWidth',2)
+yerr = {meandff_prev, meandff_opto};
+err = [];
+for i=1:length(yerr)
+    err(i) =(std(yerr{i},'omitnan')/sqrt(size(yerr{i},2))); 
+end
+er = errorbar([1 2],[mean(meandff_prev), mean(meandff_opto)],err,'LineWidth',2);
+er.Color = [0 0 0];                            
+er.LineStyle = 'none';  
+ylabel('Mean dFF')
+
+[h,p1,i,stats] = ttest(meandff_prev,meandff_opto);
+
+%%
+% correlate the vip activity with success rate
 x = x(x<2); y = y(x<2);
-fig = figure('Renderer', 'painters'); plot(x,y, 'ko')
+fig = figure('Renderer', 'painters'); plot(x,y, 'ko','MarkerSize',10, 'LineWidth',2); hold on
+% plot(x,y)
+% Get coefficients of a line fit through the data.
+coefficients = polyfit(x, y, 1);
+% Create a new x axis with exactly 1000 points (or whatever you want).
+xFit = linspace(min(x), max(x), 1000);
+% Get the estimated yFit value for each of those 1000 new x locations.
+yFit = polyval(coefficients , xFit);
+% Plot everything.
+plot(xFit, yFit, 'k-', 'LineWidth', 2); % Plot fitted line.
+
 mdl = fitlm(x,y);
 ylabel('Success Rate')
 xlabel('dFF (LED on) / dFF (LED off)')

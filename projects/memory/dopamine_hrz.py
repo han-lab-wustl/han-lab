@@ -1,6 +1,5 @@
 """zahra's dopamine hrz analysis
 march 2024
-
 """
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
@@ -26,7 +25,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"hrz.pdf"))
 days = []
 # days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
 #         'Day_7', 'Day_8']
-days = [30,31,32,33,34,35]
+days = [30,31,32,33,34,35,36,37,38,39]
 range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
