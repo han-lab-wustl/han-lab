@@ -81,7 +81,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
     # split into pre, rew, and post
     lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize-20)], 
-                    lick_probability_prev[int(rewloc-rewsize-20):int(rewloc-rewsize/2)], \
+                    lick_probability_prev[int(rewloc-rewsize-20):int(rewloc+20)], \
                     lick_probability_prev[int(rewloc+20):]]
     # Return a dictionary or multiple dictionaries containing your results
     vel_prev = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc])

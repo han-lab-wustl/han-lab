@@ -20,7 +20,7 @@ plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 #%%
 dcts = []
@@ -60,7 +60,7 @@ bigdf = pd.concat(dfs)
 bigdf=bigdf.groupby(['animal', 'vip_ctrl','opto', 'in_type']).median(numeric_only=True)
 
 in_type_cond = 'vip'
-fig,ax = plt.subplots()
+fig,ax = plt.subplots(figsize=(4,6))
 ax = sns.barplot(x="opto", y="frac_pc", hue = 'vip_ctrl', data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se', fill=False)
@@ -68,12 +68,14 @@ ax = sns.stripplot(x="opto", y="frac_pc", hue = 'vip_ctrl', data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+ax.get_legend().set_visible(False)
 
 bigdf = bigdf[bigdf.index.get_level_values('in_type') == in_type_cond]
 scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, \
             bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
-scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
+plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
+
+# scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
 # %%
 # average enrichment
 # not as robust effect with 3 mice
@@ -81,12 +83,12 @@ dcts_opto = np.array(dcts)[optoep>1]
 
 dfs_diff = []
 for ii,dct in enumerate(dcts_opto):
-    diff1=dct['difftc1'][dct['difftc1']>1e-3]
-    diff2=dct['difftc2'][dct['difftc1']>1e-3]
-    df = pd.DataFrame(np.hstack([diff1, diff2]), columns = ['tc_diff'])
+    diff1=dct['difftc1'][dct['difftc1']>1e-1]
+    diff2=dct['difftc2'][dct['difftc1']>1e-1]
+    df = pd.DataFrame(np.hstack([diff1, diff2]), columns = ['tuning_curve_difference'])
     df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']*len(diff1), [f'day{ii}_tc2_rz_{dct["rewzones_comp"][1]}']*len(diff2)])
-    df['animal'] = animals[optoep>1][ii]
-    df['in_type'] = in_type[optoep>1][ii]
+    df['animal'] = conddf.animals.values[optoep>1][ii]
+    df['in_type'] = conddf.in_type.values[optoep>1][ii]
     # if optoep[ii]>1:    
     df['opto'] = np.hstack([[False]*len(diff1),[True]*len(diff2)])
     # else: 
@@ -102,29 +104,27 @@ bigdf.reset_index(drop=True, inplace=True)
 # ax = sns.stripplot(x="opto", y="tc_diff", hue="in_type",data=bigdf)
 # ax.tick_params(axis='x', labelrotation=90)
 bigdf_test = bigdf.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
-comp1 = bigdf_test[(bigdf_test.index.get_level_values('opto')==True) & (bigdf_test.index.get_level_values('vip_cond')=='vip')].tc_diff.values; comp1=comp1[~np.isnan(comp1)]
-comp2 = bigdf_test[(bigdf_test.index.get_level_values('opto')==False) &  (bigdf_test.index.get_level_values('vip_cond')=='vip')].tc_diff.values; comp2=comp2[~np.isnan(comp2)]
+comp1 = bigdf_test[(bigdf_test.index.get_level_values('opto')==True) & (bigdf_test.index.get_level_values('vip_cond')=='vip')].tuning_curve_difference.values; comp1=comp1[~np.isnan(comp1)]
+comp2 = bigdf_test[(bigdf_test.index.get_level_values('opto')==False) &  (bigdf_test.index.get_level_values('vip_cond')=='vip')].tuning_curve_difference.values; comp2=comp2[~np.isnan(comp2)]
 diff_offon_vip = comp1-comp2
-comp1 = bigdf_test[(bigdf_test.index.get_level_values('opto')==True) & (bigdf_test.index.get_level_values('vip_cond')=='ctrl')].tc_diff.values; comp1=comp1[~np.isnan(comp1)]
-comp2 = bigdf_test[(bigdf_test.index.get_level_values('opto')==False) &  (bigdf_test.index.get_level_values('vip_cond')=='ctrl')].tc_diff.values; comp2=comp2[~np.isnan(comp2)]
+comp1 = bigdf_test[(bigdf_test.index.get_level_values('opto')==True) & (bigdf_test.index.get_level_values('vip_cond')=='ctrl')].tuning_curve_difference.values; comp1=comp1[~np.isnan(comp1)]
+comp2 = bigdf_test[(bigdf_test.index.get_level_values('opto')==False) &  (bigdf_test.index.get_level_values('vip_cond')=='ctrl')].tuning_curve_difference.values; comp2=comp2[~np.isnan(comp2)]
 diff_offon_ctrl = comp1-comp2
 t,pval=scipy.stats.ranksums(diff_offon_vip, diff_offon_ctrl)
 
-plt.figure()
-df = pd.DataFrame(np.concatenate([diff_offon_vip, diff_offon_ctrl]), columns = ['tc_diff_ledoff-on'])
+plt.figure(figsize=(2.5,6))
+df = pd.DataFrame(np.concatenate([diff_offon_vip, diff_offon_ctrl]), columns = ['tuning_curve_difference_LEDon-off'])
 df['condition']=np.concatenate([['vip']*len(diff_offon_vip), ['ctrl']*len(diff_offon_ctrl)])
-ax = sns.barplot(x="condition", y="tc_diff_ledoff-on",data=df, fill=False, color='k')
-sns.stripplot(x="condition", y="tc_diff_ledoff-on",data=df, color='k')
+df = df.sort_values('condition')
+ax = sns.barplot(x="condition", y="tuning_curve_difference_LEDon-off",hue='condition',data=df, fill=False,
+                palette={'ctrl': "slategray", 'vip': "red"},
+                errorbar='se')
+sns.stripplot(x="condition", y="tuning_curve_difference_LEDon-off",hue='condition',data=df,
+            palette={'ctrl': "slategray", 'vip': "red"},s=7)
 plt.title(f"p-value = {pval:03f}")
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-scipy.stats.t.interval(alpha=0.95, df=len(df[df.condition=='vip'])-1, 
-            loc=df[df.condition=='vip'].mean().values[0], 
-            scale=scipy.stats.sem(df.loc[df.condition=='vip', 'tc_diff_ledoff-on'].values)) 
-scipy.stats.t.interval(alpha=0.95, df=len(df[df.condition=='ctrl'])-1, 
-            loc=df[df.condition=='ctrl'].mean().values[0], 
-            scale=scipy.stats.sem(df.loc[df.condition=='ctrl', 'tc_diff_ledoff-on'].values)) 
-
+plt.savefig(os.path.join(savedst, 'tuning_curve_enrichment.svg'), bbox_inches='tight')
 #%%
 # com shift
 # control vs. vip led on
@@ -198,34 +198,41 @@ bigdf_org.reset_index(drop=True, inplace=True)
 bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
 bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True)
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(3,6))
 ratio = (bigdf.loc[bigdf.index.get_level_values('opto')==True, 'inactive_frac'].values)-(bigdf.loc[bigdf.index.get_level_values('opto')==False, 'inactive_frac'].values)
 conditions = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('vip_cond'))
 animals = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('animal'))
-df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['ledoff-on', 'condition', 'animal'])
-ax = sns.barplot(x="condition", y="ledoff-on", hue='condition',data=df,fill=False,
+df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['inactivated_cells_proportion_LEDon-off', 'condition', 'animal'])
+ax = sns.barplot(x="condition", y="inactivated_cells_proportion_LEDon-off", hue='condition',data=df,fill=False,
                 palette={'ctrl': "slategray", 'vip': "red"})
-ax = sns.stripplot(x="condition", y="ledoff-on", hue='condition', data=df,
+ax = sns.stripplot(x="condition", y="inactivated_cells_proportion_LEDon-off", hue='condition', s=7,data=df,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
-# # sig
-# scipy.stats.ttest_ind(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'inactive_frac'].values,
-#                     bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==False), 'inactive_frac'].values)
-# scipy.stats.ttest_ind(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'inactive_frac'].values,
-#                     bigdf.loc[(bigdf.vip_cond=='ctrl') & (bigdf.opto==True), 'inactive_frac'].values)
-# scipy.stats.ttest_ind(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'active_frac'].values,
-#                     bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==False), 'active_frac'].values)
-# scipy.stats.ttest_ind(bigdf.loc[(bigdf.vip_cond=='vip') & (bigdf.opto==True), 'active_frac'].values,
-#                     bigdf.loc[(bigdf.vip_cond=='ctrl') & (bigdf.opto==True), 'active_frac'].values)
-
-
 # sig # per animal
-stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'ledoff-on'].astype(float).values, df.loc[(df.condition=='ctrl'), 'ledoff-on'].astype(float).values)
+stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'inactivated_cells_proportion_LEDon-off'].astype(float).values, 
+            df.loc[(df.condition=='ctrl'), 'inactivated_cells_proportion_LEDon-off'].astype(float).values)
 ax.set_title(f'p={np.round(pval, 4)}')
 plt.savefig(os.path.join(savedst, 'inactive_prop.svg'), bbox_inches='tight')
+#%%
+fig, ax = plt.subplots(figsize=(3,6))
+ratio = (bigdf.loc[bigdf.index.get_level_values('opto')==True, 'active_frac'].values)-(bigdf.loc[bigdf.index.get_level_values('opto')==False, 'active_frac'].values)
+conditions = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('vip_cond'))
+animals = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('animal'))
+df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['activated_cells_proportion_LEDon-off', 'condition', 'animal'])
+ax = sns.barplot(x="condition", y="activated_cells_proportion_LEDon-off", hue='condition',data=df,fill=False,
+                palette={'ctrl': "slategray", 'vip': "red"})
+ax = sns.stripplot(x="condition", y="activated_cells_proportion_LEDon-off", hue='condition', s=7,data=df,
+                palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'activated_cells_proportion_LEDon-off'].astype(float).values, 
+            df.loc[(df.condition=='ctrl'), 'activated_cells_proportion_LEDon-off'].astype(float).values)
+ax.set_title(f'p={np.round(pval, 4)}')
 # %%
 # save pickle of dcts
 with open(r'Z:\dcts_com_opto.p', "wb") as fp:   #Pickling
@@ -339,8 +346,8 @@ for dd,day in enumerate(conddf.days.values):
                 pdf.savefig(fig)
                 plt.close(fig)                
                 for cl,cell in enumerate(dct['inactive']):         
-                    fig, ax = plt.subplots()           
-                    ax.plot(tc1[cl,:],color='k',label='previous_ep')
+                    fig, ax = plt.subplots(figsize=(5,4))           
+                    ax.plot(tc1[cl,:],color='k',label='previous_epoch')
                     ax.plot(tc2[cl,:],color='red',label='led_on')
                     ax.plot(tc3[cl,:],color='slategray',label='after_ledon')
                     ax.axvline(dct['rewlocs_comp'][0]/bin_size,color='k', linestyle='dotted')
@@ -350,10 +357,13 @@ for dd,day in enumerate(conddf.days.values):
                     r = np.round(r,2)
                     pearsonr_per_cell.append(r)
                     # ax.set_axis_off()  
-                    ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}\n r={r}')
+                    ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}\n r={r}, cell: {cell,cl}')
                     ax.spines['top'].set_visible(False)
                     ax.spines['right'].set_visible(False) 
                     ax.legend()
+                    ax.set_ylabel('dF/F')
+                    ax.set_xlabel('Spatial bins')
+                    plt.savefig(os.path.join(savedst, f'cell{cl}.svg'), bbox_inches='tight')
                     pdf.savefig(fig)
                     plt.close(fig)
             else:
