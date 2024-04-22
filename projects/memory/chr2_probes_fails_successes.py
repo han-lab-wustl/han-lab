@@ -24,10 +24,10 @@ src = r"Z:\chr2_grabda\e232"
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"peri_analysis.pdf"))
 # days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
-days = [40,41,42]
+days = [40,41,42,43]
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-optodays = [42]
+optodays = [42,43]
 day_date_dff = {}
 for day in days: 
     newrewloc = condrewloc.loc[condrewloc.Day==day, 'RewLoc'].values[0]
@@ -42,8 +42,8 @@ for day in days:
         layer = planelut[pln]
         params_keys = params.keys()
         keys = params['params'].dtype
-        # dff is in row 7 - roibasemean3/basemean
-        dff = np.hstack(params['params'][0][0][6][0][0])/np.hstack(params['params'][0][0][9])
+        # dff is in row 7 - roibasemean3/average
+        dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))#/np.hstack(params['params'][0][0][9])
         fig, ax = plt.subplots()
         ax.plot(dff)
         # temp remove artifacts
@@ -160,29 +160,35 @@ for day in days:
         ax.set_title('Failed / Catch Trials (Centered by rewloc)')
         
         # for opto days, plot opto trials only // vs. non opto
-        if day in optodays:
-            mask = trialnum%2==1
-        else:
-            mask = (np.ones_like(trialnum)*True).astype(bool)
+        mask = trialnum%2==1
         # all subsequent rews
-        normmeanrewdFF, meanrewdFF, normrewdFF, \
-            rewdFF = eye.perireward_binned_activity(dff[mask], rewards[mask], timedFF[mask], 
+        normmeanrewdFF, meanrewdFF_opto, normrewdFF, \
+            rewdFF_opto = eye.perireward_binned_activity(dff[mask], rewards[mask], timedFF[mask], 
                                     range_val, binsize)
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
         # Select rows that do not contain any NaNs
-        clean_arr = rewdFF.T#[~rows_with_nans]    
+        clean_arr_opto = rewdFF_opto.T#[~rows_with_nans]  normmeanrewdFF, meanrewdFF, normrewdFF, \
+        normmeanrewdFF, meanrewdFF_nonopto, normrewdFF, rewdFF_nonopto = eye.perireward_binned_activity(dff[~mask], rewards[~mask], timedFF[~mask], 
+                                range_val, binsize)  
+        clean_arr_nonopto = rewdFF_nonopto.T
         ax = axes[2]
-        ax.imshow(clean_arr)
+        ax.imshow(np.concatenate([clean_arr_opto,clean_arr_nonopto]))
+        ax.axhline(clean_arr_opto.shape[0], color='yellow')
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Successful Trials (Centered by CS)')
         ax = axes2[2]
-        ax.plot(meanrewdFF)   
+        ax.plot(meanrewdFF_nonopto, color = 'k')   
         xmin,xmax = ax.get_xlim()     
         ax.fill_between(range(0,int(range_val/binsize)*2), 
-                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
-                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)        
+                meanrewdFF_nonopto-scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'),
+                meanrewdFF_nonopto+scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'), alpha=0.5, color='k')        
+        ax.plot(meanrewdFF_opto, color = 'mediumturquoise')   
+        xmin,xmax = ax.get_xlim()     
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                meanrewdFF_opto-scipy.stats.sem(rewdFF_opto,axis=1,nan_policy='omit'),
+                meanrewdFF_opto+scipy.stats.sem(rewdFF_opto,axis=1,nan_policy='omit'), alpha=0.5, color='mediumturquoise')        
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         fig.suptitle(f'Peri CS/Rew Loc, Day {day}, {layer}')
@@ -192,7 +198,7 @@ for day in days:
         fig.tight_layout()
         fig2.tight_layout()
         plt.close('all')
-        plndff.append(meanrewdFF)
+        plndff.append(meanrewdF_opto)
     day_date_dff[str(day)] = plndff
 pdf.close()
 

@@ -70,7 +70,7 @@ for plane=1:planes
 
     sgtitle(sprintf('All successful trials, plane %i', plane))
     pptx.addPicture(fig);
-    % export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_peri_reward_plane%i', an, plane)), '-jpg')
+    export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_peri_reward_plane%i', an, plane)), '-svg')
     close(fig)
 end
 % save ppt

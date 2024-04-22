@@ -24,7 +24,7 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"hrz.pdf"))
 days = []
 # days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
-#         'Day_7', 'Day_8']
+#         'Day_7', 'Day_8'] 
 days = [30,31,32,33,34,35,36,37,38,39]
 range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -43,9 +43,9 @@ for day in days:
         keys = params['params'].dtype
         # dff is in row 7 - roibasemean3/basemean
         if old:
-            dff = np.hstack(params['params'][0][0][7][0][0])/np.hstack(params['params'][0][0][11])
+            dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
         else:
-            dff = np.hstack(params['params'][0][0][6][0][0])/np.hstack(params['params'][0][0][9])
+            dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
         dff = np.hstack(dffdf.rolling(3).mean().values)

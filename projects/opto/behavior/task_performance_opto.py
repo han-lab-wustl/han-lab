@@ -116,7 +116,7 @@ import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
 print(p_values)
 plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'behavior.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'behavior.svg'), bbox_inches='tight')
 #%%
 # velocity
 plt.figure()
