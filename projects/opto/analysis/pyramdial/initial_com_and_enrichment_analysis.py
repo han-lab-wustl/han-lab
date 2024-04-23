@@ -31,6 +31,9 @@ for dd,day in enumerate(conddf.days.values):
     dct = get_pyr_metrics_opto(conddf, dd, day, 
                 threshold=threshold, pc=pc)
     dcts.append(dct)
+# save pickle of dcts
+with open(r'Z:\dcts_com_opto_inference.p', "wb") as fp:   #Pickling
+    pickle.dump(dcts, fp)   
 #%%
 # plot fraction of cells near reward
 optoep = conddf.optoep.values; animals = conddf.animals.values; in_type = conddf.in_type.values
@@ -233,10 +236,7 @@ ax.spines['right'].set_visible(False)
 stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'activated_cells_proportion_LEDon-off'].astype(float).values, 
             df.loc[(df.condition=='ctrl'), 'activated_cells_proportion_LEDon-off'].astype(float).values)
 ax.set_title(f'p={np.round(pval, 4)}')
-# %%
-# save pickle of dcts
-with open(r'Z:\dcts_com_opto.p', "wb") as fp:   #Pickling
-    pickle.dump(dcts, fp)            
+         
 #%%
 # get spatial info of inactive cells vs. all cells
 track_length = 270

@@ -9,12 +9,6 @@ from sklearn.cluster import KMeans
 import numpy as np
 from scipy.signal import gaussian
 
-Here's the Python equivalent of the MATLAB function perivelocitybinnedactivity:
-
-python
-
-
-Copy code
 import numpy as np
 
 def perivelocitybinnedactivity(velocity, rewards, dff, timedFF, range_val, binsize, numplanes):
