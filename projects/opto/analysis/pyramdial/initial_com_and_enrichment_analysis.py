@@ -26,7 +26,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
-    threshold = 7
+    threshold = 5
     pc = False
     dct = get_pyr_metrics_opto(conddf, dd, day, 
                 threshold=threshold, pc=pc)
@@ -152,22 +152,17 @@ ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcon
         palette={'ctrl': "slategray", 'vip': "red"},s=150)
 ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = df, 
         palette={'ctrl': "slategray", 'vip': "red"}, s=150,alpha=0.2)
-# xerr = [scipy.stats.sem(df.loc[(df.animal==an), 'com_shift_inactive'].values, nan_policy='omit') for an in dfagg.index.get_level_values('animal')]
-# yerr = [scipy.stats.sem(df.loc[(df.animal==an), 'rewloc_shift'].values, nan_policy='omit') for an in dfagg.index.get_level_values('animal')]
-# ax.errorbar(dfagg.com_shift_inactive.values, dfagg.rewloc_shift.values, xerr=xerr,yerr=yerr, color='k')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.get_legend().set_visible(False)
 ax.set_title('Shift = VIP Inhibition-Before Inhibition')
-plt.savefig(os.path.join(savedst, 'scatterplot_comshift.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'scatterplot_comshift.svg'), bbox_inches='tight')
+# active
 fig, ax = plt.subplots()
 ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = dfagg, 
         palette={'ctrl': "slategray", 'vip': "red"},s=50)
 ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = df, 
         palette={'ctrl': "slategray", 'vip': "red"}, alpha=0.2)
-# xerr = [scipy.stats.sem(df.loc[(df.animal==an), 'com_shift_inactive'].values, nan_policy='omit') for an in dfagg.index.get_level_values('animal')]
-# yerr = [scipy.stats.sem(df.loc[(df.animal==an), 'rewloc_shift'].values, nan_policy='omit') for an in dfagg.index.get_level_values('animal')]
-# ax.errorbar(dfagg.com_shift_inactive.values, dfagg.rewloc_shift.values, xerr=xerr,yerr=yerr, color='k')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.legend(bbox_to_anchor=(1.1, 1.1))
@@ -257,7 +252,7 @@ ax.spines['right'].set_visible(False)
 stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'inactivated_cells_proportion_LEDon-off'].astype(float).values, 
             df.loc[(df.condition=='ctrl'), 'inactivated_cells_proportion_LEDon-off'].astype(float).values)
 ax.set_title(f'p={np.round(pval, 4)}')
-plt.savefig(os.path.join(savedst, 'inactive_prop.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'inactive_prop.svg'), bbox_inches='tight')
 #%%
 # activated cells
 fig, ax = plt.subplots(figsize=(3,6))
