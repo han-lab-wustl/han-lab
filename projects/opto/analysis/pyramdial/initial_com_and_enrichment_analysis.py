@@ -32,8 +32,8 @@ for dd,day in enumerate(conddf.days.values):
                 threshold=threshold, pc=pc)
     dcts.append(dct)
 # save pickle of dcts
-with open(r'Z:\dcts_com_opto_inference.p', "wb") as fp:   #Pickling
-    pickle.dump(dcts, fp)   
+# with open(r'Z:\dcts_com_opto.p', "wb") as fp:   #Pickling
+#     pickle.dump(dcts, fp)   
 #%%
 # plot fraction of cells near reward
 optoep = conddf.optoep.values; animals = conddf.animals.values; in_type = conddf.in_type.values
@@ -98,7 +98,7 @@ for ii,dct in enumerate(dcts_opto):
     # df['opto'] = [False]*len(df)
     if df['in_type'].values[0] =='vip':
         df['vip_cond'] = 'vip'
-    elif df['in_type'].values[0] !='pv':        
+    else:#if df['in_type'].values[0] !='pv':        
         df['vip_cond'] = 'ctrl'
     dfs_diff.append(df)
 bigdf = pd.concat(dfs_diff,ignore_index=False) 
@@ -142,22 +142,24 @@ df = pd.DataFrame(com_shift[:,0], columns = ['com_shift_inactive'])
 df['com_shift_active'] = com_shift[:,1]
 df['rewloc_shift'] = rewloc_shift
 df['animal'] = animals
+condition = []
 df['vipcond'] = ['vip' if (xx == 'e216') | (xx == 'e217') | (xx == 'e218') else 'ctrl' for xx in animals]
 
 dfagg = df.groupby(['animal', 'vipcond']).mean(numeric_only=True)
 
 fig, ax = plt.subplots()
 ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = dfagg, 
-        palette={'ctrl': "slategray", 'vip': "red"},s=50)
+        palette={'ctrl': "slategray", 'vip': "red"},s=150)
 ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = df, 
-        palette={'ctrl': "slategray", 'vip': "red"}, alpha=0.2)
+        palette={'ctrl': "slategray", 'vip': "red"}, s=150,alpha=0.2)
 # xerr = [scipy.stats.sem(df.loc[(df.animal==an), 'com_shift_inactive'].values, nan_policy='omit') for an in dfagg.index.get_level_values('animal')]
 # yerr = [scipy.stats.sem(df.loc[(df.animal==an), 'rewloc_shift'].values, nan_policy='omit') for an in dfagg.index.get_level_values('animal')]
 # ax.errorbar(dfagg.com_shift_inactive.values, dfagg.rewloc_shift.values, xerr=xerr,yerr=yerr, color='k')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-ax.legend(bbox_to_anchor=(1.1, 1.1))
-ax.set_title('Shift = Opto Epoch - Previous Epoch')
+ax.get_legend().set_visible(False)
+ax.set_title('Shift = VIP Inhibition-Before Inhibition')
+plt.savefig(os.path.join(savedst, 'scatterplot_comshift.svg'), bbox_inches='tight')
 fig, ax = plt.subplots()
 ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = dfagg, 
         palette={'ctrl': "slategray", 'vip': "red"},s=50)
@@ -169,7 +171,44 @@ ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond'
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.legend(bbox_to_anchor=(1.1, 1.1))
-ax.set_title('Shift = Opto Epoch - Previous Epoch')
+ax.set_title('Shift = VIP Inhibition-Before Inhibition')
+
+#%%
+# bar plot of shift
+dfagg = dfagg.sort_values('vipcond')
+fig, ax = plt.subplots(figsize=(2.5,6))
+ax = sns.barplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg, fill=False,
+                palette={'ctrl': "slategray", 'vip': "red"},
+                errorbar='se')
+ax = sns.stripplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg,
+                palette={'ctrl': "slategray", 'vip': "red"},
+                s=8)
+
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+vipshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='vip', 'com_shift_inactive'].values
+ctrlshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='ctrl', 'com_shift_inactive'].values
+t,pval=scipy.stats.ranksums(vipshift, ctrlshift)
+plt.title(f"p-value = {pval:03f}")
+plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
+
+# active
+dfagg = dfagg.sort_values('vipcond')
+fig, ax = plt.subplots(figsize=(2.5,6))
+ax = sns.barplot(x = 'vipcond', y = 'com_shift_active', hue = 'vipcond', data=dfagg, fill=False,
+                palette={'ctrl': "slategray", 'vip': "red"},
+                errorbar='se')
+ax = sns.stripplot(x = 'vipcond', y = 'com_shift_active', hue = 'vipcond', data=dfagg,
+                palette={'ctrl': "slategray", 'vip': "red"},
+                s=9)
+
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+vipshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='vip', 'com_shift_active'].values
+ctrlshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='ctrl', 'com_shift_active'].values
+t,pval=scipy.stats.ranksums(vipshift, ctrlshift)
+plt.title(f"p-value = {pval:03f}")
+plt.savefig(os.path.join(savedst, 'barplot_active_comshift.svg'), bbox_inches='tight')
 
 #%%
 # proportion of inactivate cells 
@@ -220,6 +259,7 @@ stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'inactivated_cell
 ax.set_title(f'p={np.round(pval, 4)}')
 plt.savefig(os.path.join(savedst, 'inactive_prop.svg'), bbox_inches='tight')
 #%%
+# activated cells
 fig, ax = plt.subplots(figsize=(3,6))
 ratio = (bigdf.loc[bigdf.index.get_level_values('opto')==True, 'active_frac'].values)-(bigdf.loc[bigdf.index.get_level_values('opto')==False, 'active_frac'].values)
 conditions = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('vip_cond'))
@@ -236,7 +276,7 @@ ax.spines['right'].set_visible(False)
 stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'activated_cells_proportion_LEDon-off'].astype(float).values, 
             df.loc[(df.condition=='ctrl'), 'activated_cells_proportion_LEDon-off'].astype(float).values)
 ax.set_title(f'p={np.round(pval, 4)}')
-         
+
 #%%
 # get spatial info of inactive cells vs. all cells
 track_length = 270
@@ -381,7 +421,7 @@ for dd,day in enumerate(conddf.days.values):
                 plt.close(fig)
                 r=0; c=0
                 for cl,cell in enumerate(dct['inactive']):
-                    fig, ax = plt.subplots()         
+                    fig, ax = plt.subplots(figsize=(5,4))         
                     ax.plot(tc1[cl,:],color='k',label='previous_ep')
                     ax.plot(tc2[cl,:],color='red',label='led_on')
                     ax.plot(tc3[cl,:],color='slategray',label='ep1')
@@ -391,10 +431,11 @@ for dd,day in enumerate(conddf.days.values):
                     r, pval = scipy.stats.pearsonr(tc1[cl,:][~np.isnan(tc1[cl,:])], tc2[cl,:][~np.isnan(tc2[cl,:])])
                     r = np.round(r,2)
                     pearsonr_per_cell.append(r)
-                    ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}\n r={r}')
+                    ax.set_title(f'animal: {animal}, day: {day}, optoep: {conddf.optoep.values[dd]}\n r={r}, cell: {cell,cl}')
                     ax.spines['top'].set_visible(False)
                     ax.spines['right'].set_visible(False) 
-                    ax.legend()                   
+                    ax.legend()
+                    plt.savefig(os.path.join(savedst, f'cell{cl}.svg'), bbox_inches='tight')                   
                     pdf.savefig(fig)
                     plt.close(fig)
         pearsonr_per_day.append(pearsonr_per_cell)
