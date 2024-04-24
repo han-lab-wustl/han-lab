@@ -185,7 +185,7 @@ vipshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='vip', 'com_shift_
 ctrlshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='ctrl', 'com_shift_inactive'].values
 t,pval=scipy.stats.ranksums(vipshift, ctrlshift)
 plt.title(f"p-value = {pval:03f}")
-plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
 
 # active
 dfagg = dfagg.sort_values('vipcond')
@@ -203,7 +203,7 @@ vipshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='vip', 'com_shift_
 ctrlshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='ctrl', 'com_shift_active'].values
 t,pval=scipy.stats.ranksums(vipshift, ctrlshift)
 plt.title(f"p-value = {pval:03f}")
-plt.savefig(os.path.join(savedst, 'barplot_active_comshift.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'barplot_active_comshift.svg'), bbox_inches='tight')
 
 #%%
 # proportion of inactivate cells 
