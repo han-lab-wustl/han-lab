@@ -18,14 +18,16 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-src = r"Z:\chr2_grabda\e232"
+# src = r"Z:\chr2_grabda\e232"
+src = r'\\storage1.ris.wustl.edu\ebhan\Active\calvin\E231'
 # src = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\HRZ\E168HRZparams"
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"hrz.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
 days = []
 # days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
 #         'Day_7', 'Day_8'] 
-days = [30,31,32,33,34,35,36,37,38,39]
+# days = [30,31,32,33,34,35,36,37,38,39]
+days = ['240409_CF','240423_CF']
 range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -46,6 +48,7 @@ for day in days:
             dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
         else:
             dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))
+        
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
         dff = np.hstack(dffdf.rolling(3).mean().values)

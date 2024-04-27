@@ -1,15 +1,15 @@
 clear all;
-src = 'I:\pupil_pickles';
-fls = dir(fullfile(src, '*time*.mat'));
+src = '\\storage1.ris.wustl.edu\ebhan\Active\calvin\E231\240410_CF';
+fls = dir(fullfile(src, '*params*.mat'));
 
 for i=1:length(fls)
     try
         load(fullfile(fls(i).folder,fls(i).name))
-        save(fullfile(fls(i).folder,fls(i).name),'VR','-v7.3')
+        save(fullfile(fls(i).folder,fls(i).name))
     catch
         disp(fls(i).name)
     end
-    clear VR
+    clearvars --except src fls i
 end
 %%
 clear all;
