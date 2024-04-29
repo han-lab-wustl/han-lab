@@ -12,11 +12,11 @@ if __name__ == "__main__":
         # e.g. in matlab
         # load('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat')
         # save('D:\adina_vr_files\E218_09_Nov_2023_time(10_40_41).mat', 'VR', '-v7.3')                        
-        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\240214_E228DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
-        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E228_comparison\E228_14_Feb_2024_time(08_57_19).mat"]
+        dlccsv = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E218_controls\240219_E217DLC_resnet50_PupilTrainingJul7shuffle1_1000000.csv"]                
+        vrfl = [r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E218_controls\E217_19_Feb_2024_time(07_58_12).mat"]
         #dlccsv = [r"I:\dlc_inference\230502_E201DLC_resnet50_PupilTrainingJul7shuffle1_500000.csv"]
         #vrfl = [r"D:\adina_vr_files\VR_data\E201_02_May_2023_time(09_16_02).mat"]
-        savedst = r"D:\PupilTraining-Matt-2023-07-07"
+        savedst = r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E218_controls"
         #savedst = r"I:\pupil_pickles"
         # specify mrzt = True for multiple reward zone training!!!!!!!!!!!!!!
         mrzt = False

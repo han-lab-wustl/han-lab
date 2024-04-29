@@ -9,6 +9,7 @@ import os, sys, shutil, tifffile, ast, time, re
 import argparse   
 import pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir 
 from utils import preprocessing
 

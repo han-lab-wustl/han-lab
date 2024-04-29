@@ -4,7 +4,7 @@
 
 import os, pandas as pd
 
-src = r'J:\240408-240413'
+src = r'E:\240408-240413'
 vids = [os.path.join(src, xx) for xx in os.listdir(src) if 'csv' not in xx]
 fls = [len(os.listdir(xx)) for xx in vids]
 

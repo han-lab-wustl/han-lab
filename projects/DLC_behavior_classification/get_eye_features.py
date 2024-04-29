@@ -21,7 +21,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # TODO: keep array orientation consistent
 
 if __name__ == "__main__": # TODO; compare with diameter
-    src = r"I:\pupil_pickles" # path to pickle files you want to analyze
+    src = r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E218_controls" # path to pickle files you want to analyze
     add_to_dct = False # add to previous datadct
     if add_to_dct:
         with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
