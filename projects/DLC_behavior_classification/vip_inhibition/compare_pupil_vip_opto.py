@@ -3,7 +3,11 @@ zahra
 """
 
 import pickle, os, sys, matplotlib.pyplot as plt, matplotlib as mpl
+<<<<<<< HEAD:projects/DLC_behavior_classification/vip_inhibition/compare_pupil_vip_opto.py
 import numpy as np, scipy, pandas as pd, seaborn as sns
+=======
+import numpy as np, scipy
+>>>>>>> c4f7a267d2a6d9dc55e3bd4e196eb9797a585d54:projects/DLC_behavior_classification/compare_pupil_vip_opto.py
 import eye
 import statsmodels.api as sm
 from sklearn.preprocessing import MinMaxScaler
@@ -15,9 +19,13 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 from eye import consecutive_stretch_vralign, get_area_circumference_opto, perireward_binned_activity
 # path to pickle
+<<<<<<< HEAD:projects/DLC_behavior_classification/vip_inhibition/compare_pupil_vip_opto.py
 pdst = r"D:\PupilTraining-Matt-2023-07-07\opto-pickles\E218_06_Dec_2023_vr_dlc_align.p"
 range_val=5
 binsize=0.05
+=======
+pdst = r"Z:\E201_26_Apr_2023_vr_dlc_align.p"
+>>>>>>> c4f7a267d2a6d9dc55e3bd4e196eb9797a585d54:projects/DLC_behavior_classification/compare_pupil_vip_opto.py
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
 # fix vars
@@ -25,7 +33,11 @@ rewards = vralign["rewards"]
 changeRewLoc = vralign["changeRewLoc"]
 crl = consecutive_stretch_vralign(np.where(changeRewLoc>0)[0])
 crl = np.array([min(xx) for xx in crl])
+<<<<<<< HEAD:projects/DLC_behavior_classification/vip_inhibition/compare_pupil_vip_opto.py
 eps = np.array([xx for ii,xx in enumerate(crl[1:]) if np.diff(np.array([crl[ii],xx]))[0]>5000])
+=======
+eps = np.array([xx for ii,xx in enumerate(crl[1:]) if np.diff(np.array([crl[ii-1],xx]))>1000])
+>>>>>>> c4f7a267d2a6d9dc55e3bd4e196eb9797a585d54:projects/DLC_behavior_classification/compare_pupil_vip_opto.py
 eps = np.append(eps, 0)
 eps = np.append(eps, len(changeRewLoc))
 eps = np.sort(eps)
@@ -33,16 +45,22 @@ velocity = np.hstack(vralign['forwardvel'])
 areas, areas_res = get_area_circumference_opto(pdst, range_val, binsize)
 # plot
 fig, axes = plt.subplots(nrows=(len(eps)-1), ncols=2)
+<<<<<<< HEAD:projects/DLC_behavior_classification/vip_inhibition/compare_pupil_vip_opto.py
 pre_reward = []
 areas_per_ep = []
 for i in range(len(eps)-1):
     input_peri = areas_res[eps[i]:eps[i+1]]
     areas_per_ep.append(input_peri)
+=======
+for i in range(len(eps)-1):
+    input_peri = areas_res[eps[i]:eps[i+1]]
+>>>>>>> c4f7a267d2a6d9dc55e3bd4e196eb9797a585d54:projects/DLC_behavior_classification/compare_pupil_vip_opto.py
     rewards_ = rewards[eps[i]:eps[i+1]]
     normmeanrew_t, meanrew, normrewall_t, \
     rewall = perireward_binned_activity(np.array(input_peri), \
                             rewards_.astype(int), 
                             vralign['timedFF'][eps[i]:eps[i+1]], range_val, binsize)
+<<<<<<< HEAD:projects/DLC_behavior_classification/vip_inhibition/compare_pupil_vip_opto.py
     pre_reward.append(np.nanmean(rewall[:int(range_val/binsize),:],axis=0))
     ax = axes[i,0]
     ax.imshow(rewall.T)
@@ -82,3 +100,20 @@ plt.figure()
 plt.bar(range(0, len(mean_comp)), mean_comp, color = 'slategray')
 plt.errorbar(range(0, len(std_comp)), mean_comp, yerr=std_comp,
             color='k')
+=======
+    ax = axes[i,0]
+    ax.imshow(normrewall_t)
+    ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,20))
+    ax.set_xticklabels(np.arange(-range_val, range_val+1, 2))
+    ax.set_title(f'Epoch {i+1}')
+    ax.axvline(int(range_val/binsize), color = 'w', linestyle = '--')
+    ax.axvline(int(range_val/binsize)+5, color = 'lightgray', linestyle = '--')
+    ax = axes[i,1]
+    ax.plot(normmeanrew_t)
+    ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,20))
+    ax.set_xticklabels(np.arange(-range_val, range_val+1, 2))
+    ax.axvline(int(range_val/binsize), color = 'k', linestyle = '--')
+    ax.axvline(int(range_val/binsize)+5, color = 'gray', linestyle = '--')
+
+fig.suptitle("Residual pupil area / trial")
+>>>>>>> c4f7a267d2a6d9dc55e3bd4e196eb9797a585d54:projects/DLC_behavior_classification/compare_pupil_vip_opto.py

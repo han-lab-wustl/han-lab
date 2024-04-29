@@ -9,6 +9,81 @@ from sklearn.cluster import KMeans
 import numpy as np
 from scipy.signal import gaussian
 
+import numpy as np
+
+def perivelocitybinnedactivity(velocity, rewards, dff, timedFF, range_val, binsize, numplanes):
+    """
+    Compute binned peri-velocity activity around non-reward stops.
+
+    Parameters:
+    velocity (numpy.ndarray): Velocity data.
+    rewards (numpy.ndarray): Reward indices.
+    dff (numpy.ndarray): dF/F data.
+    timedFF (numpy.ndarray): Time stamps for dF/F data.
+    range_val (float): Range of time around stops (in seconds).
+    binsize (float): Bin size (in seconds).
+    numplanes (int): Number of planes.
+
+    Returns:
+    binnedPerivelocity (numpy.ndarray): Binned peri-velocity activity.
+    allbins (numpy.ndarray): Bin centers.
+    rewvel (numpy.ndarray): Peri-velocity activity for each non-reward stop.
+    """
+    # dff aligned to stops
+    moving_middle = get_moving_time(velocity, 2, 10, 30)
+
+    stop_idx = moving_middle[np.where(np.diff(moving_middle) > 1)[0] + 1]
+
+    # find stops without reward
+    frame_rate = 31.25 / numplanes
+    max_reward_stop = 10 * frame_rate  # number of seconds after reward for a stop to be considered a reward related stop * frame rate.
+    rew_idx = np.where(rewards)[0]
+    rew_stop_idx = []
+    frame_tol = 10  # number of frames prior to reward to check for stopping points as a tolerance for defining stopped.
+
+    for r in rew_idx:
+        stop_candidates = stop_idx[(stop_idx - r >= 0 - frame_tol) & (stop_idx - r < max_reward_stop)]
+        if len(stop_candidates) > 0:
+            rew_stop_idx.append(stop_candidates[0])
+        else:
+            rew_stop_idx.append(np.nan)
+
+    rew_stop_idx = np.array(rew_stop_idx)
+    rew_stop_idx = rew_stop_idx[~np.isnan(rew_stop_idx)].astype(int)
+    non_rew_stops = np.setdiff1d(stop_idx, rew_stop_idx, assume_unique=True)
+
+    # binsize = 0.1  # half a second bins
+    # range_val = 6  # seconds back and forward in time
+    rewvel = np.zeros((int(np.ceil(2 * range_val / binsize)), dff.shape[1], len(non_rew_stops)))
+
+    for rr, non_rew_stop in enumerate(non_rew_stops):
+        rewtime = timedFF[non_rew_stop]
+        currentrewchecks = np.where((timedFF > rewtime - range_val) & (timedFF <= rewtime + range_val))[0]
+        currentrewcheckscell = consecutive_stretch(currentrewchecks)
+        currentrewardlogical = [non_rew_stop in x for x in currentrewcheckscell]
+
+        for bin_idx in range(int(np.ceil(2 * range_val / binsize))):
+            testbin = round(-range_val + bin_idx * binsize - binsize, 13)  # round to nearest 13 so 0 = 0 and not 3.576e-16
+            currentidxt = np.where((timedFF > rewtime - range_val + bin_idx * binsize - binsize) &
+                                   (timedFF <= rewtime - range_val + bin_idx * binsize))[0]
+            checks = consecutive_stretch(currentidxt)
+
+            if checks:
+                currentidxlogical = [max(any(np.isin(x, currentrewcheckscell[i])) for x in checks) for i in currentrewardlogical]
+                if sum(currentidxlogical) > 0:
+                    checkidx = np.array(checks)[currentidxlogical]
+                    rewvel[bin_idx, :, rr] = np.mean(dff[np.concatenate(checkidx), :], axis=0, keepdims=True)
+                else:
+                    rewvel[bin_idx, :, rr] = np.nan
+            else:
+                rewvel[bin_idx, :, rr] = np.nan
+
+    meanrewvel = np.nanmean(rewvel, axis=2)
+    binnedPerivelocity = meanrewvel.T
+    allbins = np.array([round(-range_val + bin_idx * binsize - binsize, 13) for bin_idx in range(int(np.ceil(2 * range_val / binsize)))])
+
+    return binnedPerivelocity, allbins, rewvel
+    
 def get_moving_time(velocity, thres, Fs, ftol):
     """
     Returns time points when the animal is considered moving based on animal's change in y position.
@@ -387,8 +462,10 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     dct['rewzones_comp'] = rewzones[comp]
     dct['coms1'] = coms1
     dct['coms2'] = coms2
-    dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-(track_length*.1))) & (coms1<(rewlocs[comp[0]])+5))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
-    dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-(track_length*.1))) & (coms2<(rewlocs[comp[1]])+5))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
+    # dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
+    # dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
+    dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>=bin_size)])
+    dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>=bin_size)])
     dct['rewloc_shift'] = rewloc_shift
     dct['com_shift'] = com_shift
     dct['inactive'] = differentially_inactivated_cells

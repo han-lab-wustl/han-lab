@@ -20,24 +20,24 @@ plt.rcParams["font.family"] = "Arial"
 plt.close('all')
 # save to pdf
 condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
-src = r"Z:\chr2_grabda\e232"
+src = r"Z:\chr2_grabda\e231"
+animal = os.path.basename(src)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"peri_analysis.pdf"))
-# days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
-days = [40,41,42,43,44,45,46]
+days = [2,3]
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-optodays = [42,43,44]
+optodays = [3]
 day_date_dff = {}
 for day in days: 
-    newrewloc = condrewloc.loc[condrewloc.Day==day, 'RewLoc'].values[0]
-    rewloc = condrewloc.loc[condrewloc.Day==day, 'PrevRewLoc'].values[0]
+    newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
+    rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
     plndff = []
     # for each plane
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
         params = scipy.io.loadmat(path)
         gainf = params['VR']
-        planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
+        planenum = os.path.basename(os.path.dirname(path))
         pln = int(planenum[-1])
         layer = planelut[pln]
         params_keys = params.keys()

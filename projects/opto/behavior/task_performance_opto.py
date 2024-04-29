@@ -16,7 +16,8 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from behavior import get_success_failure_trials, get_performance, get_rewzones
 
 # import condition df
-conddf = pd.read_csv(r"Z:\conddf_behavior.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
 # corresponding to days analysing
@@ -31,7 +32,7 @@ for dd,day in enumerate(conddf.days.values):
     fall = scipy.io.loadmat(params_pth, variable_names=['VR'])
     VR = fall['VR'][0][0][()]
     eps = np.where(np.hstack(VR['changeRewLoc']>0))[0]
-    eps = np.hstack(np.ravel([eps, len(np.hstack(VR['changeRewLoc']))]))
+    eps = np.append(eps, len(np.hstack(VR['changeRewLoc'])))
     scalingf = VR['scalingFACTOR'][0][0]
     track_length = 180/scalingf
     nbins = track_length/bin_size
@@ -46,12 +47,15 @@ for dd,day in enumerate(conddf.days.values):
     licks = np.hstack(VR['lickVoltage'])
     licks = licks<=-0.065 # remake boolean
     eptest = conddf.optoep.values[dd]
-    if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)   
-    if len(eps)<4: eptest = 2 # if no 3 epochs    
-    rates_opto, rates_prev, lick_prob_opto, lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev = get_performance(eptest, eps, 
-    trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
+    if conddf.optoep.values[dd]<2: 
+        eptest = random.randint(2,3)   
+        if len(eps)<4: eptest = 2 # if no 3 epochs    
+    rates_opto, rates_prev, lick_prob_opto, \
+        lick_prob_prev, trials_bwn_success_opto, \
+        trials_bwn_success_prev, vel_opto, vel_prev = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
     rewzones = get_rewzones(rewlocs, 1.5)
-
+    
+    dct['velocity'] = [vel_prev, vel_opto]
     dct['rates'] = [rates_prev, rates_opto]    
     dct['lick_p'] = [lick_prob_prev, lick_prob_opto]
     dct['rewlocs'] = [rewlocs[eptest-2], rewlocs[eptest-1]]
@@ -65,8 +69,10 @@ dcts_opto = np.array(dcts)
 dfs=[]; dfs_diff = []
 for ii,dct in enumerate(dcts_opto):
     rates_prev, rates_opto = dct['rates']   
+    vel_prev, vel_opto = dct['velocity']
     df = pd.DataFrame([rates_prev], columns = ['rates_prev'])
     df['rates_diff'] = rates_opto-rates_prev
+    df['velocity_diff'] = vel_opto-vel_prev
     df['rewzones_transition'] = f'rz_{dct["rewzones"][0].astype(int)}-{dct["rewzones"][1].astype(int)}'
     df['rewzones_opto'] = f'rz_{dct["rewzones"][1].astype(int)}'
     df['animal'] = conddf.animals.values[ii]    
@@ -85,20 +91,22 @@ for ii,dct in enumerate(dcts_opto):
     dfs.append(df)
 bigdf = pd.concat(dfs)
 bigdf.reset_index(drop=True, inplace=True)   
-#%%
+
 # plot rates vip vs. ctl led off and on
-bigdf_plot = bigdf.groupby(['animal', 'vip_ctrl_type']).mean()
+bigdf_plot = bigdf.groupby(['animal', 'vip_ctrl_type']).mean(numeric_only=True)
 bigdf_plot['vip_ctrl_type'] = [bigdf_plot.index[xx][1] for xx in range(len(bigdf_plot.index))]
-plt.figure()
+plt.figure(figsize=(3.5,6))
 ax = sns.barplot(x="vip_ctrl_type", y="rates_diff",hue='opto', data=bigdf_plot,
-                palette={False: "slategray", True: "red"},
-                ci=68, fill=False)
+                palette={False: "slategray", True: "red"},                
+                errorbar='se', fill=False)
 sns.stripplot(x="vip_ctrl_type", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "slategray", True: "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+ax.get_legend().set_visible(False)
+# sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+
 x1 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledon'), 'rates_diff'].values
 x2 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledoff'), 'rates_diff'].values
 x3 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledon'), 'rates_diff'].values
@@ -108,20 +116,32 @@ import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
 print(p_values)
 plt.tight_layout()
+# plt.savefig(os.path.join(savedst, 'behavior.svg'), bbox_inches='tight')
 #%%
-# plot rates by rewzone
-bigdf_plot = bigdf[bigdf.in_type.str.contains('vip') & ~bigdf.in_type.str.contains('ctrl')]
-bigdf_plot = bigdf_plot.sort_values('rewzones_opto')
+# velocity
 plt.figure()
-ax = sns.barplot(x="rewzones_opto", y="rates_diff",hue='opto', data=bigdf_plot,
+ax = sns.barplot(x="vip_ctrl_type", y="velocity_diff",hue='opto', data=bigdf_plot,
                 palette={False: "slategray", True: "red"},
-                ci=68, fill=False)
-sns.stripplot(x="rewzones_opto", y="rates_diff",hue='opto', data=bigdf_plot,
+                errorbar='se', fill=False)
+sns.stripplot(x="vip_ctrl_type", y="velocity_diff",hue='opto', data=bigdf_plot,
                 palette={False: "slategray", True: "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+
+x1 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledon'), 'velocity_diff'].values
+x2 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledoff'), 'velocity_diff'].values
+x3 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledon'), 'velocity_diff'].values
+x4 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledoff'), 'velocity_diff'].values
+scipy.stats.f_oneway(x1[~np.isnan(x1)], x2, x3, x4[~np.isnan(x4)])
+p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
+print(p_values)
+
+#%%
+# plot rates by rewzone
+
+bigdf_plot = bigdf.groupby(['animal', 'rewzones_transition', 'vip_ctrl_type']).mean(numeric_only=True)
 
 # plot by rew zone transition
 bigdf_plot = bigdf[bigdf.in_type.str.contains('vip') & ~bigdf.in_type.str.contains('ctrl')]
@@ -129,13 +149,15 @@ bigdf_plot = bigdf_plot.sort_values('rewzones_transition')
 plt.figure()
 ax = sns.barplot(x="rewzones_transition", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "slategray", True: "red"},
-                ci=68, fill=False)
+                errorbar='se', fill=False)
 sns.stripplot(x="rewzones_transition", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "slategray", True: "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+ax.get_legend().set_visible(False)
+plt.savefig(os.path.join(savedst, 'rewzone_transition.svg'), bbox_inches='tight')
 
 # controls
 bigdf_plot = bigdf[~bigdf.in_type.str.contains('vip') & ~bigdf.in_type.str.contains('ctrl')]
@@ -143,10 +165,9 @@ bigdf_plot = bigdf_plot.sort_values('rewzones_opto')
 plt.figure()
 ax = sns.barplot(x="rewzones_opto", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "lightgray", True: "lightcoral"},
-                ci=68, fill=False)
+                errorbar='se', fill=False)
 sns.stripplot(x="rewzones_opto", y="rates_diff",hue='opto', data=bigdf_plot,
-                palette={False: "lightgray", True: "lightcoral"},
-                ci=68, fill=False)
+                palette={False: "lightgray", True: "lightcoral"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
@@ -158,7 +179,7 @@ bigdf_plot = bigdf_plot.sort_values('rewzones_transition')
 plt.figure()
 ax = sns.barplot(x="rewzones_transition", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "lightgray", True: "lightcoral"},
-                ci=68, fill=False)
+                errorbar='se', fill=False)
 sns.stripplot(x="rewzones_transition", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "lightgray", True: "lightcoral"})
 ax.tick_params(axis='x', labelrotation=90)
@@ -176,13 +197,13 @@ scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2)
 
 # tests 3-1 transition
 bigdf_test = bigdf
-x1 = bigdf_test.loc[~(bigdf_test.in_type=='vip_ledon') & (bigdf_test.rewzones_transition=='rz_3-1'), 'rates_diff'].values
+x1 = bigdf_test.loc[(bigdf_test.in_type=='vip_ledoff') & (bigdf_test.rewzones_transition=='rz_3-1'), 'rates_diff'].values
 x2 = bigdf_test.loc[(bigdf_test.in_type=='vip_ledon') & (bigdf_test.rewzones_transition=='rz_3-1'), 'rates_diff'].values
 scipy.stats.ranksums(x1[~np.isnan(x1)], x2)
 
 # tests 1-3 transition
 bigdf_test = bigdf
-x1 = bigdf_test.loc[~(bigdf_test.in_type=='vip_ledon') & (bigdf_test.rewzones_transition=='rz_1-3'), 'rates_diff'].values
+x1 = bigdf_test.loc[(bigdf_test.in_type=='vip_ledoff') & (bigdf_test.rewzones_transition=='rz_1-3'), 'rates_diff'].values
 x2 = bigdf_test.loc[(bigdf_test.in_type=='vip_ledon') & (bigdf_test.rewzones_transition=='rz_1-3'), 'rates_diff'].values
 scipy.stats.ranksums(x1[~np.isnan(x1)], x2)
 
@@ -206,13 +227,16 @@ for ii,dct in enumerate(dcts_opto):
     dists_o = [pre_o.values, rew_o.values, \
         post_o.values]
     df = pd.DataFrame()
-    df['lick_prob_prev'] = [np.percentile(pre_prev.values,75), np.percentile(rew_prev.values,75), \
+    lick_all_cond_prev = [np.percentile(pre_prev.values,75), np.percentile(rew_prev.values,75), \
         np.percentile(post_prev.values,75)]
-    df['lick_prob_opto'] = [np.percentile(pre_o.values,75), np.percentile(rew_o.values,75), \
-        np.percentile(post_o.values,75)]
-    df['lick_diff_quantile'] = df['lick_prob_opto']-df['lick_prob_prev']
+    lick_all_cond_opto = [np.percentile(pre_o.values,75), np.percentile(rew_o.values,75), \
+        np.percentile(post_o.values,75)]    
+    df['lick_prob_prev'] = np.array(lick_all_cond_prev)
+    df['lick_prob_opto'] = np.array(lick_all_cond_opto)
+    df['lick_probability_difference_condition'] = df['lick_prob_opto']-df['lick_prob_prev']
+    df['lick_probability_difference'] = np.nanmean(np.array(lick_all_cond_opto))-np.nanmean(np.array(lick_all_cond_prev))
     # df['lick_dist'] = [scipy.spatial.distance.jensenshannon(xx,dists_o[ii]) for ii,xx in enumerate(dists_prev)]
-    df['lick_condition'] = ['pre', 'rew', 'post']
+    df['lick_condition'] = ['pre_reward', 'reward', 'post_reward']
     df['rewzones_transition'] = [f'rz_{dct["rewzones"][0].astype(int)}-{dct["rewzones"][1].astype(int)}_pre',
                                 f'rz_{dct["rewzones"][0].astype(int)}-{dct["rewzones"][1].astype(int)}_rew',
                                 f'rz_{dct["rewzones"][0].astype(int)}-{dct["rewzones"][1].astype(int)}_post']
@@ -223,43 +247,67 @@ for ii,dct in enumerate(dcts_opto):
     if conddf.optoep.values[ii]>1:    
         df['in_type'] = [f'{conddf.in_type.values[ii]}_ledon']*3
         df['led'] = [True]*3
+        df['vip_ctrl_type'] = df['in_type']
+        if not conddf.in_type.values[ii]=="vip":
+            df['vip_ctrl_type'] = 'ctrl_ledon'
     else: 
         df['in_type'] = [f'{conddf.in_type.values[ii]}_ledoff']*3
         df['led'] = [False]*3
+        df['vip_ctrl_type'] = df['in_type']
+        if not conddf.in_type.values[ii]=="vip":
+            df['vip_ctrl_type'] = 'ctrl_ledoff'
     dfs.append(df)
 bigdf = pd.concat(dfs)
 bigdf.reset_index(drop=True, inplace=True)   
 #%%
 bigdf_plot = bigdf[(bigdf.in_type.str.contains('vip'))]
-bigdf_plot = bigdf_plot.groupby(['animal', 'lick_condition', 'in_type']).mean()
+bigdf_plot = bigdf_plot.groupby(['animal', 'lick_condition', 'in_type']).mean(numeric_only=True)
 bigdf_plot.sort_values('lick_condition')
-plt.figure()
-ax = sns.barplot(x="lick_condition", y="lick_diff_quantile",hue='in_type', data=bigdf_plot,
+
+plt.figure(figsize=(4,6))
+ax = sns.barplot(x="lick_condition", y="lick_probability_difference_condition",hue='in_type', data=bigdf_plot,
     palette={'vip_ledoff': "slategray", 'vip_ledon': "red"},
-    ci=68, fill=False)
-ax = sns.stripplot(x="lick_condition", y="lick_diff_quantile",hue='in_type', data=bigdf_plot,
+    errorbar='se', fill=False)
+ax = sns.stripplot(x="lick_condition", y="lick_probability_difference_condition",hue='in_type', data=bigdf_plot,
     palette={'vip_ledoff': "slategray", 'vip_ledon': "red"})
 ax.tick_params(axis='x', labelrotation=90)
-sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+ax.get_legend().set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+# plt.savefig(os.path.join(savedst, 'lick_vip.svg'), bbox_inches='tight')
 
+bigdf_plot = bigdf
+bigdf_plot = bigdf_plot.groupby(['animal', 'vip_ctrl_type']).mean(numeric_only=True)
+plt.figure(figsize=(3,6))
+ax = sns.barplot(x="vip_ctrl_type", y="lick_probability_difference",hue='vip_ctrl_type', data=bigdf_plot,
+    palette={'ctrl_ledoff': "gray", 'ctrl_ledon': "lightcoral", 'vip_ledoff': "slategray", 'vip_ledon': "red"},
+    errorbar='se', fill=False)
+ax = sns.stripplot(x="vip_ctrl_type", y="lick_probability_difference",hue='vip_ctrl_type', data=bigdf_plot,
+    palette={'ctrl_ledoff': "gray", 'ctrl_ledon': "lightcoral", 'vip_ledoff': "slategray", 'vip_ledon': "red"},
+    )
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+# plt.savefig(os.path.join(savedst, 'lick_vip_mean.svg'), bbox_inches='tight')
+
+#%%
 # per session
 bigdftest = bigdf[(bigdf.in_type.str.contains('vip'))]
-scipy.stats.ranksums(bigdftest.loc[(bigdftest.lick_condition == 'pre') & (bigdftest.in_type != 'vip_ledon'), 'lick_diff_quantile'].values,
-    bigdftest.loc[(bigdftest.lick_condition == 'pre') & (bigdftest.in_type == 'vip_ledon'), 'lick_diff_quantile'].values)
-scipy.stats.ranksums(bigdftest.loc[(bigdftest.lick_condition == 'rew') & (bigdftest.in_type != 'vip_ledon'), 'lick_diff_quantile'].values,
-    bigdftest.loc[(bigdftest.lick_condition == 'rew') & (bigdftest.in_type == 'vip_ledon'), 'lick_diff_quantile'].values)
+scipy.stats.ranksums(bigdftest.loc[(bigdftest.in_type != 'vip_ledon'), 'lick_probability_difference'].values,
+    bigdftest.loc[(bigdftest.in_type == 'vip_ledon'), 'lick_probability_difference'].values)
 
 # per mouse
-bigdftest=bigdf_plot
-scipy.stats.ttest_rel(bigdftest.loc[(bigdftest.index.get_level_values('lick_condition') == 'pre') & (bigdftest.index.get_level_values('in_type') != 'vip_ledon'), 'lick_diff_quantile'].values,
-    bigdftest.loc[(bigdftest.index.get_level_values('lick_condition') == 'pre') & (bigdftest.index.get_level_values('in_type') == 'vip_ledon'), 'lick_diff_quantile'].values)
-
+x1 = bigdf_plot.loc[(bigdf_plot.index.get_level_values('vip_ctrl_type') == 'vip_ledon'), 'lick_probability_difference'].values
+x2 = bigdf_plot.loc[(bigdf_plot.index.get_level_values('vip_ctrl_type') == 'vip_ledoff'), 'lick_probability_difference'].values
+x3 = bigdf_plot.loc[(bigdf_plot.index.get_level_values('vip_ctrl_type')=='ctrl_ledon'), 'lick_probability_difference'].values
+x4 = bigdf_plot.loc[(bigdf_plot.index.get_level_values('vip_ctrl_type')=='ctrl_ledoff'), 'lick_probability_difference'].values
+scipy.stats.f_oneway(x1[~np.isnan(x1)], x2, x3, x4[~np.isnan(x4)])
+p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
+print(p_values)
 
 # vs. controls
 bigdf_plot = bigdf[~(bigdf.in_type.str.contains('vip'))]
-bigdf_plot = bigdf_plot.groupby(['animal', 'lick_condition', 'in_type']).mean()
+bigdf_plot = bigdf_plot.groupby(['animal', 'lick_condition', 'in_type']).mean(numeric_only=True)
 plt.figure()
 ax = sns.barplot(x="lick_condition", y="lick_diff_quantile",hue='led', data=bigdf_plot,
     palette={False: "lightgray", True: "lightcoral"},
@@ -272,6 +320,8 @@ ax.tick_params(axis='x', labelrotation=90)
 sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+ax.get_legend().set_visible(False)
+plt.savefig(os.path.join(savedst, 'lick_ctrl.svg'), bbox_inches='tight')
 
 bigdftest = bigdf[~(bigdf.in_type.str.contains('vip'))]
 scipy.stats.mannwhitneyu(bigdftest.loc[(bigdftest.lick_condition == 'rew') & (bigdftest.led==False), 'lick_diff_quantile'].values,
@@ -288,10 +338,10 @@ for ii,dct in enumerate(dcts_opto):
     try:
         df = pd.DataFrame([ts[0][0]], columns = ['trials_before_first_success_prev'])
         df['trials_before_first_success_opto'] = ts[1][0]
-        df['trials_before_success_median_prev'] = np.median(ts[0])
-        df['trials_before_success_median_opto'] = np.median(ts[1])
+        df['trials_before_success_median_prev'] = np.mean(ts[0])
+        df['trials_before_success_median_opto'] = np.mean(ts[1])
         
-        df['trials_before_first_success_ledoff-on'] = df['trials_before_first_success_opto']-df['trials_before_first_success_prev']
+        df['trials_before_first_success_ledoff-on'] = df['trials_before_first_success_opto'].astype(int)-df['trials_before_first_success_prev'].astype(int)
         df['trials_before_success_med_ledoff-on'] = df['trials_before_success_median_opto']-df['trials_before_success_median_prev']
         # df['lick_dist'] = [scipy.spatial.distance.jensenshannon(xx,dists_o[ii]) for ii,xx in enumerate(dists_prev)]
         df['rewzones_transition'] = f'rz_{dct["rewzones"][0].astype(int)}-{dct["rewzones"][1].astype(int)}'
@@ -317,14 +367,36 @@ bigdf.reset_index(drop=True, inplace=True)
 # %%
 # plot
 bigdf_plot = bigdf#[(bigdf.in_type.str.contains('vip'))]
-bigdf_plot = bigdf_plot.groupby(['animal', 'in_type']).mean()
+bigdf_plot = bigdf_plot.groupby(['animal', 'in_type']).mean(numeric_only=True)
 # bigdf_plot.sort_values('lick_condition')
-plt.figure()
+fig, axes = plt.subplots(figsize=(4,6))
 ax = sns.barplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type', data=bigdf_plot,
     palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
             'vip_ledoff': "slategray"}, 
-    errorbar=('ci', 68), fill=False)
+    errorbar='se', fill=False)
 ax = sns.stripplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type',data=bigdf_plot,
+                palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
+            'vip_ledoff': "slategray"})
+ax.tick_params(axis='x', labelrotation=90)
+# sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+# ax.set_ylim(-5,8)
+# vipledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledon", "trials_before_success_med_ledoff-on"].values
+# vipledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledoff", "trials_before_success_med_ledoff-on"].values
+# ctrlledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledoff", "trials_before_success_med_ledoff-on"].values
+# ctrlledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledon", "trials_before_success_med_ledoff-on"].values
+# scipy.stats.f_oneway(vipledon, vipledoff, ctrlledoff, ctrlledon)
+# import scikit_posthocs as sp
+# p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
+# print(p_values)
+
+fig, axes = plt.subplots(figsize=(4,6))
+ax = sns.barplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type', data=bigdf_plot,
+    palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
+            'vip_ledoff': "slategray"}, 
+    errorbar='se', fill=False)
+ax = sns.stripplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type',data=bigdf_plot,
                 palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
             'vip_ledoff': "slategray"})
 ax.tick_params(axis='x', labelrotation=90)
@@ -340,6 +412,8 @@ scipy.stats.f_oneway(vipledon, vipledoff, ctrlledoff, ctrlledon)
 import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
 print(p_values)
+
+# plt.savefig(os.path.join(savedst, 'trails_before_success_start_diff.svg'), bbox_inches='tight')
 
 #%%
 # by rew zone

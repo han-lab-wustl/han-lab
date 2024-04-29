@@ -18,6 +18,40 @@ mpl.rcParams["ytick.major.size"] = 6
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 ################################FUNCTION DEFINITIONS################################
+def get_success_failure_trials(trialnum, reward):
+    """
+    Quantify successful and failed trials based on trial numbers and rewards.
+
+    Args:
+        trialnum (numpy.ndarray): Array of trial numbers.
+        reward (numpy.ndarray): Array of rewards (0 or 1) corresponding to each trial.
+
+    Returns:
+        int: Number of successful trials.
+        int: Number of failed trials.
+        list: List of successful trial numbers.
+        list: List of failed trial numbers.
+        numpy.ndarray: Array of trial numbers, excluding probe trials (trial < 3).
+        int: Total number of trials, excluding probe trials.
+    """
+    success = 0
+    fail = 0
+    str_trials = []
+    ftr_trials = []
+
+    for trial in np.unique(trialnum):
+        if trial >= 3:  # Exclude probe trials (trial < 3)
+            if np.sum(reward[trialnum == trial] == 1) > 0:  # If reward was found in the trial
+                success += 1
+                str_trials.append(trial)
+            else:
+                fail += 1
+                ftr_trials.append(trial)
+
+    total_trials = np.sum(np.unique(trialnum) >= 3)
+    ttr = np.unique(trialnum)[np.unique(trialnum) > 2]  # Remove probe trials
+
+    return success, fail, str_trials, ftr_trials, ttr, total_trials
 
 def nan_helper(y):
         """Helper to handle indices and logical indices of NaNs.
@@ -75,12 +109,14 @@ def get_unrewarded_stops(vralign):
     stops = vralign['forwardvel']==0 # 0 velocity
     stop_ind = consecutive_stretch(stops)
     
-def get_area_circumference_from_vralign(pdst, range_val, binsize):
+def get_area_circumference_from_vralign_with_fails(pdst, vrfl,
+                    range_val, binsize):
     
-    # example on how to open the pickle file
-    # pdst = r"Y:\DLC\dlc_mixedmodel2\E201_25_Mar_2023_vr_dlc_align.p"
     with open(pdst, "rb") as fp: #unpickle
             vralign = pickle.load(fp)
+    f = h5py.File(vrfl,'r')  #need to save vrfile with -v7.3 tag for this to work
+    VR = f['VR']
+
     # edit name of eye points
     eye = ['EyeNorth', 'EyeNorthWest', 'EyeWest', 'EyeSouthWest', 
             'EyeSouth', 'EyeSouthEast', 'EyeEast', 'EyeNorthEast']
@@ -126,41 +162,61 @@ def get_area_circumference_from_vralign(pdst, range_val, binsize):
     X = np.array([velocity, acc, licks, eyelid]).T # Predictor(s)
     X = sm.add_constant(X) # Adds a constant term to the predictor(s)
     y = areas # Outcome
+
+    ############## GLM ##############
+    # run peri reward time & plot  
     # Fit a regression model
     model = sm.GLM(y, X, family=sm.families.Gaussian())
     result = model.fit()
     areas_res = result.resid_pearson
-    y = centroids_x # Outcome
-    # Fit a regression model
-    model = sm.GLM(y, X, family=sm.families.Gaussian())
-    result = model.fit()
-    centroids_x_res = result.resid_pearson
-    y = centroids_y # Outcome
-    # Fit a regression model
-    model = sm.GLM(y, X, family=sm.families.Gaussian())
-    result = model.fit()
-    centroids_y_res = result.resid_pearson
-    ############## GLM ##############
-    # run peri reward time & plot
-    input_peri = areas_res
+
+    # successful trials
     rewards = vralign["rewards"]
+    input_peri = areas_res
+    time = vralign['timedFF']
     normmeanrew_t, meanrew, normrewall_t, \
     rewall = perireward_binned_activity(np.array(input_peri), \
                             rewards.astype(int), 
-                            vralign['timedFF'], range_val, binsize)
-
-    normmeanlicks_t, meanlicks, normlickall_t, \
-    lickall = perireward_binned_activity(licks_threshold, \
-                    rewards.astype(int), 
-                    vralign['timedFF'], range_val, binsize)
-    normmeanvel_t, meanvel, normvelall_t, \
-    velall = perireward_binned_activity(velocity, \
-                    rewards.astype(int), 
-                    vralign['timedFF'], range_val, binsize)
-
+                            time, range_val, binsize)
+    # failed
+    trialnum = vralign['trialnum']
+    ybinned = vralign['ybinned']
+    rewlocs = VR['changeRewLoc'][:][VR['changeRewLoc'][:]>0]
+    changeRewLoc = vralign["changeRewLoc"]
+    crl = consecutive_stretch_vralign(np.where(changeRewLoc>0)[0])
+    crl = np.array([min(xx) for xx in crl])
+    eps = np.array([xx for ii,xx in enumerate(crl[1:]) if np.diff(np.array([crl[ii],xx]))[0]>5000])
+    eps = np.append(eps, 0)
+    eps = np.append(eps, len(changeRewLoc))
+    eps = np.sort(eps)
+    rewallfail = []; meanrewfail = []
+    for ep in range(len(eps)-1):
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eps[ep]:eps[ep+1]], rewards[eps[ep]:eps[ep+1]])
+        failtr_bool = np.array([any(yy==xx for yy in ftr_trials) for xx in trialnum[eps[ep]:eps[ep+1]]])
+        failed_trialnum = trialnum[eps[ep]:eps[ep+1]][failtr_bool]
+        rews_centered = np.zeros_like(failed_trialnum)
+        ypos = ybinned[eps[ep]:eps[ep+1]]
+        rews_centered[(ypos[failtr_bool] >= rewlocs[ep]-5) & (ypos[failtr_bool] <= rewlocs[ep]+5)]=1
+        rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+        min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+        rews_centered = np.zeros_like(failed_trialnum)
+        rews_centered[min_iind]=1
+        rewards_ep = rews_centered
+        time_ep = vralign['timedFF'][eps[ep]:eps[ep+1]][failtr_bool]
+        licks_threshold_ep = licks_threshold[eps[ep]:eps[ep+1]][failtr_bool]
+        velocity_ep = velocity[eps[ep]:eps[ep+1]][failtr_bool]
+        input_peri = areas_res[eps[ep]:eps[ep+1]][failtr_bool]
+        normmeanrew_t, meanrew_ep, normrewall_t, \
+        rewall_ep = perireward_binned_activity(np.array(input_peri), \
+                                rewards_ep.astype(int), 
+                                time_ep, range_val, binsize)
+        rewallfail.append(rewall_ep.T)
+        meanrewfail.append(meanrew_ep.T)
+    rewallfail = np.concatenate(rewallfail)
+    meanrewfail = np.concatenate(meanrewfail)
     
-    return areas, areas_res, circumferences, centroids_x_res, centroids_y_res, \
-    meanrew, rewall, meanlicks, meanvel
+    return areas, areas_res, circumferences, meanrew, rewall, meanrewfail, rewallfail
 
 def get_pose_tuning_curve(pth, vralign, pose, gainf, rewsize, \
     pose_name, savedst, success=True):

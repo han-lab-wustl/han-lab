@@ -21,7 +21,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com.csv", index_col=None)
 pdf = matplotlib.backends.backend_pdf.PdfPages(r'Z:\opto_analysis_stable_vs_remap.pdf')
-
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 #%%
 figcom, axcom = plt.subplots()
 figcom2, axcom2 = plt.subplots()
@@ -40,7 +40,7 @@ rewzones_comps = []
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     day = conddf.days.values[ii]
-    if True:#conddf.in_type.values[ii]=='vip': #and conddf.animals.values[ii]=='e218':#and conddf.optoep.values[ii]==2:# and conddf.animals.values[ii]=='e218':
+    if conddf.in_type.values[ii]=='vip': #and conddf.animals.values[ii]=='e218':#and conddf.optoep.values[ii]==2:# and conddf.animals.values[ii]=='e218':
         plane=0 #TODO: make modular        
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
         # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
@@ -222,6 +222,7 @@ axcom.spines['right'].set_visible(False)
 axcom.set_xlabel('Prev Ep COM')
 axcom.set_ylabel('Target Ep COM')
 axcom.set_title('Inactivated cells, LED off')
+figcom.tight_layout()
 
 axcom2.plot(axcom2.get_xlim(), axcom2.get_ylim(), color='k', linestyle='--')
 axcom2.axvline(0, color='slategray', linestyle='--')
@@ -232,6 +233,7 @@ axcom2.set_xlabel('Prev Ep COM')
 axcom2.set_ylabel('Target Ep COM')
 axcom2.set_title('Inactivated cells, LED on')
 
+figcom2.tight_layout()
 axcom3.plot(axcom3.get_xlim(), axcom3.get_ylim(), color='orange', linestyle='--')
 axcom3.axvline(0, color='yellow', linestyle='--')
 axcom3.axhline(0, color='yellow', linestyle='--')
@@ -240,6 +242,7 @@ axcom3.spines['right'].set_visible(False)
 axcom3.set_xlabel('Prev Ep COM')
 axcom3.set_ylabel('Target Ep COM')
 axcom3.set_title('Activated cells, LED off')
+figcom3.tight_layout()
 
 axcom4.plot(axcom4.get_xlim(), axcom4.get_ylim(), color='k', linestyle='--')
 axcom4.axvline(0, color='slategray', linestyle='--')
@@ -249,6 +252,7 @@ axcom4.spines['right'].set_visible(False)
 axcom4.set_xlabel('Prev Ep COM')
 axcom4.set_ylabel('Target Ep COM')
 axcom4.set_title('Activated cells, LED on')
+figcom4.tight_layout()
 
 pdf.savefig(figcom)
 pdf.savefig(figcom2)
@@ -256,7 +260,7 @@ pdf.savefig(figcom3)
 pdf.savefig(figcom4)
 
 pdf.close()
-plt.close('all')
+# plt.close('all')
 #%%
 inactive_cells_remap = np.array(inactive_cells_remap)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
 inactive_cells_stable = np.array(inactive_cells_stable)#[(conddf.optoep.values[(conddf.in_type.values=='vip')]<2), :]
@@ -286,7 +290,7 @@ ax.spines['right'].set_visible(False)
 ax.set_xlabel('Days of recording')
 ax.set_ylabel('Proportion of all cells')
 
-df = df[(df.animal!='e186') & (df.animal!='e201')]
+# df = df[(df.animal!='e186') & (df.animal!='e201')]
 df = df.groupby(['animal', 'opto', 'cond']).mean(numeric_only=True)
 #%%
 # relative remap proportion
@@ -402,6 +406,46 @@ scipy.stats.ttest_rel(inactive_remap_t, inactive_remap_f)
 stable_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == 'vip')), 'stable_prop'].values
 stable_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == 'vip')), 'stable_prop'].values
 scipy.stats.ttest_rel(stable_t, stable_f)
+
+
+# relative stable proportion
+diff_remap_prop_ctrl = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')=='ctrl')), 
+        'stable_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')=='ctrl')), 'stable_prop']).values
+diff_remap_prop_vip = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')=='vip')), 
+        'stable_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')=='vip')), 'stable_prop']).values
+df2 = pd.DataFrame()
+df2['stable_prop_diff'] = np.concatenate([diff_remap_prop_ctrl, diff_remap_prop_vip])
+df2['condition'] = np.concatenate([['ctrl']*len(diff_remap_prop_ctrl), ['vip']*len(diff_remap_prop_vip)])
+plt.figure()
+ax = sns.barplot(x="condition", y='stable_prop_diff',hue='condition', data=df2,fill=False,
+                palette={'ctrl': "slategray", 'vip': "red"}, errorbar='se')
+ax = sns.stripplot(x="condition", y='stable_prop_diff',hue='condition', data=df2,
+                palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+scipy.stats.ranksums(diff_remap_prop_ctrl, diff_remap_prop_vip)
+
+# relative remap proportion
+diff_remap_prop_ctrl = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')=='ctrl')), 
+        'remap_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')=='ctrl')), 'remap_prop']).values
+diff_remap_prop_vip = (df.loc[((df.index.get_level_values('opto')==True) & (df.index.get_level_values('cond')=='vip')), 
+        'remap_prop']).values-(df.loc[((df.index.get_level_values('opto')==False) & (df.index.get_level_values('cond')=='vip')), 'remap_prop']).values
+df2 = pd.DataFrame()
+df2['remap_prop_diff'] = np.concatenate([diff_remap_prop_ctrl, diff_remap_prop_vip])
+df2['condition'] = np.concatenate([['ctrl']*len(diff_remap_prop_ctrl), ['vip']*len(diff_remap_prop_vip)])
+plt.figure()
+ax = sns.barplot(x="condition", y='remap_prop_diff',hue='condition', data=df2,fill=False,
+                palette={'ctrl': "slategray", 'vip': "red"}, errorbar='se')
+ax = sns.stripplot(x="condition", y='remap_prop_diff',hue='condition', data=df2,
+                palette={'ctrl': "slategray", 'vip': "red"})
+ax.tick_params(axis='x', labelrotation=90)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+scipy.stats.ranksums(diff_remap_prop_ctrl, diff_remap_prop_vip)
+
 # ctrl
 # stable_t = df.loc[((df.index.get_level_values('opto') == True) & (df.index.get_level_values('cond') == 'ctrl')), 'stable_prop'].values
 # stable_f = df.loc[((df.index.get_level_values('opto') == False) & (df.index.get_level_values('cond') == 'ctrl')), 'stable_prop'].values
