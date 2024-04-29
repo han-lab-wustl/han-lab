@@ -22,7 +22,7 @@ picklesrc = r'I:\vip_inhibition'
 #%% - step 1
 # optional if you don't have the vr fl in the folder
 inhibition.copyvrfl_matching_pickle(picklesrc, vrsrc)
-#%% - step 2
+#%% - step 2 - align to start of reward zone
 range_val=5
 binsize=0.05
 fs = 31.25 # frame rate
@@ -52,73 +52,70 @@ for fl in os.listdir(picklesrc):
         eps = np.sort(eps)
         velocity = np.hstack(vralign['forwardvel'])
         areas, areas_res = get_area_circumference_opto(pdst, range_val, binsize)
-        pre_reward = []; pre_reward_fail_after_success = []; pre_reward_fail_after_fail = []
-        areas_per_ep = []; peri_reward = [];  peri_reward_fail_after_success = []; peri_reward_fail_after_fail = []
+        areas_per_ep = []; peri_reward_fail_after_success = []; peri_reward_fail_after_fail = []
+        peri_reward_s_after_s = []; peri_reward_s_after_ss = []        
         for i in range(len(eps)-1):
             ypos = ybinned[eps[i]:eps[i+1]]            
             input_peri = areas_res[eps[i]:eps[i+1]][ypos>2]
             areas_per_ep.append(input_peri)
             rewards_ = rewards[eps[i]:eps[i+1]]            
             time_ = time[eps[i]:eps[i+1]]            
-            # success
-            normmeanrew_t, meanrew, normrewall_t, \
-            rewall = perireward_binned_activity(np.array(input_peri), \
-                                rewards_[ypos>2].astype(int),
-                                time_[ypos>2], range_val, binsize)
-            # failed - different trial types
-            success, fail, str_trials, \
-            ftr_trials, ttr, total_trials, \
-            fail_after_success, fail_after_fail = inhibition.get_success_failure_trials(trialnum[eps[i]:eps[i+1]], rewards_)
+            success, fail, str_trials, ftr_trials, ttr, total_trials, \
+            fail_after_success, fail_after_fail, succ_after_one_succ, \
+            succ_after_two_succ = inhibition.get_success_failure_trials(trialnum[eps[i]:eps[i+1]], rewards[eps[i]:eps[i+1]])         
+            # success after 1
+            # success after 2
+            rewall_ep_ss = inhibition.get_peri_signal_of_fail_trial_types(succ_after_one_succ, \
+                trialnum, eps, i, rewlocs, ypos, fs, range_val,
+                binsize, areas_res)
+            rewall_ep_sss = inhibition.get_peri_signal_of_fail_trial_types(succ_after_two_succ, \
+                trialnum, eps, i, rewlocs, ypos, fs, range_val,
+                binsize, areas_res)
+            # failed - different trial types            
             rewall_ep_ff = inhibition.get_peri_signal_of_fail_trial_types(fail_after_fail, trialnum, eps, i, rewlocs, ypos, fs, range_val,
                 binsize, areas_res)
             rewall_ep_fs = inhibition.get_peri_signal_of_fail_trial_types(fail_after_success, trialnum, eps, i, rewlocs, ypos, fs, range_val,
                 binsize, areas_res)
-            # mean per trials
-            pre_reward.append(np.nanmean(rewall[:int(range_val/binsize),:],axis=0))
-            pre_reward_fail_after_fail.append(np.nanmean(rewall_ep_ff[:int(range_val/binsize),:],axis=0))
-            pre_reward_fail_after_success.append(np.nanmean(rewall_ep_fs[:int(range_val/binsize),:],axis=0))
             # save peri reward
-            peri_reward.append(rewall); peri_reward_fail_after_fail.append(rewall_ep_ff)
-            peri_reward_fail_after_success.append(rewall_ep_fs)
-            dct_pre_reward[fl] = [areas_per_ep, peri_reward, 
+            peri_reward_fail_after_fail.append(rewall_ep_ff)
+            peri_reward_fail_after_success.append(rewall_ep_fs);
+            peri_reward_s_after_ss.append(rewall_ep_ss)
+            peri_reward_s_after_ss.append(rewall_ep_sss)
+            dct_pre_reward[fl] = [areas_per_ep, 
                 peri_reward_fail_after_success, peri_reward_fail_after_fail, 
-                pre_reward, pre_reward_fail_after_success, pre_reward_fail_after_fail] # trial per ep
-#%%
-# mean_prerew_areas_per_ep = [np.concatenate(v[4]) for k,v in dct_pre_reward.items()]
-# std_prerew_areas_per_ep = [np.concatenate(v[4]) for k,v in dct_pre_reward.items()]
-
-# fails_mean_prerew_areas_per_ep = [np.concatenate(v[5]) for k,v in dct_pre_reward.items()]
-# fails_std_prerew_areas_per_ep = [np.concatenate(v[5]) for k,v in dct_pre_reward.items()]
-
-# # distribution of success vr. fails
-# for i,an in enumerate(mean_prerew_areas_per_ep):
-#     fig, ax = plt.subplots()
-#     ax.hist(an, color = 'k', alpha=0.3)
-#     ax.hist(fails_mean_prerew_areas_per_ep[i], color = 'r', alpha=0.3)
-#     fig.suptitle(f'{list(dct_pre_reward.items())[i][0]}')
+                peri_reward_s_after_s, peri_reward_s_after_ss] # trial per ep
 #%%
 # heat map successes vs. fails
 # plot mean and standard error
 # peri_reward.append(rewall); peri_reward_fail.append(rewall_ep)
 # dct_pre_reward[fl] = [areas_per_ep, peri_reward, peri_reward_fail, pre_reward, pre_reward_fail] # trial per ep
 
-for k,v in dct_pre_reward.items():
-    arr = np.hstack(v[1])
-    arrfs = np.hstack(v[2])
-    arrff = np.hstack(v[3])
+for k,v in dct_pre_reward.items():    
+    arrfs = np.hstack(v[1])
+    arrff = np.hstack(v[2])
+    arrss = np.hstack(v[3])
+    arrsss = np.hstack(v[4])
     fig, ax = plt.subplots()
-    meanrewdFF = np.nanmean(arr,axis=1)
-    ax.plot(meanrewdFF, color='k',label='success')   
+    meanrewdFF = np.nanmean(arrsss,axis=1)
+    ax.plot(meanrewdFF, color='k',label='success_after_2success')   
     xmin,xmax = ax.get_xlim()     
     ax.fill_between(range(0,int(range_val/binsize)*2), 
-            meanrewdFF-scipy.stats.sem(arr,axis=1,nan_policy='omit'),
-            meanrewdFF+scipy.stats.sem(arr,axis=1,nan_policy='omit'), color='k',alpha=0.2)
+            meanrewdFF-scipy.stats.sem(arrsss,axis=1,nan_policy='omit'),
+            meanrewdFF+scipy.stats.sem(arrsss,axis=1,nan_policy='omit'), color='k',alpha=0.2)
+    
+    meanrewdFF = np.nanmean(arrss,axis=1)
+    ax.plot(meanrewdFF, color='darkslategray',label='success_after_1success')   
+    xmin,xmax = ax.get_xlim()     
+    ax.fill_between(range(0,int(range_val/binsize)*2), 
+            meanrewdFF-scipy.stats.sem(arrss,axis=1,nan_policy='omit'),
+            meanrewdFF+scipy.stats.sem(arrss,axis=1,nan_policy='omit'), color='darkslategray',alpha=0.2)
+    
     meanrewdFF = np.nanmean(arrfs,axis=1)
-    ax.plot(meanrewdFF, color='r',label='fail_after_success')   
+    ax.plot(meanrewdFF, color='darkorchid',label='fail_after_success')   
     xmin,xmax = ax.get_xlim()     
     ax.fill_between(range(0,int(range_val/binsize)*2), 
             meanrewdFF-scipy.stats.sem(arrfs,axis=1,nan_policy='omit'),
-            meanrewdFF+scipy.stats.sem(arrfs,axis=1,nan_policy='omit'), color='rosybrown',alpha=0.2)
+            meanrewdFF+scipy.stats.sem(arrfs,axis=1,nan_policy='omit'), color='darkorchid',alpha=0.2)
     meanrewdFF = np.nanmean(arrff,axis=1)
     ax.plot(meanrewdFF, color='r',label='fail_after_fail')   
     xmin,xmax = ax.get_xlim()     
@@ -131,5 +128,5 @@ for k,v in dct_pre_reward.items():
     ax.set_xticklabels(range(-range_val, range_val+1, 1))
     ax.set_title(k)
     ax.set_ylabel('Pupil residual')
-    ax.set_xlabel('Time from CS (s)')
-    
+    ax.set_xlabel('Time from start of reward zone (s)')
+    ax.legend()
