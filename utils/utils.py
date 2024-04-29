@@ -5,7 +5,7 @@ Created on Fri Feb 24 16:06:02 2023
 @author: Han
 """
 
-import os, sys, shutil, tifffile, numpy as np, pandas as pd
+import os, sys, shutil, tifffile, numpy as np, pandas as pd, re
 from datetime import datetime
 
 def makedir(dr):
@@ -47,13 +47,21 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
     for day in days:
         print(day)
         fls = listdir(day)
-        imgfl = [xx for xx in fls if "23" in xx or "ZD" in xx][0] # change conditional strings if you need!
+        imgfl = [xx for xx in fls if "23" in xx or "ZD" in xx or "24" in xx][0] # change conditional strings if you need!
         date = os.path.basename(imgfl)[:6]
         datetime_object = datetime.strptime(date, '%y%m%d')
         dates.append(str(datetime_object.date()))
     vrfls = listdir(usb,ifstring=animal.upper())
     # matches dates on vr files to imaging dates
-    dates_vr = [str(datetime.strptime(os.path.basename(xx)[5:16], '%d_%b_%Y').date()) for xx in vrfls]
+    # Regex pattern to match the date format '29_Apr_2024'
+    # \d{1,2} matches 1 or 2 digits (for the day)
+    # [A-Z][a-z]{2} matches three letters where the first is uppercase (for the month)
+    # \d{4} matches exactly four digits (for the year)
+    date_pattern = r'\d{1,2}_[A-Z][a-z]{2}_\d{4}'
+    # Search for the pattern in the string
+    match = re.search(date_pattern, vrfls[0])
+
+    dates_vr = [str(datetime.strptime(re.search(date_pattern, xx).group(), '%d_%b_%Y').date()) for xx in vrfls]
     for flnm,datevr in enumerate(dates_vr):
         if datevr in dates:
             ind = dates.index(datevr)
@@ -63,8 +71,8 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
     
     return
 
-def ig_f(dir, files):
-    return [f for f in files if os.path.isfile(os.path.join(dir, f))]
+def ig_f(dirr, files):
+    return [f for f in files if os.path.isfile(os.path.join(dirr, f))]
 
 def copydopaminefldstruct(src, dst, overwrite=False):
     """useful for sharing dopamine data
@@ -274,8 +282,8 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
     return os.path.join(src, animal)
 
 if __name__ == "__main__":
-    usb = r"I:\2023-2024_ZD_VR"
-    drives = [r'Z:\chr2_grabda']
-    animals = ['e232']
+    usb = r"F:\2023-2024_ZD_VR"
+    drives = [r'Z:\chr2_grabda', r'X:\vipcre', r'Z:\chr2_grabda']
+    animals = ['e232', 'z8', 'e231']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

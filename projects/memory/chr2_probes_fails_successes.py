@@ -15,23 +15,24 @@ mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
-
+plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
 # save to pdf
 condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
 src = r"Z:\chr2_grabda\e232"
+animal = os.path.basename(src)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"peri_analysis.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"{animal}_opto_peri_analysis.pdf"))
 # days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
-days = [40,41,42,43,44,45,46]
-range_val = 10; binsize=0.2
+days = [40,41,42,43,44,45,46,47,48,49]
+range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-optodays = [42,43,44]
+optodays = [42,43,44,47,48]
 day_date_dff = {}
 for day in days: 
-    newrewloc = condrewloc.loc[condrewloc.Day==day, 'RewLoc'].values[0]
-    rewloc = condrewloc.loc[condrewloc.Day==day, 'PrevRewLoc'].values[0]
+    newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
+    rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
     plndff = []
     # for each plane
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
@@ -47,7 +48,10 @@ for day in days:
         fig, ax = plt.subplots()
         ax.plot(dff)
         # temp remove artifacts
-        artifact_threshold = 1+np.std(dff)*75
+        mean = np.mean(dff)
+        std = np.std(dff)
+        z_scores = np.abs((dff - mean) / std)
+        artifact_threshold = np.std(z_scores)*3.5
         if day in optodays:
             mean = np.mean(dff)
             std = np.std(dff)
@@ -203,7 +207,6 @@ for day in days:
 pdf.close()
 
 #%%
-plt.rc('font', size=16)          # controls default text sizes
 
 # average across learning
 fig, axes = plt.subplots(4,3,sharex=True, figsize=(20,15))
