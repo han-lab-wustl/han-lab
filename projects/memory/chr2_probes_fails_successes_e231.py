@@ -23,11 +23,11 @@ condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
 src = r"Z:\chr2_grabda\e231"
 animal = os.path.basename(src)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,"peri_analysis.pdf"))
-days = [2,3]
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"{animal}_peri_analysis.pdf"))
+days = [2,3,6,7]
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-optodays = [3]
+optodays = [3,7]
 day_date_dff = {}
 for day in days: 
     newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
@@ -37,17 +37,19 @@ for day in days:
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
         params = scipy.io.loadmat(path)
         gainf = params['VR']
-        planenum = os.path.basename(os.path.dirname(path))
+        planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
         pln = int(planenum[-1])
         layer = planelut[pln]
         params_keys = params.keys()
         keys = params['params'].dtype
         # dff is in row 7 - roibasemean3/average
-        dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))#/np.hstack(params['params'][0][0][9])
+        dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))
         fig, ax = plt.subplots()
         ax.plot(dff)
-        # temp remove artifacts
-        artifact_threshold = 1+np.std(dff)*75
+        mean = np.mean(dff)
+        std = np.std(dff)
+        z_scores = np.abs((dff - mean) / std)
+        artifact_threshold = np.std(z_scores)*1
         if day in optodays:
             mean = np.mean(dff)
             std = np.std(dff)

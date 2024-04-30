@@ -25,7 +25,7 @@ animal = os.path.basename(src)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"{animal}_opto_peri_analysis.pdf"))
 # days = [4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
-days = [40,41,42,43,44,45,46,47,48,49]
+days = [40,41,42,43,44,45,46,47,48,49,50]
 range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 optodays = [42,43,44,47,48]
@@ -51,7 +51,10 @@ for day in days:
         mean = np.mean(dff)
         std = np.std(dff)
         z_scores = np.abs((dff - mean) / std)
-        artifact_threshold = np.std(z_scores)*3.5
+        if pln==1:
+            artifact_threshold = np.std(z_scores)*2
+        else:
+            artifact_threshold = np.std(z_scores)*3        
         if day in optodays:
             mean = np.mean(dff)
             std = np.std(dff)
@@ -61,6 +64,7 @@ for day in days:
             clean_data = dff.copy()
             clean_data[artifact_mask] = np.nan
             ax.plot(clean_data)
+            ax.set_ylim(0.9,1.1)
             dff = clean_data
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})

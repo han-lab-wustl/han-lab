@@ -453,6 +453,7 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     rel_coms2 = [convert_com_to_radians(com, rewlocs[comp[1]], track_length) for com in coms2]
     # rel_coms2 = np.hstack([(coms2[coms2<=rewlocs[comp[1]]]-rewlocs[comp[1]])/rewlocs[comp[1]],(coms2[coms2>rewlocs[comp[1]]]-rewlocs[comp[1]])/(track_length-rewlocs[comp[1]])])
     # rel_coms2 = (coms2-rewlocs[comp[1]])/rewlocs[comp[1]]
+    dct['comp'] = comp
     dct['rel_coms1'] = np.array(rel_coms1)
     dct['rel_coms2'] = np.array(rel_coms2)
     dct['learning_tc1'] = [tc1_early, tc1_late]

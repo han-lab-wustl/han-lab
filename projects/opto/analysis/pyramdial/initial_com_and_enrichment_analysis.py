@@ -22,19 +22,23 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
-#%%
+#%% - re-run dct making
 dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
-    threshold = 5
+    threshold = 7
     pc = False
     dct = get_pyr_metrics_opto(conddf, dd, day, 
                 threshold=threshold, pc=pc)
     dcts.append(dct)
 # save pickle of dcts
-# with open(r'Z:\dcts_com_opto.p', "wb") as fp:   #Pickling
-#     pickle.dump(dcts, fp)   
+with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
+    pickle.dump(dcts, fp)   
 #%%
+# open previously saved dcts
+with open("Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
+        dcts = pickle.load(fp)
+
 # plot fraction of cells near reward
 optoep = conddf.optoep.values; animals = conddf.animals.values; in_type = conddf.in_type.values
 dcts_opto = np.array(dcts)[optoep>1]

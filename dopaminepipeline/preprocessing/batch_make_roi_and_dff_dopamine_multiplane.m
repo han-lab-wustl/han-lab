@@ -4,6 +4,7 @@
 % uses primarily for GRAB-DA recordings in 2p
 
 %% step 1 - pick files
+% e231 ref=\\storage1.ris.wustl.edu\ebhan\Active\calvin\E231\240403_CF
 clear all
 close all
 pr_dir=uipickfiles;

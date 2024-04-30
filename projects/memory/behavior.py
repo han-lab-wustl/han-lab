@@ -1,4 +1,26 @@
-import numpy as np
+import numpy as np, pandas as pd
+
+def get_behavior_tuning_curve(ybinned, beh, bins=270):
+    """
+    Plot a lick tuning curve given a dataframe with position and lick columns.
+    
+    Parameters:
+    - df: pandas DataFrame containing the data.
+    - position_col: name of the column in df that contains the position data.
+    - lick_col: name of the column in df that contains the lick binary variable (1 for lick, 0 for no lick).
+    - bins: number of bins to divide the position data into for the curve.
+    """
+    df = pd.DataFrame()
+    df['position'] = ybinned
+    df['beh'] = beh
+    # Discretize the position data into bins
+    df['position_bin'] = pd.cut(df['position'], bins=bins, labels=False)
+    
+    # Calculate the lick probability for each bin
+    grouped = df.groupby('position_bin')['beh'].agg(['mean', 'count']).reset_index()
+    beh_probability = grouped['mean']  # This is the mean of the binary lick variable, which represents probability
+    
+    return grouped['position_bin'], beh_probability
 
 
 def consecutive_stretch(x):
