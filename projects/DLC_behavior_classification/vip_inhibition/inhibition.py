@@ -88,6 +88,7 @@ def get_peri_signal_of_fail_trial_types(ftr_trials, trialnum, eps, i, rewlocs, y
                 binsize, areas_res):
     """
     takes input of success and fail trials (can be different fail trial types)
+    excludes dark time
     """
     failtr_bool = np.array([any(yy.astype(int)==xx for yy in ftr_trials) for xx in trialnum[eps[i]:eps[i+1]]])
     failed_trialnum = trialnum[eps[i]:eps[i+1]][failtr_bool]
