@@ -7,6 +7,7 @@ Created on Fri Feb 24 16:06:02 2023
 
 import os, sys, shutil, tifffile, numpy as np, pandas as pd, re
 from datetime import datetime
+from pathlib import Path
 
 def makedir(dr):
     if not os.path.exists(dr): os.mkdir(dr)
@@ -192,7 +193,7 @@ def deletebinaries(src,fls=False,keyword='data.bin'):
             os.remove(path)
     return 
 
-def deleteregtif(src,fls=False,keyword='reg_tif'):
+def deleteregtif(src,fls=[],keyword='reg_tif'):
     """deletes reg_tif folder en masse
     useful after you've checked for motion correction
 
@@ -201,11 +202,12 @@ def deleteregtif(src,fls=False,keyword='reg_tif'):
         keyword (str, optional): folder name. Defaults to 'reg_tif'.
     """
     #src = 'Z:\sstcre_imaging\e201'
-    if not fls:
+    if len(fls)==0:
         fls = listdir(src)
-    for fl in fls:
-        from pathlib import Path
-        for path in Path(src).rglob(keyword):
+    else:
+        fls = [os.path.join(src,str(fl)) for fl in fls]
+    for fl in fls:        
+        for path in Path(fl).rglob(keyword):
             # deletes reg_tif directory and all its contents
             print(f"\n*** deleting {path}***")
             shutil.rmtree(path)

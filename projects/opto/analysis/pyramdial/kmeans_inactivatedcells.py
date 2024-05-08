@@ -62,20 +62,21 @@ for dd in range(len(conddf)):
         tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
         tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))    
         
-        coms1 = np.hstack(coms[comp[0]])
-        fig, axes = plt.subplots(nrows=1, ncols=2)
-        axes[1].imshow(np.concatenate([np.squeeze(tc1_late[inactive,:][np.argsort(coms1)]),
-            np.squeeze(tc2_late[inactive,:][np.argsort(coms1)])]))
-        axes[1].axhline(tc1_late[inactive,:].shape[0], color='y')
-        axes[1].axvline(rewlocs[comp[0]]/bin_size, color='y', linestyle='--')
-        axes[1].axvline(rewlocs[comp[1]]/bin_size, color='y')
-        axes[1].set_title(f'{animal}, {day}, opto: {eptest}, late')
-        axes[0].imshow(np.concatenate([np.squeeze(tc1_early[inactive,:][np.argsort(coms1)]),
-            np.squeeze(tc2_early[inactive,:][np.argsort(coms1)])]))
-        axes[0].axhline(tc1_late[inactive,:].shape[0], color='y')
-        axes[0].axvline(rewlocs[comp[0]]/bin_size, color='y', linestyle='--')
-        axes[0].axvline(rewlocs[comp[1]]/bin_size, color='y')
-        axes[0].set_title(f'{animal}, {day}, opto: {eptest}, early')
+        if len(inactive)>1:
+            coms1 = np.hstack(coms[comp[0]])[inactive]
+            fig, axes = plt.subplots(nrows=1, ncols=2)
+            axes[1].imshow(np.concatenate([np.squeeze(tc1_late[inactive,:][np.argsort(coms1)]),
+                np.squeeze(tc2_late[inactive,:][np.argsort(coms1)])]))
+            axes[1].axhline(tc1_late[inactive,:].shape[0], color='y')
+            axes[1].axvline(rewlocs[comp[0]]/bin_size, color='y', linestyle='--')
+            axes[1].axvline(rewlocs[comp[1]]/bin_size, color='y')
+            axes[1].set_title(f'{animal}, {day}, opto: {eptest}, late')
+            axes[0].imshow(np.concatenate([np.squeeze(tc1_early[inactive,:][np.argsort(coms1)]),
+                np.squeeze(tc2_early[inactive,:][np.argsort(coms1)])]))
+            axes[0].axhline(tc1_late[inactive,:].shape[0], color='y')
+            axes[0].axvline(rewlocs[comp[0]]/bin_size, color='y', linestyle='--')
+            axes[0].axvline(rewlocs[comp[1]]/bin_size, color='y')
+            axes[0].set_title(f'{animal}, {day}, opto: {eptest}, early')
 #%%
 y = tc2_late[inactive,:]
 nans, x= nan_helper(y)

@@ -11,7 +11,7 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e217';
+an = 'z8';
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218
@@ -21,7 +21,7 @@ an = 'e217';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [47];
+dys = [7];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -36,11 +36,26 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
         'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+
+    if ~exist('VR', 'var')==1
+    %% step 0 - align to behavior
+    daypth = dir(fullfile(src, an, string(dy), "behavior", "vr\*.mat"));
+%     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+    fmatfl = dir(fullfile(src, an, string(dy), '**\Fall.mat')); 
+    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    disp(savepthfmat)
+    end
+    load(fullfile(pth.folder,pth.name), 'dFF', ...
+    'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
+    'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+
+
+    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
+    
     % vars to get com and tuning curves
     bin_size = 3; % cm
     try
@@ -217,4 +232,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum',an)));

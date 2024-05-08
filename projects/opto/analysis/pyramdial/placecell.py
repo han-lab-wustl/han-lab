@@ -473,15 +473,43 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     dct['active'] = differentially_activated_cells
     dct['rewlocs_comp'] = rewlocs[comp]
     return dct
+import numpy as np
+from scipy.stats import pearsonr
+
+def calculate_noise_correlations(data, trial_info):
+    """
+    Calculate noise correlations among neurons in a calcium imaging dataset.
+
+    Args:
+        data (numpy.ndarray): Calcium imaging data with shape (num_neurons, num_timesteps, num_trials).
+        trial_info (numpy.ndarray): Trial information with shape (num_trials, num_features).
+            Typically includes trial conditions, behavioral variables, etc.
+
+    Returns:
+        numpy.ndarray: Noise correlation matrix with shape (num_neurons, num_neurons).
+    """
+    num_neurons, num_timesteps, num_trials = data.shape
+
+    # Compute trial-averaged activity for each neuron
+    trial_avg = data.mean(axis=1)  # Shape: (num_neurons, num_trials)
+
+    # Compute noise for each neuron on each trial
+    noise = data - trial_avg[:, np.newaxis, :]  # Shape: (num_neurons, num_timesteps, num_trials)
+
+    # Compute noise correlations
+    noise_corr = np.zeros((num_neurons, num_neurons))
+    for i in range(num_neurons):
+        for j in range(i+1, num_neurons):
+            # Compute Pearson correlation between noise traces
+            r, _ = pearsonr(noise[i, :, :].ravel(), noise[j, :, :].ravel())
+            noise_corr[i, j] = noise_corr[j, i] = r
+
+    return noise_corr
 
 # # Example usage
-# if __name__ == "__main__":
-#     # Example data
-#     velocity = np.random.rand(1000) * 2  # Random velocities between 0 and 2
-#     thres = 0.5  # Threshold velocity
-#     Fs = 10  # Minimum number of frames to be considered stopped
-#     ftol = 10  # Frame tolerance
+# # Load your calcium imaging data and trial information
+# data = ...  # Shape: (num_neurons, num_timesteps, num_trials)
+# trial_info = ...  # Shape: (num_trials, num_features)
 
-#     moving_middle, stop = get_moving_time_V3(velocity, thres, Fs, ftol)
-#     print("Moving:", moving_middle)
-#     print("Stop:", stop)
+# # Calculate noise correlations
+# noise_corr = calculate_noise_correlations(data, trial_info)

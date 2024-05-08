@@ -27,8 +27,13 @@ for allplanes=1:size(planefolders,2)
         %         end
         chone_temp = double(TIFFStack(myfilename));
 
-        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+        crop_points1=[41-35 169-110 594 403]; %%% Direct .sbx crop
+        % zd made the dimensions compatible with previous cropping
+        % after cropping etl pre motion correction
+        % and new opto cropping params
         %         crop_points1=[1 169 619 512]; %%% Direct .sbx crop
+        % note that zahra crops off etl before motion correction (110
+        % pixels)
 
         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
         eval(['x2=crop_points' num2str(1) '(3)']);
