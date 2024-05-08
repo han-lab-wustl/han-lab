@@ -1,0 +1,167 @@
+clear all
+%close all
+pr_dir=uipickfiles; 
+days_check=1:length(pr_dir);
+planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
+timewindow = 10; %s peri window
+ for days=days_check
+     dir_s2p = struct2cell(dir([pr_dir{days} '\**\suite2p']));
+    planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
+     days
+for allplanes=1:size(planefolders,2) %1:4
+        clearvars -except mouse_id pr_dir days_check days dir_s2p planefolders allplanes planecolors timewindow
+       
+        pr_dir2=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
+ 
+        %%% grab 1st file/initial 3000 frames
+        cd(pr_dir2)
+        
+        load('params')
+        dFF = params.roibasemean3{1};
+        dFF_base_mean=mean(dFF);
+        dFF = dFF/dFF_base_mean;
+        find_figure(['Raw Data Day ' num2str(days)])
+        plot(timedFF,(dFF-min(dFF))/range(dFF)+allplanes-1,'Color',planecolors{allplanes})
+        hold on
+        xlims = xlim;
+        plot([0.9*xlims(2) 0.9*xlims(2)],[allplanes-(0.01/range(dFF) allplanes],'k-','LineWidth',1.5)
+
+        abfstims = bwlabel(stims>0.5);
+            for dw = 1:max(abfstims)-1
+                if utimedFF(find(abfstims==dw+1,1))-utimedFF(find(abfstims==dw,1,'last'))<0.5
+                    abfstims(find(abfstims==dw,1):find(abfstims==dw+1,1)) = dw+1;
+                end
+                
+            end
+         abfstims = abfstims>0.5;
+            abfrect =  consecutive_stretch(find(abfstims));
+            %hotfix for weird things
+            abfrect(cellfun(@length,abfrect)<50) = [];
+        if allplanes == size(planefolders,2)
+            plot(utimedFF,rescale(forwardvelALL,-1,0),'k-')
+            
+            ylims = ylim;
+            for r = 1:length(abfrect)
+                rectangle('Position',[utimedFF(abfrect{r}(1)) ylims(1) utimedFF(length(abfrect{r})) ylims(2)-ylims(1)],'FaceColor',[0 0.5 0.5 0.3],'EdgeColor',[00 0 0 0])
+            end
+            
+        end
+        
+        find_figure(['PeriOpto Start Day ' num2str(days)])
+        subplot(2,2,allplanes)
+        hold on
+        xs = cellfun(@(x) utimedFF(x(1)) ,abfrect,'UniformOutput',1);
+        for x = 1:length(xs)
+            currx = find(timedFF>=(xs(x)-timewindow)&timedFF<(xs(x)+timewindow));
+            yyaxis left
+            plot(timedFF(currx)-xs(x),dFF(currx),'-','Color',planecolors{allplanes})
+            ylim([0.85 1.2])
+            hold on
+            yyaxis right
+            currspeedx = find(utimedFF>=(xs(x)-timewindow)&utimedFF<(xs(x)+timewindow));
+            plot(utimedFF(currspeedx)-xs(x),forwardvelALL(currspeedx),'k-')
+            ylim([-5 200])
+            yticks([0:25:75])
+            
+        end
+        title(['Plane ' num2str(allplanes)])
+        
+        rewrect = abfrect(cellfun(@(x) sum(solenoid2ALL(x))>0,abfrect,'UniformOutput',1));
+        nonrewrect = abfrect(cellfun(@(x) sum(solenoid2ALL(x))==0,abfrect,'UniformOutput',1));
+        
+        if ~isempty(rewrect)
+         find_figure(['PeriCSopto Start Day ' num2str(days)])
+        subplot(2,4,allplanes*2-1)
+        hold on
+        xs = cellfun(@(x) utimedFF(x(find(solenoid2ALL(x),1))) ,rewrect,'UniformOutput',1);
+        nonCS = utimedFF(cellfun(@(x) x(1),consecutive_stretch(find(solenoid2ALL)),'UniformOutput',1));
+        [deleteidx] = ismember(nonCS,xs);
+        deleteidx(find(deleteidx)+1) = 1;
+        if length(deleteidx)>length(nonCS)
+            deleteidx(end) = [];
+        end
+        nonCS([deleteidx]) = [];
+        for x = 1:length(xs)
+            currx = find(timedFF>=(xs(x)-timewindow)&timedFF<(xs(x)+timewindow));
+            yyaxis left
+            plot(timedFF(currx)-xs(x),dFF(currx),'-','Color',planecolors{allplanes})
+            ylim([0.85 1.2])
+            hold on
+            yyaxis right
+            currspeedx = find(utimedFF>=(xs(x)-timewindow)&utimedFF<(xs(x)+timewindow));
+            plot(utimedFF(currspeedx)-xs(x),forwardvelALL(currspeedx),'k-')
+            ylim([-5 200])
+            yticks([0:25:75])
+            
+        end
+        title(['Peri CS Opto Plane ' num2str(allplanes)])
+        
+        subplot(2,4,allplanes*2)
+        for x = 1:length(xs)
+            randCS = randi(length(nonCS));
+            randxs = nonCS(randCS);
+            nonCS(randCS) = [];
+            currx = find(timedFF>=(randxs-timewindow)&timedFF<(randxs+timewindow));
+            yyaxis left
+            plot(timedFF(currx)-randxs,dFF(currx),'-','Color',planecolors{allplanes})
+            ylim([0.85 1.2])
+            hold on
+            yyaxis right
+            currspeedx = find(utimedFF>=(randxs-timewindow)&utimedFF<(randxs+timewindow));
+            plot(utimedFF(currspeedx)-randxs,forwardvelALL(currspeedx),'k-')
+            ylim([-5 200])
+            yticks([0:25:75])
+            
+        end
+        title(['Peri CS nonOpto Plane ' num2str(allplanes)])
+        end
+        
+        if~isempty(nonrewrect)
+            find_figure(['PeriRand Start Day ' num2str(days)])
+        subplot(2,4,allplanes*2-1)
+        hold on
+        xs = cellfun(@(x) utimedFF(x(1)) ,nonrewrect,'UniformOutput',1);
+        FakeCS = cumsum(VR.newInterval)+120-VR.time(scanstart);
+       availableidx = 1:length(FakeCS);
+       deleteidx = [];
+        for x = 1:length(xs)
+            deleteidx = [deleteidx (find(FakeCS<xs(x),1,'last'))] ;
+        end
+        availableidx(unique(deleteidx)) = [];
+         for x = 1:length(xs)
+            currx = find(timedFF>=(xs(x)-timewindow)&timedFF<(xs(x)+timewindow));
+            yyaxis left
+            plot(timedFF(currx)-xs(x),dFF(currx),'-','Color',planecolors{allplanes})
+            ylim([0.85 1.2])
+            hold on
+            yyaxis right
+            currspeedx = find(utimedFF>=(xs(x)-timewindow)&utimedFF<(xs(x)+timewindow));
+            plot(utimedFF(currspeedx)-xs(x),forwardvelALL(currspeedx),'k-')
+            ylim([-5 200])
+            yticks([0:25:75])
+            
+        end
+        title(['Peri Rand Opto Plane ' num2str(allplanes)])
+            subplot(2,4,allplanes*2)
+             for x = 1:length(xs)
+            randCS = randi(length(availableidx)-1);
+            randtemp = FakeCS(availableidx(randCS):availableidx(randCS)+1);
+            randxs = FakeCS(availableidx(randCS))+8+rand*(diff(randtemp)-16);
+            availableidx(randCS) = [];
+            currx = find(timedFF>=(randxs-timewindow)&timedFF<(randxs+timewindow));
+            yyaxis left
+            plot(timedFF(currx)-randxs,dFF(currx),'-','Color',planecolors{allplanes})
+            ylim([0.85 1.2])
+            hold on
+            yyaxis right
+            currspeedx = find(utimedFF>=(randxs-timewindow)&utimedFF<(randxs+timewindow));
+            plot(utimedFF(currspeedx)-randxs,forwardvelALL(currspeedx),'k-')
+            ylim([-5 200])
+            yticks([0:25:75])
+            
+        end
+        title(['Peri Rand nonOpto Plane ' num2str(allplanes)])
+        end
+        
+end
+ end
