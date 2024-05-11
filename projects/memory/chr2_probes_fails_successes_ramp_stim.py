@@ -24,16 +24,15 @@ plt.close('all')
 # save to pdf
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
-    f"chr2_opto_peri_analysis.pdf"))
+    f"chr2_ramp_opto_peri_analysis.pdf"))
 
 condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
 src = r"Z:\chr2_grabda"
-animals = ['e231', 'e232']
+animals = ['e232']
 # days_all = [[13],
 #         [55,56]]
 
-days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
-        [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58]]
+days_all = [np.arange(16,25)]
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
@@ -298,7 +297,6 @@ pdf.close()
 
 #%%
 # plot mean and sem of opto days vs. control days
-# on same plane
 opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
             'Opto'].values for ii,animal in enumerate(animals)])
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
@@ -306,8 +304,75 @@ day_date_dff_arr = np.array([v for k,v in day_date_dff.items()])
 day_date_dff_arr_opto = day_date_dff_arr[opto_condition]
 day_date_dff_arr_nonopto = day_date_dff_arr[~opto_condition]
 
+fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
+                        figsize=(20,15))
+for pln in range(4):
+    for daytype in range(2):
+        if daytype==0: # odd
+            trialtype = 0 # odd
+            ax = axes[pln, daytype]
+            ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
+                    color='mediumturquoise', label='LEDon')
+            ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                        np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                        alpha=0.5, color='mediumturquoise')
+            trialtype = 1 # even
+            ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
+                    color='k',label='LEDoff')
+            ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                        np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                        alpha=0.5, color='k')
+            ax.legend()
+            height = 1.025 # ylim
+            ax.add_patch(
+            patches.Rectangle(
+                xy=(0,0),  # point of origin.
+                width=50, height=height, linewidth=1,
+                color='mediumspringgreen', alpha=0.2))
+
+            ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+            ax.set_xticklabels(range(-range_val, range_val+1, 1))
+            ax.set_title(f'Plane {planelut[pln]}, 200 mA')
+            ax.set_ylim(.96, height)
+            if pln==3: ax.set_xlabel('Time from CS (s)')
+        else:
+            trialtype = 0 # odd
+            ax = axes[pln, daytype]
+            ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+                    color='cadetblue', label='odd')
+            ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                        np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                        alpha=0.5, color='cadetblue')
+            trialtype = 1 # even
+            ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+                    color='k', label='even')
+            ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                        np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                        alpha=0.5, color='k')
+            ax.add_patch(
+            patches.Rectangle(
+                xy=(0,0),  # point of origin.
+                width=50, height=height, linewidth=1,
+                color='silver', alpha=0.2))
+
+            ax.legend()
+            ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+            ax.set_xticklabels(range(-range_val, range_val+1, 1))
+            ax.set_title(f'Plane {planelut[pln]}, 0 mA')
+            ax.set_ylim(.96, height)
+            if pln==3: ax.set_xlabel('Time from CS (s)')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+fig.suptitle('ChR2 per day per + mouse averages')
+#%%
+# on same plot for vis
 fig, axes = plt.subplots(nrows = 4, ncols = 1, sharex=True,
-                        figsize=(8,15))
+                        figsize=(7,15))
 for pln in range(4):
     trialtype = 0 # odd
     ax = axes[pln]
@@ -328,13 +393,15 @@ for pln in range(4):
     height = 1.025 # ylim
     ax.add_patch(
     patches.Rectangle(
-        xy=(40,0),  # point of origin.
-        width=10, height=height, linewidth=1,
+        xy=(0,0),  # point of origin.
+        width=50, height=height, linewidth=1,
         color='mediumspringgreen', alpha=0.2))
-    ax.set_ylim(.97, height)
+
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+    ax.set_xticklabels(range(-range_val, range_val+1, 1))
+    ax.set_ylim(.96, height)
     if pln==3: ax.set_xlabel('Time from CS (s)')
-    trialtype = 0 # odd
-    ax = axes[pln]
+    trialtype = 0 # odd    
     ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
             color='cadetblue', label='odd, 0mA')
     ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -348,18 +415,17 @@ for pln in range(4):
                 np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
                 np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
                 alpha=0.5, color='peru')
-    height = 1.025 # ylim
     ax.add_patch(
     patches.Rectangle(
-        xy=(40,0),  # point of origin.
-        width=10, height=height, linewidth=1,
+        xy=(0,0),  # point of origin.
+        width=50, height=height, linewidth=1,
         color='silver', alpha=0.2))
 
     ax.legend()
     ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
     ax.set_xticklabels(range(-range_val, range_val+1, 1))
     ax.set_title(f'Plane {planelut[pln]}')
-    ax.set_ylim(.97, height)
+    ax.set_ylim(.96, height)
     if pln==3: ax.set_xlabel('Time from CS (s)')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)

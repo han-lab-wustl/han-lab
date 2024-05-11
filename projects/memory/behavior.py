@@ -1,4 +1,4 @@
-import numpy as np, pandas as pd
+import numpy as np, pandas as pd, matplotlib.pyplot as plt
 
 
 def get_lick_selectivity_post_reward(ypos, trialnum, lick, time, rewloc, rewsize):
@@ -26,7 +26,7 @@ def get_lick_selectivity_post_reward(ypos, trialnum, lick, time, rewloc, rewsize
             if total_licks>0:
                 # get 2 s later
                 # in_stim_zone = lick_t[np.where((time_t>time_start) & (time_t<(time_start+2.2)))[0]].sum()
-                in_stim_zone = lick_t[np.where((ypos_t>start_postion)&(time_t<time_start+4))[0]].sum()
+                in_stim_zone = lick_t[np.where((time_t>time_start)&(time_t<=time_start+2))[0]].sum()
                 lick_selectivity = in_stim_zone/total_licks 
             else:
                 lick_selectivity = np.nan
@@ -72,9 +72,9 @@ def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
             lick_selectivity = 1+last_quarter/total_licks 
         
         lick_selectivity_per_trial.append(lick_selectivity)
+        
     
     return lick_selectivity_per_trial
-        
         
     
 def get_behavior_tuning_curve(ybinned, beh, bins=270):
