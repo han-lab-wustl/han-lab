@@ -284,16 +284,18 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
     return os.path.join(src, animal)
 
 def compresssbx_move_to_archive(sbxsrc, dst, compress=True):       
-    with tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-3]+'tar.gz'), 'w:gz') as tar:
-        tar.add(sbxsrc) 
-        tar.add(sbxsrc[:-4]+'.mat') 
-    # test
-    # # open file 
-    file = tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-4]+'tar.gz')) 
-    
-    # extracting file 
-    file.extractall(r"C:\Users\Han\Desktop\test\open")     
-    file.close() 
+    if compress:
+        with tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-3]+'tar.gz'), 'w:gz') as tar:
+            tar.add(sbxsrc) 
+            tar.add(sbxsrc[:-4]+'.mat') 
+        os.remove(sbxsrc)
+    else:
+        # test
+        # # open file 
+        file = tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-4]+'tar.gz')) 
+        # extracting file 
+        file.extractall(r"C:\Users\Han\Desktop\test\open")     
+        file.close() 
     
 if __name__ == "__main__":
     usb = r"F:\2023-2024_ZD_VR"

@@ -15,8 +15,8 @@
 % directories
 
 clear all; close all;
-days=[16];
-src = 'Z:\chr2_grabda\e231';
+days=[59];
+src = 'Z:\chr2_grabda\e232';
 lenVid=3000;
 loadVideoTiffNoSplit_Opto(src, days, lenVid);
 

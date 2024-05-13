@@ -22,7 +22,7 @@ import matplotlib.patches as patches
 #%%
 plt.close('all')
 # save to pdf
-dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
+dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"chr2_opto_peri_analysis.pdf"))
 
@@ -32,7 +32,7 @@ animals = ['e231', 'e232']
 # days_all = [[13],
 #         [55,56]]
 
-days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58]]
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -294,7 +294,6 @@ plt.ylabel('dF/F')
 fig.tight_layout()
 fig.suptitle('e232 and e231, learning day 1 vs. 2')
 pdf.savefig(fig)
-pdf.close()
 
 #%%
 # plot mean and sem of opto days vs. control days
@@ -365,3 +364,5 @@ for pln in range(4):
     ax.spines['right'].set_visible(False)
 
 fig.suptitle('ChR2 per day per + mouse averages')
+pdf.savefig(fig)
+pdf.close()

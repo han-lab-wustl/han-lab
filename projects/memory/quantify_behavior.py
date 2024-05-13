@@ -27,7 +27,7 @@ animals = ['e231', 'e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 days_all = [[2,3,4,5,6,7,8,9,10,11,12,13,15],
         [44,45,46,47,48,49,50,51,54,55,56]]
-# days_all = [np.arange(16,26)]
+days_all = [np.arange(16,26)]
 
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 # src = r"Z:\chr2_grabda\e231"
