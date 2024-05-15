@@ -7,7 +7,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
-import matplotlib, pandas as pd, random
+import matplotlib, pandas as pd, random, scikit_posthocs as sp
 from behavior import get_performance, get_success_failure_trials, get_lick_selectivity
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -59,11 +59,12 @@ for dd,day in enumerate(conddf.days.values):
         eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)       
     lick_selectivity_trial_type.append([lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev]) 
 #%%
+plt.rc('font', size=16)          # controls default text sizes
 df = conddf[(conddf.optoep!=0) & (conddf.optoep!=1)]
 df['lick_selectivity_last5trials_targetep'] = np.array([np.nanmean(xx[0]) for xx in lick_selectivity_trial_type])[((conddf.optoep!=0) & (conddf.optoep!=1)).values]
 df['lick_selectivity_last5trials_prevep'] = np.array([np.nanmean(xx[1]) for xx in lick_selectivity_trial_type])[((conddf.optoep!=0) & (conddf.optoep!=1)).values]
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['opto'] = ['LEDon' if optoep>1 else 'LEDoff' for optoep in df.optoep.values]
+df['opto'] = ['LED on' if optoep>1 else 'LED off' for optoep in df.optoep.values]
 # df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 dfagg = df.groupby(['animals', 'opto', 'condition']).mean(numeric_only = True)
 # drop 1st row
@@ -76,12 +77,23 @@ dfagg['lick_selectivity_last5trials'] = dfagg['lick_selectivity_last5trials_targ
 dfagg = dfagg.sort_values('opto')
 
 plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto', y='lick_selectivity_last5trials', hue='condition', data=dfagg, fill=False,
+ax = sns.barplot(x='opto', y='lick_selectivity_last5trials_targetep', hue='condition', data=dfagg, fill=False,
                 errorbar='se',
                 palette={'ctrl': "slategray", 'vip': "red"})
-ax = sns.stripplot(x='opto', y='lick_selectivity_last5trials', hue='condition', data=dfagg,
+ax = sns.stripplot(x='opto', y='lick_selectivity_last5trials_targetep', hue='condition', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
                 s=8)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.get_legend().set_visible(False)
+
+
+x1 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'vip') & (dfagg.index.get_level_values('opto') == 'LEDon')), 'lick_selectivity_last5trials_targetep'].values
+x2 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'vip') & (dfagg.index.get_level_values('opto') == 'LEDoff')), 'lick_selectivity_last5trials_targetep'].values
+x3 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'ctrl') & (dfagg.index.get_level_values('opto') == 'LEDon')), 'lick_selectivity_last5trials_targetep'].values
+x4 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'ctrl') & (dfagg.index.get_level_values('opto') == 'LEDoff')), 'lick_selectivity_last5trials_targetep'].values
+labels = ['vipledon', 'vipledoff', 'ctrlledon', 'ctrlledoff']
+scipy.stats.f_oneway(x1, x2, x3, x4)
+p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
+print(p_values)
+plt.savefig(os.path.join(savedst, 'lick_selectivity_success_trials.svg'), bbox_inches='tight')

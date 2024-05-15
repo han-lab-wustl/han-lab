@@ -106,6 +106,8 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     # lick selectivity - only success
     lasttr = 5
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
+    # optional - fails
+    # mask = np.array([xx in ftrials for xx in trialnum_])
     lick_selectivity_per_trial_opto = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
                 licks_[mask], rewloc, rewsize,
                 fails_only = False)
@@ -128,6 +130,8 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
     # lick selectivity
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
+    # optional - fails
+    # mask = np.array([xx in ftrials for xx in trialnum_])
     lick_selectivity_per_trial_prev = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
                 licks_[mask], rewloc, rewsize,
                 fails_only = False)
