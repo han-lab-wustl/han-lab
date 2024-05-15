@@ -32,16 +32,20 @@ animals = ['e231', 'e232']
 # days_all = [[13],
 #         [55,56]]
 
-days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-        [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58]]
+# days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
+#         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
+days_all = [[17,18],
+        [59,60]]
+
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
 # optodays = [18, 19, 22, 23, 24]
 day_date_dff = {}
 for ii,animal in enumerate(animals):
-    days = days_all[ii]
+    days = days_all[ii]    
     for day in days: 
+        print(f'*******Animal: {animal}, Day: {day}*******\n')
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
         plndff = []

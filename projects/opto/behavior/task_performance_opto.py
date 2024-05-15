@@ -52,7 +52,7 @@ for dd,day in enumerate(conddf.days.values):
         if len(eps)<4: eptest = 2 # if no 3 epochs    
     rates_opto, rates_prev, lick_prob_opto, \
         lick_prob_prev, trials_bwn_success_opto, \
-        trials_bwn_success_prev, vel_opto, vel_prev = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
+        trials_bwn_success_prev, vel_opto, vel_prev, __, _ = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
     rewzones = get_rewzones(rewlocs, 1.5)
     
     dct['velocity'] = [vel_prev, vel_opto]

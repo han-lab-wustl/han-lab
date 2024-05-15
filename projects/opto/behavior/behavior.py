@@ -6,6 +6,44 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
+                fails_only = False):
+    """Assume Y is the position, which is a one-dimensional vector. L is the binary licking behavior, 
+    which is also a one-dimensional vector. The start position of reward 
+    zone is “reward location – ½ * reward zone size – 1”, which is a scalar, P.
+    Licking number in the last quarter is 
+    “L[np.where((Y/P < 1) & (Y/P > 0.75))[0]].sum()”. The total 
+    licking number in the pre-reward zone 
+    is “L[np.where((Y/P < 1) & (Y > 3.0))[0]].sum()”, 
+    where I remove all the dark time licking.
+    Licks in the last quarter / total pre-reward licks is what I define of licking accuracy.
+    """
+    lick_selectivity_per_trial = []
+    for trial in np.unique(trialnum):
+        ypos_t = ypos[trialnum==trial]
+        lick_t = lick[trialnum==trial]
+        start_postion = rewloc-(.5*rewsize)
+        last_quarter = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t/start_postion > 0.75))[0]].sum()
+        pre_rew_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t > 3))[0]].sum()
+        total_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t > 3))[0]].sum()
+        pre_n_rew_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t<rewloc+(.5*rewsize)+1) & (ypos_t > 3))[0]].sum()
+        in_rew_zone = lick_t[np.where((ypos_t>start_postion) & (ypos_t<(rewloc+(.5*rewsize))))[0]].sum()
+        # if fails_only==True:
+            # print(f'Pre-reward licks: {pre_rew_licks}, in reward zone licks {in_rew_zone}')
+        # lick_selectivity = last_quarter/total_licks 
+        if in_rew_zone==0 or fails_only==False:# or fails_only: # done to avoid those instances when animal seems
+            # to lick just before or at start of reward zone (according to vr)
+            lick_selectivity = last_quarter/total_licks 
+        elif pre_rew_licks>0 and in_rew_zone>0: 
+            lick_selectivity = 1+last_quarter/total_licks 
+        elif pre_rew_licks==0 and in_rew_zone>0: # if the mouse only licks in rew zone
+            lick_selectivity = 3
+        
+        lick_selectivity_per_trial.append(lick_selectivity)
+        
+    
+    return lick_selectivity_per_trial
+
 def get_behavior_tuning_curve(ybinned, beh, bins=270):
     """
     Plot a lick tuning curve given a dataframe with position and lick columns.
@@ -59,10 +97,18 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     ybinned_ = ybinned[eprng]
     forwardvel_ = forwardvel[eprng]
     rewloc = np.ceil(rewlocs[eptotest]).astype(int)
+    rewsize = 10 # temp
     success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_opto = success / total_trials
     trials_bwn_success_opto =  np.diff(np.array(strials))
+    # get lick prob
     pos_bin_opto, lick_probability_opto = get_behavior_tuning_curve(ybinned_, licks_)
+    # lick selectivity - only success
+    lasttr = 5
+    mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
+    lick_selectivity_per_trial_opto = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                licks_[mask], rewloc, rewsize,
+                fails_only = False)
     # split into pre, rew, and post
     lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize-10):int(rewloc+20)], \
                     lick_probability_opto[int(rewloc+20):]]
@@ -78,7 +124,13 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_prev = success / total_trials 
     trials_bwn_success_prev =  np.diff(np.array(strials))
+    # lick prob
     pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
+    # lick selectivity
+    mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
+    lick_selectivity_per_trial_prev = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                licks_[mask], rewloc, rewsize,
+                fails_only = False)
     # split into pre, rew, and post
     lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize-20)], 
                     lick_probability_prev[int(rewloc-rewsize-20):int(rewloc+20)], \
@@ -87,7 +139,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     vel_prev = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc])
     return rate_opto, rate_prev, lick_prob_opto, \
     lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev, \
-    vel_opto, vel_prev
+    vel_opto, vel_prev, lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev
 
 
 def get_success_failure_trials(trialnum, reward):

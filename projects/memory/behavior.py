@@ -62,14 +62,20 @@ def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
         lick_t = lick[trialnum==trial]
         start_postion = rewloc-(.5*rewsize)
         last_quarter = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t/start_postion > 0.75))[0]].sum()
+        pre_rew_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t > 3))[0]].sum()
         total_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t > 3))[0]].sum()
+        pre_n_rew_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t<rewloc+(.5*rewsize)+1) & (ypos_t > 3))[0]].sum()
         in_rew_zone = lick_t[np.where((ypos_t>start_postion) & (ypos_t<(rewloc+(.5*rewsize))))[0]].sum()
+        # if fails_only==True:
+            # print(f'Pre-reward licks: {pre_rew_licks}, in reward zone licks {in_rew_zone}')
         # lick_selectivity = last_quarter/total_licks 
-        if in_rew_zone==0 or fails_only: # done to avoid those instances when animal seems
+        if in_rew_zone==0 or fails_only==False:# or fails_only: # done to avoid those instances when animal seems
             # to lick just before or at start of reward zone (according to vr)
             lick_selectivity = last_quarter/total_licks 
-        elif in_rew_zone>0: 
+        elif pre_rew_licks>0 and in_rew_zone>0: 
             lick_selectivity = 1+last_quarter/total_licks 
+        elif pre_rew_licks==0 and in_rew_zone>0: # if the mouse only licks in rew zone
+            lick_selectivity = 3
         
         lick_selectivity_per_trial.append(lick_selectivity)
         
