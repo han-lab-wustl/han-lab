@@ -16,7 +16,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from behavior import get_success_failure_trials, get_performance, get_rewzones
 
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_track_only.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
@@ -52,7 +52,7 @@ for dd,day in enumerate(conddf.days.values):
         if len(eps)<4: eptest = 2 # if no 3 epochs    
     rates_opto, rates_prev, lick_prob_opto, \
         lick_prob_prev, trials_bwn_success_opto, \
-        trials_bwn_success_prev, vel_opto, vel_prev = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
+        trials_bwn_success_prev, vel_opto, vel_prev, __, _ = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
     rewzones = get_rewzones(rewlocs, 1.5)
     
     dct['velocity'] = [vel_prev, vel_opto]
@@ -100,7 +100,8 @@ ax = sns.barplot(x="vip_ctrl_type", y="rates_diff",hue='opto', data=bigdf_plot,
                 palette={False: "slategray", True: "red"},                
                 errorbar='se', fill=False)
 sns.stripplot(x="vip_ctrl_type", y="rates_diff",hue='opto', data=bigdf_plot,
-                palette={False: "slategray", True: "red"})
+                palette={False: "slategray", True: "red"},
+                s=7)
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
@@ -284,7 +285,7 @@ ax = sns.barplot(x="vip_ctrl_type", y="lick_probability_difference",hue='vip_ctr
     errorbar='se', fill=False)
 ax = sns.stripplot(x="vip_ctrl_type", y="lick_probability_difference",hue='vip_ctrl_type', data=bigdf_plot,
     palette={'ctrl_ledoff': "gray", 'ctrl_ledon': "lightcoral", 'vip_ledoff': "slategray", 'vip_ledon': "red"},
-    )
+    s=9)
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
@@ -376,7 +377,7 @@ ax = sns.barplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in
     errorbar='se', fill=False)
 ax = sns.stripplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type',data=bigdf_plot,
                 palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
-            'vip_ledoff': "slategray"})
+            'vip_ledoff': "slategray"},s=8)
 ax.tick_params(axis='x', labelrotation=90)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)
@@ -398,7 +399,7 @@ ax = sns.barplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_t
     errorbar='se', fill=False)
 ax = sns.stripplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type',data=bigdf_plot,
                 palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
-            'vip_ledoff': "slategray"})
+            'vip_ledoff': "slategray"},s=8)
 ax.tick_params(axis='x', labelrotation=90)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)

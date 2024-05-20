@@ -5,8 +5,9 @@ Created on Fri Feb 24 16:06:02 2023
 @author: Han
 """
 
-import os, sys, shutil, tifffile, numpy as np, pandas as pd, re
+import os, sys, shutil, tifffile, numpy as np, pandas as pd, re, tarfile
 from datetime import datetime
+from pathlib import Path
 
 def makedir(dr):
     if not os.path.exists(dr): os.mkdir(dr)
@@ -192,7 +193,7 @@ def deletebinaries(src,fls=False,keyword='data.bin'):
             os.remove(path)
     return 
 
-def deleteregtif(src,fls=False,keyword='reg_tif'):
+def deleteregtif(src,fls=[],keyword='reg_tif'):
     """deletes reg_tif folder en masse
     useful after you've checked for motion correction
 
@@ -201,11 +202,12 @@ def deleteregtif(src,fls=False,keyword='reg_tif'):
         keyword (str, optional): folder name. Defaults to 'reg_tif'.
     """
     #src = 'Z:\sstcre_imaging\e201'
-    if not fls:
+    if len(fls)==0:
         fls = listdir(src)
-    for fl in fls:
-        from pathlib import Path
-        for path in Path(src).rglob(keyword):
+    else:
+        fls = [os.path.join(src,str(fl)) for fl in fls]
+    for fl in fls:        
+        for path in Path(fl).rglob(keyword):
             # deletes reg_tif directory and all its contents
             print(f"\n*** deleting {path}***")
             shutil.rmtree(path)
@@ -281,6 +283,20 @@ def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
 
     return os.path.join(src, animal)
 
+def compresssbx_move_to_archive(sbxsrc, dst, compress=True):       
+    if compress:
+        with tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-3]+'tar.gz'), 'w:gz') as tar:
+            tar.add(sbxsrc) 
+            tar.add(sbxsrc[:-4]+'.mat') 
+        os.remove(sbxsrc)
+    else:
+        # test
+        # # open file 
+        file = tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-4]+'tar.gz')) 
+        # extracting file 
+        file.extractall(r"C:\Users\Han\Desktop\test\open")     
+        file.close() 
+    
 if __name__ == "__main__":
     usb = r"F:\2023-2024_ZD_VR"
     drives = [r'Z:\chr2_grabda', r'X:\vipcre', r'Z:\chr2_grabda']

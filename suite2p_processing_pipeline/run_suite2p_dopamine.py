@@ -43,7 +43,7 @@ def main(**args):
                 if params["crop_opto"]:
                     imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
                 else:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718, dtype='axonal')            
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718, dtype='dopamine')            
                 print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -101,7 +101,7 @@ def main(**args):
                     if params["crop_opto"]:
                         imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
                     else:
-                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718,dtype='axonal')            
+                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718,dtype='dopamine')            
                     print(imagingflnm)
 
             #do suite2p after tifs are made
@@ -110,9 +110,7 @@ def main(**args):
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
             ops = preprocessing.fillops(ops, params)
-            # temp
-            ops["threshold_scaling"]=1 #TODO: make modular
-            ops["max_iterations"]=30
+            ops["roidetect"]=0      
             # test for e216
             # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
@@ -131,7 +129,7 @@ def main(**args):
             # run one experiment
             opsEnd = suite2p.run_s2p(ops=ops, db=db)
             # fix reg tif order -_- TODO: make into function
-            for npln in ops['nplanes']:
+            for npln in range(ops['nplanes']):
                 pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
                 fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
                 order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])
