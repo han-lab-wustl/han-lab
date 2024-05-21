@@ -483,7 +483,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
         with open(dst, "wb") as fp:   #Pickling
             pickle.dump(vralign, fp)
         print(f"\n ********* saved to {dst} *********")
-    else:
+    else:        
         # modified VRstartendsplit
         dst = os.path.join(savedst, os.path.basename(vrfl)[:16]+'_vr_dlc_align.p')
         dlcdf = pd.read_csv(dlccsv)
@@ -523,7 +523,7 @@ def VRalign(vrfl, dlccsv, savedst, only_add_experiment=False,mrzt=False):
             uscanstop  = plt.ginput(1)
             uscanstop = int(round(uscanstop[0][0]))
             print(f'Length of scan is {uscanstop - uscanstart}')
-            print(f'Time of scan is {(VR["time"][:][uscanstop] - VR["time"][:][uscanstart])/60} minutes')
+            print(f'Time of scan is {np.round((VR["time"][:][uscanstop] - VR["time"][:][uscanstart])/60,2)} minutes')
 
             plt.close('all')
             scanstart = uscanstart

@@ -99,6 +99,9 @@ def get_peri_signal_of_fail_trial_types(ftr_trials, trialnum, eps, i, rewlocs, y
     rews_centered = np.zeros_like(failed_trialnum)
     rews_centered[min_iind]=1
     rewards_ep = rews_centered[ypos[failtr_bool]>2]
+    # remove rew at the edge
+    ind_del = np.where(rewards_ep)[0][np.where(rewards_ep)[0]>len(rewards_ep)-1000]
+    for ind in ind_del: rewards_ep[ind]=0 
     # fake time var
     time_ep = np.arange(0,rewards_ep.shape[0]/fs,1/fs)
     # licks_threshold_ep = licks_threshold[eps[i]:eps[i+1]][failtr_bool]
