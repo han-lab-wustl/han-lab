@@ -90,10 +90,13 @@ def get_peri_signal_of_fail_trial_types(ftr_trials, trialnum, eps, i, rewlocs, y
     takes input of success and fail trials (can be different fail trial types)
     excludes dark time
     """
+    #mask of trials
     failtr_bool = np.array([any(yy.astype(int)==xx for yy in ftr_trials) for xx in trialnum[eps[i]:eps[i+1]]])
     failed_trialnum = trialnum[eps[i]:eps[i+1]][failtr_bool]
+    # center by reward
     rews_centered = np.zeros_like(failed_trialnum)            
     rews_centered[(ypos[failtr_bool] >= rewlocs[i]-5) & (ypos[failtr_bool] <= rewlocs[i])]=1
+    # fix instance where multiple ypos meet criteria
     rews_iind = eye.consecutive_stretch(np.where(rews_centered)[0])
     min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
     rews_centered = np.zeros_like(failed_trialnum)
