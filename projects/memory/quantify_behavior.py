@@ -20,15 +20,17 @@ plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
 # save to pdf
-condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
+condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
 src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
 # animals = ['e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 days_all = [[2,3,4,5,6,7,8,9,10,11,12,13,15,16],
         [44,45,46,47,48,49,50,51,54,55,56,57]]
+days_all = [[17,18,19,20,21,23,24,25,26,27],
+        [59,60,61,62,63,65,66,67,68,69]]
 # days_all = [np.arange(16,26)]
-
+dark_time = True
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
 near_reward_per_day = []
@@ -41,8 +43,10 @@ for ii,animal in enumerate(animals):
     for day in days: 
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
-        optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_day'].values[0])
-        optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
+        # optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_day'].values[0])
+        optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_memory_day'].values[0])
+        # optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
+        optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_stim_ctrl'].values[0])
         # for each plane
         path=list(Path(os.path.join(src, animal, str(day))).rglob('params.mat'))[0]
         params = scipy.io.loadmat(path)
@@ -163,23 +167,24 @@ df['licks_selectivity_last8trials'] = [np.nanmean(xx[11]) for xx in near_reward_
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
 dfagg = df#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 # drop 1st row
-# performance on opto days
-plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto', y='success_rate', hue='opto', data=df, fill=False,
-                errorbar='se',
-                palette={False: "slategray", True: "mediumturquoise"})
-ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
-                palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
 
 # performance on opto days
-plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df, fill=False,
-                errorbar='se',
-                palette={False: "slategray", True: "mediumturquoise"})
-ax = sns.stripplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df,
-                palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
+# plt.figure(figsize=(3,6))
+# ax = sns.barplot(x='opto', y='success_rate', hue='opto', data=df, fill=False,
+#                 errorbar='se',
+#                 palette={False: "slategray", True: "mediumturquoise"})
+# ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
+#                 palette={False: "slategray", True: "mediumturquoise"},
+#                 s=8)
+
+# # performance on opto days
+# plt.figure(figsize=(3,6))
+# ax = sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df, fill=False,
+#                 errorbar='se',
+#                 palette={False: "slategray", True: "mediumturquoise"})
+# ax = sns.stripplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df,
+#                 palette={False: "slategray", True: "mediumturquoise"},
+#                 s=8)
 
 # memory performance the next day
 # plt.figure(figsize=(3,6))
@@ -198,6 +203,8 @@ ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean'
                 hue='opto_day_before', data=dfagg,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=8)
+ax.get_legend().set_visible(False)
+
 # plt.figure(figsize=(3,6))
 # ax = sns.barplot(x='opto_day_before', y='com_lick_probe', hue='opto_day_before', data=df, fill=False,
 #                 errorbar='se',
@@ -206,32 +213,32 @@ ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean'
 #                 palette={False: "slategray", True: "mediumturquoise"},
 #                 s=8)
 dfagg = df#.groupby(['animal', 'opto']).mean(numeric_only = True)
-# odd trials (led on vs. off days)
-plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto', y='vel_failed_odd', hue='opto', data=dfagg, fill=False,
-                errorbar='se',
-                palette={False: "slategray", True: "mediumturquoise"})
-ax = sns.stripplot(x='opto', y='vel_failed_odd', hue='opto', data=dfagg,
-                palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
-# too many nans for this
-# plt.figure(figsize=(3,6)) 
+# # odd trials (led on vs. off days)
+# plt.figure(figsize=(3,6))
+# ax = sns.barplot(x='opto', y='vel_failed_odd', hue='opto', data=dfagg, fill=False,
+#                 errorbar='se',
+#                 palette={False: "slategray", True: "mediumturquoise"})
+# ax = sns.stripplot(x='opto', y='vel_failed_odd', hue='opto', data=dfagg,
+#                 palette={False: "slategray", True: "mediumturquoise"},
+#                 s=8)
+# # too many nans for this
+# # plt.figure(figsize=(3,6)) 
 # ax = sns.barplot(x='opto', y='lick_selectivity_failed_odd', hue='opto', data=df, fill=False,
 #                 errorbar='se',
 #                 palette={False: "slategray", True: "mediumturquoise"})
 # ax = sns.stripplot(x='opto', y='lick_selectivity_failed_odd', hue='opto', data=df,
 #                 palette={False: "slategray", True: "mediumturquoise"},
 #                 s=8)
-plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto', y='lick_selectivity_during_stim_odd', hue='opto', 
-                data=dfagg, fill=False,
-                errorbar='se',
-                palette={False: "slategray", True: "mediumturquoise"})
-ax = sns.stripplot(x='opto', y='lick_selectivity_during_stim_odd',
-                hue='opto', data=dfagg,
-                palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
-ax.get_legend().set_visible(False)
+# plt.figure(figsize=(3,6))
+# ax = sns.barplot(x='opto', y='lick_selectivity_during_stim_odd', hue='opto', 
+#                 data=dfagg, fill=False,
+#                 errorbar='se',
+#                 palette={False: "slategray", True: "mediumturquoise"})
+# ax = sns.stripplot(x='opto', y='lick_selectivity_during_stim_odd',
+#                 hue='opto', data=dfagg,
+#                 palette={False: "slategray", True: "mediumturquoise"},
+#                 s=8)
+# ax.get_legend().set_visible(False)
 
 # plt.figure(figsize=(3,6))
 # ax = sns.barplot(x='opto', y='com_lick_odd', hue='opto', data=dfagg, fill=False,

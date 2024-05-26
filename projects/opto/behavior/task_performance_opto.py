@@ -16,7 +16,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from behavior import get_success_failure_trials, get_performance, get_rewzones
 
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_track_only.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
@@ -158,7 +158,7 @@ ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.get_legend().set_visible(False)
-plt.savefig(os.path.join(savedst, 'rewzone_transition.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'rewzone_transition.svg'), bbox_inches='tight')
 
 # controls
 bigdf_plot = bigdf[~bigdf.in_type.str.contains('vip') & ~bigdf.in_type.str.contains('ctrl')]
@@ -391,6 +391,7 @@ ax.spines['right'].set_visible(False)
 # import scikit_posthocs as sp
 # p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
 # print(p_values)
+plt.savefig(os.path.join(savedst, 'trails_before_success_start_diff.svg'), bbox_inches='tight', dpi=500)
 
 fig, axes = plt.subplots(figsize=(4,6))
 ax = sns.barplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type', data=bigdf_plot,
@@ -414,7 +415,7 @@ import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
 print(p_values)
 
-# plt.savefig(os.path.join(savedst, 'trails_before_success_start_diff.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'trails_before_success_med_start_diff.svg'), bbox_inches='tight', dpi=500)
 
 #%%
 # by rew zone

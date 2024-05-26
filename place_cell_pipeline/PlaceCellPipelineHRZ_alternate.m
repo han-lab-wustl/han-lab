@@ -11,10 +11,12 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-anms = ["e218", "e216", "e217", "e201", "e200", "e189", "e190", "e186"];
-dys_per_an = {[20:50], [7:10, 32,33,35:63,65],  [2:20, 26,27,29,31], [27:30, 32,33,34,36,38,40:75], ...
-    [62:70, 72,73,74, 76, 80:90], [7,8,10,11:15,17:21,24:42,44:46], [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45], ...
-    [1:51]};
+% anms = ["e218", "e216", "e217", "e201", "e200", "e189", "e190", "e186"];
+% dys_per_an = {[20:50], [7:10, 32,33,35:63,65],  [2:20, 26,27,29,31], [27:30, 32,33,34,36,38,40:75], ...
+%     [62:70, 72,73,74, 76, 80:90], [7,8,10,11:15,17:21,24:42,44:46], [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45], ...
+%     [1:51]};
+anms = ["e217"];
+dys_per_an = {[29,31,32,34,39,43,47]};
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218
@@ -148,7 +150,7 @@ for dy=dys % for loop per day
     % also append fall with tables    
     save(fullfile(pth.folder,pth.name), 'tuning_curves_pc_late_trials', ...
         'tuning_curves_pc_early_trials', 'coms_pc_late_trials', ...
-        'coms_pc_early_trials', 'pc_tc_s2p_cellind', '-append')
+        'coms_pc_early_trials', 'pc_tc_s2p_cellind', 'pyr_tc_s2p_cellind', '-append')
 end
 end
 % save ppt

@@ -24,13 +24,18 @@ plt.close('all')
 # save to pdf
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
-    f"chr2_opto_peri_analysis.pdf"))
+    f"chr2_darktime_opto_peri_analysis.pdf"))
 
-condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
+condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
 src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
-days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
-        [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
+# days_all = [[13],
+#         [55,56]]
+
+# days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
+#         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
+days_all = [[17,18,19,20,21,22,23,24,25],
+        [59,60,61,62,63,64,65,66,67,68,69]]
 
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -44,7 +49,7 @@ for ii,animal in enumerate(animals):
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
         plndff = []
-        optoday = (condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
+        optoday = (condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_stim_ctrl'].values[0])
         optoday = optoday==1
         # for each plane
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
@@ -86,13 +91,6 @@ for ii,animal in enumerate(animals):
             ybinned = np.hstack(params['ybinned'])/gainf
             licks = np.hstack(params['licks'])
             timedFF = np.hstack(params['timedFF'])
-            # mask out dark time
-            dff = dff[ybinned>3]
-            rewards = rewards[ybinned>3]
-            trialnum = trialnum[ybinned>3]
-            licks = licks[ybinned>3]
-            timedFF = timedFF[ybinned>3]
-            ybinned = ybinned[ybinned>3]
             # plot pre-first reward dop activity    
             firstrew = np.where(rewards==1)[0][0]
             rews_centered = np.zeros_like(ybinned[:firstrew])
@@ -265,7 +263,7 @@ for k,v in day_date_dff.items():
     day = int(k)
     learning_day = condrewloc.loc[condrewloc.Day==day, 'learning_date'].values[0]-1    
     if learning_day<2:
-        optoday = (condrewloc.loc[(condrewloc.Day==day), 'Opto'].values[0])
+        optoday = (condrewloc.loc[(condrewloc.Day==day), 'Dark_time_stim_ctrl'].values[0])
         optoday = optoday==1
         if optoday:
             colorl = 'mediumturquoise'
@@ -288,12 +286,18 @@ for k,v in day_date_dff.items():
             ax.set_title(planelut[pln])
             ax.axvline(range_val/binsize, color='slategray', linestyle='--')    
             height = 1.04 # ylim
+            ymin = .96
+            ax.set_ylim(ymin, height)
             ax.add_patch(
             patches.Rectangle(
-                xy=(40,0),  # point of origin.
-                width=10, height=height, linewidth=1,
-                color='mediumspringgreen', alpha=0.01))
-            ax.set_ylim(.96, height)                
+                xy=(0,ymin),  # point of origin.
+                width=10, height=height-ymin, linewidth=1,
+                color='mediumspringgreen', alpha=0.03))
+            ax.add_patch(
+            patches.Rectangle(
+                xy=(70,ymin),  # point of origin.
+                width=10, height=height-ymin, linewidth=1,
+                color='mediumspringgreen', alpha=0.03))                
                 
 plt.xlabel('Time from CS (s)')
 plt.ylabel('dF/F')
@@ -305,7 +309,9 @@ pdf.savefig(fig)
 # plot mean and sem of opto days vs. control days
 # on same plane
 opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
-            'Opto'].values for ii,animal in enumerate(animals)])
+            'Dark_time_stim_ctrl'].values for ii,animal in enumerate(animals)])
+learning_days  = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
+            'learning_date'].values for ii,animal in enumerate(animals)])
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
 day_date_dff_arr = np.array([v for k,v in day_date_dff.items()])
 day_date_dff_arr_opto = day_date_dff_arr[opto_condition]
@@ -315,60 +321,62 @@ fig, axes = plt.subplots(nrows = 4, ncols = 1, sharex=True,
                         figsize=(8,15))
 for pln in range(4):
     trialtype = 0 # odd
-    ax = axes[pln]
-    ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
-            color='mediumturquoise', label='LEDon')
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-                np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
-                np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
-                alpha=0.5, color='mediumturquoise')
-    trialtype = 1 # even
-    ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
-            color='k',label='LEDoff')
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-                np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
-                np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
-                alpha=0.5, color='k')
-    ax.legend()
-    height = 1.025 # ylim
-    ax.add_patch(
-    patches.Rectangle(
-        xy=(40,0),  # point of origin.
-        width=10, height=height, linewidth=1,
-        color='mediumspringgreen', alpha=0.2))
-    ax.set_ylim(.97, height)
-    if pln==3: ax.set_xlabel('Time from CS (s)')
-    trialtype = 0 # odd
-    ax = axes[pln]
-    ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
-            color='cadetblue', label='odd, 0mA')
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-                np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
-                np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
-                alpha=0.5, color='cadetblue')
-    trialtype = 1 # even
-    ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
-            color='peru', label='even, 0mA')
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-                np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
-                np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
-                alpha=0.5, color='peru')
-    height = 1.025 # ylim
-    ax.add_patch(
-    patches.Rectangle(
-        xy=(40,0),  # point of origin.
-        width=10, height=height, linewidth=1,
-        color='silver', alpha=0.2))
+    learning_day = condrewloc.loc[condrewloc.Day==day, 'learning_date'].values[0]-1 
+    if learning_day<2:
+        ax = axes[pln]
+        ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
+                color='mediumturquoise', label='LEDon')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                    np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                    alpha=0.5, color='mediumturquoise')
+        trialtype = 1 # even
+        ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
+                color='k',label='LEDoff')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                    np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                    alpha=0.5, color='k')    
+        height = 1.025 # ylim
+        ax.set_ylim(.97, height)
 
-    ax.legend()
-    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-    ax.set_xticklabels(range(-range_val, range_val+1, 1))
-    ax.set_title(f'Plane {planelut[pln]}')
-    ax.set_ylim(.97, height)
-    if pln==3: ax.set_xlabel('Time from CS (s)')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+        if pln==3: ax.set_xlabel('Time from CS (s)'); ax.legend()
+        trialtype = 0 # odd
+        ax = axes[pln]
+        ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+                color='cadetblue', label='odd, 0mA')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                    np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                    alpha=0.5, color='cadetblue')
+        trialtype = 1 # even
+        ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+                color='peru', label='even, 0mA')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+                    np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+                    alpha=0.5, color='peru')
+        height = 1.025 # ylim
+        ax.add_patch(
+        patches.Rectangle(
+            xy=(0,0),  # point of origin.
+            width=10, height=height, linewidth=1,
+            color='cyan', alpha=0.2))
+        ax.add_patch(
+        patches.Rectangle(
+            xy=(70,0),  # point of origin.
+            width=10, height=height, linewidth=1,
+            color='cyan', alpha=0.2))
 
-fig.suptitle('ChR2 per day per + mouse averages')
+        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+        ax.set_xticklabels(range(-range_val, range_val+1, 1))
+        ax.set_title(f'Plane {planelut[pln]}')
+        ax.set_ylim(.97, height)
+        if pln==3: ax.set_xlabel('Time from CS (s)'); ax.legend()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+fig.suptitle('ChR2 per day per + mouse averages for dark time stim')
 pdf.savefig(fig)
 pdf.close()
+

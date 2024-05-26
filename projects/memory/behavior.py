@@ -75,7 +75,7 @@ def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
         elif pre_rew_licks>0 and in_rew_zone>0: 
             lick_selectivity = 1+last_quarter/total_licks 
         elif pre_rew_licks==0 and in_rew_zone>0: # if the mouse only licks in rew zone
-            lick_selectivity = 3
+            lick_selectivity = 2
         
         lick_selectivity_per_trial.append(lick_selectivity)
         
