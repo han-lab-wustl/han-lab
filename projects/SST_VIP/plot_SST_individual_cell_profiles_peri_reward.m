@@ -1,8 +1,8 @@
 % zahra adaptation of gm's code
 % sst individual cell profiles
 clear all; close all
-an = 'e136';
-dy = 6;
+an = 'e135';
+dy = 3;
 load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln0 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane0_Fall.mat", an, dy)));
 pln1 = load(fullfile("Y:\analysis\fmats", sprintf("%s", an), sprintf("%s_day%03d_plane1_Fall.mat", an, dy)));
@@ -70,8 +70,6 @@ for plane=1:planes
 
     sgtitle(sprintf('All successful trials, plane %i', plane))
     pptx.addPicture(fig);
-    export_fig(fullfile(savedst, sprintf('%s_successful_trials_cell_profiles_peri_reward_plane%i', an, plane)), '-svg')
-    close(fig)
 end
 % save ppt
 fl = pptx.save(fullfile(savedst,sprintf('%s_successful_trial_cell_profiles_day%i',an,dy)));

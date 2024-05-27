@@ -21,8 +21,6 @@ if ~isempty(break_point)
     end
     y{length(break_point)+1} = x(break_point(length(break_point))+1 : length(x));
     
-    
-    
 end
 
 
