@@ -9,7 +9,8 @@ from sklearn.cluster import KMeans
 import seaborn as sns
 import placecell
 from placecell import get_rewzones, find_differentially_activated_cells, \
-find_differentially_inactivated_cells, convert_com_to_radians, get_pyr_metrics_opto
+find_differentially_inactivated_cells, convert_com_to_radians, get_pyr_metrics_opto, \
+get_dff_opto
 import matplotlib.backends.backend_pdf
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -26,19 +27,48 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
-    threshold = 7
+    threshold = 5
     pc = False
     dct = get_pyr_metrics_opto(conddf, dd, day, 
                 threshold=threshold, pc=pc)
     dcts.append(dct)
 # save pickle of dcts
-with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
-    pickle.dump(dcts, fp)   
+# with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
+#     pickle.dump(dcts, fp)   
 #%%
 # open previously saved dcts
-with open("Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
+with open(r"Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
         dcts = pickle.load(fp)
 
+#%%
+# dff for opto vs. control
+dffs = []
+for dd,day in enumerate(conddf.days.values):
+    dff_opto, dff_prev = get_dff_opto(conddf, dd, day)
+    dffs.append([dff_opto, dff_prev])
+    
+#%%
+# plot
+conddf['dff_target'] = np.array(dffs)[:,0]
+conddf['dff_prev'] = np.array(dffs)[:,1]
+conddf['dff_target-prev'] = conddf['dff_target']-conddf['dff_prev']
+conddf['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in conddf.in_type.values]
+df = conddf
+df=df.groupby(['animals', 'condition']).mean(numeric_only=True)
+fig,ax = plt.subplots(figsize=(2.5,6))
+ax = sns.barplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
+                palette={'Control': "slategray", 'VIP': "red"},
+                errorbar='se', fill=False)
+ax = sns.stripplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
+                palette={'Control': "slategray", 'VIP': "red"},
+                s=10)
+ax.spines[['top','right']].set_visible(False)
+
+t,pval = scipy.stats.ranksums(df[(df.index.get_level_values('condition')=='VIP')]['dff_target-prev'].values, \
+            df[(df.index.get_level_values('condition')=='Control')]['dff_target-prev'].values)
+# plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
+#%%
 # plot fraction of cells near reward
 optoep = conddf.optoep.values; animals = conddf.animals.values; in_type = conddf.in_type.values
 dcts_opto = np.array(dcts)[optoep>1]
@@ -72,18 +102,18 @@ ax = sns.barplot(x="opto", y="frac_pc", hue = 'vip_ctrl', data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se', fill=False)
 ax = sns.stripplot(x="opto", y="frac_pc", hue = 'vip_ctrl', data=bigdf,
-                palette={'ctrl': "slategray", 'vip': "red"})
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
+                palette={'ctrl': "slategray", 'vip': "red"},
+                s=8)
+ax.spines[['top', 'right']].set_visible(False)
 ax.get_legend().set_visible(False)
 
 bigdf = bigdf[bigdf.index.get_level_values('in_type') == in_type_cond]
-scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, \
+t,pval = scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, \
             bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
-plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
 
 # scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True)].frac_pc.values, bigdf[(bigdf.index.get_level_values('opto')==False)].frac_pc.values)
-# %%
+#%%
 # average enrichment
 # not as robust effect with 3 mice
 dcts_opto = np.array(dcts)[optoep>1]
@@ -131,7 +161,7 @@ sns.stripplot(x="condition", y="tuning_curve_difference_LEDon-off",hue='conditio
 plt.title(f"p-value = {pval:03f}")
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-plt.savefig(os.path.join(savedst, 'tuning_curve_enrichment.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'tuning_curve_enrichment.svg'), bbox_inches='tight')
 #%%
 # com shift
 # control vs. vip led on
@@ -239,14 +269,16 @@ bigdf_org.reset_index(drop=True, inplace=True)
 bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
 bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True)
 
-fig, ax = plt.subplots(figsize=(3,6))
+fig, ax = plt.subplots(figsize=(2.5,6))
 ratio = (bigdf.loc[bigdf.index.get_level_values('opto')==True, 'inactive_frac'].values)-(bigdf.loc[bigdf.index.get_level_values('opto')==False, 'inactive_frac'].values)
 conditions = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('vip_cond'))
 animals = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('animal'))
 df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['inactivated_cells_proportion_LEDon-off', 'condition', 'animal'])
-ax = sns.barplot(x="condition", y="inactivated_cells_proportion_LEDon-off", hue='condition',data=df,fill=False,
+ax = sns.barplot(x="condition", y="inactivated_cells_proportion_LEDon-off", 
+                hue='condition',data=df,fill=False,
                 palette={'ctrl': "slategray", 'vip': "red"})
-ax = sns.stripplot(x="condition", y="inactivated_cells_proportion_LEDon-off", hue='condition', s=7,data=df,
+ax = sns.stripplot(x="condition", y="inactivated_cells_proportion_LEDon-off", 
+                hue='condition', s=10,data=df,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
@@ -372,6 +404,7 @@ for dd,day in enumerate(conddf.days.values):
             tc1 = arr[np.argsort(dct['coms1'][dct['inactive']])]
             fig, ax1 = plt.subplots()            
             if other_ep>comp[1]:
+                # fig, ax1 = plt.subplots() 
                 ax1.imshow(np.concatenate([tc1,tc2,tc3]),cmap = 'jet')
                 ax1.axvline(dct['rewlocs_comp'][0]/bin_size, color='w', linestyle='--')
                 ax1.axvline(dct['rewlocs_comp'][1]/bin_size, color='w')

@@ -104,17 +104,18 @@ def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
     elif dtype == 'pyramidal':
         frames=45000
         nplanes=1
+    else: nplanes=2 #temp: TODO: make modular
     split = int(zplns/nplanes) # 3000 planes as normal
     if len(tifs)<ceil(frames/zplns): # if no tifs exists 
         #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16        
         for nn,i in enumerate(range(0, dat.shape[0], split)): #splits into tiffs of 3000 planes each
             stack = np.array(dat[i:i+split,:,:,:])
             #crop in x
-            if dtype == 'dopamine': 
+            if nplanes>1:
                 stack=np.squeeze(stack)[:,:,y1:y2,x1:x2] #170:500,105:750] # crop based on etl artifacts                
-                # reshape so planes are one after another
+                    # reshape so planes are one after another
                 stack = np.reshape(stack, (stack.shape[0]*stack.shape[1], stack.shape[2], stack.shape[3]))
-            elif dtype == 'pyramidal': 
+            else: 
                 stack=np.squeeze(stack)[:,y1:y2,x1:x2]            
             tifffile.imwrite(sbxfl[:-4]+f'_{nn+1:03d}.tif', stack)
         print("\n ******Tifs made!******\n")    

@@ -2,14 +2,12 @@ import numpy as np, math, scipy
 from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc
-
+from scipy.stats import pearsonr
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
-import numpy as np
 from scipy.signal import gaussian
 
-import numpy as np
 
 def perivelocitybinnedactivity(velocity, rewards, dff, timedFF, range_val, binsize, numplanes):
     """
@@ -473,8 +471,30 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     dct['active'] = differentially_activated_cells
     dct['rewlocs_comp'] = rewlocs[comp]
     return dct
-import numpy as np
-from scipy.stats import pearsonr
+
+def get_dff_opto(conddf, dd, day):
+    track_length = 270
+    dct = {}
+    animal = conddf.animals.values[dd]
+    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms_pc_late_trials', 'changeRewLoc', 'dFF',
+                    'ybinned'])
+    coms = fall['coms_pc_late_trials'][0]
+    dFF = fall['dFF']
+    ybinned = fall['ybinned'][0]*1.5
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    eptest = conddf.optoep.values[dd]    
+    eps = np.where(changeRewLoc>0)[0]
+    rewlocs = changeRewLoc[eps]*1.5
+    rewzones = get_rewzones(rewlocs, 1.5)
+    eps = np.append(eps, len(changeRewLoc))  
+    if conddf.optoep.values[dd]<2: 
+        eptest = random.randint(2,3)      
+        if len(eps)<4: eptest = 2 # if no 3 epochs
+    comp = [eptest-2,eptest-1] # eps to compare    
+    dff_prev = np.nanmean(dFF[eps[comp[0]]:eps[comp[1]],:])#[ybinned[eps[comp[0]]:eps[comp[1]]]<rewlocs[comp[0]],:])
+    dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:])#[ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]],:])
+    return dff_opto, dff_prev
 
 def calculate_noise_correlations(data, trial_info):
     """

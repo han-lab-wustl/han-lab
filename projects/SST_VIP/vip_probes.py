@@ -13,7 +13,7 @@ plt.rc('font', size=16)          # controls default text sizes
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 
 # Load MATLAB data
-matfl = r"Z:\vip_dff_probes.mat"
+matfl = r"Z:\vip_dff_probes_3probe.mat"
 # matrix contents: dy,pln,ep
 # for each arr: probes, probes-ctrl, success
 mat = sio.loadmat(matfl)
@@ -51,12 +51,24 @@ for dy in dys:
         rs.append(r); rs_c.append(rc)
     rs_dy.append(rs); rs_ctrl_dy.append(rs_c)
 #%%
+def KL(P,Q):
+    """ Epsilon is used here to avoid conditional code for
+    checking that neither P nor Q is equal to 0. """
+    epsilon = 0.00001
+
+    # You may want to instead make copies to avoid changing the np arrays.
+    P = P+epsilon
+    Q = Q+epsilon
+
+    divergence = np.sum(P*np.log(P/Q))
+    return divergence
+
 fig, ax = plt.subplots()
-ax.hist(rs_dy[3], alpha=0.7, color = 'k', label='Probes')
-ax.hist(rs_ctrl_dy[3],alpha=0.7, color = 'darkslategray',label='Probes to Shuffled Loc.')
+ax.hist(np.concatenate(rs_dy), alpha=0.5, color = 'k', label='Probes')
+ax.hist(np.concatenate(rs_ctrl_dy),alpha=0.5, color = 'darkslategray',label='Probes to Shuffled Loc.')
 ax.legend()
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('# Cells')
 ax.set_xlabel('Pearson r')
-plt.savefig(os.path.join(savedst, 'probes_corr_hist.svg'),dpi=300)
+scipy.stats.ttest_ind(np.concatenate(rs_dy),np.concatenate(rs_ctrl_dy))
 # %%

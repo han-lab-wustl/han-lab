@@ -9,7 +9,7 @@ for dy=1:5
     plns = fall.Falls;
     planes = 3;
     bin_size = 0.2; %s
-    range = 10; %s
+    range = 8; %s
     changeRewLoc = fall.rewardLocation{1}(:,1)';
     rewards = fall.rewards{1}(:,1)';
     timedFF = fall.time{1}(:,1)';
@@ -57,16 +57,18 @@ for dy=1:5
             %     yyaxis right
             %     plot(dff_ep((trialnum_ep<10),ii))
             % end
+            probetotest = 3;
             time_ep = timedFF(eps(ep):eps(ep+1));
-            [binnedPerireward_probes,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dff_ep(trialnum_ep<3,:), ...
-                startofrew(trialnum_ep<3), ...
-                time_ep(trialnum_ep<3), range,bin_size);
+            [binnedPerireward_probes,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dff_ep(trialnum_ep<probetotest,:), ...
+                startofrew(trialnum_ep<probetotest), ...
+                time_ep(trialnum_ep<probetotest), range,bin_size);
             fig = figure('Renderer', 'painters');
             subplot(1,2,1)
             imagesc(normalize(binnedPerireward_probes))
             ylabel('Cells')
             xticks(0:25:size(allbins,2))
             xticklabels(-range:5:range)
+            % correct trials
             [binnedPerireward_success,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dff_ep(trialnum_ep>3,:),rewards_ep(trialnum_ep>3), ...
                 time_ep(trialnum_ep>3), range,bin_size);
             subplot(1,2,2)
@@ -74,9 +76,10 @@ for dy=1:5
             ylabel('Cells')
             xticks(0:25:size(allbins,2))
             xticklabels(-range:5:range)
-            [binnedPerireward_probes_ctrl,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dff_ep(trialnum_ep<3,:), ...
-                startofrew_ctrl(trialnum_ep<3), ...
-                time_ep(trialnum_ep<3), range,bin_size);
+            % control
+            [binnedPerireward_probes_ctrl,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dff_ep(trialnum_ep<probetotest,:), ...
+                startofrew_ctrl(trialnum_ep<probetotest), ...
+                time_ep(trialnum_ep<probetotest), range,bin_size);
 
             % get only probes
             dff_probes{dy,pln,ep} = [binnedPerireward_probes,binnedPerireward_probes_ctrl,binnedPerireward_success];
@@ -85,4 +88,4 @@ for dy=1:5
     end
 end
 %%
-save('Z:\vip_dff_probes.mat','dff_probes')
+save('Z:\vip_dff_probes_3probe.mat','dff_probes')

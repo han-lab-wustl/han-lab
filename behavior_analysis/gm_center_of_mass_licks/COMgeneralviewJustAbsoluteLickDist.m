@@ -48,7 +48,7 @@
 %% ------------------------------------------------------------------------
 clear all %clean up the environment
 close all;
-mouse_name = "e218";
+mouse_name = "e216";
 % params to export to ppt
 pptx    = exportToPPTX('', ...
     'Dimensions',[12 6], ...
@@ -66,7 +66,7 @@ else
     %     days = [55:75];
     %     days = [4:7,9:11];
     %     days = [62:67,69:70,72:74,76,81:85];
-    days = [20:46];
+    days = [37 41 46 47 48 50 51 52 54 55 56 57 60];
     %     src = "Z:\sstcre_imaging";
     %     src = "X:\pyramidal_cell_data";
     %     src = "Y:\sstcre_imaging";
@@ -100,7 +100,7 @@ for dy=1:length(days)
         %             min(days), max(days))), "allCOM")
 
         % ZD - save to ppt
-        fig = figure;
+        fig = figure('Renderer', 'painters', 'WindowState', 'maximized');
         slideId = pptx.addSlide();
         fprintf('Added slide %d\n',slideId);
         %raw data plot

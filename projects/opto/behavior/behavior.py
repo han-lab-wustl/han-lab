@@ -37,7 +37,7 @@ def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
         elif pre_rew_licks>0 and in_rew_zone>0: 
             lick_selectivity = 1+last_quarter/total_licks 
         elif pre_rew_licks==0 and in_rew_zone>0: # if the mouse only licks in rew zone
-            lick_selectivity = 3
+            lick_selectivity = 2
         
         lick_selectivity_per_trial.append(lick_selectivity)
         
@@ -65,6 +65,23 @@ def get_behavior_tuning_curve(ybinned, beh, bins=270):
     beh_probability = grouped['mean']  # This is the mean of the binary lick variable, which represents probability
     
     return grouped['position_bin'], beh_probability
+def consecutive_stretch(x):
+    x = np.array(x)
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+
+    if len(break_point) == 0:
+        return [x.tolist()]
+
+    y = []
+    y.append(x[:break_point[0] + 1].tolist())
+    
+    for i in range(1, len(break_point)):
+        y.append(x[break_point[i - 1] + 1 : break_point[i] + 1].tolist())
+    
+    y.append(x[break_point[-1] + 1 :].tolist())
+
+    return y
 
 def get_rewzones(rewlocs, gainf):
     # Initialize the reward zone numbers array with zeros
@@ -86,8 +103,132 @@ def get_rewzones(rewlocs, gainf):
 def get_mean_velocity_per_ep(forwardvel):
     return np.nanmean(forwardvel)
 
-def get_performance(opto_ep, eps, trialnum, rewards, licks, \
+def lick_selectivity_probes(opto_ep, eps, trialnum, rewards, licks, \
     ybinned, rewlocs, forwardvel, rewsize):
+    # opto ep    
+    eptotest = opto_ep # matlab index (+1), but remember here we are testing the next ep
+    if len(eps)>eptotest+1:
+        eprng = range(eps[eptotest], eps[eptotest+1])
+        trialnum_ = trialnum[eprng]
+        reward_ = rewards[eprng]
+        licks_ = licks[eprng]
+        ybinned_ = ybinned[eprng]
+        forwardvel_ = forwardvel[eprng]
+        rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
+        rewsize = 10 # temp
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
+        rate_opto = success / total_trials
+        # probes
+        mask = trialnum_<3
+        # optional - fails
+        # mask = np.array([xx in ftrials for xx in trialnum_])
+        lick_selectivity_per_trial_opto = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                    licks_[mask], rewloc, rewsize,
+                    fails_only = False)
+        # previous ep
+        eprng = range(eps[eptotest-1], eps[eptotest])
+        trialnum_ = trialnum[eprng]
+        reward_ = rewards[eprng]
+        licks_ = licks[eprng]
+        ybinned_ = ybinned[eprng]
+        forwardvel_ = forwardvel[eprng]
+        rewloc = np.ceil(rewlocs[eptotest-2]).astype(int)
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
+        rate_prev = success / total_trials 
+        trials_bwn_success_prev =  np.diff(np.array(strials))
+        # probes
+        mask = trialnum_<3
+        # optional - fails
+        # mask = np.array([xx in ftrials for xx in trialnum_])
+        lick_selectivity_per_trial_prev = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                    licks_[mask], rewloc, rewsize,
+                    fails_only = False)
+        return lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev
+    else:
+        return np.nan, np.nan
+    
+def lick_selectivity_fails(opto_ep, eps, trialnum, rewards, licks, \
+    ybinned, rewlocs, forwardvel, rewsize):
+    # opto ep    
+    eptotest = opto_ep-1 # matlab index (+1)
+    if len(eps)>eptotest+1:
+        eprng = range(eps[eptotest], eps[eptotest+1])
+        trialnum_ = trialnum[eprng]
+        reward_ = rewards[eprng]
+        licks_ = licks[eprng]
+        ybinned_ = ybinned[eprng]
+        forwardvel_ = forwardvel[eprng]
+        rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
+        rewsize = 10 # temp
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
+        rate_opto = success / total_trials
+        # probes
+        mask = [xx in ftrials for xx in trialnum_]
+        # optional - fails
+        # mask = np.array([xx in ftrials for xx in trialnum_])
+        lick_selectivity_per_trial_opto = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                    licks_[mask], rewloc, rewsize,
+                    fails_only = False)
+        # previous ep
+        eprng = range(eps[eptotest-1], eps[eptotest])
+        trialnum_ = trialnum[eprng]
+        reward_ = rewards[eprng]
+        licks_ = licks[eprng]
+        ybinned_ = ybinned[eprng]
+        forwardvel_ = forwardvel[eprng]
+        rewloc = np.ceil(rewlocs[eptotest-2]).astype(int)
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
+        rate_prev = success / total_trials 
+        trials_bwn_success_prev =  np.diff(np.array(strials))
+        # probes
+        mask = [xx in ftrials for xx in trialnum_]
+        # optional - fails
+        # mask = np.array([xx in ftrials for xx in trialnum_])
+        lick_selectivity_per_trial_prev = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                    licks_[mask], rewloc, rewsize,
+                    fails_only = False)
+        return lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev
+    else:
+        return np.nan, np.nan
+
+def calculate_lick_rate(licks, window_size, sampling_rate=31.25):
+    """
+    Calculate lick rate in a time series data where licks is a binary variable.
+
+    Parameters:
+    licks (numpy array): Binary array where 1 represents a lick and 0 represents no lick.
+    window_size (int): The size of the window (in number of samples) over which to calculate the lick rate.
+    sampling_rate (float): The sampling rate in Hz (default is 31.25 Hz).
+
+    Returns:
+    numpy array: Array of lick rates (licks per second) for each window.
+    """
+    # Sampling frequency
+    sampling_interval = 1 / sampling_rate  # seconds per sample
+
+    # Define the time window for calculating lick rate (e.g., 1 second)
+    window_length_seconds = 1  # seconds
+    window_length_samples = int(window_length_seconds * sampling_rate)
+
+    # Calculate the number of windows
+    num_windows = int(np.ceil(len(licks) / window_length_samples))
+
+    # Initialize the lick rate array
+    lick_rate = np.zeros(num_windows)
+
+    # Calculate lick rate for each window
+    for i in range(num_windows):
+        start_index = i * window_length_samples
+        end_index = min((i + 1) * window_length_samples, len(licks))
+        licks_in_window = np.sum(licks[start_index:end_index])
+        lick_rate[i] = licks_in_window / window_length_seconds
+
+    # print("Lick rate (licks/second):", lick_rate)
+
+    return lick_rate
+
+def get_performance(opto_ep, eps, trialnum, rewards, licks, \
+    ybinned, rewlocs, forwardvel, rewsize,fs=31.25):
     # opto ep    
     eptotest = opto_ep-1 # matlab index (+1)
     eprng = range(eps[eptotest], eps[eptotest+1])
@@ -103,6 +244,12 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     trials_bwn_success_opto =  np.diff(np.array(strials))
     # get lick prob
     pos_bin_opto, lick_probability_opto = get_behavior_tuning_curve(ybinned_, licks_)
+    # get lick rate / trial
+    # only in the first 5 trials
+    firsttr = 5
+    mask = np.array([xx in ttr[:firsttr] for xx in trialnum_])
+    window_size = 10
+    lick_rate_opto = calculate_lick_rate(licks_[mask][(ybinned_<rewloc)[mask]], window_size, sampling_rate=31.25)
     # lick selectivity - only success
     lasttr = 5
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
@@ -115,6 +262,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize-10):int(rewloc+20)], \
                     lick_probability_opto[int(rewloc+20):]]
     vel_opto = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc]) # pre-reward
+    
     # previous ep
     eprng = range(eps[eptotest-1], eps[eptotest])
     trialnum_ = trialnum[eprng]
@@ -128,6 +276,12 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     trials_bwn_success_prev =  np.diff(np.array(strials))
     # lick prob
     pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
+    # get lick rate / trial
+    # only in the first 5 trials
+    firsttr = 5
+    mask = np.array([xx in ttr[:firsttr] for xx in trialnum_])
+    window_size = 10    
+    lick_rate_prev = calculate_lick_rate(licks_[mask][(ybinned_<rewloc)[mask]], window_size, sampling_rate=31.25)
     # lick selectivity
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
     # optional - fails
@@ -143,7 +297,8 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     vel_prev = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc])
     return rate_opto, rate_prev, lick_prob_opto, \
     lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev, \
-    vel_opto, vel_prev, lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev
+    vel_opto, vel_prev, lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev, \
+    lick_rate_opto, lick_rate_prev
 
 
 def get_success_failure_trials(trialnum, reward):

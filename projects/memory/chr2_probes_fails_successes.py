@@ -26,12 +26,15 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"chr2_opto_peri_analysis.pdf"))
 
-condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
+condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
 src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
-days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
-        [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
-
+# first batch
+# days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
+#         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
+days_all = [[30],
+        [72]]
+numtrialsstim=10
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
@@ -211,7 +214,10 @@ for ii,animal in enumerate(animals):
             ax.set_title('Failed Trials (Centered by rewloc)')
             
             # for opto days, plot opto trials only // vs. non opto
-            mask = (trialnum%2==1)
+            if numtrialsstim==10:
+                mask = ~(trialnum%10==0)
+            else:
+                mask = (trialnum%2==1)
             # all subsequent rews
             normmeanrewdFF, meanrewdFF_opto, normrewdFF, \
                 rewdFF_opto = eye.perireward_binned_activity(dff[mask], rewards[mask], timedFF[mask], 

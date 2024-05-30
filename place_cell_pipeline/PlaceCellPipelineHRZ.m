@@ -9,7 +9,7 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'z8';
+an = 'e218';
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218
@@ -19,7 +19,7 @@ an = 'z8';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [19 20];
+dys = [38];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -39,7 +39,7 @@ for dy=dys % for loop per day
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
         'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
-
+    % 
     if ~exist('VR', 'var')==1
         %% step 0 - align to behavior
         daypth = dir(fullfile(src, an, string(dy), "behavior", "vr\*.mat"));
@@ -212,7 +212,6 @@ for dy=dys % for loop per day
         rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
             rew_zone/bin_size size(plt,1)], ... 
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        colormap jet
         xticks([0:bin_size:ceil(track_length/bin_size)])
         xticklabels([0:bin_size*bin_size:track_length])
         title(sprintf('epoch %i', ep))
@@ -221,7 +220,7 @@ for dy=dys % for loop per day
 
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);        
-    close(fig)
+    % close(fig)
     tuning_curves_late_trials = tuning_curves;
     % also append fall with tables    
     ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...

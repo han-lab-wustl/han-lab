@@ -26,7 +26,7 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"chr2_ramp_opto_peri_analysis.pdf"))
 
-condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grab.csv", index_col = None)
+condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
 src = r"Z:\chr2_grabda"
 animals = ['e232']
 # days_all = [[13],

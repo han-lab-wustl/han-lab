@@ -52,7 +52,7 @@ for dd,day in enumerate(conddf.days.values):
         if len(eps)<4: eptest = 2 # if no 3 epochs    
     rates_opto, rates_prev, lick_prob_opto, \
         lick_prob_prev, trials_bwn_success_opto, \
-        trials_bwn_success_prev, vel_opto, vel_prev, __, _ = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
+        trials_bwn_success_prev, vel_opto, vel_prev, __, _,___,____ = get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, rewsize)
     rewzones = get_rewzones(rewlocs, 1.5)
     
     dct['velocity'] = [vel_prev, vel_opto]
@@ -96,16 +96,18 @@ bigdf.reset_index(drop=True, inplace=True)
 bigdf_plot = bigdf.groupby(['animal', 'vip_ctrl_type']).mean(numeric_only=True)
 bigdf_plot['vip_ctrl_type'] = [bigdf_plot.index[xx][1] for xx in range(len(bigdf_plot.index))]
 plt.figure(figsize=(3.5,6))
-ax = sns.barplot(x="vip_ctrl_type", y="rates_diff",hue='opto', data=bigdf_plot,
-                palette={False: "slategray", True: "red"},                
+ax = sns.barplot(x="vip_ctrl_type", y="rates_diff",hue='vip_ctrl_type', data=bigdf_plot,
+                palette={'ctrl_ledoff': "slategray", 'vip_ledon': "red",
+                        'ctrl_ledon': "slategray", 'vip_ledoff': "red"},                
                 errorbar='se', fill=False)
-sns.stripplot(x="vip_ctrl_type", y="rates_diff",hue='opto', data=bigdf_plot,
-                palette={False: "slategray", True: "red"},
-                s=7)
+sns.stripplot(x="vip_ctrl_type", y="rates_diff",hue='vip_ctrl_type', data=bigdf_plot,
+                palette={'ctrl_ledoff': "slategray", 'vip_ledon': "red",
+                        'ctrl_ledon': "slategray", 'vip_ledoff': "red"},                
+                s=8)
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-ax.get_legend().set_visible(False)
+# ax.get_legend().set_visible(False)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
 x1 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledon'), 'rates_diff'].values
@@ -117,7 +119,7 @@ import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
 print(p_values)
 plt.tight_layout()
-# plt.savefig(os.path.join(savedst, 'behavior.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
 #%%
 # velocity
 plt.figure()
@@ -349,16 +351,17 @@ for ii,dct in enumerate(dcts_opto):
         df['rewzones_opto'] = f'rz_{dct["rewzones"][1].astype(int)}'
         df['animal'] = conddf.animals.values[ii]   
         if conddf.optoep.values[ii]>1 and conddf.in_type.values[ii]=='vip':    
-            df['in_type'] = f'{conddf.in_type.values[ii]}_ledon'
-            df['led'] = True
+            df['in_type'] = f'{conddf.in_type.values[ii]}'
+            df['led'] = 'LED on'
         elif conddf.optoep.values[ii]<2 and conddf.in_type.values[ii]=='vip':    
-            df['in_type'] = f'{conddf.in_type.values[ii]}_ledoff'
+            df['in_type'] = f'{conddf.in_type.values[ii]}'
+            df['led'] = 'LED off'
         elif conddf.optoep.values[ii]<2 and conddf.in_type.values[ii]!='vip':    
-            df['in_type'] = 'ctrl_ledoff'
-            df['led'] = False
+            df['in_type'] = 'ctrl'
+            df['led'] = 'LED off'
         else: 
-            df['in_type'] = 'ctrl_ledon'
-            df['led'] = False
+            df['in_type'] = 'ctrl'
+            df['led'] = 'LED on'
         dfs.append(df)
     except Exception as e:
         print(e)
@@ -368,48 +371,53 @@ bigdf.reset_index(drop=True, inplace=True)
 # %%
 # plot
 bigdf_plot = bigdf#[(bigdf.in_type.str.contains('vip'))]
-bigdf_plot = bigdf_plot.groupby(['animal', 'in_type']).mean(numeric_only=True)
+bigdf_plot = bigdf_plot.groupby(['animal', 'in_type', 'led']).mean(numeric_only=True)
 # bigdf_plot.sort_values('lick_condition')
 fig, axes = plt.subplots(figsize=(4,6))
-ax = sns.barplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type', data=bigdf_plot,
-    palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
-            'vip_ledoff': "slategray"}, 
+ax = sns.barplot(x="led", y="trials_before_first_success_ledoff-on", hue='in_type', data=bigdf_plot,
+    palette={'ctrl': 'slategray','vip': "red"}, 
     errorbar='se', fill=False)
-ax = sns.stripplot(x="in_type", y="trials_before_first_success_ledoff-on", hue='in_type',data=bigdf_plot,
-                palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
-            'vip_ledoff': "slategray"},s=8)
+ax = sns.stripplot(x="led", y="trials_before_first_success_ledoff-on", hue='in_type',data=bigdf_plot,
+                palette={'ctrl': 'slategray','vip': "red"},s=8)
 ax.tick_params(axis='x', labelrotation=90)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+ax.get_legend().set_visible(False)
+
 # ax.set_ylim(-5,8)
-# vipledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledon", "trials_before_success_med_ledoff-on"].values
-# vipledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledoff", "trials_before_success_med_ledoff-on"].values
-# ctrlledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledoff", "trials_before_success_med_ledoff-on"].values
-# ctrlledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledon", "trials_before_success_med_ledoff-on"].values
-# scipy.stats.f_oneway(vipledon, vipledoff, ctrlledoff, ctrlledon)
-# import scikit_posthocs as sp
-# p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
-# print(p_values)
+vipledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledon", 
+                        "trials_before_first_success_ledoff-on"].values
+vipledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledoff",
+                    "trials_before_first_success_ledoff-on"].values
+ctrlledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledoff",
+                    "trials_before_first_success_ledoff-on"].values
+ctrlledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledon",
+                    "trials_before_first_success_ledoff-on"].values
+scipy.stats.f_oneway(vipledon, vipledoff, ctrlledoff, ctrlledon)
+import scikit_posthocs as sp
+p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
+print(p_values)
 plt.savefig(os.path.join(savedst, 'trails_before_success_start_diff.svg'), bbox_inches='tight', dpi=500)
 
 fig, axes = plt.subplots(figsize=(4,6))
-ax = sns.barplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type', data=bigdf_plot,
-    palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
-            'vip_ledoff': "slategray"}, 
+ax = sns.barplot(x="led", y="trials_before_success_med_ledoff-on", hue='in_type', data=bigdf_plot,
+    palette={'ctrl': 'slategray','vip': "red"}, 
     errorbar='se', fill=False)
-ax = sns.stripplot(x="in_type", y="trials_before_success_med_ledoff-on", hue='in_type',data=bigdf_plot,
-                palette={'ctrl_ledon': "lightcoral", 'ctrl_ledoff': 'lightgray', 'vip_ledon': "red",
-            'vip_ledoff': "slategray"},s=8)
+ax = sns.stripplot(x="led", y="trials_before_success_med_ledoff-on", hue='in_type',data=bigdf_plot,
+                palette={'ctrl': 'slategray','vip': "red"},s=8)
 ax.tick_params(axis='x', labelrotation=90)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+ax.get_legend().set_visible(False)
+
 # ax.set_ylim(-5,8)
-vipledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledon", "trials_before_success_med_ledoff-on"].values
-vipledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "vip_ledoff", "trials_before_success_med_ledoff-on"].values
-ctrlledoff = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledoff", "trials_before_success_med_ledoff-on"].values
-ctrlledon = bigdf_plot.loc[bigdf_plot.index.get_level_values('in_type') == "ctrl_ledon", "trials_before_success_med_ledoff-on"].values
+vipledon = bigdf_plot.loc[((bigdf_plot.index.get_level_values('in_type') == "vip")&(bigdf_plot.index.get_level_values('led') == "LED on")), 
+            "trials_before_success_med_ledoff-on"].values
+vipledoff = bigdf_plot.loc[((bigdf_plot.index.get_level_values('in_type') == "vip")&(bigdf_plot.index.get_level_values('led') == "LED off")), "trials_before_success_med_ledoff-on"].values
+ctrlledoff = bigdf_plot.loc[((bigdf_plot.index.get_level_values('in_type') == "ctrl")&(bigdf_plot.index.get_level_values('led') == "LED on")), "trials_before_success_med_ledoff-on"].values
+ctrlledon = bigdf_plot.loc[((bigdf_plot.index.get_level_values('in_type') == "ctrl")&(bigdf_plot.index.get_level_values('led') == "LED off")), "trials_before_success_med_ledoff-on"].values
 scipy.stats.f_oneway(vipledon, vipledoff, ctrlledoff, ctrlledon)
 import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([vipledon,vipledoff,ctrlledon,ctrlledoff])#,p_adjust='holm-sidak')
