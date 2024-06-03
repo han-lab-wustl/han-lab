@@ -44,7 +44,8 @@ for allplanes=1:size(planefolders,2)
         chone_temp = double(TIFFStack(myfilename));
         
         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-%         crop_points1=[1 169 619 512]; %%% Direct .sbx crop
+%         crop_points1=[1 169 619 512]; %%% Direct .sbx crop1
+
         
         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
         eval(['x2=crop_points' num2str(1) '(3)']);

@@ -1,5 +1,4 @@
 function x = sbxread(fname,k,N,varargin)
-
 % img = sbxread(fname,k,N,varargin)
 %
 % Reads from frame k to k+N-1 in file fname
