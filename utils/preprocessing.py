@@ -78,7 +78,8 @@ def getmeanimg(pth):
     meanimg = np.mean(img,axis=0)
     return meanimg
 
-def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
+def maketifs(imagingflnm,y1,y2,x1,x2,nplanes=2,
+        zplns=3000):
     """makes tifs out of sbx file
 
     Args:
@@ -98,18 +99,12 @@ def maketifs(imagingflnm,y1,y2,x1,x2,dtype='pyramidal',zplns=3000):
     dat = sbx_memmap(sbxfl)
     #check if tifs exists
     tifs=[xx for xx in os.listdir(imagingflnm) if ".tif" in xx]
-    if dtype == 'dopamine':
-        frames=15000
-        nplanes=4
-    elif dtype == 'pyramidal':
-        frames=45000
-        nplanes=1
-    else: nplanes=2 #temp: TODO: make modular
+    frames=dat.shape[0]
     split = int(zplns/nplanes) # 3000 planes as normal
     if len(tifs)<ceil(frames/zplns): # if no tifs exists 
         #copied from ed's legacy version: loadVideoTiffNoSplit_EH2_new_sbx_uint16        
         for nn,i in enumerate(range(0, dat.shape[0], split)): #splits into tiffs of 3000 planes each
-            stack = np.array(dat[i:i+split,:,:,:])
+            stack = np.array(dat[i:i+split,:])
             #crop in x
             if nplanes>1:
                 stack=np.squeeze(stack)[:,:,y1:y2,x1:x2] #170:500,105:750] # crop based on etl artifacts                

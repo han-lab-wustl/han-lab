@@ -40,9 +40,11 @@ def main(**args):
             if len(imagingfl)!=0:           
                 print(imagingfl)
                 if params["crop_opto"]:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                    imagingflnm = preprocessing.maketifs(imagingflnm,89,
+                                    512,89,718,nplanes=params["nplanes"])
                 else:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718)            
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,
+                                    512,89,718,nplanes=params["nplanes"])            
                 print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -51,8 +53,6 @@ def main(**args):
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
-        ops["threshold_scaling"]=1 #TODO: make modular
-        ops["max_iterations"]=30
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {

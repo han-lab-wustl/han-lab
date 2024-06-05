@@ -62,7 +62,7 @@ for dd,day in enumerate(conddf.days.values):
                 lick_selectivity_post_opto_probes,lick_selectivity_post_prev_probes,
                 lick_selectivity_fails_opto, lick_selectivity_fails_prev,lick_rate_opto, lick_rate_prev]) 
 #%%
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 df = conddf[((conddf.optoep!=0) & (conddf.optoep!=1)).values]
 df['lick_selectivity_last5trials_targetep'] = np.array([np.nanmean(xx[0]) for xx in lick_selectivity_trial_type])[((conddf.optoep!=0) & (conddf.optoep!=1)).values]
 df['lick_selectivity_last5trials_prevep'] = np.array([np.nanmean(xx[1]) for xx in lick_selectivity_trial_type])[((conddf.optoep!=0) & (conddf.optoep!=1)).values]
@@ -77,6 +77,7 @@ df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['opto'] = ['LED on' if optoep>1 else 'LED off' for optoep in df.optoep.values]
 # df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 # df = df.drop([12])
+df = df[(df.animals!='e189')&(df.animals!='e190')]
 dfagg = df.groupby(['animals', 'opto', 'condition']).mean(numeric_only = True)
 # drop 1st row
 # performance on opto days
@@ -96,7 +97,7 @@ ax = sns.barplot(x='opto', y='lick_rate', hue='condition', data=dfagg, fill=Fals
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax = sns.stripplot(x='opto', y='lick_rate', hue='condition', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                s=8)
+                s=10)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 plt.savefig(os.path.join(savedst, 'lick_rate_first_5_trials.svg'), bbox_inches='tight')
@@ -107,7 +108,7 @@ ax = sns.barplot(x='opto', y='lick_selectivity_last5trials', hue='condition', da
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax = sns.stripplot(x='opto', y='lick_selectivity_last5trials', hue='condition', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                s=8)
+                s=10)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 plt.savefig(os.path.join(savedst, 'lick_selectivity_success_trials.svg'), bbox_inches='tight')
@@ -118,7 +119,7 @@ ax = sns.barplot(x='opto', y='lick_selectivity_probes', hue='condition', data=df
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax = sns.stripplot(x='opto', y='lick_selectivity_probes', hue='condition', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                s=8)
+                s=10)
 ax.spines[['top','right']].set_visible(False)
 # ax.get_legend().set_visible(False)
 plt.savefig(os.path.join(savedst, 'lick_selectivity_probes.svg'), bbox_inches='tight')
@@ -129,10 +130,11 @@ ax = sns.barplot(x='opto', y='lick_selectivity_fails', hue='condition', data=dfa
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax = sns.stripplot(x='opto', y='lick_selectivity_fails', hue='condition', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                s=8)
+                s=10)
 ax.spines[['top','right']].set_visible(False)
 plt.savefig(os.path.join(savedst, 'lick_selectivity_fails.svg'), bbox_inches='tight')
 
+totest = 'lick_selectivity_last5trials'
 x1 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'vip') & 
             (dfagg.index.get_level_values('opto') == 'LED on')), 'lick_selectivity_last5trials'].values
 x2 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'vip') & 
@@ -144,6 +146,8 @@ x4 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'ctrl') &
 labels = ['vipledon', 'vipledoff', 'ctrlledon', 'ctrlledoff']
 scipy.stats.f_oneway(x1, x2, x3, x4)
 p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
+p_values.columns = labels
+p_values.index = labels
 print(p_values)
 
 # probes

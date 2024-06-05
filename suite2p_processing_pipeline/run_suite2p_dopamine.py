@@ -41,9 +41,11 @@ def main(**args):
             if len(imagingfl)!=0:           
                 print(imagingfl)
                 if params["crop_opto"]:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                    imagingflnm = preprocessing.maketifs(imagingflnm,89,
+                                512,89,718,nplanes=params["nplanes"])
                 else:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718, dtype='dopamine')            
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,
+                                512,89,718,nplanes=params["nplanes"])            
                 print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -99,9 +101,11 @@ def main(**args):
                 if len(imagingfl)!=0:           
                     print(imagingfl)
                     if params["crop_opto"]:
-                        imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                        imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718,
+                                nplanes=params["nplanes"])
                     else:
-                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718,dtype='dopamine')            
+                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718,
+                                nplanes=params["nplanes"])            
                     print(imagingflnm)
 
             #do suite2p after tifs are made

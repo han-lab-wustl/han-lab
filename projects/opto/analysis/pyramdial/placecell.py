@@ -2,12 +2,60 @@ import numpy as np, math, scipy
 from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, ranksums
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
 from scipy.signal import gaussian
 
+def calculate_global_remapping(data_reward1, data_reward2, 
+    num_iterations=1000):
+    n_cells = data_reward1.shape[0]
+    threshold=0.1 # arbitrary for now
+    # Calculate real cosine similarities
+    real_CS = []
+    for neuron in range(data_reward1.shape[0]):
+        x = data_reward1[neuron, :]
+        y = data_reward2[neuron, :]
+        cs = get_cosine_similarity(x, y)
+        real_CS.append(cs)
+    
+    real_CS = np.array(real_CS)
+    global_remapping = real_CS < threshold
+    
+    # Shuffled distribution
+    shuffled_CS = []
+    for _ in range(num_iterations):
+        shuffled_indices = np.random.permutation(n_cells)
+        shuffled_data_reward2 = data_reward2[shuffled_indices, :]
+        shuffled_cs = []
+        for neuron in range(data_reward1.shape[0]):
+            x = data_reward1[neuron, :]
+            y = shuffled_data_reward2[neuron, :]
+            cs = get_cosine_similarity(x, y)
+            shuffled_cs.append(cs)
+        shuffled_CS.extend(shuffled_cs)    
+    shuffled_CS = np.array(shuffled_CS)
+    
+    # Calculate p-values
+    p_values = []
+    for real_cs in real_CS:
+        p_value = np.sum(shuffled_CS > real_cs) / num_iterations
+        p_values.append(p_value)
+    
+    p_values = np.array(p_values)
+    
+    # Compare real vs shuffled using ranksum test
+    P, H = ranksums(real_CS[~np.isnan(real_CS)], shuffled_CS[~np.isnan(shuffled_CS)])
+    
+    real_distribution = real_CS[~np.isnan(real_CS)]
+    shuffled_distribution = shuffled_CS[~np.isnan(shuffled_CS)]
+    
+    return P, H, real_distribution, shuffled_distribution, p_values, global_remapping
+
+def get_cosine_similarity(vec1, vec2):
+    cos_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+    return cos_sim
 
 def perivelocitybinnedactivity(velocity, rewards, dff, timedFF, range_val, binsize, numplanes):
     """
@@ -396,12 +444,14 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
             'tuning_curves_late_trials', 'coms_early_trials'])
         coms = fall['coms'][0]
+        coms_early = fall['coms_early_trials'][0]
         tcs_early = fall['tuning_curves_early_trials'][0]
         tcs_late = fall['tuning_curves_late_trials'][0]
     else:
         fall = scipy.io.loadmat(params_pth, variable_names=['coms_pc_late_trials', 'changeRewLoc', 'tuning_curves_pc_early_trials',\
             'tuning_curves_pc_late_trials', 'coms_pc_early_trials'])
         coms = fall['coms_pc_late_trials'][0]
+        coms_early = fall['coms_pc_early_trials'][0]
         tcs_early = fall['tuning_curves_pc_early_trials'][0]
         tcs_late = fall['tuning_curves_pc_late_trials'][0]
     changeRewLoc = np.hstack(fall['changeRewLoc'])
@@ -426,8 +476,9 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     # coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])    
     coms1 = np.hstack(coms[comp[0]])
     coms2 = np.hstack(coms[comp[1]])
-    # coms1[np.isnan(coms1)]=coms1_max[np.isnan(coms1)]
-    # coms2[np.isnan(coms2)]=coms2_max[np.isnan(coms2)]
+    coms1_early = np.hstack(coms_early[comp[0]])
+    coms2_early = np.hstack(coms_early[comp[1]])
+    
     # take fc3 in area around com
     difftc1 = tc1_late-tc1_early
     coms1_bin = np.floor(coms1/bin_size).astype(int)
@@ -439,6 +490,8 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     # Find differentially inactivated cells
     differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
     differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[0]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    # differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late[:, :int(rewlocs[comp[1]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
+    # differentially_activated_cells = find_differentially_activated_cells(tc1_late[:, :int(rewlocs[comp[1]]/bin_size)], tc2_late[:, :int(rewlocs[comp[1]]/bin_size)], threshold, bin_size)
     # differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
     # differentially_activated_cells = find_differentially_activated_cells(tc1_late, tc2_late, threshold, bin_size)
     # tc1_pc_width = evaluate_place_field_width(tc1_late, bin_centers, threshold=0.5)
@@ -463,8 +516,10 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     dct['coms2'] = coms2
     # dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
     # dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
-    dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>=bin_size)])
-    dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>=bin_size)])
+    dct['frac_place_cells_tc1_late_trials'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>=bin_size)])
+    dct['frac_place_cells_tc2_late_trials'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>=bin_size)])
+    dct['frac_place_cells_tc1_early_trials'] = sum((coms1_early>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1_early<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1_early[(coms1_early>=bin_size)])
+    dct['frac_place_cells_tc2_early_trials'] = sum((coms2_early>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2_early<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2_early[(coms2_early>=bin_size)])
     dct['rewloc_shift'] = rewloc_shift
     dct['com_shift'] = com_shift
     dct['inactive'] = differentially_inactivated_cells

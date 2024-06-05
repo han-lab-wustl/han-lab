@@ -71,11 +71,11 @@ for m, mouse_name in enumerate(mice):
         trialoptomask = trialnum[rngopto] > 10
         trialpreoptomask = trialnum[rngpreopto] > 10
         cp = cells_to_plot[dyind] # just get 1 cell        
-        try:
-            if len(cp)>1:
-                cp = cp[0]
-        except:
-            print('e')
+        # try:
+        #     if len(cp)>1:
+        #         cp = cp[0]
+        # except:
+        #     print('e')
         dffopto = dFF[rngopto, :]
         dffpreopto = dFF[rngpreopto, :]
         dffs_cp.append([np.nanmean(dffopto[:, [cp]],axis=1), 
@@ -140,8 +140,8 @@ dffarr = np.array(dffs_cp_dys)
 # dffarr = np.delete(dffarr,2,0)
 # dffarr = np.delete(dffarr,5,0)
 an_ranges = [range(4), range(4,7), range(7,11)]
-fig, ax = plt.subplots()
-for an in an_ranges:
+for ii,an in enumerate(an_ranges):
+    fig, ax = plt.subplots()
     meantc = np.nanmean(dffarr[an,1,:],axis=0)
     ax.plot(meantc, color='k', label='LED off')   
     xmin,xmax = ax.get_xlim()     
@@ -154,11 +154,12 @@ for an in an_ranges:
     ax.fill_between(np.arange(0,(range_val*2)/binsize), 
             meantc-scipy.stats.sem(dffarr[:,1,:],axis=0,nan_policy='omit'),
             meantc+scipy.stats.sem(dffarr[:,1,:],axis=0,nan_policy='omit'), color = 'r', alpha=0.2)        
-ax.set_xlabel('Time from reward (s)')
-ax.set_ylabel('dF/F')
-ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-ax.set_xticklabels(range(-range_val, range_val+1, 1))
-ax.spines[['top','right']].set_visible(False)
-ax.legend()
+    ax.set_xlabel('Time from reward (s)')
+    ax.set_ylabel('dF/F')
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+    ax.set_xticklabels(range(-range_val, range_val+1, 1))
+    ax.spines[['top','right']].set_visible(False)
+    ax.legend()
+    ax.set_title(f'{mice[ii]}')
 # savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 # plt.savefig(os.path.join(savedst, 'vip_during_opto.svg'), bbox_inches='tight')

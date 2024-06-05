@@ -9,7 +9,7 @@ mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 
@@ -65,81 +65,62 @@ for dd,day in enumerate(conddf.days.values):
 #%%
 # plot performance by rewzones
 dcts_opto = np.array(dcts)
+df = conddf
+df['rates_diff'] = [np.diff(dct['rates'])[0] for dct in dcts]
+df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
+df['velocity'] = [dct['velocity'][0] for dct in dcts]
 
-dfs=[]; dfs_diff = []
-for ii,dct in enumerate(dcts_opto):
-    rates_prev, rates_opto = dct['rates']   
-    vel_prev, vel_opto = dct['velocity']
-    df = pd.DataFrame([rates_prev], columns = ['rates_prev'])
-    df['rates_diff'] = rates_opto-rates_prev
-    df['velocity_diff'] = vel_opto-vel_prev
-    df['rewzones_transition'] = f'rz_{dct["rewzones"][0].astype(int)}-{dct["rewzones"][1].astype(int)}'
-    df['rewzones_opto'] = f'rz_{dct["rewzones"][1].astype(int)}'
-    df['animal'] = conddf.animals.values[ii]    
-    if conddf.optoep.values[ii]>1:    
-        df['opto'] = True    
-        df['in_type'] = f'{conddf.in_type.values[ii]}_ledon'
-        df['vip_ctrl_type'] = df['in_type']
-        if not conddf.in_type.values[ii]=="vip":
-            df['vip_ctrl_type'] = 'ctrl_ledon'
-    else:#elif optoep[ii]==0: 
-        df['opto'] = False    
-        df['in_type'] = f'{conddf.in_type.values[ii]}_ledoff'
-        df['vip_ctrl_type'] = df['in_type']
-        if not conddf.in_type.values[ii]=="vip":
-            df['vip_ctrl_type'] = 'ctrl_ledoff'
-    dfs.append(df)
-bigdf = pd.concat(dfs)
-bigdf.reset_index(drop=True, inplace=True)   
-
+df['opto'] = conddf.optoep.values>1
+df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
 # plot rates vip vs. ctl led off and on
-bigdf_plot = bigdf.groupby(['animal', 'vip_ctrl_type']).mean(numeric_only=True)
-bigdf_plot['vip_ctrl_type'] = [bigdf_plot.index[xx][1] for xx in range(len(bigdf_plot.index))]
+df = df[(df.animals!='e189')&(df.animals!='e190')]
+
+bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 plt.figure(figsize=(3.5,6))
-ax = sns.barplot(x="vip_ctrl_type", y="rates_diff",hue='vip_ctrl_type', data=bigdf_plot,
-                palette={'ctrl_ledoff': "slategray", 'vip_ledon': "red",
-                        'ctrl_ledon': "slategray", 'vip_ledoff': "red"},                
-                errorbar='se', fill=False)
-sns.stripplot(x="vip_ctrl_type", y="rates_diff",hue='vip_ctrl_type', data=bigdf_plot,
-                palette={'ctrl_ledoff': "slategray", 'vip_ledon': "red",
-                        'ctrl_ledon': "slategray", 'vip_ledoff': "red"},                
-                s=8)
+ax = sns.barplot(x="opto", y="rates_diff",hue='condition', data=bigdf_plot,
+    palette={'ctrl': "slategray", 'vip': "red"},                
+            errorbar='se', fill=False)
+sns.stripplot(x="opto", y="rates_diff",hue='condition', data=bigdf_plot,
+            palette={'ctrl': 'slategray','vip': "red"},                
+            s=10)
 ax.tick_params(axis='x', labelrotation=90)
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-# ax.get_legend().set_visible(False)
+ax.spines[['top','right']].set_visible(False)
+ax.get_legend().set_visible(False)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 
-x1 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledon'), 'rates_diff'].values
-x2 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledoff'), 'rates_diff'].values
-x3 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledon'), 'rates_diff'].values
-x4 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledoff'), 'rates_diff'].values
+x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
+x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==False)), 'rates_diff'].values
+x3 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
+x4 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==False)), 'rates_diff'].values
 scipy.stats.f_oneway(x1[~np.isnan(x1)], x2, x3, x4[~np.isnan(x4)])
 import scikit_posthocs as sp
 p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
+p_values.columns = ['vip_ledon','vip_ledoff','ctrl_ledon','ctrl_ledoff']
 print(p_values)
+
 plt.tight_layout()
 # plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
 #%%
 # velocity
 plt.figure()
-ax = sns.barplot(x="vip_ctrl_type", y="velocity_diff",hue='opto', data=bigdf_plot,
-                palette={False: "slategray", True: "red"},
-                errorbar='se', fill=False)
-sns.stripplot(x="vip_ctrl_type", y="velocity_diff",hue='opto', data=bigdf_plot,
-                palette={False: "slategray", True: "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
+plt.figure(figsize=(3.5,6))
+ax = sns.barplot(x="opto", y="velocity",hue='condition', data=bigdf_plot,
+    palette={'ctrl': "slategray", 'vip': "red"},                
+            errorbar='se', fill=False)
+sns.stripplot(x="opto", y="velocity",hue='condition', data=bigdf_plot,
+            palette={'ctrl': 'slategray','vip': "red"},                
+            s=10)
+ax.spines[['top','right']].set_visible(False)
+ax.get_legend().set_visible(False)
 
-x1 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledon'), 'velocity_diff'].values
-x2 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledoff'), 'velocity_diff'].values
-x3 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledon'), 'velocity_diff'].values
-x4 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledoff'), 'velocity_diff'].values
-scipy.stats.f_oneway(x1[~np.isnan(x1)], x2, x3, x4[~np.isnan(x4)])
-p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
-print(p_values)
+# x1 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledon'), 'velocity_diff'].values
+# x2 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type == 'vip_ledoff'), 'velocity_diff'].values
+# x3 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledon'), 'velocity_diff'].values
+# x4 = bigdf_plot.loc[(bigdf_plot.vip_ctrl_type=='ctrl_ledoff'), 'velocity_diff'].values
+# scipy.stats.f_oneway(x1[~np.isnan(x1)], x2, x3, x4[~np.isnan(x4)])
+# p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
+# print(p_values)
 
 #%%
 # plot rates by rewzone

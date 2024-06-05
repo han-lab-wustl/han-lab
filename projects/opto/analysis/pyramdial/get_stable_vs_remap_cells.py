@@ -19,7 +19,8 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
-savepth = r'Z:\opto_analysis_stable_vs_remap_all_an.pdf'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data\vip_inhibition'
+savepth = os.path.join(savedst, 'opto_analysis_stable_vs_remap_all_an.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 # import raw data
 with open("Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
@@ -66,7 +67,6 @@ for ii in range(len(conddf)):
         tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
         tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))        
         # Find differentially inactivated cells
-        threshold=7
         differentially_inactivated_cells = dct['inactive']
         differentially_activated_cells = dct['active']
         # coms = fall['coms_pc_late_trials'][0]
@@ -78,7 +78,7 @@ for ii in range(len(conddf)):
         coms1_early = np.hstack(coms_early[comp[0]])
         coms2_early = np.hstack(coms_early[comp[1]])
         com_remap = (coms1-rewlocs[comp[0]])-(coms2-rewlocs[comp[1]])
-        window = 30 # cm
+        window = 20 # cm
         goal_window = 10 # cm
         # get proportion of remapping vs. stable cells
         remap = np.where((com_remap<goal_window) & (com_remap>-goal_window))[0]
