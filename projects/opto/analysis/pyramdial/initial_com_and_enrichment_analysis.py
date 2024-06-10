@@ -17,7 +17,6 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
-plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
@@ -41,32 +40,35 @@ for dd,day in enumerate(conddf.days.values):
 #         dcts = pickle.load(fp)
 
 # #%%
-# # dff for opto vs. control
-# dffs = []
-# for dd,day in enumerate(conddf.days.values):
-#     dff_opto, dff_prev = get_dff_opto(conddf, dd, day)
-#     dffs.append([dff_opto, dff_prev])
+# dff for opto vs. control
+dffs = []
+for dd,day in enumerate(conddf.days.values):
+    dff_opto, dff_prev = get_dff_opto(conddf, dd, day)
+    dffs.append([dff_opto, dff_prev])
     
 # #%%
-# # plot
-# conddf['dff_target'] = np.array(dffs)[:,0]
-# conddf['dff_prev'] = np.array(dffs)[:,1]
-# conddf['dff_target-prev'] = conddf['dff_target']-conddf['dff_prev']
-# conddf['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in conddf.in_type.values]
-# df = conddf
-# df=df.groupby(['animals', 'condition']).mean(numeric_only=True)
-# fig,ax = plt.subplots(figsize=(2.5,6))
-# ax = sns.barplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
-#                 palette={'Control': "slategray", 'VIP': "red"},
-#                 errorbar='se', fill=False)
-# ax = sns.stripplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
-#                 palette={'Control': "slategray", 'VIP': "red"},
-#                 s=10)
-# ax.spines[['top','right']].set_visible(False)
+# plot
+plt.rc('font', size=20)          # controls default text sizes
+conddf['dff_target'] = np.array(dffs)[:,0]
+conddf['dff_prev'] = np.array(dffs)[:,1]
+conddf['dff_target-prev'] = conddf['dff_target']-conddf['dff_prev']
+conddf['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in conddf.in_type.values]
+conddf['opto'] = conddf.optoep.values>1
+df = conddf
+df=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
+fig,ax = plt.subplots(figsize=(2.5,6))
+ax = sns.barplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
+                palette={'Control': "slategray", 'VIP': "red"},
+                errorbar='se', fill=False)
+ax = sns.stripplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
+                palette={'Control': "slategray", 'VIP': "red"},
+                s=10)
+ax.spines[['top','right']].set_visible(False)
+ax.get_legend().set_visible(False)
 
-# t,pval = scipy.stats.ranksums(df[(df.index.get_level_values('condition')=='VIP')]['dff_target-prev'].values, \
-#             df[(df.index.get_level_values('condition')=='Control')]['dff_target-prev'].values)
-# plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
+t,pval = scipy.stats.ranksums(df[(df.index.get_level_values('condition')=='VIP')]['dff_target-prev'].values, \
+            df[(df.index.get_level_values('condition')=='Control')]['dff_target-prev'].values)
+plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
 #%%
 # plot fraction of cells near reward
 df = conddf
@@ -148,7 +150,7 @@ df['rewloc_shift'] = rewloc_shift
 df['animal'] = animals
 condition = []
 df['vipcond'] = ['vip' if (xx == 'e216') | (xx == 'e217') | (xx == 'e218') else 'ctrl' for xx in animals]
-
+df = df[(df.animal!='e189')&(df.animal!='e200')]
 dfagg = df.groupby(['animal', 'vipcond']).mean(numeric_only=True)
 
 fig, ax = plt.subplots()
@@ -156,8 +158,7 @@ ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcon
         palette={'ctrl': "slategray", 'vip': "red"},s=150)
 ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = df, 
         palette={'ctrl': "slategray", 'vip': "red"}, s=150,alpha=0.2)
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
+ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 ax.set_title('Shift = VIP Inhibition-Before Inhibition')
 # plt.savefig(os.path.join(savedst, 'scatterplot_comshift.svg'), bbox_inches='tight')
@@ -226,9 +227,9 @@ for ii,dct in enumerate(dcts_opto):
     df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
     if df['in_type'].values[0] =='vip':
         df['vip_cond'] = 'vip'
-    else:
+    # else:
     #     df['vip_cond'] = 'ctrl'
-    # elif (df['in_type'].values[0] =='sst') or (df['animal'].values[0] =='e190'):        
+    elif (df['in_type'].values[0] =='sst') or (df['animal'].values[0] =='e190') or (df['animal'].values[0] =='z8'):        
         df['vip_cond'] = 'ctrl'
 
     dfs_diff.append(df)

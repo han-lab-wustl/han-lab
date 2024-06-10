@@ -19,7 +19,7 @@ an = 'z9';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [6];
+dys = [9];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -176,7 +176,7 @@ for dy=dys % for loop per day
             'ep%i vs ep%i: ranksum = %d'], an, dy, comparison(1), comparison(2),...
             p))
         pptx.addPicture(fig);
-        close(fig)
+        % close(fig)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 2%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         slideId = pptx.addSlide();
         fprintf('Added slide %d\n',slideId);

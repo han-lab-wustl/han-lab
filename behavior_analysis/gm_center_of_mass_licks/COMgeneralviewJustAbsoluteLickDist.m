@@ -198,7 +198,7 @@ for dy=1:length(days)
         end
         pptx.addPicture(fig);
         pptx.addTextbox(sprintf('%s_day%i behavior COM',mouse_name,days(dy)));
-        close(fig)
+        % close(fig)
         %% Speed Mean Plots
 
 %         fig = figure;

@@ -8,6 +8,39 @@ import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
 from scipy.signal import gaussian
 
+
+def get_place_field_widths(tuning_curves, threshold=0.5):
+    """
+    Calculate place field widths around peak firing fields for each cell.
+    
+    Parameters:
+    tuning_curves (pd.DataFrame): DataFrame where each row represents a cell and each column a position.
+    threshold (float): Proportion of peak firing rate to define place field boundaries (default is 0.5, i.e., 50%).
+    
+    Returns:
+    pd.DataFrame: DataFrame with place field widths for each cell.
+    """
+    n_cells = tuning_curves.shape[0]
+    place_field_widths = []
+
+    for cell in range(n_cells):
+        firing_rates = tuning_curves[cell, :]
+        peak_rate = np.max(firing_rates)
+        threshold_rate = threshold * peak_rate
+        
+        # Find the positions where the firing rate is above the threshold
+        above_threshold = np.where(firing_rates >= threshold_rate)[0]
+        
+        if above_threshold.size == 0:
+            place_field_widths.append(np.nan)
+            continue
+        
+        # Calculate the width as the distance between the first and last position above the threshold
+        width = above_threshold[-1] - above_threshold[0] + 1
+        place_field_widths.append(width)
+    
+    return place_field_widths
+
 def calculate_global_remapping(data_reward1, data_reward2, 
     num_iterations=1000):
     n_cells = data_reward1.shape[0]
@@ -34,22 +67,24 @@ def calculate_global_remapping(data_reward1, data_reward2,
             y = shuffled_data_reward2[neuron, :]
             cs = get_cosine_similarity(x, y)
             shuffled_cs.append(cs)
-        shuffled_CS.extend(shuffled_cs)    
+        shuffled_CS.append(shuffled_cs)    
     shuffled_CS = np.array(shuffled_CS)
     
+    # remove nan cell
+    real_CS_ = real_CS[~np.isnan(real_CS)]
+    shuffled_CS_ = shuffled_CS[:, ~np.isnan(real_CS)]
     # Calculate p-values
     p_values = []
-    for real_cs in real_CS:
-        p_value = np.sum(shuffled_CS > real_cs) / num_iterations
+    for ii,real_cs in enumerate(real_CS_):
+        p_value = np.sum(shuffled_CS_[:,ii] > real_cs) / num_iterations
         p_values.append(p_value)
     
     p_values = np.array(p_values)
-    
     # Compare real vs shuffled using ranksum test
-    P, H = ranksums(real_CS[~np.isnan(real_CS)], shuffled_CS[~np.isnan(shuffled_CS)])
+    H, P = ranksums(real_CS_, np.nanmean(shuffled_CS_,axis=0))
     
-    real_distribution = real_CS[~np.isnan(real_CS)]
-    shuffled_distribution = shuffled_CS[~np.isnan(shuffled_CS)]
+    real_distribution = real_CS_
+    shuffled_distribution = shuffled_CS_
     
     return P, H, real_distribution, shuffled_distribution, p_values, global_remapping
 
@@ -258,45 +293,7 @@ def intersect_arrays(*arrays):
     for arr in arrays[2:]:
         intersection = np.intersect1d(intersection, arr)
 
-    return intersection
-    
-def evaluate_place_field_width(tuning_curve, bin_centers, threshold=0.3):
-    """
-    Evaluate the width of a place field from a tuning curve calculated from calcium imaging data.
-
-    Args:
-        tuning_curve (numpy.ndarray): 1D array containing the tuning curve values.
-        bin_centers (numpy.ndarray): 1D array containing the bin centers corresponding to the tuning curve values.
-        threshold (float, optional): Threshold for determining the place field boundaries (default: 0.5).
-
-    Returns:
-        float: Width of the place field in the same units as bin_centers.
-        None: If no place field is detected.
-    """
-    # Normalize the tuning curve to [0, 1] range
-    tuning_curve = (tuning_curve - np.min(tuning_curve)) / (np.max(tuning_curve) - np.min(tuning_curve))
-
-    # Find the indices where the tuning curve crosses the threshold
-    above_threshold = tuning_curve >= threshold
-    crossings = np.where(np.diff(above_threshold.astype(int)))[0]
-
-    # If there are no crossings or an odd number of crossings, no place field is detected
-    if len(crossings) == 0 or len(crossings) % 2 != 0:
-        return None
-
-    # Find the bin centers corresponding to the place field boundaries
-    field_boundaries = []
-    for i in range(0, len(crossings), 2):
-        boundary_left = bin_centers[crossings[i]]
-        boundary_right = bin_centers[crossings[i + 1]]
-        field_boundaries.append((boundary_left, boundary_right))
-
-    # Calculate the width of the place field as the difference between the boundaries
-    place_field_widths = [right - left for left, right in field_boundaries]
-
-    # Return the maximum width (in case of multiple place fields)
-    return max(place_field_widths)
-
+    return intersection   
 
 def convert_com_to_radians(com, reward_location, track_length):
     """
@@ -580,11 +577,3 @@ def calculate_noise_correlations(data, trial_info):
             noise_corr[i, j] = noise_corr[j, i] = r
 
     return noise_corr
-
-# # Example usage
-# # Load your calcium imaging data and trial information
-# data = ...  # Shape: (num_neurons, num_timesteps, num_trials)
-# trial_info = ...  # Shape: (num_trials, num_features)
-
-# # Calculate noise correlations
-# noise_corr = calculate_noise_correlations(data, trial_info)

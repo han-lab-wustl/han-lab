@@ -16,7 +16,7 @@ mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
-plt.rc('font', size=12)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 #%%
 plt.close('all')
 # save to pdf
@@ -27,10 +27,10 @@ animals = ['e231', 'e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[2,3,4,5,6,7,8,9,10,11],#,12,13,15,16],
 #         [44,45,46,47,48,49,50,51]]#,54,55,56,57]]
-# days_all = [[17,18,19,20,21,23,24,25,26,27], # dark time
-#         [59,60,61,62,63,65,66,67,68,69]]
-days_all = [[28,29,30,31,32,33],
-    [70,71,72,73,74,75]]
+days_all = [[17,18,19,20,21,23,24,25,26,27], # dark time
+        [59,60,61,62,63,65,66,67,68,69]]
+# days_all = [[28,29,31,33,34,36], # excluded some days
+#     [70,71,72,73,74,75,76,77,78]]
 # days_all = [np.arange(16,26)]
 dark_time = True
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -45,10 +45,12 @@ for ii,animal in enumerate(animals):
     for day in days: 
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
-        optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_day'].values[0])
-        # optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_memory_day'].values[0])
-        optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
-        # optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_stim_ctrl'].values[0])
+        if dark_time: # get dt columns
+            optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_memory_day'].values[0])
+            optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_stim_ctrl'].values[0])
+        else:
+            optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_day'].values[0])    
+            optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
         # for each plane
         path=list(Path(os.path.join(src, animal, str(day))).rglob('params.mat'))[0]
         params = scipy.io.loadmat(path)
@@ -177,7 +179,8 @@ ax = sns.barplot(x='opto', y='success_rate', hue='opto', data=df, fill=False,
                 palette={False: "slategray", True: "mediumturquoise"})
 ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
                 palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
+                s=12)
+ax.get_legend().set_visible(False)
 
 # # performance on opto days
 # plt.figure(figsize=(3,6))
@@ -195,7 +198,7 @@ ax = sns.barplot(x='opto_day_before', y='velocity_near_rewardloc_mean', hue='opt
                 palette={False: "slategray", True: "mediumturquoise"})
 ax = sns.stripplot(x='opto_day_before', y='velocity_near_rewardloc_mean', hue='opto_day_before', data=df,
                 palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
+                s=12)
 ax.get_legend().set_visible(False)
 
 plt.figure(figsize=(3,6))
@@ -206,7 +209,7 @@ ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
 ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
                 hue='opto_day_before', data=dfagg,
                 palette={False: "slategray", True: "mediumturquoise"},
-                s=8)
+                s=12)
 ax.get_legend().set_visible(False)
 
 # plt.figure(figsize=(3,6))
@@ -281,6 +284,12 @@ x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lick_sele
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'lick_selectivity_near_rewardloc_mean'].values
 t,pval = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 print(f'Paired t-test (n=2) p-value: {pval:02f}')
+
+# velocity
+x1 = df.loc[df.opto_day_before==True, 'velocity_near_rewardloc_mean'].values
+x2 = df.loc[df.opto_day_before==False, 'velocity_near_rewardloc_mean'].values
+t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+print(f'Velocity near reward in memory probes\nPer session t-test p-value: {pval:02f}')
 
 
 # x1 = df.loc[df.opto_day_before==True, 'vel_failed_odd'].values

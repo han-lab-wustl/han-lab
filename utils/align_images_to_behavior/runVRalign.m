@@ -30,14 +30,14 @@ for day=days
 end
 %%
 clear all;
-mouse_name = "e217";
-days = [8:10];
-src = "Y:\hrz_consolidation";
+mouse_name = "grabda_sparse_hrz";
+days = [9];
+src = "\\storage1.ris.wustl.edu\ebhan\Active\dzahra";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\Fall.mat')); 
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\*roibyclick_F.mat')); 
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
