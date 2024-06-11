@@ -1,11 +1,61 @@
 import numpy as np
 
-import numpy as np
+import scipy, random
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+def get_lick_tuning_curves_per_trial(params_pth, conddf, dd):
+    bin_size = 3
+    fall = scipy.io.loadmat(params_pth, variable_names=['VR'])
+    VR = fall['VR'][0][0][()]
+    eps = np.where(np.hstack(VR['changeRewLoc']>0))[0]
+    eps = np.append(eps, len(np.hstack(VR['changeRewLoc'])))
+    scalingf = VR['scalingFACTOR'][0][0]
+    track_length = 180/scalingf
+    nbins = int(track_length/bin_size)
+    ybinned = np.hstack(VR['ypos']/scalingf)
+    rewlocs = np.ceil(np.hstack(VR['changeRewLoc'])[np.hstack(VR['changeRewLoc']>0)]/scalingf).astype(int)
+    rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
+    trialnum = np.hstack(VR['trialNum'])
+    rewards = np.hstack(VR['reward'])
+    forwardvel = np.hstack(VR['ROE']); time =np.hstack(VR['time'])
+    forwardvel=-0.013*forwardvel[1:]/np.diff(time) # make same size
+    forwardvel = np.append(forwardvel, np.interp(len(forwardvel)+1, np.arange(len(forwardvel)),forwardvel))
+    licks = np.hstack(VR['lickVoltage'])
+    licks = licks<=-0.065 # remake boolean
+    eptest = conddf.optoep.values[dd]
+    if conddf.optoep.values[dd]<2: 
+        eptest = random.randint(2,3)   
+        if len(eps)<4: eptest = 2 # if no 3 epochs    
+    lickdf = pd.DataFrame({'lick': licks})
+    lick_smooth = np.hstack(lickdf.rolling(20).mean().values)
+    comp = [eptest-1] # just comparison epoch
+    # get licks per trial
+    trialnum_eps = [trialnum[eps[ep]:eps[ep+1]] for ep in comp]
+    lick_smooth_eps = [lick_smooth[eps[ep]:eps[ep+1]] for ep in comp] 
+    ybinned_eps = [ybinned[eps[ep]:eps[ep+1]] for ep in comp] 
+    rewards_eps = [rewards[eps[ep]:eps[ep+1]] for ep in comp] 
+    # get all reward eligible trials in one list
+    licks_per_trial_per_ep = [lick_smooth_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]
+    ybinned_per_trial_per_ep = [ybinned_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]
+    trialstate_per_ep = [sum(rewards_eps[ii][trialnum_ep == xx]==1)>0 for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]
+    lick_tuning_curves_per_trial_per_ep = []
+    for ii,lick in enumerate(licks_per_trial_per_ep):
+        _, beh_prob = get_behavior_tuning_curve(ybinned_per_trial_per_ep[ii], lick, bins=nbins)
+        lick_tuning_curves_per_trial_per_ep.append(beh_prob.values)
+    # exclude incomplete trials
+    trialstate_per_ep = [xx for ii,xx in enumerate(trialstate_per_ep) if len(lick_tuning_curves_per_trial_per_ep[ii])>70]
+    lick_tuning_curves_per_trial_per_ep = [xx for xx in lick_tuning_curves_per_trial_per_ep if len(xx)>70]
+
+    lick_tuning_curves_per_trial_per_ep_padded = np.ones((len(lick_tuning_curves_per_trial_per_ep),nbins))*np.nan
+    for trial in range(len(lick_tuning_curves_per_trial_per_ep_padded)):
+        lick_tuning_curves_per_trial_per_ep_padded[trial,:len(lick_tuning_curves_per_trial_per_ep[trial])] = lick_tuning_curves_per_trial_per_ep[trial]
+    rewzones = get_rewzones(rewlocs,1/scalingf)
+    rewzone = rewzones[comp]
+    return lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep
+    
 def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
                 fails_only = False):
     """Assume Y is the position, which is a one-dimensional vector. L is the binary licking behavior, 
@@ -98,8 +148,6 @@ def get_rewzones(rewlocs, gainf):
             
     return rewzonenum
     
-    return trials_before_success
-
 def get_mean_velocity_per_ep(forwardvel):
     return np.nanmean(forwardvel)
 

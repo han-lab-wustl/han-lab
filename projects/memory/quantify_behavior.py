@@ -27,12 +27,12 @@ animals = ['e231', 'e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[2,3,4,5,6,7,8,9,10,11],#,12,13,15,16],
 #         [44,45,46,47,48,49,50,51]]#,54,55,56,57]]
-days_all = [[17,18,19,20,21,23,24,25,26,27], # dark time
-        [59,60,61,62,63,65,66,67,68,69]]
-# days_all = [[28,29,31,33,34,36], # excluded some days
-#     [70,71,72,73,74,75,76,77,78]]
+# days_all = [[17,18,19,20,21,23,24,25,26,27], # dark time
+#         [59,60,61,62,63,65,66,67,68,69]]
+days_all = [[28,29,31,33,34,36,37], # excluded some days
+    [70,71,72,73,74,75,76,77,78,79]]
 # days_all = [np.arange(16,26)]
-dark_time = True
+dark_time = False
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
 near_reward_per_day = []

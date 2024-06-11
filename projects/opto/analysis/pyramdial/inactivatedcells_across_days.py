@@ -89,7 +89,6 @@ maxbin = 5; ymax = 36
 animals = ['e216','e218']
 fig, axes = plt.subplots(nrows = 1, ncols = 2, figsize=(6,6), sharey=True)
 js_s_opto = []
-other_dist_opto = []
 for i,an in enumerate(animals):
     opto = []
     ctrl = []
@@ -103,7 +102,6 @@ for i,an in enumerate(animals):
                 ctrl.append(v)
     opto_count = Counter(chain(*opto))
     ctrl_count = Counter(chain(*ctrl))
-    other_dist_opto.append(jensen_shannon(opto_count,ctrl_count))
     opto_count = np.array(list(opto_count.values()))
     opto_count = opto_count[opto_count>1]
     ctrl_count = np.array(list(ctrl_count.values()))
@@ -132,7 +130,7 @@ axes[0].set_yticks(np.arange(0,ymax,5))
 axes[1].set_title(f'VIP Inhibition (n=2) \n KL Divergence: {np.nanmedian(js_s_opto):.1f}')
 axes[0].spines[['top','right']].set_visible(False)
 axes[1].spines[['top','right']].set_visible(False)
-plt.savefig(os.path.join(savedst,'kl_div_vip.jpg'),dpi=500,bbox_inches='tight')
+# plt.savefig(os.path.join(savedst,'kl_div_vip.jpg'),dpi=500,bbox_inches='tight')
 
 # ctrl mice
 # separate opto vs. normal days
@@ -140,7 +138,6 @@ animals = ['e201','e200','e186','e189','e190']
 maxbin=5; ymax = 21
 fig, axes = plt.subplots(nrows = 1, ncols = 2, figsize=(6,6), sharey=True)
 js_s_ctrl = []
-other_dist_ctrl=[]
 for i,an in enumerate(animals):
     opto = []
     ctrl = []
@@ -154,7 +151,6 @@ for i,an in enumerate(animals):
                 ctrl.append(v)
     opto_count = Counter(chain(*opto))
     ctrl_count = Counter(chain(*ctrl))
-    other_dist_ctrl.append(jensen_shannon(opto_count,ctrl_count))
     opto_count = np.array(list(opto_count.values()))
     opto_count = opto_count[opto_count>1]
     ctrl_count = np.array(list(ctrl_count.values()))
@@ -184,6 +180,6 @@ axes[1].set_title(f'Control (n=5) \n KL Divergence: {np.nanmedian(js_s_ctrl):.1f
 # ax.set_xticks(np.arange(1,8))
 axes[0].spines[['top','right']].set_visible(False)
 axes[1].spines[['top','right']].set_visible(False)
-plt.savefig(os.path.join(savedst,'kl_div_ctrl.jpg'),dpi=500,bbox_inches='tight')
+# plt.savefig(os.path.join(savedst,'kl_div_ctrl.jpg'),dpi=500,bbox_inches='tight')
 
 scipy.stats.ttest_ind(js_s_ctrl,js_s_opto)
