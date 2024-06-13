@@ -1,11 +1,8 @@
 """"use binned licks to visualize average licking behavior 
-align all rew locations to a common coordinate
 """
 #%%
-    
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
-from sklearn.cluster import KMeans
 import matplotlib.patches as patches
 import seaborn as sns
 import matplotlib as mpl
@@ -23,95 +20,129 @@ from behavior import get_success_failure_trials, get_performance, get_rewzones, 
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_licks.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
-# days = np.arange(2,21)
-# optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
-# corresponding to days analysing
-
-lick_tc_vip_opto = {}
+bin_size = 1
+lick_tc_vip_opto = {} # collecting
 lick_tc_vip_ledoff = {}
 lick_tc_ctrl_opto = {}
-# com shift analysis
-dcts = []
 for dd,day in enumerate(conddf.days.values):
     if (conddf.in_type.values[dd]=='vip') and (conddf.optoep.values[dd]>1):
         animal = conddf.animals.values[dd]
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep = get_lick_tuning_curves_per_trial(params_pth, conddf, dd)
-        lick_tc_vip_opto[f'rz{int(rewzone)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
+        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
+            bin_size=bin_size)
+        lick_tc_vip_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
     elif (conddf.in_type.values[dd]!='vip') and (conddf.optoep.values[dd]>1):
         animal = conddf.animals.values[dd]
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep = get_lick_tuning_curves_per_trial(params_pth, conddf, dd)
-        lick_tc_ctrl_opto[f'rz{int(rewzone)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
+        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
+            bin_size=bin_size)
+        lick_tc_ctrl_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
     elif (conddf.in_type.values[dd]=='vip') and (conddf.optoep.values[dd]==-1):
         animal = conddf.animals.values[dd]
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep = get_lick_tuning_curves_per_trial(params_pth, conddf, dd)
-        lick_tc_vip_ledoff[f'rz{int(rewzone)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded,trialstate_per_ep]
+        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
+            bin_size=bin_size)
+        lick_tc_vip_ledoff[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded,trialstate_per_ep]
         
 #%%
-# trial by trial heatmap
 
+# Function to plot and calculate average licks
 def plot_lick_vis(dct_to_use, condition):
-    rz1 = [67,86]
-    rz2 = [101,120]
-    rz3 = [135,155]
-    bin_size = 3
+    expandrzwindow = 7
     scalingf = 2/3
+    rz1 = np.ceil(np.array([67-expandrzwindow,86+expandrzwindow])/scalingf)
+    rz2 = np.ceil(np.array([101-expandrzwindow,120+expandrzwindow])/scalingf)
+    rz3 = np.ceil(np.array([135-expandrzwindow,154+expandrzwindow])/scalingf)
+    rzs = np.array([rz1,rz2,rz3]).astype(int)
+    
     fig, axes = plt.subplots(nrows=1,ncols=3,sharex=True)
-    licks_opto_rz1 = [v[0] for k,v in dct_to_use.items() if k[:3] == 'rz1']
-    licks_opto_rz1 = np.concatenate(licks_opto_rz1)
-    trialstate_rz1 = [v[1] for k,v in dct_to_use.items() if k[:3] == 'rz1']
-    trialstate_rz1 = np.concatenate(trialstate_rz1).astype(bool)
-    df = pd.DataFrame(licks_opto_rz1)
-    mask = np.array([[trial]*df.shape[1] for trial in trialstate_rz1])
-    sns.heatmap(df, mask=mask, cmap='Reds',cbar=False, ax=axes[0])
-    sns.heatmap(df, mask=~mask, cmap='Greys',cbar=False, ax=axes[0])
-    axes[0].set_title('Reward zone 1')
-    axes[0].set_ylabel('Trials')
-    axes[0].set_xlabel('Position bin (3cm)')
-    axes[0].add_patch(patches.Rectangle(
-        xy=((rz1[0]/scalingf)/bin_size,0),  # point of origin.
-        width=((rz1[1]/scalingf)-(rz1[0]/scalingf))/bin_size, 
-        height=licks_opto_rz1.shape[0], linewidth=1, # width is s
-        color='slategray', alpha=0.3))
-    licks_opto_rz2 = [v[0] for k,v in dct_to_use.items() if k[:3] == 'rz2']
-    licks_opto_rz2 = np.concatenate(licks_opto_rz2)
-    trialstate_rz2 = [v[1] for k,v in dct_to_use.items() if k[:3] == 'rz2']
-    trialstate_rz2 = np.concatenate(trialstate_rz2)
-    df = pd.DataFrame(licks_opto_rz2)
-    mask = np.array([[trial]*df.shape[1] for trial in trialstate_rz2])
-    sns.heatmap(df, mask=mask, cmap='Reds',cbar=False, ax=axes[1])
-    sns.heatmap(df, mask=~mask, cmap='Greys',cbar=False, ax=axes[1])
-    axes[1].set_title('Reward zone 2')
-    axes[1].add_patch(patches.Rectangle(
-        xy=((rz2[0]/scalingf)/bin_size,0),  # point of origin.
-        width=((rz2[1]/scalingf)-(rz2[0]/scalingf))/bin_size, 
-        height=licks_opto_rz2.shape[0], linewidth=1, # width is s
-        color='slategray', alpha=0.3))
+    
+    av_licks_in_rewzone = {}
+    av_licks_in_prevrewzone = {}
+    
+    for i, (zone, rz) in enumerate(zip(range(1, 4), rzs)):
+        licks_opto = [v[0] for k,v in dct_to_use.items() if k[:3] == f'rz{zone}']
+        prev_rz = [[int(k[4])]*len(v[0]) for k,v in dct_to_use.items() if k[:3] == f'rz{zone}']
+        licks_opto = np.concatenate(licks_opto)
+        trialstate = [v[1] for k,v in dct_to_use.items() if k[:3] == f'rz{zone}']
+        trialstate = np.concatenate(trialstate).astype(bool)
+        df = pd.DataFrame(licks_opto)
+        mask = np.array([[trial]*df.shape[1] for trial in trialstate])
+        
+        sns.heatmap(df, mask=mask, cmap='Reds', cbar=False, ax=axes[i])
+        sns.heatmap(df, mask=~mask, cmap='Greys', cbar=False, ax=axes[i])
+        axes[i].set_title(f'Reward zone {zone}')
+        if i == 0:
+            axes[i].set_ylabel('Trials')
+        axes[i].set_xlabel('Position (cm)')
+        
+        axes[i].add_patch(patches.Rectangle(
+            xy=((rz[0])/bin_size,0),  # point of origin.
+            width=((rz[1])/bin_size)-((rz[0])/bin_size),
+            height=licks_opto.shape[0], linewidth=1, 
+            color='mediumspringgreen', alpha=0.3))
+        av_licks_in_rewzones = []
+        av_licks_in_prevrewzones = []
+        for jj, przs in enumerate(prev_rz):
+            if jj > 0:
+                ystart = len(np.concatenate(prev_rz[:jj]))
+            else:
+                ystart = 0
+            axes[i].add_patch(patches.Rectangle(
+                xy=((rzs[przs[0]-1][0])/bin_size,ystart),
+                width=((rzs[przs[0]-1][1])/bin_size)-((rzs[przs[0]-1][0])/bin_size),
+                height=len(przs), linewidth=1,
+                color='slategray', alpha=0.3))
+            arr = np.array(df)[ystart:(ystart+len(przs)), (rz[0]//bin_size):(rz[1]//bin_size)]
+            # mask, only fails
+            # arr = arr[trialstate[ystart:(ystart+len(przs))],:]
+            licks_in_rewzone = np.nansum(arr,axis=1)
+            total_licks = np.nansum(np.array(df)[ystart:(ystart+len(przs)), :], axis=1)
+            # total_licks = total_licks[trialstate[ystart:(ystart+len(przs))]]
+            av_licks_in_rewzones.append(np.nanmean(licks_in_rewzone/total_licks))            
+            # -1 for py indexing of rzs
+            # mask, only fails
+            arr = np.array(df)[ystart:(ystart+len(przs)), int(rzs[prev_rz[jj][0]-1][0]/bin_size):int(rzs[prev_rz[jj][0]-1][1]//bin_size)]
+            # arr = arr[trialstate[ystart:(ystart+len(przs))],:]
+            licks_in_prevrewzone = np.nansum(arr,axis=1)
+            av_licks_in_prevrewzones.append(np.nanmean(licks_in_prevrewzone/total_licks))
 
-    licks_opto_rz3 = [v[0] for k,v in dct_to_use.items() if k[:3] == 'rz3']
-    licks_opto_rz3 = np.concatenate(licks_opto_rz3)
-    trialstate_rz3 = [v[1] for k,v in dct_to_use.items() if k[:3] == 'rz3']
-    trialstate_rz3 = np.concatenate(trialstate_rz3)
-    df = pd.DataFrame(licks_opto_rz3)
-    mask = np.array([[trial]*df.shape[1] for trial in trialstate_rz3])
-    sns.heatmap(df, mask=mask, cmap='Reds',cbar=False, ax=axes[2])
-    sns.heatmap(df, mask=~mask, cmap='Greys',cbar=False, ax=axes[2])
-    axes[2].set_title(f'{condition}\nReward zone 3')
-    axes[2].add_patch(patches.Rectangle(
-        xy=((rz3[0]/scalingf)/bin_size,0),  # point of origin.
-        width=((rz3[1]/scalingf)-(rz3[0]/scalingf))/bin_size, 
-        height=licks_opto_rz3.shape[0], linewidth=1, # width is s
-        color='slategray', alpha=0.3))
-
-
+        av_licks_in_rewzone[zone] = av_licks_in_rewzones
+        av_licks_in_prevrewzone[zone] = av_licks_in_prevrewzones
+        
+    plt.suptitle(f'{condition}')
+    plt.show()
+    
+    return av_licks_in_rewzone, av_licks_in_prevrewzone
+#%%
+# Plot and compute licks for each condition
 dct_to_use = lick_tc_ctrl_opto
 condition = 'Control LED on'
-plot_lick_vis(dct_to_use, condition)
+av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition)
+
 dct_to_use = lick_tc_vip_opto
 condition = 'VIP LED on'
-plot_lick_vis(dct_to_use, condition)
+av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition)
+#%%
+prevrz1_ctrl = av_licks_in_prevrewzone_ctrl[1]
+prevrz1_vip = av_licks_in_prevrewzone_vip[1]
+# prevrz1_ctrl = av_licks_in_rewzone_ctrl[1]
+# prevrz1_vip = av_licks_in_rewzone_vip[1]
+
+df = pd.DataFrame(np.concatenate([prevrz1_ctrl,prevrz1_vip]), columns = ['prevrz_lick_prob'])
+df['condition'] = np.concatenate([['Control']*len(prevrz1_ctrl),['VIP']*len(prevrz1_vip)])
+dfagg = df
+plt.figure(figsize=(3,6))
+ax = sns.barplot(x='condition', y='prevrz_lick_prob', hue='condition', data=dfagg, fill=False,
+                errorbar='se',
+                palette={'Control': "slategray", 'VIP': "red"})
+ax = sns.stripplot(x='condition', y='prevrz_lick_prob', hue='condition', data=dfagg,
+                palette={'Control': "slategray", 'VIP': "red"},
+                s=10)
+ax.spines[['top','right']].set_visible(False)
+# ax.get_legend().set_visible(False)
+#%%
 dct_to_use = lick_tc_vip_ledoff
 condition = 'VIP LED off'
 plot_lick_vis(dct_to_use, condition)
+

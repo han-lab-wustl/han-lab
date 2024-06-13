@@ -1,7 +1,7 @@
 %%%%% batch processing
 %%ROI selection and the extraction of raw flourescence
 % zahra's notes
-% uses primarily for GRAB-DA recordings in 2p
+% use: primarily for GRAB-DA or other GRAB imaging in 2p
 
 %% step 1 - pick files
 clear all
