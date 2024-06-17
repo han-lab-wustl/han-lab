@@ -90,7 +90,8 @@ for ep=1:length(eps)-1
         peak(c) = 0;
     end
     end
-    coms{ep} = peak; %median_com;
+    % coms{ep} = peak; %median_com;
+    coms{ep} = median_com;
 end
 % end
 end

@@ -13,12 +13,12 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.DLC_behavior_classification import eye
 
 # Definitions and setups
-mice = ["e216", "e217", "e218"]
-dys_s = [[37, 41], [14, 26, 27], [35, 38, 41, 44, 47, 50]]
-opto_ep_s = [[2,3], [2, 3, 3], [3, 2, 3, 2, 3, 2]]
-cells_to_plot_s = [[266,191], [16,6,9], 
-        [[453,63,26,38], [301, 17, 13, 320], [17, 23, 36, 10], 
-        [6, 114, 11, 24], [49, 47, 6, 37], [434,19,77,5]]]
+mice = ["e216"]#, "e217", "e218"]
+dys_s = [[48]]#, [14, 26, 27], [35, 38, 41, 44, 47, 50]]
+opto_ep_s = [[2]]#, [2, 3, 3], [3, 2, 3, 2, 3, 2]]
+cells_to_plot_s = [[2231]]#, [16,6,9], 
+        # [[453,63,26,38], [301, 17, 13, 320], [17, 23, 36, 10], 
+        # [6, 114, 11, 24], [49, 47, 6, 37], [434,19,77,5]]]
 src = "X:/vipcre"
 dffs_cp_dys = []
 mind = 0
@@ -137,6 +137,7 @@ dffarr = np.array(dffs_cp_dys)
 # dffarr = np.delete(dffarr,2,0)
 # dffarr = np.delete(dffarr,5,0)
 an_ranges = [range(4), range(4,7), range(7,11)]
+an_ranges = [range(1)]
 for ii,an in enumerate(an_ranges):
         fig, ax = plt.subplots()
         meantc = np.nanmean(dffarr[an,1,:],axis=0)

@@ -16,10 +16,11 @@ mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
-
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_modeling.csv", index_col=None)
+from projects.opto.behavior.behavior import get_success_failure_trials
+
+conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'
 savepth = os.path.join(savedst, 'goal_cells_stats.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -30,6 +31,8 @@ goal_cell_iind = []
 goal_cell_prop = []
 num_epochs = []
 pvals = []
+rates = []
+total_cells = []
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     day = conddf.days.values[ii]
@@ -38,12 +41,19 @@ for ii in range(len(conddf)):
     # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
     #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
     fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
-        'tuning_curves_late_trials', 'coms', 'coms_early_trials'])        
-    changeRewLoc = np.hstack(fall['changeRewLoc'])
+        'tuning_curves_late_trials', 'coms', 'coms_early_trials', 'trialnum', 'rewards'])        
+    changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum = fall['trialnum'][0]; rewards = fall['rewards'][0]
     eptest = conddf.optoep.values[ii]
     eps = np.where(changeRewLoc>0)[0]
     rewlocs = changeRewLoc[eps]*1.5
     eps = np.append(eps, len(changeRewLoc))    
+    # quantify performance
+    rate = []
+    for ep in range(len(eps)-1):
+        eprng = range(eps[ep], eps[ep+1])
+        success, fail, str_trials, ftr_trials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rate.append(success/total_trials)
+    rates.append(np.nanmean(np.array(rate)))
     bin_size = 3    
     tcs_early = fall['tuning_curves_early_trials'][0]
     tcs_late = fall['tuning_curves_late_trials'][0]
@@ -75,12 +85,19 @@ for ii in range(len(conddf)):
         pdf.savefig(fig)
         plt.close(fig)
     # get shuffled iterations
-    num_iterations = 3000
+    num_iterations = 2000
     shuffled_dist = np.zeros((num_iterations))
     for i in range(num_iterations):
-        rewlocs_shuf = [random.randint(100,250) for iii in range(len(eps))]
+        # shuffle locations
+        rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
+        shufs = [list(range(coms[ii].shape[0])) for ii in range(1, len(coms))]
+        [random.shuffle(shuf) for shuf in shufs]
+        com_shufs = np.zeros_like(coms)
+        com_shufs[0,:] = coms[0]
+        com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+        # OR shuffle cell identities
         # relative to reward
-        coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(coms)])             
+        coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(com_shufs)])             
         perm = list(combinations(range(len(coms)), 2))     
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         # get goal cells across all epochs
@@ -89,6 +106,7 @@ for ii in range(len(conddf)):
         shuffled_dist[i] = len(goal_cells_shuf)/len(coms[0])
     p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
     pvals.append(p_value)
+    total_cells.append(len(coms[0]))
     print(p_value)
 
 pdf.close()
@@ -104,28 +122,55 @@ ax = sns.stripplot(x='num_epochs', y='goal_cell_prop',
         hue='condition',data=df[df.opto==False],
         s=10)
 ax.spines[['top','right']].set_visible(False)
+#%%
+df['success_rate'] = rates
+df['p_value'] = pvals
+
+an_nms = df.animals.unique()
+rows = int(np.ceil(np.sqrt(len(an_nms))))
+cols = int(np.ceil(np.sqrt(len(an_nms))))
+fig,axes = plt.subplots(nrows=rows, ncols=cols, sharey=True,
+            figsize=(10,10))
+rr=0;cc=0
+for an in an_nms:        
+    ax = axes[rr,cc]
+    sns.scatterplot(x='success_rate', y='goal_cell_prop',
+            data=df[(df.animals==an)&(df.opto==False)&(df.p_value<0.05)],
+            s=200, ax=ax)
+    ax.spines[['top','right']].set_visible(False)
+    ax.set_title(an)
+    rr+=1
+    if rr>=rows: rr=0; cc+=1    
+fig.tight_layout()
+#%%
+df['recorded_neurons_per_session'] = total_cells
+fig,ax = plt.subplots(figsize=(7,5))
+sns.scatterplot(x='recorded_neurons', y='goal_cell_prop',hue='animals',
+        data=df[(df.opto==False)&(df.p_value<0.05)],
+        s=150, ax=ax)
+ax.spines[['top','right']].set_visible(False)
 
 #%%
 # histograms of p-values
 # shuffled reward loc
 fig,ax = plt.subplots()
-ax.hist(pvals,bins=80)
+ax.hist(pvals,bins=40)
 ax.axvline(0.05,color='k',linewidth=2,linestyle='--')
 ax.set_ylabel('Sessions')
 ax.set_xlabel('P-value')
 ax.spines[['top','right']].set_visible(False)
-ax.set_title('Reward cell proportion compared\nto shuffled rew loc cells')
+ax.set_title('Reward cell proportion compared\nto shuffled cell indicies')
 # %%
-df['p_value'] = pvals
 
-dfagg = df.groupby(['animals', 'opto', 'condition']).mean(numeric_only=True)
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.barplot(x='opto', y='goal_cell_prop',
-        hue='condition',data=dfagg, 
+dfagg = df#.groupby(['animals', 'opto', 'condition']).mean(numeric_only=True)
+fig,ax = plt.subplots(figsize=(8,6))
+ax = sns.barplot(x='animals', y='p_value',
+        hue='animals',data=dfagg, 
         fill=False)
-ax = sns.stripplot(x='opto', y='goal_cell_prop',
-        hue='condition',data=dfagg, 
+ax = sns.stripplot(x='animals', y='p_value',
+        hue='animals',data=dfagg, 
         s=10,dodge=True)
 ax.spines[['top','right']].set_visible(False)
-# ax.axhline(0.05,color='k',linewidth=2,linestyle='--')
 
+# ax.axhline(0.05,color='k',linewidth=2,linestyle='--')
+# ax.get_legend().set_visible(False)

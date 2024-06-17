@@ -21,7 +21,7 @@ MIJ.start;    %calls Fiji
 
 for day=days
     filename = dir(fullfile(src, string(day), '**', '*.sbx'));
-    cd (filename.folder); %set path
+    cd (filename.folder); %set path    
     stripped_filename=fullfile(filename.folder,filename.name);
     stripped_filename= strtok(stripped_filename,'.');
     z = sbxread(stripped_filename,1,1);
