@@ -34,8 +34,9 @@ animals = ['e231', 'e232']
 #         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
 days_all = [[28,29,30,31,32,33,34,35,36],
     [70,71,72,73,74,75,76,77,78]]
+days_all = [[40],[82]]
 numtrialsstim=10
-range_val = 5; binsize=0.2
+range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
 # optodays = [18, 19, 22, 23, 24]
@@ -360,4 +361,4 @@ for pln in range(4):
 fig.suptitle('ChR2 per day per + mouse averages')
 pdf.savefig(fig)
 pdf.close()
-plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')

@@ -439,14 +439,16 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
     if not pc:
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
-            'tuning_curves_late_trials', 'coms_early_trials'])
+            'tuning_curves_late_trials', 'coms_early_trials', 'trialnum'])
+        trialnum = fall['trialnum'][0]
         coms = fall['coms'][0]
         coms_early = fall['coms_early_trials'][0]
         tcs_early = fall['tuning_curves_early_trials'][0]
         tcs_late = fall['tuning_curves_late_trials'][0]
     else:
         fall = scipy.io.loadmat(params_pth, variable_names=['coms_pc_late_trials', 'changeRewLoc', 'tuning_curves_pc_early_trials',\
-            'tuning_curves_pc_late_trials', 'coms_pc_early_trials'])
+            'tuning_curves_pc_late_trials', 'coms_pc_early_trials', 'trialnum'])
+        trialnum = fall['trialnum'][0]
         coms = fall['coms_pc_late_trials'][0]
         coms_early = fall['coms_pc_early_trials'][0]
         tcs_early = fall['tuning_curves_pc_early_trials'][0]
@@ -456,7 +458,11 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     eps = np.where(changeRewLoc>0)[0]
     rewlocs = changeRewLoc[eps]*1.5
     rewzones = get_rewzones(rewlocs, 1.5)
-    eps = np.append(eps, len(changeRewLoc))  
+    eps = np.append(eps, len(changeRewLoc)) 
+    # exclude last ep if too little trials
+    lastrials = np.unique(trialnum[eps[(len(eps)-2)]:eps[(len(eps)-1)]])[-1]
+    if lastrials<8:
+        eps = eps[:-1]
     if conddf.optoep.values[dd]<2: 
         eptest = random.randint(2,3)      
         if len(eps)<4: eptest = 2 # if no 3 epochs

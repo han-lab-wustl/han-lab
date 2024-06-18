@@ -20,7 +20,7 @@ javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
 MIJ.start;    %calls Fiji
 
 for day=days
-    filename = dir(fullfile(src, string(day), '**', '*.sbx'));
+    filename = dir(fullfile(src, string(day), '*2*', '*.sbx'));
     cd (filename.folder); %set path    
     stripped_filename=fullfile(filename.folder,filename.name);
     stripped_filename= strtok(stripped_filename,'.');

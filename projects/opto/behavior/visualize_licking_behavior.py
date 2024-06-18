@@ -24,6 +24,11 @@ bin_size = 1
 lick_tc_vip_opto = {} # collecting
 lick_tc_vip_ledoff = {}
 lick_tc_ctrl_opto = {}
+
+probe_lick_tc_vip_opto = {} # collecting
+probe_lick_tc_vip_ledoff = {}
+probe_lick_tc_ctrl_opto = {}
+
 for dd,day in enumerate(conddf.days.values):
     if (conddf.in_type.values[dd]=='vip') and (conddf.optoep.values[dd]>1):
         animal = conddf.animals.values[dd]
@@ -31,23 +36,32 @@ for dd,day in enumerate(conddf.days.values):
         lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
             bin_size=bin_size)
         lick_tc_vip_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
+        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
+            bin_size=bin_size,probes=True)
+        probe_lick_tc_vip_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
     elif (conddf.in_type.values[dd]!='vip') and (conddf.optoep.values[dd]>1):
         animal = conddf.animals.values[dd]
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
             bin_size=bin_size)
         lick_tc_ctrl_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
+        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
+            bin_size=bin_size,probes=True)
+        probe_lick_tc_ctrl_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
     elif (conddf.in_type.values[dd]=='vip') and (conddf.optoep.values[dd]==-1):
         animal = conddf.animals.values[dd]
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
             bin_size=bin_size)
         lick_tc_vip_ledoff[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded,trialstate_per_ep]
+        lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
+            bin_size=bin_size,probes=True)
+        probe_lick_tc_vip_ledoff[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
         
 #%%
 
 # Function to plot and calculate average licks
-def plot_lick_vis(dct_to_use, condition):
+def plot_lick_vis(dct_to_use, condition, probes=False):
     expandrzwindow = 7
     scalingf = 2/3
     rz1 = np.ceil(np.array([67-expandrzwindow,86+expandrzwindow])/scalingf)
@@ -69,14 +83,18 @@ def plot_lick_vis(dct_to_use, condition):
         df = pd.DataFrame(licks_opto)
         mask = np.array([[trial]*df.shape[1] for trial in trialstate])
         
-        sns.heatmap(df, mask=mask, cmap='Reds', cbar=False, ax=axes[i])
-        sns.heatmap(df, mask=~mask, cmap='Greys', cbar=False, ax=axes[i])
+        if not probes:
+            sns.heatmap(df, mask=mask, cmap='Reds', cbar=False, ax=axes[i])
+            sns.heatmap(df, mask=~mask, cmap='Greys', cbar=False, ax=axes[i])
+        else:
+            sns.heatmap(df, cmap='Blues', cbar=False, ax=axes[i])
         axes[i].set_title(f'Reward zone {zone}')
         if i == 0:
             axes[i].set_ylabel('Trials')
         axes[i].set_xlabel('Position (cm)')
         
-        axes[i].add_patch(patches.Rectangle(
+        if not probes: 
+            axes[i].add_patch(patches.Rectangle(
             xy=((rz[0])/bin_size,0),  # point of origin.
             width=((rz[1])/bin_size)-((rz[0])/bin_size),
             height=licks_opto.shape[0], linewidth=1, 
@@ -119,10 +137,23 @@ def plot_lick_vis(dct_to_use, condition):
 dct_to_use = lick_tc_ctrl_opto
 condition = 'Control LED on'
 av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition)
+#%%
+dct_to_use = probe_lick_tc_ctrl_opto
+condition = 'Control LED on'
+av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, 
+                                            condition, probes=True)
 
+#%%
 dct_to_use = lick_tc_vip_opto
 condition = 'VIP LED on'
 av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition)
+
+#%%
+dct_to_use = probe_lick_tc_vip_opto
+condition = 'VIP LED on'
+av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition,
+        probes=True)
+
 #%%
 prevrz1_ctrl = av_licks_in_prevrewzone_ctrl[1]
 prevrz1_vip = av_licks_in_prevrewzone_vip[1]

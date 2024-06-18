@@ -19,50 +19,7 @@ an = 'e217';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-39
-40
-41
-42
-43
-44
-46
-47
-]';
+dys = [9 20 21 23 24];
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
@@ -77,10 +34,10 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
     pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     if length(pth)>1 % if multi plane imaging, grab the combined f file
         pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
-    end
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    end    
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...

@@ -29,89 +29,98 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 goal_cell_iind = []
 goal_cell_prop = []
+dist_to_rew = [] # per epoch
 num_epochs = []
 pvals = []
 rates = []
 total_cells = []
+#%%
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
-    day = conddf.days.values[ii]
-    plane=0 #TODO: make modular  
-    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
-    # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
-    #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
-    fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
-        'tuning_curves_late_trials', 'coms', 'coms_early_trials', 'trialnum', 'rewards'])        
-    changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum = fall['trialnum'][0]; rewards = fall['rewards'][0]
-    eptest = conddf.optoep.values[ii]
-    eps = np.where(changeRewLoc>0)[0]
-    rewlocs = changeRewLoc[eps]*1.5
-    eps = np.append(eps, len(changeRewLoc))    
-    # quantify performance
-    rate = []
-    for ep in range(len(eps)-1):
-        eprng = range(eps[ep], eps[ep+1])
-        success, fail, str_trials, ftr_trials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-        rate.append(success/total_trials)
-    rates.append(np.nanmean(np.array(rate)))
-    bin_size = 3    
-    tcs_early = fall['tuning_curves_early_trials'][0]
-    tcs_late = fall['tuning_curves_late_trials'][0]
-    # coms_early = fall['coms_pc_early_trials'][0]
-    coms = fall['coms'][0]
-    coms_early = fall['coms_early_trials'][0]    
-    window = 20 # cm
-    goal_window = 10 # cm
-    coms = np.array([np.hstack(xx) for xx in coms])
-    # relative to reward
-    coms_rewrel = np.array([com-rewlocs[ii] for ii, com in enumerate(coms)])                 
-    perm = list(combinations(range(len(coms)), 2))     
-    com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-    # get goal cells across all epochs
-    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    goal_cells = intersect_arrays(*com_goal)
-    goal_cell_iind.append(goal_cells)
-    goal_cell_p=len(goal_cells)/len(coms[0])
-    goal_cell_prop.append(goal_cell_p)
-    num_epochs.append(len(coms))
-    colors = ['navy', 'red', 'green', 'k','darkorange']
-    for gc in goal_cells:
-        fig, ax = plt.subplots()
-        for ep in range(len(coms)):
-            ax.plot(tcs_late[ep][gc,:], label=f'epoch {ep}', color=colors[ep])
-            ax.axvline(rewlocs[ep]/bin_size, color=colors[ep])
-            ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-        ax.legend()
-        pdf.savefig(fig)
-        plt.close(fig)
-    # get shuffled iterations
-    num_iterations = 2000
-    shuffled_dist = np.zeros((num_iterations))
-    for i in range(num_iterations):
-        # shuffle locations
-        rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-        shufs = [list(range(coms[ii].shape[0])) for ii in range(1, len(coms))]
-        [random.shuffle(shuf) for shuf in shufs]
-        com_shufs = np.zeros_like(coms)
-        com_shufs[0,:] = coms[0]
-        com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-        # OR shuffle cell identities
+    if not animal=='e217':
+        day = conddf.days.values[ii]
+        plane=0 #TODO: make modular  
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
+        # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
+        #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
+        fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
+            'tuning_curves_late_trials', 'coms', 'coms_early_trials', 'trialnum', 'rewards'])        
+        changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum = fall['trialnum'][0]; rewards = fall['rewards'][0]
+        eptest = conddf.optoep.values[ii]
+        eps = np.where(changeRewLoc>0)[0]
+        rewlocs = changeRewLoc[eps]*1.5
+        eps = np.append(eps, len(changeRewLoc))    
+        # exclude last ep if too little trials
+        lastrials = np.unique(trialnum[eps[(len(eps)-2)]:eps[(len(eps)-1)]])[-1]
+        if lastrials<8:
+            eps = eps[:-1]
+        # quantify performance
+        rate = []
+        for ep in range(len(eps)-1):
+            eprng = range(eps[ep], eps[ep+1])
+            success, fail, str_trials, ftr_trials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+            rate.append(success/total_trials)
+        rates.append(np.nanmean(np.array(rate)))
+        bin_size = 3    
+        tcs_early = fall['tuning_curves_early_trials'][0]
+        tcs_late = fall['tuning_curves_late_trials'][0]
+        # coms_early = fall['coms_pc_early_trials'][0]
+        coms = fall['coms'][0]
+        coms_early = fall['coms_early_trials'][0]    
+        window = 20 # cm
+        goal_window = 10 # cm
+        coms = np.array([np.hstack(xx) for xx in coms])
         # relative to reward
-        coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(com_shufs)])             
+        coms_rewrel = np.array([com-rewlocs[ii] for ii, com in enumerate(coms)])                 
         perm = list(combinations(range(len(coms)), 2))     
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-        # get goal cells across all epochs
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        goal_cells_shuf = intersect_arrays(*com_goal)
-        shuffled_dist[i] = len(goal_cells_shuf)/len(coms[0])
-    p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-    pvals.append(p_value)
-    total_cells.append(len(coms[0]))
-    print(p_value)
+        # get goal cells across all epochs        
+        goal_cells = intersect_arrays(*com_goal)
+        dist_to_rew.append(np.array([com-rewlocs[ii] for ii, com in enumerate(coms)]))        
+        goal_cell_iind.append(goal_cells)
+        goal_cell_p=len(goal_cells)/len(coms[0])
+        goal_cell_prop.append(goal_cell_p)
+        num_epochs.append(len(coms))
+        colors = ['navy', 'red', 'green', 'k','darkorange']
+        for gc in goal_cells:
+            fig, ax = plt.subplots()
+            for ep in range(len(coms)):
+                ax.plot(tcs_late[ep][gc,:], label=f'epoch {ep}', color=colors[ep])
+                ax.axvline(rewlocs[ep]/bin_size, color=colors[ep])
+                ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+            ax.legend()
+            pdf.savefig(fig)
+            plt.close(fig)
+        # get shuffled iterations
+        num_iterations = 2000
+        shuffled_dist = np.zeros((num_iterations))
+        for i in range(num_iterations):
+            # shuffle locations
+            rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
+            shufs = [list(range(coms[ii].shape[0])) for ii in range(1, len(coms))]
+            [random.shuffle(shuf) for shuf in shufs]
+            com_shufs = np.zeros_like(coms)
+            com_shufs[0,:] = coms[0]
+            com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+            # OR shuffle cell identities
+            # relative to reward
+            coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(com_shufs)])             
+            perm = list(combinations(range(len(coms)), 2))     
+            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+            # get goal cells across all epochs
+            com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+            goal_cells_shuf = intersect_arrays(*com_goal)
+            shuffled_dist[i] = len(goal_cells_shuf)/len(coms[0])
+        
+        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
+        pvals.append(p_value)
+        total_cells.append(len(coms[0]))
+        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
 
 pdf.close()
 # %%
-df = conddf
+df = conddf[conddf.animals!='e217']
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = goal_cell_prop
 df['opto'] = df.optoep.values>1
@@ -129,7 +138,7 @@ df['p_value'] = pvals
 an_nms = df.animals.unique()
 rows = int(np.ceil(np.sqrt(len(an_nms))))
 cols = int(np.ceil(np.sqrt(len(an_nms))))
-fig,axes = plt.subplots(nrows=rows, ncols=cols, sharey=True,
+fig,axes = plt.subplots(nrows=rows, ncols=cols,
             figsize=(10,10))
 rr=0;cc=0
 for an in an_nms:        
@@ -145,10 +154,56 @@ fig.tight_layout()
 #%%
 df['recorded_neurons_per_session'] = total_cells
 fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='recorded_neurons', y='goal_cell_prop',hue='animals',
+sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
         data=df[(df.opto==False)&(df.p_value<0.05)],
         s=150, ax=ax)
 ax.spines[['top','right']].set_visible(False)
+#%%
+# histogram of dist to rew
+df['com_distance_to_reward'] = [np.concatenate(xx) for xx in dist_to_rew]
+an_nms = df.animals.unique()
+rows = int(np.ceil(np.sqrt(len(an_nms))))
+cols = int(np.ceil(np.sqrt(len(an_nms))))
+fig,axes = plt.subplots(nrows=rows, ncols=cols,
+            figsize=(10,10))
+rr=0;cc=0
+for an in an_nms:        
+    ax = axes[rr,cc]
+    dists = df.loc[df.animals==an, 'com_distance_to_reward']
+    for dist in dists:
+        ax.hist(dist,bins=100)
+    ax.spines[['top','right']].set_visible(False)
+    ax.set_title(an)
+    rr+=1
+    if rr>=rows: rr=0; cc+=1    
+fig.tight_layout()
+ax.set_ylabel('# Cells')
+ax.set_xlabel('Distance to reward \n\
+    (COM-rewardloc.)')
+
+#%%
+# only reward cells
+df['com_distance_to_reward_goal_cells'] = [np.concatenate(xx[:,goal_cell_iind[ii]]) for ii,xx in enumerate(dist_to_rew)]
+an_nms = df.animals.unique()
+rows = int(np.ceil(np.sqrt(len(an_nms))))
+cols = int(np.ceil(np.sqrt(len(an_nms))))
+fig,axes = plt.subplots(nrows=rows, ncols=cols,
+            figsize=(10,10))
+rr=0;cc=0
+for an in an_nms:        
+    ax = axes[rr,cc]
+    dists = df.loc[df.animals==an, 'com_distance_to_reward_goal_cells']
+    for dist in dists:
+        ax.hist(dist)
+    ax.spines[['top','right']].set_visible(False)
+    ax.set_title(an)
+    rr+=1
+    if rr>=rows: rr=0; cc+=1    
+ax.set_ylabel('# Cells')
+ax.set_xlabel('Distance to reward \n\
+    (COM-rewardloc.)')
+fig.suptitle('Reward cells only')
+fig.tight_layout()
 
 #%%
 # histograms of p-values
@@ -169,7 +224,7 @@ ax = sns.barplot(x='animals', y='p_value',
         fill=False)
 ax = sns.stripplot(x='animals', y='p_value',
         hue='animals',data=dfagg, 
-        s=10,dodge=True)
+        s=10)
 ax.spines[['top','right']].set_visible(False)
 
 # ax.axhline(0.05,color='k',linewidth=2,linestyle='--')

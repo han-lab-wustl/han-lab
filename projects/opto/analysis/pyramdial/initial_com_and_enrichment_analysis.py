@@ -68,7 +68,7 @@ ax.get_legend().set_visible(False)
 
 t,pval = scipy.stats.ranksums(df[(df.index.get_level_values('condition')=='VIP')]['dff_target-prev'].values, \
             df[(df.index.get_level_values('condition')=='Control')]['dff_target-prev'].values)
-plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
 #%%
 # plot fraction of cells near reward
 df = conddf
