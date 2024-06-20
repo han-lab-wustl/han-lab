@@ -3,7 +3,8 @@ This script performs analysis on pyramidal cell data to identify differentially 
 
 ### Prerequisites
 To run this script, you need the following libraries installed:
-```numpy
+```
+numpy
 h5py
 scipy
 matplotlib
@@ -13,7 +14,8 @@ pickle
 seaborn
 random
 math
-sklearn```
+sklearn
+```
 You also need to have the placecell package, which includes custom functions used in the analysis.
 
 ### Data
