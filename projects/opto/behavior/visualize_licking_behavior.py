@@ -61,8 +61,9 @@ for dd,day in enumerate(conddf.days.values):
 #%%
 
 # Function to plot and calculate average licks
-def plot_lick_vis(dct_to_use, condition, probes=False):
-    expandrzwindow = 7
+def plot_lick_vis(dct_to_use, condition, probes=False,
+            plot_all_probes=False, probe2plot=1):
+    expandrzwindow = 5
     scalingf = 2/3
     rz1 = np.ceil(np.array([67-expandrzwindow,86+expandrzwindow])/scalingf)
     rz2 = np.ceil(np.array([101-expandrzwindow,120+expandrzwindow])/scalingf)
@@ -86,15 +87,24 @@ def plot_lick_vis(dct_to_use, condition, probes=False):
         if not probes:
             sns.heatmap(df, mask=mask, cmap='Reds', cbar=False, ax=axes[i])
             sns.heatmap(df, mask=~mask, cmap='Greys', cbar=False, ax=axes[i])
-        else:
-            sns.heatmap(df, cmap='Blues', cbar=False, ax=axes[i])
+        elif plot_all_probes:
+            mask = np.ones_like(df);mask[::3] = 0 # first probe
+            sns.heatmap(df, mask=mask, cmap='Greys', cbar=False, ax=axes[i])
+            mask = np.ones_like(df);mask[1::3] = 0 
+            sns.heatmap(df, mask=mask, cmap='Blues', cbar=False, ax=axes[i])
+            mask = np.ones_like(df);mask[2::3] = 0 
+            sns.heatmap(df, mask=mask, cmap='Purples', cbar=False, ax=axes[i])
+        elif (plot_all_probes==False) and (probes==True):
+            df_ = df[(probe2plot-1)::3]
+            sns.heatmap(df_, cmap='Greys', 
+                    cbar=False, ax=axes[i])
+                        
         axes[i].set_title(f'Reward zone {zone}')
         if i == 0:
             axes[i].set_ylabel('Trials')
         axes[i].set_xlabel('Position (cm)')
         
-        if not probes: 
-            axes[i].add_patch(patches.Rectangle(
+        axes[i].add_patch(patches.Rectangle(
             xy=((rz[0])/bin_size,0),  # point of origin.
             width=((rz[1])/bin_size)-((rz[0])/bin_size),
             height=licks_opto.shape[0], linewidth=1, 
@@ -106,7 +116,8 @@ def plot_lick_vis(dct_to_use, condition, probes=False):
                 ystart = len(np.concatenate(prev_rz[:jj]))
             else:
                 ystart = 0
-            axes[i].add_patch(patches.Rectangle(
+            if not probes:
+                axes[i].add_patch(patches.Rectangle(
                 xy=((rzs[przs[0]-1][0])/bin_size,ystart),
                 width=((rzs[przs[0]-1][1])/bin_size)-((rzs[przs[0]-1][0])/bin_size),
                 height=len(przs), linewidth=1,
@@ -128,7 +139,10 @@ def plot_lick_vis(dct_to_use, condition, probes=False):
         av_licks_in_rewzone[zone] = av_licks_in_rewzones
         av_licks_in_prevrewzone[zone] = av_licks_in_prevrewzones
         
-    plt.suptitle(f'{condition}')
+    if (plot_all_probes==False) and (probes==True):
+        plt.suptitle(f'Probe {probe2plot}, {condition}')
+    else:
+        plt.suptitle(f'{condition}')
     plt.show()
     
     return av_licks_in_rewzone, av_licks_in_prevrewzone
@@ -137,26 +151,24 @@ def plot_lick_vis(dct_to_use, condition, probes=False):
 dct_to_use = lick_tc_ctrl_opto
 condition = 'Control LED on'
 av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition)
-#%%
-dct_to_use = probe_lick_tc_ctrl_opto
-condition = 'Control LED on'
-av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, 
-                                            condition, probes=True)
-
-#%%
 dct_to_use = lick_tc_vip_opto
 condition = 'VIP LED on'
 av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition)
 
 #%%
+dct_to_use = probe_lick_tc_ctrl_opto
+condition = 'Control LED on'
+av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, 
+            condition, probes=True, plot_all_probes=False, 
+                probe2plot=3)
 dct_to_use = probe_lick_tc_vip_opto
 condition = 'VIP LED on'
 av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition,
-        probes=True)
+        probes=True, plot_all_probes=False, probe2plot=3)
 
 #%%
-prevrz1_ctrl = av_licks_in_prevrewzone_ctrl[1]
-prevrz1_vip = av_licks_in_prevrewzone_vip[1]
+prevrz1_ctrl = av_licks_in_prevrewzone_ctrl[3]
+prevrz1_vip = av_licks_in_prevrewzone_vip[3]
 # prevrz1_ctrl = av_licks_in_rewzone_ctrl[1]
 # prevrz1_vip = av_licks_in_rewzone_vip[1]
 

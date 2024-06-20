@@ -46,8 +46,8 @@ for dd in range(len(conddf)):
         dct = dcts[dd]
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel', 'ybinned', 'iscell',
-                                    'trialnum', 'bordercells', 'changeRewLoc', 'licks',
+        fall = scipy.io.loadmat(params_pth, variable_names=['forwardvel', 'ybinned', 'iscell',
+                                    'trialnum', 'changeRewLoc', 'licks',
                                     'coms', 'changeRewLoc', 'tuning_curves_early_trials',
                                     'tuning_curves_late_trials', 'coms_early_trials'])
         inactive = dcts[dd]['inactive']
@@ -102,8 +102,9 @@ ax = sns.boxplot(x='condition', y='coms', data=df, hue='condition', fill=False,
 ax = sns.stripplot(x='condition', y='coms', data=df, hue='condition',
             palette={'VIP LED off': "slategray", 'VIP LED on': "red",
                     'Control LED on': "coral", 'Control LED off': "lightgray"},
-            s = 7)
+            s = 10)
 ax.spines[['top','right']].set_visible(False)
+ax.tick_params(axis='x', labelrotation=45)
 
 vipopto = df.loc[df.index.get_level_values('condition')=='VIP LED on', 'coms'].values
 vipoff = df.loc[df.index.get_level_values('condition')=='VIP LED off', 'coms'].values

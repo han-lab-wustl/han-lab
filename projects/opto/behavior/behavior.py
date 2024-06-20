@@ -41,30 +41,50 @@ def get_lick_tuning_curves_per_trial(params_pth, conddf, dd, bin_size = 2, probe
     if not probes: # everything but probes
         licks_per_trial_per_ep = [lick_smooth_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]
         ybinned_per_trial_per_ep = [ybinned_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]
-        trialstate_per_ep = [sum(rewards_eps[ii][trialnum_ep == xx]==1)>0 for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]
-    else:  # get probes starting from previous epoch
-        trialnum_eps = [trialnum[eps[ep]:eps[ep+1]] for ep in comp+1]
-        lick_smooth_eps = [lick_smooth[eps[ep]:eps[ep+1]] for ep in comp+1] 
-        ybinned_eps = [ybinned[eps[ep]:eps[ep+1]] for ep in comp+1] 
-        rewards_eps = [rewards[eps[ep]:eps[ep+1]] for ep in comp+1] 
-        licks_per_trial_per_ep = [lick_smooth_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx <= 2]
-        ybinned_per_trial_per_ep = [ybinned_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx <= 2]
-        trialstate_per_ep = [sum(rewards_eps[ii][trialnum_ep == xx]==1)>0 for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx <= 2]
-    lick_tuning_curves_per_trial_per_ep = []
-    for ii,lick in enumerate(licks_per_trial_per_ep):
-        _, beh_prob = get_behavior_tuning_curve(ybinned_per_trial_per_ep[ii], lick, bins=nbins)
-        lick_tuning_curves_per_trial_per_ep.append(beh_prob.values)
-    # exclude incomplete trials
-    trialstate_per_ep = [xx for ii,xx in enumerate(trialstate_per_ep) if len(lick_tuning_curves_per_trial_per_ep[ii])>70]
-    lick_tuning_curves_per_trial_per_ep = [xx for xx in lick_tuning_curves_per_trial_per_ep if len(xx)>70]
+        trialstate_per_ep = [sum(rewards_eps[ii][trialnum_ep == xx]==1)>0 for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx > 2]         
+        lick_tuning_curves_per_trial_per_ep = []
+        for ii,lick in enumerate(licks_per_trial_per_ep):
+            _, beh_prob = get_behavior_tuning_curve(ybinned_per_trial_per_ep[ii], lick, bins=nbins)
+            lick_tuning_curves_per_trial_per_ep.append(beh_prob.values)
+        # exclude incomplete trials
+        trialstate_per_ep = [xx for ii,xx in enumerate(trialstate_per_ep) if len(lick_tuning_curves_per_trial_per_ep[ii])>70]
+        lick_tuning_curves_per_trial_per_ep = [xx for xx in lick_tuning_curves_per_trial_per_ep if len(xx)>70]
 
-    lick_tuning_curves_per_trial_per_ep_padded = np.ones((len(lick_tuning_curves_per_trial_per_ep),nbins))*np.nan
-    for trial in range(len(lick_tuning_curves_per_trial_per_ep_padded)):
-        lick_tuning_curves_per_trial_per_ep_padded[trial,:len(lick_tuning_curves_per_trial_per_ep[trial])] = lick_tuning_curves_per_trial_per_ep[trial]
-    rewzones = get_rewzones(rewlocs,1/scalingf)
-    rewzone = rewzones[comp]
-    rewzone_prev = rewzones[comp[0]-1]
-    
+        lick_tuning_curves_per_trial_per_ep_padded = np.ones((len(lick_tuning_curves_per_trial_per_ep),nbins))*np.nan
+        for trial in range(len(lick_tuning_curves_per_trial_per_ep_padded)):
+            lick_tuning_curves_per_trial_per_ep_padded[trial,:len(lick_tuning_curves_per_trial_per_ep[trial])] = lick_tuning_curves_per_trial_per_ep[trial]
+        rewzones = get_rewzones(rewlocs,1/scalingf)
+        rewzone = rewzones[comp]
+        rewzone_prev = rewzones[comp[0]-1]
+    else:  # get probes starting from previous epoch
+        if (eptest+1)<len(eps):
+            probecomp = [eptest]
+            trialnum_eps = [trialnum[eps[ep]:eps[ep+1]] for ep in probecomp]
+            lick_smooth_eps = [lick_smooth[eps[ep]:eps[ep+1]] for ep in probecomp] 
+            ybinned_eps = [ybinned[eps[ep]:eps[ep+1]] for ep in probecomp] 
+            rewards_eps = [rewards[eps[ep]:eps[ep+1]] for ep in probecomp] 
+            # only first probe
+            licks_per_trial_per_ep = [lick_smooth_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx<=2]
+            ybinned_per_trial_per_ep = [ybinned_eps[ii][trialnum_ep == xx] for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx<=2]
+            trialstate_per_ep = [sum(rewards_eps[ii][trialnum_ep == xx]==1)>0 for ii,trialnum_ep in enumerate(trialnum_eps) for xx in np.unique(trialnum_ep) if xx<=2]
+            
+            lick_tuning_curves_per_trial_per_ep = []
+            for ii,lick in enumerate(licks_per_trial_per_ep):
+                _, beh_prob = get_behavior_tuning_curve(ybinned_per_trial_per_ep[ii], lick, bins=nbins)
+                lick_tuning_curves_per_trial_per_ep.append(beh_prob.values)
+            # exclude incomplete trials
+            trialstate_per_ep = [xx for ii,xx in enumerate(trialstate_per_ep) if len(lick_tuning_curves_per_trial_per_ep[ii])>70]
+            lick_tuning_curves_per_trial_per_ep = [xx for xx in lick_tuning_curves_per_trial_per_ep if len(xx)>70]
+
+            lick_tuning_curves_per_trial_per_ep_padded = np.ones((len(lick_tuning_curves_per_trial_per_ep),nbins))*np.nan
+            for trial in range(len(lick_tuning_curves_per_trial_per_ep_padded)):
+                lick_tuning_curves_per_trial_per_ep_padded[trial,:len(lick_tuning_curves_per_trial_per_ep[trial])] = lick_tuning_curves_per_trial_per_ep[trial]
+            rewzones = get_rewzones(rewlocs,1/scalingf)
+            rewzone = rewzones[comp]
+            rewzone_prev = rewzones[comp[0]-1]
+        else:
+            lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep,rewzone, rewzone_prev = np.nan, np.nan, 0,0
+                    
     return lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev
     
 def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,

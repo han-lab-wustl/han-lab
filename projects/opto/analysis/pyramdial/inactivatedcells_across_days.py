@@ -34,6 +34,7 @@ with open(r"Z:\dcts_com_opto_cell_track_wcomp.p", "rb") as fp: #unpickle
     dcts = pickle.load(fp)
 
 tracked_inactive_cell_inds = {}
+tracked_inactive_activity = {}
 for dd,day in enumerate(conddf.days.values):
     dct = dcts[dd]
     animal = conddf.animals.values[dd]

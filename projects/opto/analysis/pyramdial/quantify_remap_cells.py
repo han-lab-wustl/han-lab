@@ -19,6 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
 from projects.opto.behavior.behavior import get_success_failure_trials
+from projects.opto.analysis.pyramdial.placecell import consecutive_stretch_time
 
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'
@@ -34,7 +35,8 @@ num_epochs = []
 pvals = []
 rates = []
 total_cells = []
-#%%
+time_per_rew_bout_mean = [] # s time the animal spends in rew loc
+
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     if not animal=='e217':
@@ -44,22 +46,40 @@ for ii in range(len(conddf)):
         # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
         #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
         fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
-            'tuning_curves_late_trials', 'coms', 'coms_early_trials', 'trialnum', 'rewards'])        
+            'tuning_curves_late_trials', 'coms', 'coms_early_trials', 'trialnum', 'rewards',
+            'ybinned', 'forwardvel', 'timedFF', 'VR'])        
         changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum = fall['trialnum'][0]; rewards = fall['rewards'][0]
+        VR = fall['VR'][0][0][()]
+        scalingf = VR['scalingFACTOR'][0][0]
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
+        ybinned = fall['ybinned'][0]/scalingf; timedFF = fall['timedFF'][0]
+        forwardvel = fall['forwardvel'][0]
         eptest = conddf.optoep.values[ii]
         eps = np.where(changeRewLoc>0)[0]
-        rewlocs = changeRewLoc[eps]*1.5
+        rewlocs = changeRewLoc[eps]/scalingf
         eps = np.append(eps, len(changeRewLoc))    
         # exclude last ep if too little trials
         lastrials = np.unique(trialnum[eps[(len(eps)-2)]:eps[(len(eps)-1)]])[-1]
         if lastrials<8:
             eps = eps[:-1]
         # quantify performance
-        rate = []
+        rate = []; time_per_rew_bout_ep = []
         for ep in range(len(eps)-1):
+            rewloc = rewlocs[ep]
             eprng = range(eps[ep], eps[ep+1])
             success, fail, str_trials, ftr_trials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+            time = timedFF[eprng]
+            # only for correct trials
+            correct = np.array([xx in str_trials for xx in trialnum[eprng]])
+            time = time[correct]
+            ypos = ybinned[eprng][correct]
+            speed = forwardvel[eprng][correct] # correct for animals that lick outside rewloc
+            time_in_rew = time[(ypos>(rewloc-rewsize)) & (ypos<(rewloc+rewsize))]
+            time_in_rew_ =consecutive_stretch_time(time_in_rew)
+            time_per_rew_bout = [xx[-1]-xx[0] for xx in time_in_rew_]
+            time_per_rew_bout_ep.append(np.nanmean(time_per_rew_bout))
             rate.append(success/total_trials)
+        time_per_rew_bout_mean.append(np.nanmean(time_per_rew_bout_ep))
         rates.append(np.nanmean(np.array(rate)))
         bin_size = 3    
         tcs_early = fall['tuning_curves_early_trials'][0]
@@ -93,7 +113,7 @@ for ii in range(len(conddf)):
             pdf.savefig(fig)
             plt.close(fig)
         # get shuffled iterations
-        num_iterations = 2000
+        num_iterations = 1000
         shuffled_dist = np.zeros((num_iterations))
         for i in range(num_iterations):
             # shuffle locations
@@ -125,15 +145,34 @@ df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = goal_cell_prop
 df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
+df['p_value'] = pvals
 
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.stripplot(x='num_epochs', y='goal_cell_prop',
-        hue='condition',data=df[df.opto==False],
-        s=10)
+        hue='animals',data=df[df.opto==False],
+        s=8)
+ax.spines[['top','right']].set_visible(False)
+#%%
+# split into pre and post reward cells
+pre_rew = [[cellind for cellind in range(xx[:,goal_cell_iind[kk]].shape[1]) if np.nanmedian(xx[:,goal_cell_iind[kk]][:,cellind])<0] for kk,xx in enumerate(dist_to_rew)]
+post_rew = [[cellind for cellind in range(xx[:,goal_cell_iind[kk]].shape[1]) if np.nanmedian(xx[:,goal_cell_iind[kk]][:,cellind])>0] for kk,xx in enumerate(dist_to_rew)]
+pre_rew_prop = [len(xx)/total_cells[ii] for ii,xx in enumerate(pre_rew)]
+post_rew_prop = [len(xx)/total_cells[ii] for ii,xx in enumerate(post_rew)]
+
+df['pre_rew_prop'] = pre_rew_prop
+df['post_rew_prop'] = post_rew_prop
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.stripplot(x='num_epochs', y='pre_rew_prop',
+        hue='animals',data=df[(df.opto==False)&(df.p_value<0.05)],
+        s=8)
+ax.spines[['top','right']].set_visible(False)
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.stripplot(x='num_epochs', y='post_rew_prop',
+        hue='animals',data=df[(df.opto==False)&(df.p_value<0.05)],
+        s=8)
 ax.spines[['top','right']].set_visible(False)
 #%%
 df['success_rate'] = rates
-df['p_value'] = pvals
 
 an_nms = df.animals.unique()
 rows = int(np.ceil(np.sqrt(len(an_nms))))
@@ -143,7 +182,7 @@ fig,axes = plt.subplots(nrows=rows, ncols=cols,
 rr=0;cc=0
 for an in an_nms:        
     ax = axes[rr,cc]
-    sns.scatterplot(x='success_rate', y='goal_cell_prop',
+    sns.scatterplot(x='success_rate', y='post_rew_prop',
             data=df[(df.animals==an)&(df.opto==False)&(df.p_value<0.05)],
             s=200, ax=ax)
     ax.spines[['top','right']].set_visible(False)
@@ -229,3 +268,28 @@ ax.spines[['top','right']].set_visible(False)
 
 # ax.axhline(0.05,color='k',linewidth=2,linestyle='--')
 # ax.get_legend().set_visible(False)
+
+#%% 
+# compare reward cell proportion vs. number of sessions recorded
+an_nms = df.animals.unique()
+rows = int(np.ceil(np.sqrt(len(an_nms))))
+cols = int(np.ceil(np.sqrt(len(an_nms))))
+fig,axes = plt.subplots(nrows=rows, ncols=cols,
+            figsize=(10,10))
+rr=0;cc=0
+for an in an_nms:        
+    ax = axes[rr,cc]    
+    df_an = df[df.animals==an]
+    sessions = list(df_an.reset_index().index)
+    df_an['sessions'] = sessions
+    sns.scatterplot(x='sessions', y='post_rew_prop',
+            data=df_an[(df_an.opto==False)&(df_an.p_value<0.05)],
+            s=200, ax=ax)
+    ax.spines[['top','right']].set_visible(False)
+    ax.set_title(an)
+    rr+=1
+    if rr>=rows: rr=0; cc+=1    
+ax.set_ylabel('% Reward cells of pyramidal cells')
+ax.set_xlabel('sessions')
+fig.suptitle('Sessions vs. proportion of reward cells')
+fig.tight_layout()

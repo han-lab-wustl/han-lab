@@ -1,4 +1,5 @@
-% Zahra - Nov 2023
+% Zahra - june 2024
+% NEED TO RUN FOR CELL TRACKING AND TO GET PLACE CELL TUNING CURVES
 % makes tuning curves with velocity filter
 % uses suyash's binning method
 
@@ -16,7 +17,8 @@ clear all;
 %     [62:70, 72,73,74, 76, 80:90], [7,8,10,11:15,17:21,24:42,44:46], [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45], ...
 %     [1:51]};
 anms = ["e218"];
-dys_per_an = {[23]};
+dys_per_an = {[32
+]'};
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218

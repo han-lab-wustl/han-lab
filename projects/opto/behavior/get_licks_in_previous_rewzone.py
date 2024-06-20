@@ -1,8 +1,7 @@
-    """get fraction of licks in old reward zone 
-    """
+"""get lick rate in old reward zone 
+"""
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
-from sklearn.cluster import KMeans
 import matplotlib.patches as patches
 import seaborn as sns
 import matplotlib as mpl
@@ -22,36 +21,37 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 
 lick_selectivity = {} # collecting
 for dd,day in enumerate(conddf.days.values):
-        animal = conddf.animals.values[dd]
-        in_type = 'vip' if conddf.in_type.values[dd]=='vip' else 'ctrl'             
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-        fall = scipy.io.loadmat(params_pth, variable_names=['VR'])
-        VR = fall['VR'][0][0][()]
-        eps = np.where(np.hstack(VR['changeRewLoc']>0))[0]
-        eps = np.append(eps, len(np.hstack(VR['changeRewLoc'])))
-        scalingf = VR['scalingFACTOR'][0][0]
-        track_length = 180/scalingf
-        ybinned = np.hstack(VR['ypos']/scalingf)
-        rewlocs = np.ceil(np.hstack(VR['changeRewLoc'])[np.hstack(VR['changeRewLoc']>0)]/scalingf).astype(int)
-        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
-        trialnum = np.hstack(VR['trialNum'])
-        rewards = np.hstack(VR['reward'])
-        forwardvel = np.hstack(VR['ROE']); time =np.hstack(VR['time'])
-        forwardvel=-0.013*forwardvel[1:]/np.diff(time) # make same size
-        forwardvel = np.append(forwardvel, np.interp(len(forwardvel)+1, np.arange(len(forwardvel)),forwardvel))
-        licks = np.hstack(VR['lickVoltage'])
-        licks = licks<=-0.065 # remake boolean
-        eptest = conddf.optoep.values[dd]    
-        if conddf.optoep.values[dd]<2: 
-            eptest = random.randint(2,3)   
-            if len(eps)<4: eptest = 2 # if no 3 epochs 
-        opto_ep = eptest
-        lick_selectivity_per_trial_opto,lick_selectivity_per_trial_opto_prevrew = lick_selectivity_current_and_prev_reward(opto_ep, eps, trialnum, rewards, licks, \
-        ybinned, rewlocs, forwardvel, rewsize)        
-        rewzones = get_rewzones(rewlocs, 1/scalingf)
-        rewzone = rewzones[opto_ep-1]
-        rewzone_prev = rewzones[opto_ep-2]
-        lick_selectivity[f'{animal}_{in_type}_{day:03d}_rz{int(rewzone)}_{int(rewzone_prev)}_{dd:03d}'] = [lick_selectivity_per_trial_opto,lick_selectivity_per_trial_opto_prevrew] 
+    animal = conddf.animals.values[dd]
+    in_type = 'vip' if conddf.in_type.values[dd]=='vip' else 'ctrl'             
+    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+    fall = scipy.io.loadmat(params_pth, variable_names=['VR'])
+    VR = fall['VR'][0][0][()]
+    eps = np.where(np.hstack(VR['changeRewLoc']>0))[0]
+    eps = np.append(eps, len(np.hstack(VR['changeRewLoc'])))
+    scalingf = VR['scalingFACTOR'][0][0]
+    track_length = 180/scalingf
+    ybinned = np.hstack(VR['ypos']/scalingf)
+    rewlocs = np.ceil(np.hstack(VR['changeRewLoc'])[np.hstack(VR['changeRewLoc']>0)]/scalingf).astype(int)
+    rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
+    trialnum = np.hstack(VR['trialNum'])
+    rewards = np.hstack(VR['reward'])
+    forwardvel = np.hstack(VR['ROE']); time =np.hstack(VR['time'])
+    forwardvel=-0.013*forwardvel[1:]/np.diff(time) # make same size
+    forwardvel = np.append(forwardvel, np.interp(len(forwardvel)+1, np.arange(len(forwardvel)),forwardvel))
+    licks = np.hstack(VR['lickVoltage'])
+    licks = licks<=-0.065 # remake boolean
+    eptest = conddf.optoep.values[dd]    
+    if conddf.optoep.values[dd]<2: 
+        eptest = random.randint(2,3)   
+        if len(eps)<4: eptest = 2 # if no 3 epochs 
+    opto_ep = eptest
+    lick_selectivity_per_trial_opto,
+lick_selectivity_per_trial_opto_prevrew = lick_selectivity_current_and_prev_reward(opto_ep, eps, trialnum, rewards, licks, \
+    ybinned, rewlocs, forwardvel, rewsize)        
+    rewzones = get_rewzones(rewlocs, 1/scalingf)
+    rewzone = rewzones[opto_ep-1]
+    rewzone_prev = rewzones[opto_ep-2]
+    lick_selectivity[f'{animal}_{in_type}_{day:03d}_rz{int(rewzone)}_{int(rewzone_prev)}_{dd:03d}'] = [lick_selectivity_per_trial_opto,lick_selectivity_per_trial_opto_prevrew] 
 
 #%%
 # plot

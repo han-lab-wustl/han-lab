@@ -336,6 +336,53 @@ def get_rewzones(rewlocs, gainf):
             
     return rewzonenum
 
+def consecutive_stretch_time(x, tol=2):
+    """note that the tol is based on approx how long
+    it takes the mouse to return to rew loc
+    on a 2.7m track
+    i.e. the mouse cannot return to rew loc at 1.2s
+
+    Args:
+        x (_type_): _description_
+        tol (int, optional): _description_. Defaults to 2.
+
+    Returns:
+        _type_: _description_
+    """
+    # Calculate differences
+    z = np.diff(x)
+    # Find break points based on the tolerance
+    break_point = np.where(z > tol)[0]
+
+    if len(break_point) == 0:
+        return [x.tolist()]  # If there are no break points, return the entire array as a single stretch
+
+    result = []
+
+    # Add the first stretch
+    first_stretch = x[:break_point[0] + 1]
+    if len(first_stretch) == 1:
+        result.append(first_stretch[0])
+    else:
+        result.append(first_stretch.tolist())
+
+    # Add the middle stretches
+    for i in range(1, len(break_point)):
+        stretch = x[break_point[i - 1] + 1:break_point[i] + 1]
+        if len(stretch) == 1:
+            result.append(stretch[0])
+        else:
+            result.append(stretch.tolist())
+
+    # Add the last stretch
+    last_stretch = x[break_point[-1] + 1:]
+    if len(last_stretch) == 1:
+        result.append(last_stretch[0])
+    else:
+        result.append(last_stretch.tolist())
+
+    return result
+
 def consecutive_stretch(x):
     z = np.diff(x)
     break_point = np.where(z != 1)[0]
