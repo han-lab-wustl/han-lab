@@ -52,7 +52,7 @@ for dd,day in enumerate(conddf.days.values):
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'Fc3', 
             'coms_early_trials', 'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel',
-            'trialnum', 'rewards'])
+            'trialnum', 'rewards', 'iscell', 'bordercells'])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
@@ -64,6 +64,7 @@ for dd,day in enumerate(conddf.days.values):
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
         comp = dct['comp'];bin_size = 3;tcs_early = []; tcs_late = []        
         Fc3 = fall['Fc3']
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
         lasttr = 5 # last 5 trials
         bins=100
@@ -73,18 +74,18 @@ for dd,day in enumerate(conddf.days.values):
         tcs_late = np.array(tcs_late); coms = np.array(coms)
         ypos_rel = np.concatenate(ypos_rel)
         pyr_tc_s2p_cellind = fall['pyr_tc_s2p_cellind'][0]
+        # suite2p indices
         inactive_cell_ind = pyr_tc_s2p_cellind[dct['inactive']]
         comp = dct['comp']
         # tracked cell ind of inactive cell this day
         try:
             tracked_inactive_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in inactive_cell_ind]
             tracked_inactive_cell_inds[f'{animal}_{day:03d}'] = tracked_inactive_cell_ind   
-            inactive_cells_that_are_tracked_iind = [ii for ii,xx in enumerate(inactive_cell_ind) if xx in tracked_lut[day].values]
             tracked_cells_that_are_inactive_pyr_id = tracked_lut[day].values[tracked_inactive_cell_ind]
             inactive_cells_that_are_tracked_iind = [np.where(pyr_tc_s2p_cellind==xx)[0][0] for xx in tracked_cells_that_are_inactive_pyr_id]
             # includes s2p indices of inactive cells so you can find them in the tracked lut
-            tracked_inactive_activity[f'{animal}_{day:03d}'] = [[tcs_late[c][dct['inactive'][inactive_cells_that_are_tracked_iind]] for c in comp],\
-                    rewlocs[comp],coms[comp][:,dct['inactive'][inactive_cells_that_are_tracked_iind]]]
+            tracked_inactive_activity[f'{animal}_{day:03d}'] = [[tcs_late[c][inactive_cells_that_are_tracked_iind] for c in comp],\
+                    rewlocs[comp],coms[comp][:,[inactive_cells_that_are_tracked_iind]]]
             # tracked_lut[day].values[tracked_inactive_cell_ind] == dct['inactive'][inactive_cells_that_are_tracked_iind]
         except Exception as e:
             print(e)
@@ -109,17 +110,20 @@ for k,v in tracked_inactive_cell_inds.items():
 # compile per animal tcs
 e218 = np.array([v for k,v in tc_tracked_per_cond.items() if k[:-4]=='e218'])
 # remove cells that are nan every tracked day
-mask = (np.sum(np.sum(np.isnan(e218[:,0,:,:]),axis=2),axis=0)<700) # not nan in all positions across all days
+mask = (np.sum(np.sum(np.isnan(e218[:,0,:,:]),axis=2),axis=0)<800) # not nan in all positions across all days
 e218 = e218[:,:,mask,:]
 shp = int(np.ceil(np.sqrt(e218.shape[2])))
 fig, axes = plt.subplots(ncols=shp,
                         nrows=shp,sharex=True,
                         figsize=(20,20))
+plt.rc('font', size=20)
 rr=0;cc=0
 for ii in range(e218.shape[2]):
     ax=axes[rr,cc]
-    ax.plot(e218[:,0,ii,:].T)
+    ax.plot(e218[:,0,ii,:].T, color='slategray')
+    ax.plot(e218[:,1,ii,:].T, color='r')
     ax.set_title(f'cell {ii}')
+    ax.spines[['top','right']].set_visible(False)
     rr+=1
     if rr>np.ceil(np.sqrt(e218.shape[2]))-1:cc+=1;rr=0        
 fig.tight_layout()
