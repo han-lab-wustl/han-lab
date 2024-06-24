@@ -3,8 +3,8 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "z9";
-days = [16 17];
+mouse_name = "z8";
+days = [38];
 src = "X:\vipcre";
 
 for day=days

@@ -274,15 +274,6 @@ def movesbx(src, dst, fldkeyword='ZD'):
         except:
             print(f"\n*** no sbx in {fl}***")
 
-def makecelltrackflds(src, animal, planes = [0], weeknm = [1,2,3,4]):
-    makedir(os.path.join(src, animal))
-    makedir(os.path.join(src, animal, 'days'))
-    for week in weeknm:
-        for plane in planes:
-            makedir(os.path.join(src, animal, f'week{week:02d}_plane{plane}'))
-
-    return os.path.join(src, animal)
-
 def compresssbx_move_to_archive(sbxsrc, dst, compress=True):       
     if compress:
         with tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-3]+'tar.gz'), 'w:gz') as tar:

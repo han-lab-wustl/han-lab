@@ -43,32 +43,28 @@ for dd,day in enumerate(conddf.days.values):
         tracked_lut = tracked_lut['commoncells_once_per_week']
         days_tracked = days_tracked_per_an[animal]
         tracked_lut = pd.DataFrame(tracked_lut, columns = days_tracked)
-        track_length = 270
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+        print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
             'tuning_curves_late_trials', 'coms_early_trials', 'pyr_tc_s2p_cellind'])
         changeRewLoc = np.hstack(fall['changeRewLoc'])
-        eps = np.where(changeRewLoc>0)[0]
-        rewlocs = changeRewLoc[eps]*1.5
-        eps = np.append(eps, len(changeRewLoc))    
-        comp = dct['comp'] # eps to compare    
-        bin_size = 3    
-        tcs_early = []; tcs_late = []
+        # set vars
+        eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]*1.5;eps = np.append(eps, len(changeRewLoc))    
+        comp = dct['comp'];bin_size = 3;tcs_early = []; tcs_late = []
         for ii,tc in enumerate(fall['tuning_curves_early_trials'][0]):
             tcs_early.append(np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_early_trials'][0][ii]])))
             tcs_late.append(np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in fall['tuning_curves_late_trials'][0][ii]])))
         tcs_early = np.array(tcs_early)
         tcs_late = np.array(tcs_late)
         coms = fall['coms'][0]
-        pyr_tc_s2p_cellind = fall['pyr_tc_s2p_cellind'][0] # s2p indices of cells in tuning curve
-        # not_active_cell_ind = pyr_tc_s2p_cellind[~dct['inactive']] # s2p index of inactive cell that day
-        # not_inactive_cell_ind = pyr_tc_s2p_cellind[~dct['active']]
-        # inactive_cell_ind = np.intersect1d(not_active_cell_ind,not_inactive_cell_ind)
+        pyr_tc_s2p_cellind = fall['pyr_tc_s2p_cellind'][0]
         inactive_cell_ind = pyr_tc_s2p_cellind[dct['inactive']]
+        comp = dct['comp']
         # tracked cell ind of inactive cell this day
         try:
             tracked_inactive_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in inactive_cell_ind]
             tracked_inactive_cell_inds[f'{animal}_{day:03d}'] = tracked_inactive_cell_ind
+            tracked_inactive_activity[f'{animal}_{day:03d}_comp{comp[0]}-{comp[1]}'] = [tc[dct['inactive']] for tc in tcs_late]
         except Exception as e:
             print(e)
 #%%

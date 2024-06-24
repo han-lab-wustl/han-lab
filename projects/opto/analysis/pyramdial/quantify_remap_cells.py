@@ -73,11 +73,11 @@ for ii in range(len(conddf)):
             correct = np.array([xx in str_trials for xx in trialnum[eprng]])
             time = time[correct]
             ypos = ybinned[eprng][correct]
-            speed = forwardvel[eprng][correct] # correct for animals that lick outside rewloc
-            time_in_rew = time[(ypos>(rewloc-rewsize)) & (ypos<(rewloc+rewsize))]
-            time_in_rew_ =consecutive_stretch_time(time_in_rew)
-            time_per_rew_bout = [xx[-1]-xx[0] for xx in time_in_rew_]
-            time_per_rew_bout_ep.append(np.nanmean(time_per_rew_bout))
+            # speed = forwardvel[eprng][correct] # correct for animals that lick outside rewloc
+            # time_in_rew = time[(ypos>(rewloc-rewsize)) & (ypos<(rewloc+rewsize))]
+            # time_in_rew_ =consecutive_stretch_time(time_in_rew)
+            # time_per_rew_bout = [xx[-1]-xx[0] for xx in time_in_rew_]
+            # time_per_rew_bout_ep.append(np.nanmean(time_per_rew_bout))
             rate.append(success/total_trials)
         time_per_rew_bout_mean.append(np.nanmean(time_per_rew_bout_ep))
         rates.append(np.nanmean(np.array(rate)))
@@ -140,6 +140,7 @@ for ii in range(len(conddf)):
 
 pdf.close()
 # %%
+# goal cells across epochs
 df = conddf[conddf.animals!='e217']
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = goal_cell_prop
@@ -259,10 +260,10 @@ ax.set_title('Reward cell proportion compared\nto shuffled cell indicies')
 dfagg = df#.groupby(['animals', 'opto', 'condition']).mean(numeric_only=True)
 fig,ax = plt.subplots(figsize=(8,6))
 ax = sns.barplot(x='animals', y='p_value',
-        hue='animals',data=dfagg, 
+        hue='opto',data=dfagg, 
         fill=False)
 ax = sns.stripplot(x='animals', y='p_value',
-        hue='animals',data=dfagg, 
+        hue='opto',data=dfagg, 
         s=10)
 ax.spines[['top','right']].set_visible(False)
 
