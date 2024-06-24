@@ -7,7 +7,52 @@ import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
 from scipy.signal import gaussian
+from scipy.ndimage import label
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+from projects.opto.behavior.behavior import get_success_failure_trials
 
+
+def get_tuning_curve(ybinned, f, bins=270):
+    """
+    """
+    df = pd.DataFrame()
+    df['position'] = ybinned
+    df['f'] = f
+    # Discretize the position data into bins
+    df['position_bin'] = pd.cut(df['position'], bins=bins, labels=False)
+    
+    # Calculate the lick probability for each bin
+    grouped = df.groupby('position_bin')['f'].agg(['mean', 'count']).reset_index()
+    f_tc = np.ones((bins))*np.nan
+    f_tc[:np.array(grouped['mean'].shape[0])] = grouped['mean'] 
+    
+    return np.array(f_tc)
+
+
+def make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
+            rewards,forwardvel,rewsize,lasttr=5,bins=100):
+    ypos_rel = []; tcs_early = []; tcs_late = []; coms = []    
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        rewloc = rewlocs[ep]
+        relpos = [(xx-rewloc)/rewloc if xx<(rewloc-rewsize) else (xx-rewloc)/(track_length-rewloc) for xx in ybinned[eprng]]            
+        ypos_rel.append(relpos)
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        F = Fc3[eprng,:]            
+        moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
+        F = F[moving_middle,:]
+        relpos = np.array(relpos)[moving_middle]
+        if len(ttr)>5:
+            mask = trialnum[eprng][moving_middle]>ttr[-lasttr]
+            F = F[mask,:]
+            relpos = relpos[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,track_length/bins)
+            tcs_late.append(tc)
+            coms.append(com)
+
+    return ypos_rel, tcs_late, coms
 
 def get_place_field_widths(tuning_curves, threshold=0.5):
     """
@@ -167,39 +212,40 @@ def perivelocitybinnedactivity(velocity, rewards, dff, timedFF, range_val, binsi
     
 def get_moving_time(velocity, thres, Fs, ftol):
     """
-    Returns time points when the animal is considered moving based on animal's change in y position.
-
-    Parameters:
-    velocity (numpy.ndarray): forward velocity
-    thres (float): Threshold speed in cm/s
-    Fs (int): number of frames length minimum to be considered stopped
-    ftol (int): frame tolerance (e.g., 10 frames)
-
-    Returns:
-    numpy.ndarray: moving_middle (time points when the animal is considered moving)
-    numpy.ndarray: stop (time points when the animal is considered stopped)
+    It returns time points when the animal is considered moving based on animal's change in y position.
+    velocity - forward velocity
+    thres - Threshold speed in cm/s
+    Fs - number of frames length minimum to be considered stopped.
+    ftol - 10 frames
     """
-
-    vr_speed = velocity
+    vr_speed = np.array(velocity)
     vr_thresh = thres
-
     moving = np.where(vr_speed > vr_thresh)[0]
     stop = np.where(vr_speed <= vr_thresh)[0]
 
-    stop_time_stretch = consecutive_stretch(stop)
+    stop_time_stretch, num_features = label(np.diff(stop) == 1)
+    stop_time_stretch = [np.where(stop_time_stretch == i)[0] for i in range(1, num_features + 1)]
+
     stop_time_length = [len(stretch) for stretch in stop_time_stretch]
-    delete_idx = np.array(stop_time_length) < Fs
-    stop_time_stretch = ([np.array(stretch) for i, stretch in enumerate(stop_time_stretch) if not delete_idx[i]])
+    delete_idx = [i for i, length in enumerate(stop_time_length) if length < Fs]
+    stop_time_stretch = [stretch for i, stretch in enumerate(stop_time_stretch) if i not in delete_idx]
 
     if len(stop_time_stretch) > 0:
         for s in range(len(stop_time_stretch) - 1):
-            if s + 1 < len(stop_time_stretch):
-                if not np.isnan(stop_time_stretch[s + d]).any():
-                    while (abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol) and s + d < len(stop_time_stretch):
-                        stop_time_stretch[s] = np.concatenate((stop_time_stretch[s], np.arange(stop_time_stretch[s][-1] + 1, stop_time_stretch[s + d][0]), stop_time_stretch[s + d]))
-
-        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).any()]
-        stop = np.concatenate(stop_time_stretch)
+            d = 1
+            while s + d < len(stop_time_stretch):
+                if not np.isnan(stop_time_stretch[s + d]).all():
+                    if abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol:
+                        stop_time_stretch[s] = np.concatenate([stop_time_stretch[s], np.arange(stop_time_stretch[s][-1] + 1, stop_time_stretch[s + d][0]), stop_time_stretch[s + d]])
+                        stop_time_stretch[s + d] = np.array([np.nan])
+                        d += 1
+                    else:
+                        break
+                else:
+                    break
+        
+        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).all()]
+        stop = np.concatenate(stop_time_stretch).astype(int)
         moving_time = np.ones(len(vr_speed), dtype=int)
         moving_time[stop] = 0
     else:
@@ -209,6 +255,55 @@ def get_moving_time(velocity, thres, Fs, ftol):
     moving_middle = moving
 
     return moving_middle, stop
+
+def calc_COM_EH(spatial_act, bin_width):
+    """
+    Calculate Center of Mass (COM) for each cell's tuning curve.
+
+    Parameters:
+    spatial_act : numpy array
+        Tuning curve where rows represent cells and columns represent bins.
+    bin_width : float
+        Width of each bin in centimeters.
+
+    Returns:
+    com : numpy array
+        Array of interpolated COM values in centimeters for each cell.
+    """
+
+    # Initialize arrays
+    binn = np.zeros(spatial_act.shape[0]).astype(int)  # 1st bin above mid point
+    frac = np.zeros(spatial_act.shape[0])  # Fraction for interpolated COM
+    com = np.zeros(spatial_act.shape[0])  # Interpolated COM in cm
+
+    # Get total fluorescence from tuning curve
+    sum_spatial_act = np.sum(spatial_act, axis=1)
+
+    # Mid point of total fluorescence
+    mid_sum = sum_spatial_act / 2
+
+    # Cumulative sum of fluorescence in tuning curve
+    spatial_act_cum_sum = np.cumsum(spatial_act, axis=1)
+
+    # Logical array of indexes above mid fluorescence
+    idx_above_mid = spatial_act_cum_sum >= mid_sum[:, np.newaxis]
+
+    for i in range(spatial_act.shape[0]):
+        if not np.isnan(sum_spatial_act[i]):
+            # Find index of first bin above mid fluorescence
+            binn[i] = int(np.argmax(idx_above_mid[i, :]))
+
+            # Linear interpolation
+            if binn[i] == 0:  # If mid point is in the 1st bin
+                frac[i] = (spatial_act_cum_sum[i, binn[i]] - mid_sum[i]) / spatial_act_cum_sum[i, binn[i]]
+                com[i] = frac[i] * bin_width
+            else:
+                frac[i] = (spatial_act_cum_sum[i, binn[i]] - mid_sum[i]) / (spatial_act_cum_sum[i, binn[i]] - spatial_act_cum_sum[i, binn[i] - 1])
+                com[i] = (binn[i] - 1 + frac[i]) * bin_width
+        else:
+            com[i] = np.nan
+
+    return com
 
 def get_spatial_info_per_cell(Fc3, fv, thres, ftol, position, Fs, nBins, track_length):
     """
