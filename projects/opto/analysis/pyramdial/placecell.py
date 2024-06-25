@@ -23,11 +23,36 @@ def get_tuning_curve(ybinned, f, bins=270):
     
     # Calculate the lick probability for each bin
     grouped = df.groupby('position_bin')['f'].agg(['mean', 'count']).reset_index()
-    f_tc = np.ones((bins))*np.nan
+    f_tc = np.ones(bins)*np.nan
     f_tc[:np.array(grouped['mean'].shape[0])] = grouped['mean'] 
     
     return np.array(f_tc)
 
+
+def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
+    tcs_early = []; tcs_late = []; coms = []    
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = rad[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        F = Fc3[eprng,:]            
+        moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
+        F = F[moving_middle,:]
+        relpos = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            mask = trialnum[eprng][moving_middle]>ttr[-lasttr]
+            F = F[mask,:]
+            relpos = relpos[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,bin_size)
+            tcs_late.append(tc)
+            coms.append(com)
+
+    return tcs_late, coms
 
 def make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
             rewards,forwardvel,rewsize,lasttr=5,bins=100):
@@ -277,13 +302,13 @@ def calc_COM_EH(spatial_act, bin_width):
     com = np.zeros(spatial_act.shape[0])  # Interpolated COM in cm
 
     # Get total fluorescence from tuning curve
-    sum_spatial_act = np.sum(spatial_act, axis=1)
+    sum_spatial_act = np.nansum(spatial_act, axis=1)
 
     # Mid point of total fluorescence
     mid_sum = sum_spatial_act / 2
 
     # Cumulative sum of fluorescence in tuning curve
-    spatial_act_cum_sum = np.cumsum(spatial_act, axis=1)
+    spatial_act_cum_sum = np.nancumsum(spatial_act, axis=1)
 
     # Logical array of indexes above mid fluorescence
     idx_above_mid = spatial_act_cum_sum >= mid_sum[:, np.newaxis]

@@ -1,9 +1,8 @@
 """look at inactivated cells tracked across days
 KL divergence: distance between 2 distributions, given how likely you can
 make the second distribution from the first
-make tuning curve relative to reward
--1 to 0 and 0 to 1
-bin by 0.02 (% of track before or after rew, etc.)
+make tuning curve relative to reward in circular alignment
+-pi to pi with 0 at reward
 """
     
 #%%
@@ -19,7 +18,7 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import get_moving_time, calc_COM_EH, make_tuning_curves_relative_to_reward
+from placecell import make_tuning_curves_radians
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_cell_tracking.csv", index_col=None)
@@ -37,7 +36,7 @@ days_tracked_per_an = {'e216':np.concatenate([[32,33],range(35,64),[65]]),
                     }
 with open(r"Z:\dcts_com_opto_cell_track_wcomp.p", "rb") as fp: #unpickle
     dcts = pickle.load(fp)
-
+    
 tracked_inactive_cell_inds = {}
 tracked_inactive_activity = {}
 for dd,day in enumerate(conddf.days.values):
@@ -62,17 +61,28 @@ for dd,day in enumerate(conddf.days.values):
         rewards = fall['rewards'][0]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        comp = dct['comp'];bin_size = 3;tcs_early = []; tcs_late = []        
+        tcs_early = []; tcs_late = []        
         Fc3 = fall['Fc3']
         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
-        lasttr = 5 # last 5 trials
-        bins=100
+        lasttr=8 # last trials
+        bins=90
+        rad = [] # get radian coordinates
+        # same as giocomo preprint - worked with gerardo
+        for i in range(len(eps)-1):
+            y = ybinned[eps[i]:eps[i+1]]
+            rew = rewlocs[i]-rewsize/2
+            # convert to radians and align to rew
+            rad.append((((((y-rew)*2*np.pi)/track_length)+np.pi)%(2*np.pi))-np.pi)
+        rad = np.concatenate(rad)
+        track_length_rad = track_length*(2*np.pi/track_length)
+        bin_size=track_length_rad/bins
         # remake tuning curves relative to reward        
-        ypos_rel, tcs_late, coms = make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
-            rewards,forwardvel,rewsize,lasttr=lasttr,bins=bins)
+        # takes time
+        tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size)
         tcs_late = np.array(tcs_late); coms = np.array(coms)
-        ypos_rel = np.concatenate(ypos_rel)
+
         pyr_tc_s2p_cellind = fall['pyr_tc_s2p_cellind'][0]
         # suite2p indices
         inactive_cell_ind = pyr_tc_s2p_cellind[dct['inactive']]

@@ -19,7 +19,7 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_relative_to_reward, intersect_arrays
+from placecell import make_tuning_curves_radians, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
@@ -27,7 +27,9 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-
+saveddataset = "Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
+with open(saveddataset, "rb") as fp: #unpickle
+    radian_alignment_saved = pickle.load(fp)
 goal_cell_iind = []
 goal_cell_prop = []
 dist_to_rew = [] # per epoch
@@ -35,7 +37,7 @@ num_epochs = []
 pvals = []
 rates = []
 total_cells = []
-
+radian_alignment = {}
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
@@ -58,19 +60,28 @@ for ii in range(len(conddf)):
         Fc3 = fall['Fc3']
         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
-        lasttr = 5 # last 5 trials
-        bins=100
-        bin_size=track_length/bins
-        # remake tuning curves relative to reward        
-        ypos_rel, tcs_late, coms = make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
-            rewards,forwardvel,rewsize,lasttr=lasttr,bins=bins)
-        tcs_late = np.array(tcs_late); coms = np.array(coms)
-        ypos_rel = np.concatenate(ypos_rel)
-        goal_window = .1 # %
-        # relative to reward
-        coms_rewrel = np.array([com-rewlocs[ii] for ii, com in enumerate(coms)])                 
+        lasttr=8 # last trials
+        bins=90
+        rad = [] # get radian coordinates
+        # same as giocomo preprint - worked with gerardo
+        for i in range(len(eps)-1):
+            y = ybinned[eps[i]:eps[i+1]]
+            rew = rewlocs[i]-rewsize/2
+            # convert to radians and align to rew
+            rad.append((((((y-rew)*2*np.pi)/track_length)+np.pi)%(2*np.pi))-np.pi)
+        rad = np.concatenate(rad)
+        track_length_rad = track_length*(2*np.pi/track_length)
+        bin_size=track_length_rad/bins
+        if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
+            tcs_late, coms = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']
+        else:# remake tuning curves relative to reward        
+            # takes time
+            tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                rewards,forwardvel,rewsize,bin_size)
+            tcs_late = np.array(tcs_late); coms = np.array(coms)
+        goal_window = 30*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
-        coms_rewrel = np.array([[((cm-rewlocs[ii])/rewlocs[ii]) if (cm<(rewlocs[ii]-(rewsize/2))) else ((cm-rewlocs[ii])/(track_length-rewlocs[ii])) for cm in com] for ii, com in enumerate(coms)])                 
+        coms_rewrel = np.array([com-np.pi for com in coms])
         perm = list(combinations(range(len(coms)), 2))     
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
@@ -84,10 +95,13 @@ for ii in range(len(conddf)):
         for gc in goal_cells:
             fig, ax = plt.subplots()
             for ep in range(len(coms)):
-                ax.plot(tcs_late[ep][gc,:], label=f'epoch {ep}', color=colors[ep])
-                ax.axvline((bins/2)+1, color='k')
-                
+                ax.plot(tcs_late[ep][gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                ax.axvline((bins/2), color='k')
                 ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+                ax.set_xticks(np.arange(0,bins+1,10))
+                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),3))
+                ax.set_xlabel('Radian position (centered at start of rew loc)')
+                ax.set_ylabel('Fc3')
             ax.legend()
             pdf.savefig(fig)
             plt.close(fig)
@@ -114,6 +128,12 @@ for ii in range(len(conddf)):
         
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         pvals.append(p_value)
+        print(p_value)
         total_cells.append(len(coms[0]))
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms]
 
 pdf.close()
+
+# save pickle of dcts
+with open(saveddataset, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp) 
