@@ -16,8 +16,12 @@ clear all;
 % dys_per_an = {[20:50], [7:10, 32,33,35:63,65],  [2:20, 26,27,29,31], [27:30, 32,33,34,36,38,40:75], ...
 %     [62:70, 72,73,74, 76, 80:90], [7,8,10,11:15,17:21,24:42,44:46], [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45], ...
 %     [1:51]};
-anms = ["e218"];
-dys_per_an = {[32
+anms = ["e217"];
+dys_per_an = {[
+43
+44
+46
+47
 ]'};
 % an = 'e190';%an='e189';
 % individual day analysis 
@@ -75,6 +79,10 @@ for dy=dys % for loop per day
         [~, dFF, Fc3] = create_dff_fc3(fullfile(pth.folder,pth.name), Fs);
         fprintf('********made dFF and Fc3 since they did not exist in structure********')
     end
+    load(fullfile(pth.folder,pth.name), 'dFF', ...
+    'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
+    'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+
     % check to see if changerewloc same length as fc3 (only a problem for old
     % multiplane rec
     if (size(Fc3,1)<size(changeRewLoc,2))

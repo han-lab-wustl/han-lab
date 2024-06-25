@@ -108,25 +108,30 @@ for k,v in tracked_inactive_cell_inds.items():
         tc_tracked_per_cond[k] = tc_tracked
 #%%    
 # compile per animal tcs
-e218 = np.array([v for k,v in tc_tracked_per_cond.items() if k[:-4]=='e218'])
+annm = 'e216'
+an = np.array([v for k,v in tc_tracked_per_cond.items() if k[:-4]==annm])
 # remove cells that are nan every tracked day
-mask = (np.sum(np.sum(np.isnan(e218[:,0,:,:]),axis=2),axis=0)<800) # not nan in all positions across all days
-e218 = e218[:,:,mask,:]
-shp = int(np.ceil(np.sqrt(e218.shape[2])))
-fig, axes = plt.subplots(ncols=shp,
-                        nrows=shp,sharex=True,
-                        figsize=(20,20))
-plt.rc('font', size=20)
-rr=0;cc=0
-for ii in range(e218.shape[2]):
-    ax=axes[rr,cc]
-    ax.plot(e218[:,0,ii,:].T, color='slategray')
-    ax.plot(e218[:,1,ii,:].T, color='r')
-    ax.set_title(f'cell {ii}')
-    ax.spines[['top','right']].set_visible(False)
-    rr+=1
-    if rr>np.ceil(np.sqrt(e218.shape[2]))-1:cc+=1;rr=0        
-fig.tight_layout()
+mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),axis=0)<800) # not nan in all positions across all days
+an = an[:,:,mask,:]
+shp = int(np.ceil(np.sqrt(an.shape[2])))
+for dy in range(an.shape[0]):    
+    fig, axes = plt.subplots(ncols=shp,
+                            nrows=shp,sharex=True,
+                            figsize=(40,40))
+    plt.rc('font', size=20)
+    rr=0;cc=0
+    for ii in range(an.shape[2]):
+        ax=axes[rr,cc]
+        ax.plot(an[dy,0,ii,:], color='slategray')
+        ax.plot(an[dy,1,ii,:], color='r')
+        ax.set_title(f'cell {ii}')
+        ax.spines[['top','right']].set_visible(False)
+        ax.axvline(x = int(bins/2)+1, color='k', linestyle='--')
+        rr+=1
+        if rr>np.ceil(np.sqrt(an.shape[2]))-1:cc+=1;rr=0        
+    fig.suptitle(f'Day {dy}')
+    # fig.suptitle(f'all days')
+    fig.tight_layout()
 
 #%%
 # tracked cell frequency

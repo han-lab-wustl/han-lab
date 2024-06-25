@@ -9,7 +9,7 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'z8';
+an = 'e217';
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218
@@ -19,11 +19,11 @@ an = 'z8';
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [38];
+dys = [44 46 47];
 % dys = [1:51]; % e186
-src = 'X:\vipcre'; % folder where fall is
+% src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-% src = 'Y:\analysis\fmats';
+src = 'Y:\analysis\fmats';
 pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -33,8 +33,8 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     if length(pth)>1 % if multi plane imaging, grab the combined f file
         pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
     end    
