@@ -112,7 +112,7 @@ for k,v in tracked_inactive_cell_inds.items():
         tracked_lut = tracked_lut['commoncells_once_per_week']
         days_tracked = days_tracked_per_an[animal]
         tracked_lut = pd.DataFrame(tracked_lut, columns = days_tracked)
-        tc_tracked = np.ones((2, len(tracked_lut), 100))*np.nan
+        tc_tracked = np.ones((2, len(tracked_lut), bins))*np.nan
         tracked_cell_id = v    
         tc_tracked[:,tracked_cell_id,:] = tcs
         tc_tracked_per_cond[k] = tc_tracked
@@ -121,14 +121,15 @@ for k,v in tracked_inactive_cell_inds.items():
 annm = 'e216'
 an = np.array([v for k,v in tc_tracked_per_cond.items() if k[:-4]==annm])
 # remove cells that are nan every tracked day
-mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),axis=0)<800) # not nan in all positions across all days
+mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),axis=0)<((an.shape[3]*an.shape[0])-an.shape[0])) # not nan in all positions across all days
 an = an[:,:,mask,:]
 shp = int(np.ceil(np.sqrt(an.shape[2])))
-for dy in range(an.shape[0]):    
-    fig, axes = plt.subplots(ncols=shp,
-                            nrows=shp,sharex=True,
-                            figsize=(40,40))
-    plt.rc('font', size=20)
+fig, axes = plt.subplots(ncols=shp,
+                    nrows=shp,sharex=True,
+                    figsize=(30,20))
+
+for dy in range(an.shape[0]):  
+    plt.rc('font', size=6)
     rr=0;cc=0
     for ii in range(an.shape[2]):
         ax=axes[rr,cc]
@@ -136,7 +137,11 @@ for dy in range(an.shape[0]):
         ax.plot(an[dy,1,ii,:], color='r')
         ax.set_title(f'cell {ii}')
         ax.spines[['top','right']].set_visible(False)
-        ax.axvline(x = int(bins/2)+1, color='k', linestyle='--')
+        ax.axvline(x = int(bins/2), color='k', linestyle='--')
+        ax.set_xticks(np.arange(0,bins+1,10))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),1))
+        if ii==an.shape[0]-1:
+            ax.set_xlabel('Radian position \n(centered at start of rew loc)')
         rr+=1
         if rr>np.ceil(np.sqrt(an.shape[2]))-1:cc+=1;rr=0        
     fig.suptitle(f'Day {dy}')

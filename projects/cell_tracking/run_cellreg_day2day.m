@@ -44,7 +44,7 @@ planes = [0];
 for plane=planes
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'e190'; % CHANGE
+animal = 'e217'; % CHANGE
 results_directory= fullfile(pth,sprintf('%s_daily_tracking_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');

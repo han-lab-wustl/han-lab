@@ -31,7 +31,7 @@ def get_tuning_curve(ybinned, f, bins=270):
 
 def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
-    tcs_early = []; tcs_late = []; coms = []    
+    rates = []; tcs_early = []; tcs_late = []; coms = []    
     # remake tuning curves relative to reward        
     for ep in range(len(eps)-1):
         eprng = np.arange(eps[ep],eps[ep+1])
@@ -39,6 +39,7 @@ def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewloc = rewlocs[ep]
         relpos = rad[eprng]        
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
         F = Fc3[eprng,:]            
         moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
         F = F[moving_middle,:]
@@ -52,7 +53,7 @@ def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             tcs_late.append(tc)
             coms.append(com)
 
-    return tcs_late, coms
+    return rates,tcs_late, coms
 
 def make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
             rewards,forwardvel,rewsize,lasttr=5,bins=100):

@@ -27,7 +27,7 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = "Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 goal_cell_iind = []
@@ -35,7 +35,7 @@ goal_cell_prop = []
 dist_to_rew = [] # per epoch
 num_epochs = []
 pvals = []
-rates = []
+rates_all = []
 total_cells = []
 radian_alignment = {}
 for ii in range(len(conddf)):
@@ -44,9 +44,8 @@ for ii in range(len(conddf)):
     if animal!='e217':
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'Fc3', 
-            'coms_early_trials', 'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel',
-            'trialnum', 'rewards', 'iscell', 'bordercells'])
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells'])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
@@ -57,8 +56,6 @@ for ii in range(len(conddf)):
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
         tcs_early = []; tcs_late = []        
-        Fc3 = fall['Fc3']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
         lasttr=8 # last trials
         bins=90
@@ -72,19 +69,25 @@ for ii in range(len(conddf)):
         rad = np.concatenate(rad)
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum, rewards)
+        rates_all.append(success/total_trials)
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-            tcs_late, coms = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']
+            tcs_late, coms = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
             # takes time
-            tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3'])
+            Fc3 = fall_fc3['Fc3']
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            rates, tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)
-            tcs_late = np.array(tcs_late); coms = np.array(coms)
+            tcs_late = np.array(tcs_late); coms = np.array(coms)            
         goal_window = 30*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms])
         perm = list(combinations(range(len(coms)), 2))     
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
         goal_cell_iind.append(goal_cells)
@@ -135,5 +138,69 @@ for ii in range(len(conddf)):
 pdf.close()
 
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-    pickle.dump(radian_alignment, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#     pickle.dump(radian_alignment, fp) 
+    
+#%%
+plt.rc('font', size=16)          # controls default text sizes
+# goal cells across epochs
+df = conddf[conddf.animals!='e217']
+df['num_epochs'] = num_epochs
+df['goal_cell_prop'] = goal_cell_prop
+df['opto'] = df.optoep.values>1
+df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
+df['p_value'] = pvals
+
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.stripplot(x='num_epochs', y='goal_cell_prop',
+        hue='animals',data=df[df.opto==False],
+        s=8)
+ax.spines[['top','right']].set_visible(False)
+#%%
+
+df['recorded_neurons_per_session'] = total_cells
+fig,ax = plt.subplots(figsize=(7,5))
+sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
+        data=df[(df.opto==False)&(df.p_value<0.05)],
+        s=150, ax=ax)
+ax.spines[['top','right']].set_visible(False)
+
+#%%
+# split into pre and post reward cells
+pre_rew = [[cellind for cellind in range(xx[:,goal_cell_iind[kk]].shape[1]) if np.nanmedian(xx[:,goal_cell_iind[kk]][:,cellind])<0] for kk,xx in enumerate(dist_to_rew)]
+post_rew = [[cellind for cellind in range(xx[:,goal_cell_iind[kk]].shape[1]) if np.nanmedian(xx[:,goal_cell_iind[kk]][:,cellind])>0] for kk,xx in enumerate(dist_to_rew)]
+pre_rew_prop = [len(xx)/total_cells[ii] for ii,xx in enumerate(pre_rew)]
+post_rew_prop = [len(xx)/total_cells[ii] for ii,xx in enumerate(post_rew)]
+
+df['pre_rew_prop'] = pre_rew_prop
+df['post_rew_prop'] = post_rew_prop
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.stripplot(x='num_epochs', y='pre_rew_prop',
+        hue='animals',data=df[(df.opto==False)&(df.p_value<0.05)],
+        s=8)
+ax.spines[['top','right']].set_visible(False)
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.stripplot(x='num_epochs', y='post_rew_prop',
+        hue='animals',data=df[(df.opto==False)&(df.p_value<0.05)],
+        s=8)
+ax.spines[['top','right']].set_visible(False)
+
+#%%
+df['success_rate'] = rates_all
+
+an_nms = df.animals.unique()
+rows = int(np.ceil(np.sqrt(len(an_nms))))
+cols = int(np.ceil(np.sqrt(len(an_nms))))
+fig,axes = plt.subplots(nrows=rows, ncols=cols,
+            figsize=(10,10))
+rr=0;cc=0
+for an in an_nms:        
+    ax = axes[rr,cc]
+    sns.scatterplot(x='success_rate', y='goal_cell_prop',
+            data=df[(df.animals==an)&(df.opto==False)&(df.p_value<0.05)],
+            s=200, ax=ax)
+    ax.spines[['top','right']].set_visible(False)
+    ax.set_title(an)
+    rr+=1
+    if rr>=rows: rr=0; cc+=1    
+fig.tight_layout()
