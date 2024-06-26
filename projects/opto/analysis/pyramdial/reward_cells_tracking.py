@@ -39,7 +39,7 @@ days_tracked_per_an = {'e216':np.concatenate([[32,33],range(35,64),[65]]),
                     'e190':np.concatenate([range(6,10),[11,13],range(15,20),[21,22,24,27,28,29,33,34,35],
                                 range(40,44),[45]])
                     }
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
@@ -188,8 +188,8 @@ for k,v in tracked_rew_cell_inds.items():
 #%%
 # plot
 # compile per animal tuning curves
-annm = 'e201'
-an = np.array([v[:3,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
+annm = 'e189'
+an = np.array([v[:2,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>1])
 # remove cells that are nan every tracked day
 mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),axis=0)<((an.shape[3]*an.shape[0])-(1*an.shape[3]))) # not nan in all positions across all days
 an = an[:,:,mask,:]
@@ -220,7 +220,7 @@ for dy in range(an.shape[0]):
         rr+=1
         if rr>np.ceil(np.sqrt(an.shape[2]))-1:cc+=1;rr=0        
     # fig.suptitle(f'Day {dy}')
-    fig.suptitle(f'all days')
-    fig.tight_layout()
-plt.savefig(r'C:\Users\Han\Desktop\e201.svg')
+fig.suptitle(f'{annm}, all days')
+fig.tight_layout()
+plt.savefig(os.path.join(savedst, f'{annm}.svg'))
 # %%
