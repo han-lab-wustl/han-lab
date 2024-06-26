@@ -31,7 +31,7 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 #         [59,60,61,62,63,65,66,67,68,69]]
 # days_all = [[28,29,31,33,34,36,37], # excluded some days
 #     [70,71,72,73,74,75,76,77,78,79]]
-days_all = [[40,41,42,45,46],[82,83,84,85,86,87,88]]
+days_all = [[40,41,42,43,44,45,46],[82,83,84,85,86,87,88]]
 
 dark_time = False
 opploc=True
