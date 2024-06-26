@@ -135,7 +135,7 @@ for dd,day in enumerate(conddf.days.values):
             com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
             # OR shuffle cell identities
             # relative to reward
-            coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(com_shufs)])             
+            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
             perm = list(combinations(range(len(coms)), 2))     
             com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             # get goal cells across all epochs
@@ -156,7 +156,7 @@ for dd,day in enumerate(conddf.days.values):
             rew_cells_that_are_tracked_iind = [np.where(pyr_tc_s2p_cellind==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id]
             # includes s2p indices of inactive cells so you can find them in the tracked lut
             tracked_rew_activity[f'{animal}_{day:03d}'] = [[tcs_late[c][rew_cells_that_are_tracked_iind] for c in range(len(coms))],\
-                    rewlocs,coms[:,[rew_cells_that_are_tracked_iind]]]
+                    rewlocs,coms_rewrel[:,[rew_cells_that_are_tracked_iind]]]
         except Exception as e:
             print(e)
 
@@ -168,8 +168,26 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
     pickle.dump(dct, fp) 
 
 #%%
+# p-values for sanity check
+plt.rc('font', size=16)          # controls default text sizes
+# goal cells across epochs
+df = conddf.copy()
+df = df[df.animals!='e217']
+df['num_epochs'] = num_epochs
+df['goal_cell_prop'] = goal_cell_prop
+df['opto'] = df.optoep.values>1
+df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
+df['p_value'] = pvals
+
+fig,ax = plt.subplots(figsize=(5,5))
+ax.hist(df.loc[df.opto==False,'p_value'].values)
+ax.spines[['top','right']].set_visible(False)
+
+#%%
+
 # tracked cell activity
 tc_tracked_per_cond = {}
+
 for k,v in tracked_rew_cell_inds.items():
     if k in tracked_rew_activity.keys():
         tcs = tracked_rew_activity[k][0]

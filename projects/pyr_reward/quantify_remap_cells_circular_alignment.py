@@ -121,7 +121,7 @@ for ii in range(len(conddf)):
             com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
             # OR shuffle cell identities
             # relative to reward
-            coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(com_shufs)])             
+            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
             perm = list(combinations(range(len(coms)), 2))     
             com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             # get goal cells across all epochs
@@ -140,17 +140,27 @@ pdf.close()
 # save pickle of dcts
 # with open(saveddataset, "wb") as fp:   #Pickling
 #     pickle.dump(radian_alignment, fp) 
-    
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # goal cells across epochs
-df = conddf[conddf.animals!='e217']
+df = conddf.copy()
+df = df[df.animals!='e217']
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = goal_cell_prop
 df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
+ax.spines[['top','right']].set_visible(False)
+ax.axvline(x=0.05, color='k', linestyle='--')
+sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
+ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
+ax.set_xlabel('P-value')
+ax.set_ylabel('Sessions')
+#%%
+# number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.stripplot(x='num_epochs', y='goal_cell_prop',
         hue='animals',data=df[df.opto==False],
