@@ -29,10 +29,12 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 #         [44,45,46,47,48,49,50,51]]#,54,55,56,57]]
 # days_all = [[17,18,19,20,21,23,24,25,26,27], # dark time
 #         [59,60,61,62,63,65,66,67,68,69]]
-days_all = [[28,29,31,33,34,36,37], # excluded some days
-    [70,71,72,73,74,75,76,77,78,79]]
-# days_all = [np.arange(16,26)]
+# days_all = [[28,29,31,33,34,36,37], # excluded some days
+#     [70,71,72,73,74,75,76,77,78,79]]
+days_all = [[40,41,42,45,46],[82,83,84,85,86,87,88]]
+
 dark_time = False
+opploc=True
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
 near_reward_per_day = []
@@ -48,6 +50,9 @@ for ii,animal in enumerate(animals):
         if dark_time: # get dt columns
             optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_memory_day'].values[0])
             optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_stim_ctrl'].values[0])
+        elif opploc:
+            optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_opploc'].values[0])    
+            optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_opp_loc'].values[0])
         else:
             optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_day'].values[0])    
             optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
@@ -183,13 +188,13 @@ ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
 ax.get_legend().set_visible(False)
 
 # # performance on opto days
-# plt.figure(figsize=(3,6))
-# ax = sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df, fill=False,
-#                 errorbar='se',
-#                 palette={False: "slategray", True: "mediumturquoise"})
-# ax = sns.stripplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df,
-#                 palette={False: "slategray", True: "mediumturquoise"},
-#                 s=8)
+plt.figure(figsize=(3,6))
+ax = sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df, fill=False,
+                errorbar='se',
+                palette={False: "slategray", True: "mediumturquoise"})
+ax = sns.stripplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=12)
 
 # memory performance the next day
 plt.figure(figsize=(3,6))
