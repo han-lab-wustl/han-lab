@@ -184,10 +184,9 @@ ax.hist(df.loc[df.opto==False,'p_value'].values)
 ax.spines[['top','right']].set_visible(False)
 
 #%%
-
 # tracked cell activity
 tc_tracked_per_cond = {}
-
+com_tracked_per_cond = {}
 for k,v in tracked_rew_cell_inds.items():
     if k in tracked_rew_activity.keys():
         tcs = tracked_rew_activity[k][0]
@@ -202,12 +201,13 @@ for k,v in tracked_rew_cell_inds.items():
         tracked_cell_id = v    
         tc_tracked[:,tracked_cell_id,:] = tcs
         tc_tracked_per_cond[k] = tc_tracked
-
+        com_tracked_per_cond[k] = coms
 #%%
 # plot
 # compile per animal tuning curves
 annm = 'e189'
-an = np.array([v[:2,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>1])
+# TODO: nan pad!!
+an = np.array([v[:3,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
 # remove cells that are nan every tracked day
 mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),axis=0)<((an.shape[3]*an.shape[0])-(1*an.shape[3]))) # not nan in all positions across all days
 an = an[:,:,mask,:]
@@ -242,3 +242,4 @@ fig.suptitle(f'{annm}, all days')
 fig.tight_layout()
 plt.savefig(os.path.join(savedst, f'{annm}.svg'))
 # %%
+# plot com of a cell vs. number of tracked days
