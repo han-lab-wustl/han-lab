@@ -31,7 +31,7 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 #         [59,60,61,62,63,65,66,67,68,69]]
 # days_all = [[28,29,31,33,34,36,37], # excluded some days
 #     [70,71,72,73,74,75,76,77,78,79]]
-days_all = [[40,41,42,43,44,45,46],[82,83,84,85,86,87,88]]
+days_all = [[40,41,42,43,44,45,46,47,48],[82,83,84,85,86,87,88,89,90]]
 
 dark_time = False
 opploc=True
@@ -195,6 +195,7 @@ ax = sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=d
 ax = sns.stripplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=12)
+ax.get_legend().set_visible(False)
 
 # memory performance the next day
 plt.figure(figsize=(3,6))

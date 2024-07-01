@@ -230,6 +230,24 @@ def get_motion_corrected_tifs_from_suite2p_binary(binarypth, dst,
         print(i) # make folder if it does not exist
         tifffile.imwrite(os.path.join(dst, f'file_{i:08d}.tif'), f_input2[i:i+chunk])
 
+def make_tiles_from_scanbox_xyz_tile(sbxsrc,frames_per_plane=30, zsteps=3):
+    """makes tiles per z plane to stich in imagej
+    assumes row by row from FOV up in 2p
+    Args:
+        sbxsrc (_type_): _description_
+        frames_per_plane (int, optional): _description_. Defaults to 30.
+        zsteps (int, optional): _description_. Defaults to 3.
+    """
+    from sbxreader import sbx_memmap  
+# src = r'Z:\sstcre_imaging\e201\0_ref_pln_day\230213_EH_DH_000_003\230213_EH_DH_000_003.sbx'
+    dat = sbx_memmap(sbxsrc)
+    dat=np.squeeze(dat)
+    if len(dat.shape)>3:
+        green = dat[:,0,:,:]
+        red = dat[:,1,:,:]
+    else:
+        green = dat
+    
 def convert_zstack_sbx_to_tif(sbxsrc):
     """converts sbx from zstacks/opto tests to tifs
 

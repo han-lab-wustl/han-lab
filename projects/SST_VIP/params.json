@@ -1,0 +1,25 @@
+{
+    "metadata": {
+        "shape": [
+            3,
+            3
+        ],
+        "size": 9,
+        "tile_shape": [
+            512,
+            796
+        ]
+    },
+    "coords": {},
+    "filenames": {
+        "0": "tile_000_registered_plane00.tif",
+        "1": "tile_001_registered_plane00.tif",
+        "2": "tile_002_registered_plane00.tif",
+        "3": "tile_003_registered_plane00.tif",
+        "4": "tile_004_registered_plane00.tif",
+        "5": "tile_005_registered_plane00.tif",
+        "6": "tile_006_registered_plane00.tif",
+        "7": "tile_007_registered_plane00.tif",
+        "8": "tile_008_registered_plane00.tif"
+    }
+}

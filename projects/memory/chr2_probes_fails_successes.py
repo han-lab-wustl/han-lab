@@ -34,11 +34,11 @@ animals = ['e231', 'e232']
 #         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
 days_all = [[28,29,30,31,32,33,34,35,36],
     [70,71,72,73,74,75,76,77,78]]
-days_all = [[40,41,42,45,46],[82,83,84,85,86,87,88]]
+days_all = [[40,41,42,43,44,45,46,47,48],[82,83,84,85,86,87,88,89,90]]
 numtrialsstim=10
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-
+opto_cond = 'Opto_opp_loc' # experiment condition
 # optodays = [18, 19, 22, 23, 24]
 day_date_dff = {}
 for ii,animal in enumerate(animals):
@@ -48,7 +48,7 @@ for ii,animal in enumerate(animals):
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
         plndff = []
-        optoday = (condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
+        optoday = (condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
         optoday = optoday==1
         # for each plane
         stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*ZD_000*.mat'))[0]
@@ -275,7 +275,7 @@ plt.rc('font', size=20)          # controls default text sizes
 # plot mean and sem of opto days vs. control days
 # on same plane
 opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
-            'Opto'].values for ii,animal in enumerate(animals)])
+            opto_cond].values for ii,animal in enumerate(animals)])
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
 day_date_dff_arr = np.array([v for k,v in day_date_dff.items()])
 day_date_dff_arr_opto = day_date_dff_arr[opto_condition]
