@@ -38,4 +38,5 @@ for i in range(int(arr.shape[0]/subvol)):
     tifffile.imwrite(savedst,np.fliplr(np.rot90(tile.T,axes=(1,2))))
     tile_nonreg = os.path.join(dst, f'tile_{i:03d}.tif')
     if os.path.exists(savedst): os.remove(tilepath); os.remove(tile_nonreg)
-    
+
+# then run grid stitching in imagej using the tiles    

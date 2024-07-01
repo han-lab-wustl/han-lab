@@ -667,9 +667,9 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     # differentially_activated_cells = find_differentially_activated_cells(tc1_late, tc2_late, threshold, bin_size)
     # tc1_pc_width = evaluate_place_field_width(tc1_late, bin_centers, threshold=0.5)
     rewloc_shift = rewlocs[comp[1]]-rewlocs[comp[0]]
-    com_shift = [np.nanmean(coms[comp[1]][differentially_inactivated_cells]-coms[comp[0]][differentially_inactivated_cells]), \
-                np.nanmean(coms[comp[1]][differentially_activated_cells]-coms[comp[0]][differentially_activated_cells]), \
-                    np.nanmean(coms[comp[1]]-coms[comp[0]])]
+    com_shift = [np.nanmean(coms2[differentially_inactivated_cells]-coms1[differentially_inactivated_cells]), \
+                np.nanmean(coms2[differentially_activated_cells]-coms1[differentially_activated_cells]), \
+                    np.nanmean(coms2-coms1)]
     # circular alignment
     rel_coms1 = [convert_com_to_radians(com, rewlocs[comp[0]], track_length) for com in coms1]
     rel_coms2 = [convert_com_to_radians(com, rewlocs[comp[1]], track_length) for com in coms2]

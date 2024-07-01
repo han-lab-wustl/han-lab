@@ -4,19 +4,10 @@ zahra's analysis for initial com and enrichment of pyramidal cell data
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
-import pickle, seaborn as sns, random, math
+import pickle, seaborn as sns, random, math,  matplotlib as mpl, matplotlib.backends.backend_pdf
 from sklearn.cluster import KMeans
-import seaborn as sns
-import placecell
-from placecell import get_rewzones, find_differentially_activated_cells, \
-find_differentially_inactivated_cells, convert_com_to_radians, get_pyr_metrics_opto, \
-get_dff_opto
-import matplotlib.backends.backend_pdf
-import matplotlib as mpl
-mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
-import matplotlib.pyplot as plt
+from placecell import get_pyr_metrics_opto, get_dff_opto
+mpl.rcParams['svg.fonttype'] = 'none'; mpl.rcParams["xtick.major.size"] = 8; mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df

@@ -99,7 +99,7 @@ def copydopaminefldstruct(src, dst, overwrite=False):
 
 
 def copyfmats(src, dst, animal, overwrite=False, days=False, 
-            weeks=False, weekdir=False, planes=[0]):
+            weeks=False, weekdir=False, planes=[0], combined=False):
     """useful for cell tracking, copies Fall to another location for each day in animal folder
     if you align to behavior can also use for further analysis 
     (run runVRalign.m in MATLAB, in projects > SST-cre inhibition)
@@ -129,15 +129,25 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         pth = os.path.join(src, str(i))
         imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
         # imgfl = pth
-        for plane in planes:
-            mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
+        if combined:
+            mat = os.path.join(imgfl, "suite2p", "combined", "Fall.mat") 
             if os.path.exists(mat):
-                copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
+                copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane0_Fall.mat")
                 if os.path.exists(copypth) and overwrite==False:
                     print(f"*********Fall for day {i} already exists in {dst}*********")    
                 else:
                     shutil.copy(mat, copypth)            
                     print(f"*********Copied day {i} Fall to {dst}*********")
+        else:
+            for plane in planes:
+                mat = os.path.join(imgfl, "suite2p", f"plane{plane}", "Fall.mat") 
+                if os.path.exists(mat):
+                    copypth = os.path.join(dst, f"{animal}_day{int(i):03d}_plane{plane}_Fall.mat")
+                    if os.path.exists(copypth) and overwrite==False:
+                        print(f"*********Fall for day {i} already exists in {dst}*********")    
+                    else:
+                        shutil.copy(mat, copypth)            
+                        print(f"*********Copied day {i} Fall to {dst}*********")
 
     if weeks:
         for w in weeks:            
