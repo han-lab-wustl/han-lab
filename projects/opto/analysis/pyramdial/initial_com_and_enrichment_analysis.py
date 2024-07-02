@@ -23,8 +23,8 @@ for dd,day in enumerate(conddf.days.values):
                 threshold=threshold, pc=pc)
     dcts.append(dct)
 # save pickle of dcts
-# with open(r'Z:\dcts_modeling_wcomp.p', "wb") as fp:   #Pickling
-#     pickle.dump(dcts, fp)   
+with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
+    pickle.dump(dcts, fp)   
 #%%
 # open previously saved dcts
 # with open(r"Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
@@ -60,6 +60,7 @@ ax.get_legend().set_visible(False)
 t,pval = scipy.stats.ranksums(df[(df.index.get_level_values('condition')=='VIP')]['dff_target-prev'].values, \
             df[(df.index.get_level_values('condition')=='Control')]['dff_target-prev'].values)
 # plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
+ax.set_title(f'p-value: {pval:.2f}')
 #%%
 # plot fraction of cells near reward
 df = conddf
@@ -72,9 +73,9 @@ df['frac_pc_opto_late'] = [dct['frac_place_cells_tc2_late_trials'] for dct in dc
 df['frac_pc_prev'] = df['frac_pc_prev_late']-df['frac_pc_prev_early']
 df['frac_pc_opto'] = df['frac_pc_opto_late']-df['frac_pc_opto_early']
 df['opto'] = [True if xx>1 else False if xx==-1 else np.nan for xx in conddf.optoep.values]
-df['opto'] = conddf.optoep.values>1
+# df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
-
+df = df.loc[df.animals!='e189']
 bigdf=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 
 fig,ax = plt.subplots(figsize=(4,6))
@@ -126,13 +127,13 @@ plt.title(f"p-value = {pval:03f}")
 
 # plt.savefig(os.path.join(savedst, 'tuning_curve_enrichment.svg'), bbox_inches='tight')
 #%%
-# com shift
+#  com shift
 # control vs. vip led on
 # com_shift col 0 = inactive; 1 = active; 2 = all
 optoep = conddf.optoep.values
 in_type = conddf.in_type.values
 optoep_in = np.array([xx for ii,xx in enumerate(optoep)])
-com_shift = np.array([dct['com_shift'] for ii,dct in enumerate(dcts)])
+com_shift = np.array([np.array(dct['com_shift']) for ii,dct in enumerate(dcts)])
 rewloc_shift = np.array([dct['rewloc_shift'] for ii,dct in enumerate(dcts)])
 animals = conddf.animals.values
 df = pd.DataFrame(com_shift[:,0], columns = ['com_shift_inactive'])
@@ -141,7 +142,7 @@ df['rewloc_shift'] = rewloc_shift
 df['animal'] = animals
 condition = []
 df['vipcond'] = ['vip' if (xx == 'e216') | (xx == 'e217') | (xx == 'e218') else 'ctrl' for xx in animals]
-df = df[(df.animal!='e189')&(df.animal!='e200')]
+df = df[(df.animal!='e200')]
 dfagg = df.groupby(['animal', 'vipcond']).mean(numeric_only=True)
 
 fig, ax = plt.subplots()
@@ -218,15 +219,13 @@ for ii,dct in enumerate(dcts_opto):
     df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
     if df['in_type'].values[0] =='vip':
         df['vip_cond'] = 'vip'
-    # else:
-    #     df['vip_cond'] = 'ctrl'
-    elif (df['in_type'].values[0] =='sst') or (df['animal'].values[0] =='e190') or (df['animal'].values[0] =='z8'):        
+    else:
         df['vip_cond'] = 'ctrl'
 
     dfs_diff.append(df)
 bigdf_org = pd.concat(dfs_diff,ignore_index=False) 
 bigdf_org.reset_index(drop=True, inplace=True)   
-
+bigdf_org = bigdf_org[(bigdf_org['animal']!='e189')&(bigdf_org['animal']!='e186')]
 # plot fraction of inactivated vs. activated cells
 bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
 bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True)
