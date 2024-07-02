@@ -35,17 +35,18 @@ with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
 dffs = []
 for dd,day in enumerate(conddf.days.values):
     dff_opto, dff_prev = get_dff_opto(conddf, dd, day)
+    if dd%10==0: print(dd)
     dffs.append([dff_opto, dff_prev])
     
 # #%%
 # plot
 plt.rc('font', size=20)          # controls default text sizes
-conddf['dff_target'] = np.array(dffs)[:,0]
-conddf['dff_prev'] = np.array(dffs)[:,1]
-conddf['dff_target-prev'] = conddf['dff_target']-conddf['dff_prev']
-conddf['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in conddf.in_type.values]
-conddf['opto'] = conddf.optoep.values>1
-df = conddf
+df = conddf.copy()[:len(dffs)]
+df['dff_target'] = np.array(dffs)[:,0]
+df['dff_prev'] = np.array(dffs)[:,1]
+df['dff_target-prev'] = conddf['dff_target']-conddf['dff_prev']
+df['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in conddf.in_type.values]
+df['opto'] = conddf.optoep.values>1
 df=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 fig,ax = plt.subplots(figsize=(2.5,6))
 ax = sns.barplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
@@ -142,7 +143,7 @@ df['rewloc_shift'] = rewloc_shift
 df['animal'] = animals
 condition = []
 df['vipcond'] = ['vip' if (xx == 'e216') | (xx == 'e217') | (xx == 'e218') else 'ctrl' for xx in animals]
-df = df[(df.animal!='e200')]
+df = df[(df.animal!='e189')&(df.animal!='e200')]
 dfagg = df.groupby(['animal', 'vipcond']).mean(numeric_only=True)
 
 fig, ax = plt.subplots()
