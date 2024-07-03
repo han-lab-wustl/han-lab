@@ -31,22 +31,27 @@ with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
 #         dcts = pickle.load(fp)
 
 # #%%
-# dff for opto vs. control
+# fc3 for opto vs. control
+# pre reward
+# pcs only
 dffs = []
 for dd,day in enumerate(conddf.days.values):
-    dff_opto, dff_prev = get_dff_opto(conddf, dd, day)
+    dff_opto, dff_prev = get_dff_opto(conddf, dd, day,pc=True)
     if dd%10==0: print(dd)
     dffs.append([dff_opto, dff_prev])
     
-# #%%
+#%%
 # plot
 plt.rc('font', size=20)          # controls default text sizes
 df = conddf.copy()[:len(dffs)]
 df['dff_target'] = np.array(dffs)[:,0]
 df['dff_prev'] = np.array(dffs)[:,1]
-df['dff_target-prev'] = conddf['dff_target']-conddf['dff_prev']
-df['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in conddf.in_type.values]
-df['opto'] = conddf.optoep.values>1
+df['dff_target-prev'] = df['dff_target']-df['dff_prev']
+df['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in df.in_type.values]
+df['opto'] = df.optoep.values>1
+# only initial days as controls
+# df['opto'] = [True if xx>1 else False if xx==-1 else np.nan for xx in conddf.optoep.values]
+df = df.loc[~((df.animals=='e217')&(df.days.isin([12,26,29])))] # exclude noisy days
 df=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 fig,ax = plt.subplots(figsize=(2.5,6))
 ax = sns.barplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
@@ -58,8 +63,10 @@ ax = sns.stripplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 
-t,pval = scipy.stats.ranksums(df[(df.index.get_level_values('condition')=='VIP')]['dff_target-prev'].values, \
-            df[(df.index.get_level_values('condition')=='Control')]['dff_target-prev'].values)
+t,pval = scipy.stats.ranksums(df.loc[((df.index.get_level_values('condition')=='VIP')&(df.index.get_level_values('opto')==True)),
+            'dff_target-prev'].values, \
+            df.loc[((df.index.get_level_values('condition')=='VIP')&(df.index.get_level_values('opto')==False)),
+            'dff_target-prev'].values)
 # plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
 ax.set_title(f'p-value: {pval:.2f}')
 #%%

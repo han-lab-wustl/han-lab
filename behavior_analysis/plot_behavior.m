@@ -15,7 +15,7 @@ pptx    = exportToPPTX('', ...
 
 % mouse_name = "z9";
 mouse_name = 'z8';
-days = [30:40];
+days = [43];
 src = 'X:\vipcre';
 % src = 'Z:\chr2_grabda';
 % src = '\\storage1.ris.wustl.edu\ebhan\Active\dzahra';
