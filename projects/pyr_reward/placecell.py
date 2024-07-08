@@ -77,12 +77,13 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
             for tt,trial in enumerate(np.unique(trialnum[eprng])):
                 for celln in range(F.shape[1]):
                     mask = trialnum[eprng][moving_middle]==trial
-                    f = F[mask,celln]
-                    relpos = rad[eprng][moving_middle][mask]                
-                    licks_ep = lick[eprng][moving_middle][mask]                
-                    tc = get_tuning_curve(relpos, f, bins=bins)  
-                    tc[np.isnan(tc)]=0 # set nans to 0
-                    tcs_per_trial[celln, tt,:] = tc
+                    if sum(mask)>100:
+                        f = F[mask,celln]
+                        relpos = rad[eprng][moving_middle][mask]                
+                        licks_ep = lick[eprng][moving_middle][mask]                
+                        tc = get_tuning_curve(relpos, f, bins=bins)  
+                        tc[np.isnan(tc)]=0 # set nans to 0
+                        tcs_per_trial[celln, tt,:] = tc
                 com = calc_COM_EH(tcs_per_trial[:, tt,:],bin_size)
                 coms_per_trial[:, tt] = com
                 lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
