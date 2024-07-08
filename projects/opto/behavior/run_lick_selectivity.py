@@ -19,7 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.close('all')
 
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_licks.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 
 dcts = []
@@ -100,7 +100,7 @@ ax = sns.stripplot(x='opto', y='lick_rate', hue='condition', data=dfagg,
                 s=10)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
-plt.savefig(os.path.join(savedst, 'lick_rate_first_5_trials.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'lick_rate_first_5_trials.svg'), bbox_inches='tight')
 
 plt.figure(figsize=(3,6))
 ax = sns.barplot(x='opto', y='lick_selectivity_last5trials', hue='condition', data=dfagg, fill=False,
@@ -111,7 +111,7 @@ ax = sns.stripplot(x='opto', y='lick_selectivity_last5trials', hue='condition', 
                 s=10)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
-plt.savefig(os.path.join(savedst, 'lick_selectivity_success_trials.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'lick_selectivity_success_trials.svg'), bbox_inches='tight')
 # probes
 plt.figure(figsize=(3,6))
 ax = sns.barplot(x='opto', y='lick_selectivity_probes', hue='condition', data=dfagg, fill=False,
@@ -122,7 +122,7 @@ ax = sns.stripplot(x='opto', y='lick_selectivity_probes', hue='condition', data=
                 s=10)
 ax.spines[['top','right']].set_visible(False)
 # ax.get_legend().set_visible(False)
-plt.savefig(os.path.join(savedst, 'lick_selectivity_probes.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'lick_selectivity_probes.svg'), bbox_inches='tight')
 # fails
 plt.figure(figsize=(3,6))
 ax = sns.barplot(x='opto', y='lick_selectivity_fails', hue='condition', data=dfagg, fill=False,
@@ -162,6 +162,7 @@ x4 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'ctrl') &
 labels = ['vipledon', 'vipledoff', 'ctrlledon', 'ctrlledoff']
 scipy.stats.f_oneway(x1, x2, x3[~np.isnan(x3)], x4)
 p_values= sp.posthoc_ttest([x1,x2,x3[~np.isnan(x3)],x4])#,p_adjust='holm-sidak')
+p_values.columns=labels
 print(p_values)
 
 # lick rate

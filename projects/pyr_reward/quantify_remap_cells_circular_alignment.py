@@ -24,12 +24,13 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 dist_to_rew = [] # per epoch
@@ -45,8 +46,12 @@ for ii in range(len(conddf)):
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells'])
+            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'stat'])
         VR = fall['VR'][0][0][()]
+        stat = np.array([fall['stat'][0][ii][()] for ii in range(fall['stat'][0].shape[0])])
+        # filter out skewed cellss
+        skew = np.array([xx[0][0] for xx in np.squeeze(np.hstack(stat['skew']))])
         scalingf = VR['scalingFACTOR'][0][0]
         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
         ybinned = fall['ybinned'][0]/scalingf;track_length=180/scalingf    
@@ -78,6 +83,9 @@ for ii in range(len(conddf)):
             fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3'])
             Fc3 = fall_fc3['Fc3']
             Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            skew_mask = skew_filter>2
+            Fc3 = Fc3[:, skew_mask] # only keep cells with skew greateer than 2
             rates, tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)
             tcs_late = np.array(tcs_late); coms = np.array(coms)            
