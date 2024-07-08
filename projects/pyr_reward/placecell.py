@@ -11,6 +11,28 @@ from scipy.ndimage import label
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import get_success_failure_trials
 
+def get_behavior_tuning_curve(ybinned, beh, bins=270):
+    """
+    Plot a lick tuning curve given a dataframe with position and lick columns.
+    
+    Parameters:
+    - df: pandas DataFrame containing the data.
+    - position_col: name of the column in df that contains the position data.
+    - lick_col: name of the column in df that contains the lick binary variable (1 for lick, 0 for no lick).
+    - bins: number of bins to divide the position data into for the curve.
+    """
+    df = pd.DataFrame()
+    df['position'] = ybinned
+    df['beh'] = beh
+    # Discretize the position data into bins
+    df['position_bin'] = pd.cut(df['position'], bins=bins, labels=False)
+    
+    # Calculate the lick probability for each bin
+    grouped = df.groupby('position_bin')['beh'].agg(['mean', 'count']).reset_index()
+    beh_probability = grouped['mean']  # This is the mean of the binary lick variable, which represents probability
+    
+    return np.array(beh_probability)
+
 
 def get_tuning_curve(ybinned, f, bins=270):
     """
@@ -27,6 +49,50 @@ def get_tuning_curve(ybinned, f, bins=270):
     f_tc[:np.array(grouped['mean'].shape[0])] = grouped['mean'] 
     
     return np.array(f_tc)
+
+
+def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
+    trialstates = []; licks = []; tcs = []; coms = []    
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = rad[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        trialstate = np.ones(len(np.unique(trialnum[eprng])))*-1
+        trialstate[[xx for xx,t in enumerate(ttr) if xx in strials]] = 1
+        trialstate[[xx for xx,t in enumerate(ttr) if xx in ftrials]] = 0
+        trialstates.append(trialstate)
+        F = Fc3[eprng,:]            
+        moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
+        F = F[moving_middle,:]
+        relpos = np.array(relpos)[moving_middle]
+        # cells x trial x bin
+        tcs_per_trial = np.ones((F.shape[1], len(np.unique(trialnum[eprng])),bins))*np.nan
+        coms_per_trial = np.ones((F.shape[1], len(np.unique(trialnum[eprng]))))*np.nan
+        licks_per_trial = np.ones((len(np.unique(trialnum[eprng])), bins))*np.nan
+        if len(ttr)>lasttr: # only if ep has more than x trials            
+            for tt,trial in enumerate(np.unique(trialnum[eprng])):
+                for celln in range(F.shape[1]):
+                    mask = trialnum[eprng][moving_middle]==trial
+                    f = F[mask,celln]
+                    relpos = rad[eprng][moving_middle][mask]                
+                    licks_ep = lick[eprng][moving_middle][mask]                
+                    tc = get_tuning_curve(relpos, f, bins=bins)  
+                    tc[np.isnan(tc)]=0 # set nans to 0
+                    tcs_per_trial[celln, tt,:] = tc
+                com = calc_COM_EH(tcs_per_trial[:, tt,:],bin_size)
+                coms_per_trial[:, tt] = com
+                lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
+                lck[np.isnan(lck)]=0
+                licks_per_trial[tt,:] = lck
+        tcs.append(tcs_per_trial)
+        coms.append(coms_per_trial)
+        licks.append(licks_per_trial)
+
+    return trialstates, licks, tcs, coms
 
 
 def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,

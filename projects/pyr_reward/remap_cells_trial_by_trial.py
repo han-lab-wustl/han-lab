@@ -6,31 +6,28 @@ visualize reward-relative cells across days
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
-import pickle, seaborn as sns, random, math
+import pickle, seaborn as sns, random, math, matplotlib as mpl
 from collections import Counter
-from itertools import combinations
-from itertools import chain
+from itertools import combinations, chain
 import matplotlib.backends.backend_pdf
-import seaborn as sns
-import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians, intersect_arrays
+from placecell import make_tuning_curves_radians, intersect_arrays, make_tuning_curves_radians_trial_by_trial
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
+savepth = os.path.join(savedst, 'trial_by_trial.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 dist_to_rew = [] # per epoch
@@ -48,7 +45,7 @@ for ii in range(len(conddf)):
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+            'stat', 'licks'])
         VR = fall['VR'][0][0][()]
         try:
             stat = np.array([fall['stat'][0][ii][()] for ii in range(fall['stat'][0].shape[0])])
@@ -106,18 +103,38 @@ for ii in range(len(conddf)):
         goal_cell_p=len(goal_cells)/len(coms[0])
         goal_cell_prop.append(goal_cell_p)
         num_epochs.append(len(coms))
-        colors = ['navy', 'red', 'green', 'k','darkorange']
-        for gc in goal_cells:
-            fig, ax = plt.subplots()
-            for ep in range(len(coms)):
-                ax.plot(tcs_late[ep][gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                ax.axvline((bins/2), color='k')
-                ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-                ax.set_xticks(np.arange(0,bins+1,10))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),3))
-                ax.set_xlabel('Radian position (centered at start of rew loc)')
-                ax.set_ylabel('Fc3')
-            ax.legend()
+        # plot trial by trial rew cells
+        F_remap = Fc3[:, goal_cells]
+        lick = fall['licks']
+        lick = np.squeeze(lick)
+        trialstates, licks_trial_by_trial, tcs_trial_by_trial, coms_trial_by_trial = make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,F_remap,trialnum,
+            rewards,forwardvel,rewsize,bin_size)
+        plt.rc('font', size=10)
+        for gc in range(len(goal_cells)):                        
+            fig,axes = plt.subplots(nrows=len(eps)-1,ncols=2,sharex=True)
+            for ep in range(len(eps)-1):
+                ax = axes[ep,0]
+                mask = ~(trialstates[ep]==0)
+                mask = np.ones_like(licks_trial_by_trial[ep]).T*mask
+                sns.heatmap(licks_trial_by_trial[ep], mask=mask.T, cmap='Reds', cbar=False,ax=ax)
+                mask = ~(trialstates[ep]==1)
+                mask = np.ones_like(licks_trial_by_trial[ep]).T*mask
+                sns.heatmap(licks_trial_by_trial[ep], mask=mask.T, cmap='Greens', cbar=False, ax=ax)
+                if ep==len(eps)-1: ax.set_title('licks')
+                ax = axes[ep,1]
+                mask = ~(trialstates[ep]==0)
+                mask = np.ones_like(tcs_trial_by_trial[ep][gc]).T*mask
+                sns.heatmap(tcs_trial_by_trial[ep][gc], 
+                    mask=mask.T,cmap='Reds',ax=ax)
+                mask = ~(trialstates[ep]==1)
+                mask = np.ones_like(tcs_trial_by_trial[ep][gc]).T*mask
+                sns.heatmap(tcs_trial_by_trial[ep][gc],  
+                    mask=mask.T,cmap='Greens', ax=ax)
+                if ep==len(eps)-1: 
+                    ax.set_title('activity')
+                    ax.set_xlabel('Position bin')
+            fig.suptitle(f'{animal}, day {day}, epoch {ep}, remap cell # {gc}')
+            fig.tight_layout()
             pdf.savefig(fig)
             plt.close(fig)
         # get shuffled iterations
@@ -145,13 +162,13 @@ for ii in range(len(conddf)):
         pvals.append(p_value)
         print(p_value)
         total_cells.append(len(coms[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms]
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms, p_value]
 
 pdf.close()
 
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # goal cells across epochs

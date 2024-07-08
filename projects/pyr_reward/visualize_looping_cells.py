@@ -28,8 +28,8 @@ with open(saveddataset, "rb") as fp: #unpickle
 looping_cell_iind = []
 looping_cell_prop = []
 radian_alignment = {}
-
-for ii in range(len(conddf)):
+#%%
+for ii in range(150,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if animal!='e217':
@@ -39,8 +39,12 @@ for ii in range(len(conddf)):
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'tuning_curves_late_trials', 'stat'])
         VR = fall['VR'][0][0][()]
-        stat = np.array([fall['stat'][0][ii][()] for ii in range(fall['stat'][0].shape[0])])
-        skew = np.array([xx[0][0] for xx in np.squeeze(np.hstack(stat['skew']))])
+        try:
+            stat = np.array([fall['stat'][0][ii][()] for ii in range(fall['stat'][0].shape[0])])
+            skew = np.array([xx[0][0] for xx in np.squeeze(np.hstack(stat['skew']))])
+        except: # accept old iscell format?
+            stat = np.array([fall['stat'][ii][()] for ii in range(fall['stat'].shape[0])])
+            skew = np.array([xx['skew'][0][0][0][0] for xx in np.squeeze(np.hstack(stat))])
         # filter out skewed cells
         scalingf = VR['scalingFACTOR'][0][0]
         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
@@ -115,7 +119,7 @@ for ii in range(len(conddf)):
             axes[0].legend()
             pdf.savefig(fig)
             plt.close(fig)        
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = tcs_late_circ
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late_circ, coms_circ]
 pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
