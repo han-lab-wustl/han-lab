@@ -23,8 +23,8 @@ for dd,day in enumerate(conddf.days.values):
                 threshold=threshold, pc=pc)
     dcts.append(dct)
 # save pickle of dcts
-with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
-    pickle.dump(dcts, fp)   
+# with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
+#     pickle.dump(dcts, fp)   
 #%%
 # open previously saved dcts
 # with open(r"Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
@@ -233,7 +233,7 @@ for ii,dct in enumerate(dcts_opto):
     dfs_diff.append(df)
 bigdf_org = pd.concat(dfs_diff,ignore_index=False) 
 bigdf_org.reset_index(drop=True, inplace=True)   
-bigdf_org = bigdf_org[(bigdf_org['animal']!='e189')&(bigdf_org['animal']!='e186')]
+bigdf_org = bigdf_org[(bigdf_org['animal']!='e190')&(bigdf_org['animal']!='e186')]
 # plot fraction of inactivated vs. activated cells
 bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
 bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True)
@@ -267,7 +267,8 @@ animals = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_val
 df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['activated_cells_proportion_LEDon-off', 'condition', 'animal'])
 ax = sns.barplot(x="condition", y="activated_cells_proportion_LEDon-off", hue='condition',data=df,fill=False,
                 palette={'ctrl': "slategray", 'vip': "red"})
-ax = sns.stripplot(x="condition", y="activated_cells_proportion_LEDon-off", hue='condition', s=7,data=df,
+ax = sns.stripplot(x="condition", y="activated_cells_proportion_LEDon-off", 
+                hue='condition', s=10,data=df,
                 palette={'ctrl': "slategray", 'vip': "red"})
 ax.tick_params(axis='x', labelrotation=90)
 ax.spines['top'].set_visible(False)

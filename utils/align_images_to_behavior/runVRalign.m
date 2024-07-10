@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "z9";
-days = [22 23];
+days = [28];
 src = "X:\vipcre";
 
 for day=days
@@ -19,7 +19,7 @@ end
 % has to have combined cells
 clear all;
 mouse_name = "z9";
-days = [23];
+days = [28];
 src = "X:\vipcre";
 planes = 2;
 for day=days

@@ -6,31 +6,28 @@ visualize reward-relative cells across days
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
-import pickle, seaborn as sns, random, math
+import pickle, seaborn as sns, random, math, matplotlib as mpl
 from collections import Counter
-from itertools import combinations
-from itertools import chain
+from itertools import combinations, chain
 import matplotlib.backends.backend_pdf
-import seaborn as sns
-import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians, intersect_arrays
+from placecell import make_tuning_curves_radians, intersect_arrays, make_tuning_curves_radians_trial_by_trial
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
+savepth = os.path.join(savedst, 'trial_by_trial_save.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 dist_to_rew = [] # per epoch
@@ -48,7 +45,7 @@ for ii in range(len(conddf)):
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+            'stat', 'licks'])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
@@ -100,18 +97,38 @@ for ii in range(len(conddf)):
         goal_cell_p=len(goal_cells)/len(coms[0])
         goal_cell_prop.append(goal_cell_p)
         num_epochs.append(len(coms))
-        colors = ['navy', 'red', 'green', 'k','darkorange']
-        for gc in goal_cells:
-            fig, ax = plt.subplots()
-            for ep in range(len(coms)):
-                ax.plot(tcs_late[ep][gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                ax.axvline((bins/2), color='k')
-                ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-                ax.set_xticks(np.arange(0,bins+1,10))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),3))
-                ax.set_xlabel('Radian position (centered at start of rew loc)')
-                ax.set_ylabel('Fc3')
-            ax.legend()
+        # plot trial by trial rew cells
+        F_remap = Fc3[:, goal_cells]
+        lick = fall['licks']
+        lick = np.squeeze(lick)
+        trialstates, licks_trial_by_trial, tcs_trial_by_trial, coms_trial_by_trial = make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,F_remap,trialnum,
+            rewards,forwardvel,rewsize,bin_size)
+        plt.rc('font', size=10)
+        for gc in range(len(goal_cells)):                        
+            fig,axes = plt.subplots(nrows=len(eps)-1,ncols=2,sharex=True)
+            for ep in range(len(eps)-1):
+                ax = axes[ep,0]
+                mask = ~(trialstates[ep]==0)
+                mask = np.ones_like(licks_trial_by_trial[ep]).T*mask
+                sns.heatmap(licks_trial_by_trial[ep], mask=mask.T, cmap='Reds', cbar=False,ax=ax)
+                mask = ~(trialstates[ep]==1)
+                mask = np.ones_like(licks_trial_by_trial[ep]).T*mask
+                sns.heatmap(licks_trial_by_trial[ep], mask=mask.T, cmap='Greens', cbar=False, ax=ax)
+                if ep==len(eps)-1: ax.set_title('licks')
+                ax = axes[ep,1]
+                mask = ~(trialstates[ep]==0)
+                mask = np.ones_like(tcs_trial_by_trial[ep][gc]).T*mask
+                sns.heatmap(tcs_trial_by_trial[ep][gc], 
+                    mask=mask.T,cmap='Reds',ax=ax)
+                mask = ~(trialstates[ep]==1)
+                mask = np.ones_like(tcs_trial_by_trial[ep][gc]).T*mask
+                sns.heatmap(tcs_trial_by_trial[ep][gc],  
+                    mask=mask.T,cmap='Greens', ax=ax)
+                if ep==len(eps)-1: 
+                    ax.set_title('activity')
+                    ax.set_xlabel('Position bin')
+            fig.suptitle(f'{animal}, day {day}, epoch {ep}, remap cell # {gc}')
+            fig.tight_layout()
             pdf.savefig(fig)
             plt.close(fig)
         # get shuffled iterations
@@ -139,84 +156,13 @@ for ii in range(len(conddf)):
         pvals.append(p_value)
         print(p_value)
         total_cells.append(len(coms[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms]
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms, 
+                                p_value, trialstates, licks_trial_by_trial, 
+                                tcs_trial_by_trial, coms_trial_by_trial]
 
 pdf.close()
 
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp) 
 #%%
-plt.rc('font', size=16)          # controls default text sizes
-# goal cells across epochs
-df = conddf.copy()
-df = df[df.animals!='e217']
-df['num_epochs'] = num_epochs
-df['goal_cell_prop'] = goal_cell_prop
-df['opto'] = df.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = pvals
-
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
-ax.spines[['top','right']].set_visible(False)
-ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
-ax.set_xlabel('P-value')
-ax.set_ylabel('Sessions')
-#%%
-# number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.stripplot(x='num_epochs', y='goal_cell_prop',
-        hue='animals',data=df[(df.opto==False) & df['p_value']<0.05],
-        s=8)
-ax.spines[['top','right']].set_visible(False)
-#%%
-
-df['recorded_neurons_per_session'] = total_cells
-fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
-        data=df[(df.opto==False)&(df.p_value<0.05)],
-        s=150, ax=ax)
-ax.spines[['top','right']].set_visible(False)
-
-#%%
-# split into pre and post reward cells
-pre_rew = [[cellind for cellind in range(xx[:,goal_cell_iind[kk]].shape[1]) if np.nanmedian(xx[:,goal_cell_iind[kk]][:,cellind])<0] for kk,xx in enumerate(dist_to_rew)]
-post_rew = [[cellind for cellind in range(xx[:,goal_cell_iind[kk]].shape[1]) if np.nanmedian(xx[:,goal_cell_iind[kk]][:,cellind])>0] for kk,xx in enumerate(dist_to_rew)]
-pre_rew_prop = [len(xx)/total_cells[ii] for ii,xx in enumerate(pre_rew)]
-post_rew_prop = [len(xx)/total_cells[ii] for ii,xx in enumerate(post_rew)]
-
-df['pre_rew_prop'] = pre_rew_prop
-df['post_rew_prop'] = post_rew_prop
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.stripplot(x='num_epochs', y='pre_rew_prop',
-        hue='animals',data=df[(df.opto==False)&(df.p_value<0.05)],
-        s=8)
-ax.spines[['top','right']].set_visible(False)
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.stripplot(x='num_epochs', y='post_rew_prop',
-        hue='animals',data=df[(df.opto==False)&(df.p_value<0.05)],
-        s=8)
-ax.spines[['top','right']].set_visible(False)
-
-#%%
-df['success_rate'] = rates_all
-
-an_nms = df.animals.unique()
-rows = int(np.ceil(np.sqrt(len(an_nms))))
-cols = int(np.ceil(np.sqrt(len(an_nms))))
-fig,axes = plt.subplots(nrows=rows, ncols=cols,
-            figsize=(10,10))
-rr=0;cc=0
-for an in an_nms:        
-    ax = axes[rr,cc]
-    sns.scatterplot(x='success_rate', y='goal_cell_prop',
-            data=df[(df.animals==an)&(df.opto==False)&(df.p_value<0.05)],
-            s=200, ax=ax)
-    ax.spines[['top','right']].set_visible(False)
-    ax.set_title(an)
-    rr+=1
-    if rr>=rows: rr=0; cc+=1    
-fig.tight_layout()

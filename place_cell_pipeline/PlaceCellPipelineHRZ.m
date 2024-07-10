@@ -9,21 +9,23 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'z8';
+an = 'e217';
 % an = 'e190';%an='e189';
 % individual day analysis 
-% dys = [20:50]; % e218
-% dys = [7:10, 32,33,35:63,65]; % e216
-% dys = [2:20, 26,27]; %e217
+% dys = [28];
+% dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
+% dys = [9 10 37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
+dys = [2 3 4 5 6 7 8 9 11 12 13	14	15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
 % dys = [27:30, 32,33,34,36,38,40:75]; % e201
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [45];
+% dys = [9 10 14 16:18 20:34]; % z8
+% dys = [12 13 15 16 17 19 20 22 23 24]; % z9
 % dys = [1:51]; % e186
-src = 'X:\vipcre'; % folder where fall is
+% src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-% src = 'Y:\analysis\fmats';
+src = 'Y:\analysis\fmats';
 pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -33,8 +35,8 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     if length(pth)>1 % if multi plane imaging, grab the combined f file
         pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
     end    
@@ -176,7 +178,7 @@ for dy=dys % for loop per day
             'ep%i vs ep%i: ranksum = %d'], an, dy, comparison(1), comparison(2),...
             p))
         pptx.addPicture(fig);
-        % close(fig)
+        close(fig)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 2%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         slideId = pptx.addSlide();
         fprintf('Added slide %d\n',slideId);
@@ -221,7 +223,7 @@ for dy=dys % for loop per day
 
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);        
-    % close(fig)
+    close(fig)
     tuning_curves_late_trials = tuning_curves;
     % also append fall with tables    
     ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...

@@ -21,17 +21,17 @@ for ep=1:length(eps)-1
             strials(trial)=trial; % successful and fail trials
         end
     end
-    strials = strials(~isnan(strials)); % only uses successful trials
-    mask = ismember(trn, strials);
-
-    eprng = eprng(mask);
+    % strials = strials(~isnan(strials)); % only uses successful trials
+    % mask = ismember(trn, strials);
+    % eprng = eprng(mask);
     if ~isempty(eprng)
         ypos = ybinned(eprng);
         % ypos = ceil(ypos*(gainf));
         lick = licks(eprng);
         fv = forwardvel(eprng);
         % updated how we get moving time to be consistent with dop pipeline
-        [time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
+        % [time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
+        time_moving = find(fv>thres); % vel greater than 5 cm/s
         ypos_mov = ypos(time_moving);
         % ypos_mov(ypos_mov<=3)=8;
         for i = 1:nbins

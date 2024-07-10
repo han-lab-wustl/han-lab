@@ -61,29 +61,31 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
         rewloc = rewlocs[ep]
         relpos = rad[eprng]        
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-        trialstate = np.ones(len(np.unique(trialnum[eprng])))*-1
-        trialstate[[xx for xx,t in enumerate(ttr) if xx in strials]] = 1
-        trialstate[[xx for xx,t in enumerate(ttr) if xx in ftrials]] = 0
+        trials = [xx for xx in np.unique(trialnum[eprng]) if np.sum(trialnum[eprng]==xx)>100]
+        trialstate = np.ones(len(trials))*-1
+        trialstate[[xx for xx,t in enumerate(trials) if xx in strials]] = 1
+        trialstate[[xx for xx,t in enumerate(trials) if xx in ftrials]] = 0
         trialstates.append(trialstate)
         F = Fc3[eprng,:]            
-        moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
+        # moving_middle,stop = get_moving_time_V3(forwardvel[eprng], 5, 5, 10)
+        # simpler metric to get moving time
+        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
-        # cells x trial x bin
-        tcs_per_trial = np.ones((F.shape[1], len(np.unique(trialnum[eprng])),bins))*np.nan
-        coms_per_trial = np.ones((F.shape[1], len(np.unique(trialnum[eprng]))))*np.nan
-        licks_per_trial = np.ones((len(np.unique(trialnum[eprng])), bins))*np.nan
+        # cells x trial x bin        
+        tcs_per_trial = np.ones((F.shape[1], len(trials),bins))*np.nan
+        coms_per_trial = np.ones((F.shape[1], len(trials)))*np.nan
+        licks_per_trial = np.ones((len(trials), bins))*np.nan        
         if len(ttr)>lasttr: # only if ep has more than x trials            
-            for tt,trial in enumerate(np.unique(trialnum[eprng])):
+            for tt,trial in enumerate(trials):
                 for celln in range(F.shape[1]):
                     mask = trialnum[eprng][moving_middle]==trial
-                    if sum(mask)>100:
-                        f = F[mask,celln]
-                        relpos = rad[eprng][moving_middle][mask]                
-                        licks_ep = lick[eprng][moving_middle][mask]                
-                        tc = get_tuning_curve(relpos, f, bins=bins)  
-                        tc[np.isnan(tc)]=0 # set nans to 0
-                        tcs_per_trial[celln, tt,:] = tc
+                    f = F[mask,celln]
+                    relpos = rad[eprng][moving_middle][mask]                
+                    licks_ep = lick[eprng][moving_middle][mask]                
+                    tc = get_tuning_curve(relpos, f, bins=bins)  
+                    tc[np.isnan(tc)]=0 # set nans to 0
+                    tcs_per_trial[celln, tt,:] = tc
                 com = calc_COM_EH(tcs_per_trial[:, tt,:],bin_size)
                 coms_per_trial[:, tt] = com
                 lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
@@ -108,7 +110,8 @@ def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
         F = Fc3[eprng,:]            
-        moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
+        # simpler metric to get moving time
+        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
         if len(ttr)>lasttr: # only if ep has more than x trials
@@ -133,7 +136,8 @@ def make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,t
         ypos_rel.append(relpos)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         F = Fc3[eprng,:]            
-        moving_middle,stop = get_moving_time(forwardvel[eprng], 2, 31.25, 10)
+        # simpler metric to get moving time
+        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
         if len(ttr)>5:
@@ -302,22 +306,21 @@ def perivelocitybinnedactivity(velocity, rewards, dff, timedFF, range_val, binsi
     allbins = np.array([round(-range_val + bin_idx * binsize - binsize, 13) for bin_idx in range(int(np.ceil(2 * range_val / binsize)))])
 
     return binnedPerivelocity, allbins, rewvel
-    
-def get_moving_time(velocity, thres, Fs, ftol):
+
+def get_moving_time_V3(velocity, thres, Fs, ftol):
     """
-    It returns time points when the animal is considered moving based on animal's change in y position.
+    It returns time points when the animal is considered moving based on the animal's change in y position.
     velocity - forward velocity
     thres - Threshold speed in cm/s
     Fs - number of frames length minimum to be considered stopped.
-    ftol - 10 frames
+    ftol - frame tolerance for merging close stop periods.
     """
     vr_speed = np.array(velocity)
     vr_thresh = thres
     moving = np.where(vr_speed > vr_thresh)[0]
     stop = np.where(vr_speed <= vr_thresh)[0]
 
-    stop_time_stretch, num_features = label(np.diff(stop) == 1)
-    stop_time_stretch = [np.where(stop_time_stretch == i)[0] for i in range(1, num_features + 1)]
+    stop_time_stretch = consecutive_stretch_mov_time(stop)
 
     stop_time_length = [len(stretch) for stretch in stop_time_stretch]
     delete_idx = [i for i, length in enumerate(stop_time_length) if length < Fs]
@@ -326,18 +329,18 @@ def get_moving_time(velocity, thres, Fs, ftol):
     if len(stop_time_stretch) > 0:
         for s in range(len(stop_time_stretch) - 1):
             d = 1
-            while s + d < len(stop_time_stretch):
+            if s + d < len(stop_time_stretch):
                 if not np.isnan(stop_time_stretch[s + d]).all():
-                    if abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol:
-                        stop_time_stretch[s] = np.concatenate([stop_time_stretch[s], np.arange(stop_time_stretch[s][-1] + 1, stop_time_stretch[s + d][0]), stop_time_stretch[s + d]])
+                    while abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol and s + d < len(stop_time_stretch):
+                        stop_time_stretch[s] = np.concatenate([
+                            stop_time_stretch[s],
+                            np.arange(stop_time_stretch[s][-1] + 1, stop_time_stretch[s + d][0]),
+                            stop_time_stretch[s + d]
+                        ])
                         stop_time_stretch[s + d] = np.array([np.nan])
                         d += 1
-                    else:
-                        break
-                else:
-                    break
-        
-        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).all()]
+                        
+        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).any()]
         stop = np.concatenate(stop_time_stretch).astype(int)
         moving_time = np.ones(len(vr_speed), dtype=int)
         moving_time[stop] = 0
@@ -348,6 +351,16 @@ def get_moving_time(velocity, thres, Fs, ftol):
     moving_middle = moving
 
     return moving_middle, stop
+
+def consecutive_stretch_mov_time(arr):
+    """
+    This function finds consecutive stretches in an array.
+    It returns a list of arrays, where each array contains the indices of a consecutive stretch.
+    """
+    stretched, num_features = label(np.diff(arr) == 1)
+    stretches = [arr[np.where(stretched == i)[0] + 1] for i in range(1, num_features + 1)]
+    return stretches
+
 
 def calc_COM_EH(spatial_act, bin_width):
     """
