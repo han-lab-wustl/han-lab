@@ -3,7 +3,7 @@
 % july 2024
 clear all; close all
 frame_num = 20;
-pth = "X:\rna_fish_alignment_zstacks\240702\240702_ZD_002_001";
+pth = "X:\rna_fish_alignment_zstacks\240709\e218_head_only\240709_ZD_001_004";
 fls = dir(fullfile(pth, 'tile*.tif'));
 for fl=1:length(fls)
     % filename = "X:\zstacks\240701_ZD_001_004\tile_000.tif";

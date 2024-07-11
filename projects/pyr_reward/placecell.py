@@ -98,6 +98,47 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
     return trialstates, licks, tcs, coms
 
 
+def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
+    rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = rad[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+        F = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        F = F[moving_middle,:]
+        relpos = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            # correct trials
+            if len(strials)>0:
+                mask = [True if xx in strials else False for xx in trialnum[eprng][moving_middle]]
+                F = F[mask,:]
+                relpos = relpos[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_correct.append(tc)
+                coms_correct.append(com)
+            # failed trials
+            elif len(ftrials)>0:
+                mask = [True if xx in ftrials else False for xx in trialnum[eprng][moving_middle]]
+                F = F[mask,:]
+                relpos = relpos[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_fail.append(tc)
+                coms_fail.append(com)
+    tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)  
+    tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
+    
+    return tcs_correct, coms_correct, tcs_fail, coms_fail
+
+
 def make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
     rates = []; tcs_early = []; tcs_late = []; coms = []    

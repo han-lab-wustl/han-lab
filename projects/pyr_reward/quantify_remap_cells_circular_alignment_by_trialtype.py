@@ -1,8 +1,8 @@
 
 """
 zahra
-june 2024
-visualize reward-relative cells across days
+july 2024
+quantify reward-relative cells
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -19,18 +19,17 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians, intersect_arrays
+from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
+savepth = os.path.join(savedst, 'reward_relative_across_days_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_skew.p"
+# saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype.p"
 # with open(saveddataset, "rb") as fp: #unpickle
 #     radian_alignment_saved = pickle.load(fp)
-
 radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
@@ -77,7 +76,7 @@ for ii in range(len(conddf)):
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum, rewards)
         rates_all.append(success/total_trials)
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-            tcs_late, coms = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+            tcs_correct, coms_correct, tcs_fail, coms_fail = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
             # takes time
             fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -89,27 +88,26 @@ for ii in range(len(conddf)):
             # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
             # skew_mask = skew_filter>2
             Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-            rates, tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                rewards,forwardvel,rewsize,bin_size)
-            tcs_late = np.array(tcs_late); coms = np.array(coms)            
+            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                rewards,forwardvel,rewsize,bin_size)          
         goal_window = 30*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
-        coms_rewrel = np.array([com-np.pi for com in coms])
-        perm = list(combinations(range(len(coms)), 2))     
+        coms_rewrel = np.array([com-np.pi for com in coms_correct])
+        perm = list(combinations(range(len(coms_correct)), 2))     
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
         goal_cell_iind.append(goal_cells)
-        goal_cell_p=len(goal_cells)/len(coms[0])
+        goal_cell_p=len(goal_cells)/len(coms_correct[0])
         goal_cell_prop.append(goal_cell_p)
         num_epochs.append(len(coms))
         colors = ['navy', 'red', 'green', 'k','darkorange']
         for gc in goal_cells:
             fig, ax = plt.subplots()
-            for ep in range(len(coms)):
-                ax.plot(tcs_late[ep][gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+            for ep in range(len(coms_correct)):
+                ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
                 ax.axvline((bins/2), color='k')
                 ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
                 ax.set_xticks(np.arange(0,bins+1,10))
@@ -126,20 +124,20 @@ for ii in range(len(conddf)):
         for i in range(num_iterations):
             # shuffle locations
             rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-            shufs = [list(range(coms[ii].shape[0])) for ii in range(1, len(coms))]
+            shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
             [random.shuffle(shuf) for shuf in shufs]
-            com_shufs = np.zeros_like(coms)
-            com_shufs[0,:] = coms[0]
-            com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+            com_shufs = np.zeros_like(coms_correct)
+            com_shufs[0,:] = coms_correct[0]
+            com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
             # OR shuffle cell identities
             # relative to reward
             coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-            perm = list(combinations(range(len(coms)), 2))     
+            perm = list(combinations(range(len(coms_correct)), 2))     
             com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             # get goal cells across all epochs
             com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
             goal_cells_shuf = intersect_arrays(*com_goal)
-            shuffled_dist[i] = len(goal_cells_shuf)/len(coms[0])
+            shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
             goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
             goal_cell_shuf_ps.append(goal_cell_shuf_p)
         goal_cell_shuf_ps_av = np.nanmean(np.array(goal_cell_shuf_ps))
@@ -147,14 +145,14 @@ for ii in range(len(conddf)):
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         pvals.append(p_value)
         print(p_value)
-        total_cells.append(len(coms[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms]
+        total_cells.append(len(coms_correct[0]))
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail]
 
 pdf.close()
 
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-    pickle.dump(radian_alignment, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#     pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # goal cells across epochs

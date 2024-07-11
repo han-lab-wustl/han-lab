@@ -9,18 +9,17 @@ from pathlib import Path
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab')
 from utils.utils import convert_zstack_sbx_to_tif
-sbxsrcs = [r"X:\rna_fish_alignment_zstacks\240702\240702_ZD_001_001\240702_ZD_001_001.sbx",
-    r"X:\rna_fish_alignment_zstacks\240702\240702_ZD_001_002\240702_ZD_001_002.sbx"]
+sbxsrcs = [r"X:\rna_fish_alignment_zstacks\240709\e218_head_only\240709_ZD_001_004\240709_ZD_001_004.sbx"]
 for sbxsrc in sbxsrcs:
     convert_zstack_sbx_to_tif(sbxsrc)
 
 # specs from imaging notes        
 frames = 20; steps = 5 #um
-volume = 150 #z, um
-fldnm = '240702_ZD_002_001'
-fldpth = rf"X:\rna_fish_alignment_zstacks\240702\{fldnm}\{fldnm}_red.tif"
+volume = 200 #z, um
+fldnm = '240709_ZD_001_004'
+fldpth = rf"X:\rna_fish_alignment_zstacks\240709\e218_head_only\{fldnm}\{fldnm}_red.tif"
+dst = rf'X:\rna_fish_alignment_zstacks\240709\e218_head_only\{fldnm}'
 arr = tifffile.imread(fldpth)
-dst = rf'X:\rna_fish_alignment_zstacks\240702\{fldnm}'
 subvol = int(((volume/steps)+1)*(frames))
 for i in range(int(arr.shape[0]/subvol)):
     subvol_tif = arr[i*subvol:(subvol*(i+1))]
@@ -29,11 +28,7 @@ for i in range(int(arr.shape[0]/subvol)):
 
 # then run motion corr with gerardo's pipeline
 # then remake tifs
-fldnm = '240702_ZD_002_001'
-fldpth = rf"X:\rna_fish_alignment_zstacks\240702\{fldnm}\{fldnm}_red.tif"
 arr = tifffile.imread(fldpth)
-dst = rf'X:\rna_fish_alignment_zstacks\240702\{fldnm}'
-
 for i in range(int(arr.shape[0]/subvol)):
     tilepath = os.path.join(dst, f'tile_{i:03d}_registered.mat')
     tile = scipy.io.loadmat(tilepath)

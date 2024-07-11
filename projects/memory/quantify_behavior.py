@@ -1,7 +1,7 @@
 """
 quantify licks and velocity during consolidation task
 """
-
+#%%
 import os, numpy as np, h5py, scipy, seaborn as sns, sys, pandas as pd, itertools
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)          # controls default text sizes
-#%%
+
 plt.close('all')
 # save to pdf
 condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
@@ -31,7 +31,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 #         [59,60,61,62,63,65,66,67,68,69]]
 # days_all = [[28,29,31,33,34,36,37], # excluded some days
 #     [70,71,72,73,74,75,76,77,78,79]]
-days_all = [[40,41,42,43,44,45,46,47,48],[82,83,84,85,86,87,88,89,90]]
+days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],
+            [82,83,84,85,86,87,88,89,90,91,93,94,95]]
 
 dark_time = False
 opploc=True
