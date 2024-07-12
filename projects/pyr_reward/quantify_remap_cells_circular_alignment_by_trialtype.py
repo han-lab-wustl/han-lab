@@ -8,11 +8,8 @@ quantify reward-relative cells
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math
 from collections import Counter
-from itertools import combinations
-from itertools import chain
-import matplotlib.backends.backend_pdf
-import seaborn as sns
-import matplotlib as mpl
+from itertools import combinations, chain
+import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
@@ -27,10 +24,10 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-# saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype.p"
-# with open(saveddataset, "rb") as fp: #unpickle
-#     radian_alignment_saved = pickle.load(fp)
-radian_alignment_saved = {} # overwrite
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype.p"
+with open(saveddataset, "rb") as fp: #unpickle
+    radian_alignment_saved = pickle.load(fp)
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -99,10 +96,8 @@ for ii in range(len(conddf)):
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
-        goal_cell_iind.append(goal_cells)
-        goal_cell_p=len(goal_cells)/len(coms_correct[0])
-        goal_cell_prop.append(goal_cell_p)
-        num_epochs.append(len(coms))
+        goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
+        goal_cell_prop.append(goal_cell_p);num_epochs.append(len(coms_correct))
         colors = ['navy', 'red', 'green', 'k','darkorange']
         for gc in goal_cells:
             fig, ax = plt.subplots()
@@ -118,16 +113,15 @@ for ii in range(len(conddf)):
             pdf.savefig(fig)
             plt.close(fig)
         # get shuffled iterations
-        num_iterations = 1000
-        shuffled_dist = np.zeros((num_iterations))
+        num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
         goal_cell_shuf_ps = []
         for i in range(num_iterations):
             # shuffle locations
             rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
             shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
             [random.shuffle(shuf) for shuf in shufs]
-            com_shufs = np.zeros_like(coms_correct)
-            com_shufs[0,:] = coms_correct[0]
+            # first com is as ep 1, others are shuffled cell identities
+            com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
             com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
             # OR shuffle cell identities
             # relative to reward
@@ -136,27 +130,26 @@ for ii in range(len(conddf)):
             com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             # get goal cells across all epochs
             com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-            goal_cells_shuf = intersect_arrays(*com_goal)
-            shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
-            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
-            goal_cell_shuf_ps.append(goal_cell_shuf_p)
-        goal_cell_shuf_ps_av = np.nanmean(np.array(goal_cell_shuf_ps))
+            goal_cells_shuf = intersect_arrays(*com_goal); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
+            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0]);goal_cell_shuf_ps.append(goal_cell_shuf_p)
+        # save median of goal cell shuffle
+        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
         goal_cell_null.append(goal_cell_shuf_ps_av)
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        pvals.append(p_value)
-        print(p_value)
+        pvals.append(p_value); print(p_value)
         total_cells.append(len(coms_correct[0]))
         radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail]
 
 pdf.close()
 
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
-# goal cells across epochs
+# plot goal cells across epochs
 df = conddf.copy()
+inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = df[df.animals!='e217']
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = goal_cell_prop
@@ -181,7 +174,7 @@ df_plt = df[(df.opto==False) & df['p_value']<0.05]
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
 sns.stripplot(x='num_epochs', y='goal_cell_prop',
         hue='animals',data=df_plt,
-        s=8)
+        s=10)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt,
         fill=False,ax=ax, color='k', errorbar='se')

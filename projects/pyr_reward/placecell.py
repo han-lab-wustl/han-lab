@@ -115,9 +115,9 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
         if len(ttr)>lasttr: # only if ep has more than x trials
-            # correct trials
+            # last 8 correct trials
             if len(strials)>0:
-                mask = [True if xx in strials else False for xx in trialnum[eprng][moving_middle]]
+                mask = [True if xx in strials[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
                 F = F[mask,:]
                 relpos = relpos[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
