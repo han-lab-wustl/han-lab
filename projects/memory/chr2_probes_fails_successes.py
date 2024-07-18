@@ -34,11 +34,11 @@ animals = ['e231', 'e232']
 #         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
 days_all = [[28,29,30,31,32,33,34,35,36],
     [70,71,72,73,74,75,76,77,78]]
-days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
+# days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
 numtrialsstim=10
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-opto_cond = 'Opto_opp_loc' # experiment condition
+opto_cond = 'Opto' # experiment condition
 # optodays = [18, 19, 22, 23, 24]
 day_date_dff = {}
 for ii,animal in enumerate(animals):

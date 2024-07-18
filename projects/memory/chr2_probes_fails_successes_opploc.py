@@ -292,6 +292,25 @@ ax.spines[['top','right']].set_visible(False)
 ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_peak'].values, df.loc[(df.condition=='LED off'), 'so_transient_peak'].values
 t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)]-1, ledoff-1)
 ax.set_title(f'p={pval:.3f}')
+
+# during stim
+# get time period around stim
+time_rng = range(int(range_val_stim/binsize_stim),int(range_val_stim/binsize_stim)+2) # during and after stim
+so_transients_opto = [np.nanmax(day_date_dff_stim_opto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
+so_transients_nonopto = [np.nanmax(day_date_dff_stim_nonopto[ii,3,0,time_rng]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
+fig, ax = plt.subplots(figsize=(2.5,5))
+df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto]),columns=['so_transient_peak_during_stim'])
+df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
+df = df.sort_values('condition')
+ax = sns.barplot(x='condition', y='so_transient_peak_during_stim',hue='condition', data=df, fill=False,
+    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+ax = sns.stripplot(x='condition', y='so_transient_peak_during_stim', hue='condition', data=df,s=10,
+    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+ax.set_ylim(0.985, 1.04)
+ax.spines[['top','right']].set_visible(False)
+ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_peak_during_stim'].values, df.loc[(df.condition=='LED off'), 'so_transient_peak_during_stim'].values
+t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)]-1, ledoff-1)
+ax.set_title(f'p={pval:.3f}')
 #%%
 # plot peri rew mean and sem of opto days vs. control days
 # learning 1 vs. 2
@@ -354,10 +373,10 @@ fig.suptitle('ChR2 per day per + mouse averages')
 #%%
 # plot peri stim mean and sem of opto days vs. control days
 # learning 1 vs. 2
-rz = 3
+rz = 1
 fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
                         figsize=(12,10))
-ymin, ymax= .95, 1.06
+ymin, ymax= .97, 1.04
 for pln in range(4):
     for ld in range(2): # per learning day
         trialtype = 0 # opto trials

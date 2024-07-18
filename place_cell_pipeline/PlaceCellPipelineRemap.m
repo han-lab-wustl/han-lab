@@ -12,10 +12,10 @@ clear all;
 an = 'z8';
 % an = 'e190';%an='e189';
 % individual day analysis 
-dys = [49];
+dys = [48];
 % dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
-% dys = [9 10 37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
-% dys = [2 3 4 5 6 7 8 9 11 12 13	14	15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
+% dys = [9 10 37 38	39 40 41 42	43 44 45 46 47 48 49 50	51 52 53 54	55 56 57 58	59 60 61 62	63 66]; % e216
+% dys = [2 3 4 5 6 7 8 9 11 12 13 14 15	16 17 18 19 20 21 22 23	24 26 27 28	29 30 31 32	34 37 39 40	41 44 46 47]; %e217
 % dys = [27:30, 32,33,34,36,38,40:75]; % e201
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
@@ -43,7 +43,8 @@ for dy=dys % for loop per day
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
-        'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')    
+        'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+    % 
     if ~exist('VR', 'var')==1
         %% step 0 - align to behavior
         daypth = dir(fullfile(src, an, string(dy), "behavior", "vr\*.mat"));
@@ -100,18 +101,18 @@ for dy=dys % for loop per day
     rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
     rewzonenum = get_rewzones(rewlocs, gainf); % get rew zone identity too:  a=[{67:86} {101:120} {135:154}];
     %% step 2 - get places cells per ep
-    if exist('putative_pcs', 'var')==1
-    else % run place cell shuffle on only iscell and excludes bordercells
-        fprintf('******** \n calculating place cells based on spatial  info shuffle, \n this may take a while...\n********')
-        putative_pcs = get_place_cells_all_ep(stat, Fc3, iscell, ...
-            changeRewLoc, ybinned,forwardvel,bin_size,track_length,gainf,Fs, ...
-            fullfile(pth.folder,pth.name));
-        fprintf('********got place cells based on spatial info shuffle********\n')
-    end
+    % if exist('putative_pcs', 'var')==1
+    % else % run place cell shuffle on only iscell and excludes bordercells
+    %     fprintf('******** \n calculating place cells based on spatial  info shuffle, \n this may take a while...\n********')
+    %     putative_pcs = get_place_cells_all_ep(stat, Fc3, iscell, ...
+    %         changeRewLoc, ybinned,forwardvel,bin_size,track_length,gainf,Fs, ...
+    %         fullfile(pth.folder,pth.name));
+    %     fprintf('********got place cells based on spatial info shuffle********\n')
+    % end
 %     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
 %     else
         % get place cells only
-        pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
+        % pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
         pc = logical(iscell(:,1))';
         [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
         fc3_pc = Fc3(:,(pc & ~bordercells)); % remove border cells
@@ -119,89 +120,24 @@ for dy=dys % for loop per day
         dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         nbins = track_length/bin_size;
-
+        worldf = 7/(1.5*gainf);
         % late trials
-        [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned*gainf, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins);
+        [tuning_curves, coms, median_com, peak] = make_tuning_curves_remap(eps, trialnum, rewards, ybinned, gainf, ntrials,...
+    licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins, worldf);
         
         % early trials
-        [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned*gainf, ...
-            gainf,licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
+        % [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned*gainf, ...
+        %     gainf,licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
         fprintf('********calculated tuning curves!********\n')
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % do per ep comparison
-    %% step 3 - compare epochs
-    comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
-    rewloccomp = zeros(size(comparisons,1),2); rewzonecomp = zeros(size(comparisons,1),2);
-    for i=1:size(comparisons,1)
-        comparison = comparisons(i,:);
-        if exist('ep_comp_pval', 'var') == 1 % if pvals already calculated
-            pvals  = ep_comp_pval(:,3);
-            p = pvals(i);
-        else
-            [p,h,s,~,~] = do_tuning_curve_ranksum_test(tuning_curves{comparison(1)}, ...
-                tuning_curves{comparison(2)});
-            pvals(i) = p;
-        end
-        disp(p)        
-        slideId = pptx.addSlide();
-        fprintf('Added slide %d\n',slideId);
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 1%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        fig = figure('Renderer', 'painters');
-        subplot(1,2,1)
-        plt = tuning_curves{comparison(1)};
-        [~,sorted_idx] = sort(coms{comparison(1)}); % sorts first tuning curve rel to another
-        imagesc(normalize(plt(sorted_idx,:),2));
-        % plot rectangle of rew loc
-        % everything divided by 3 (bins of 3cm)
-        rectangle('position',[ceil(rewlocs(comparison(1))/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-            rew_zone/bin_size size(plt,1)], ... 
-            'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        xticks([0:bin_size:ceil(track_length/bin_size)])
-        xticklabels([0:bin_size*bin_size:track_length])
-        title(sprintf('epoch %i', comparison(1)))
-        hold on;
-        subplot(1,2,2)
-        plt = tuning_curves{comparison(2)};
-        imagesc(normalize(plt(sorted_idx,:),2));
-        % plot rectangle of rew loc
-        % everything divided by 3 (bins of 3cm)
-        rectangle('position',[ceil(rewlocs(comparison(2))/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-            rew_zone/bin_size size(plt,1)], ... 
-            'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        xticks([0:bin_size:ceil(track_length/bin_size)])
-        xticklabels([0:bin_size*bin_size:track_length])
-        title(sprintf('epoch %i', comparison(2)))
-        sgtitle(sprintf(['animal %s, day %i \n' ...
-            'ep%i vs ep%i: ranksum = %d'], an, dy, comparison(1), comparison(2),...
-            p))
-        pptx.addPicture(fig);
-        close(fig)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 2%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        slideId = pptx.addSlide();
-        fprintf('Added slide %d\n',slideId);
-        fig = figure('Renderer', 'painters');
-        plot(coms{comparison(1)}, coms{comparison(2)}, 'ko'); hold on;
-        xline(rewlocs(comparison(1)), 'r', 'LineWidth', 3);
-        yline(rewlocs(comparison(2)), 'r', 'LineWidth', 3)
-        plot([0:track_length],[0:track_length], 'k', 'LineWidth',2)
-        xlim([0 track_length]); ylim([0 track_length])
-        xlabel(sprintf('ep%i', comparison(1)));
-        ylabel((sprintf('ep%i', comparison(2))))
-        title(sprintf(['COM (median) \n ' ...
-            'animal %s, day %i,' ...
-            'comparison: ep%i vs ep%i'], an, dy, comparison(1), comparison(2)))
-        pptx.addPicture(fig);
-        close(fig)
-        rewloccomp(i,:) = [rewlocs(comparison(1)) rewlocs(comparison(2))]';
-        rewzonecomp(i,:) = [rewzonenum(comparison(1)) rewzonenum(comparison(2))]';
-    end    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 3%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% step 3 - compare epochs%%%%%%%%%%%%%%%%%%%fig 3%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% step 4 - make summary fig for epoch comparisons
     slideId = pptx.addSlide();
     fprintf('Added slide %d\n',slideId);
     fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
+    bin_size=3;
     for ep=1:length(eps)-1
         subplot(1,length(eps)-1,ep)
         plt = tuning_curves{ep};
@@ -211,11 +147,14 @@ for dy=dys % for loop per day
         hold on;
         % plot rectangle of rew loc
         % everything divided by 3 (bins of 3cm)
+        if ep>1
+            bin_size=(track_length*worldf)/(nbins*worldf);
+        end
         rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
             rew_zone/bin_size size(plt,1)], ... 
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        xticks([0:bin_size:ceil(track_length/bin_size)])
-        xticklabels([0:bin_size*bin_size:track_length])
+        % xticks([0:bin_size:ceil(track_length/bin_size)])
+        % xticklabels([0:bin_size*bin_size:track_length])
         title(sprintf('epoch %i', ep))
     end
     sgtitle(sprintf(['animal %s, day %i'], an, dy))
