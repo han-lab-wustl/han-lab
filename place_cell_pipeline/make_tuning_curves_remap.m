@@ -1,7 +1,9 @@
 function [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, fc3, dff, nbins, worldf)
+    licks, forwardvel, thres, bin_size, fc3, dff, nbins, worldf)
 % TODO: incorporate multi planes
 % for pln=plns
+% TODO: make longtrack length modular
+longtrack_length=700;
 tuning_curves = {}; coms = {};
 for ep=1:length(eps)-1
     % per ep
@@ -23,7 +25,9 @@ for ep=1:length(eps)-1
     % eprng = eprng(mask);
     if ~isempty(eprng)
         ypos = ybinned(eprng);
-        % ypos = ceil(ypos*(gainf));
+        if ep==1
+            ypos = ceil(ypos*(gainf));
+        end
         lick = licks(eprng);
         fv = forwardvel(eprng);
         % updated how we get moving time to be consistent with dop pipeline
@@ -31,7 +35,7 @@ for ep=1:length(eps)-1
         time_moving = find(fv>thres); % vel greater than 5 cm/s
         ypos_mov = ypos(time_moving);
         if ep>1 % large world remaps
-            nbins = round(nbins*worldf);
+            bin_size=longtrack_length/nbins;            
         end        
         % ypos_mov(ypos_mov<=3)=8;
         for i = 1:nbins

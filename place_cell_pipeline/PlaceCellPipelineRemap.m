@@ -1,28 +1,16 @@
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        % Zahra - Nov 2023
+% Zahra - Nov 2023
 % makes tuning curves with velocity filter
 % uses suyash's binning method
 % per day analysis using iscell boolean and putative place cells identified
 % from spatial info shuffle
-% calls functions to calc dff, fc3, putative place cells, 
+% calls functions to calc dff, fc3, putative place cells,
 % make tuning curves, etc. uses median com
 
 % this run script mostly makes plots but calls other functions
-% add han-lab and han-lab-archive repos to path! 
-clear all; 
+% add han-lab and han-lab-archive repos to path!
+clear all;
 an = 'z8';
-% an = 'e190';%an='e189';
-% individual day analysis 
-dys = [48];
-% dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
-% dys = [9 10 37 38	39 40 41 42	43 44 45 46 47 48 49 50	51 52 53 54	55 56 57 58	59 60 61 62	63 66]; % e216
-% dys = [2 3 4 5 6 7 8 9 11 12 13 14 15	16 17 18 19 20 21 22 23	24 26 27 28	29 30 31 32	34 37 39 40	41 44 46 47]; %e217
-% dys = [27:30, 32,33,34,36,38,40:75]; % e201
-% dys = [62:70, 72,73,74, 76, 80:90]; % e200
-% dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
-% dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-% dys = [9 10 14 16:18 20:34]; % z8
-% dys = [12 13 15 16 17 19 20 22 23 24]; % z9
-% dys = [1:51]; % e186
+dys = [47,48,49];
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\analysis\fmats';
@@ -39,28 +27,28 @@ for dy=dys % for loop per day
     % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     if length(pth)>1 % if multi plane imaging, grab the combined f file
         pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
-    end    
+    end
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
         'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
-    % 
+    %
     if ~exist('VR', 'var')==1
         %% step 0 - align to behavior
         daypth = dir(fullfile(src, an, string(dy), "behavior", "vr\*.mat"));
-    %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
-        fmatfl = dir(fullfile(src, an, string(dy), '**\Fall.mat')); 
+        %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%,
+        fmatfl = dir(fullfile(src, an, string(dy), '**\Fall.mat'));
         savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
         disp(savepthfmat)
     end
 
     % re load
     load(fullfile(pth.folder,pth.name), 'dFF', ...
-    'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
-    'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
-    
+        'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
+        'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+
     % vars to get com and tuning curves
-    bin_size = 3; % cm
+    bin_size = 2.5; % cm
     try
         gainf = 1/VR.scalingFACTOR;
     catch
@@ -73,17 +61,13 @@ for dy=dys % for loop per day
         rew_zone = 10;
     end
     % zahra hard coded to be consistent with the dopamine pipeline
-    thres = 5; % 5 cm/s is the velocity filter, only get
-    % frames when the animal is moving faster than that
-    ftol = 10; % number of frames length minimum to be considered stopped
-    ntrials = 5; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%
     %% step 1 - calculate dff
     if exist('dFF', 'var')==1
     else % make dff and fc3
-        fprintf('********calculating dFF and Fc3********\n')
+        fprintf('********calculating dFF and Fc3 for day %d********\n', dy)
         [~, dFF, Fc3] = create_dff_fc3(fullfile(pth.folder,pth.name), Fs);
         fprintf('********made dFF and Fc3 since they did not exist in structure********')
     end
@@ -97,8 +81,9 @@ for dy=dys % for loop per day
         rewards = rewards(1:end-1);
     end
     eps = find(changeRewLoc>0);
-    eps = [eps length(changeRewLoc)];    
-    rewlocs = changeRewLoc(changeRewLoc>0)*(gainf);
+    eps = [eps length(changeRewLoc)];
+    rewlocs = changeRewLoc(changeRewLoc>0);
+    rewlocs(1) = rewlocs(1)*gainf; % only adjust gain for rewloc 1
     rewzonenum = get_rewzones(rewlocs, gainf); % get rew zone identity too:  a=[{67:86} {101:120} {135:154}];
     %% step 2 - get places cells per ep
     % if exist('putative_pcs', 'var')==1
@@ -109,35 +94,42 @@ for dy=dys % for loop per day
     %         fullfile(pth.folder,pth.name));
     %     fprintf('********got place cells based on spatial info shuffle********\n')
     % end
-%     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
-%     else
-        % get place cells only
-        % pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
-        pc = logical(iscell(:,1))';
-        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
-        fc3_pc = Fc3(:,(pc & ~bordercells)); % remove border cells
-        % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-        dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
-        % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-        nbins = track_length/bin_size;
-        worldf = 7/(1.5*gainf);
-        % late trials
-        [tuning_curves, coms, median_com, peak] = make_tuning_curves_remap(eps, trialnum, rewards, ybinned, gainf, ntrials,...
-    licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins, worldf);
-        
-        % early trials
-        % [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned*gainf, ...
-        %     gainf,licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
-        fprintf('********calculated tuning curves!********\n')
-%     end
+    %     if exist('tuning_curves','var') == 1 && exist('coms','var') == 1 % check if struct already has these saved
+    %     else
+    thres = 5; % cm/s
+    ntrials = 5;
+    longtrack_length = 700; %cm
+    % get place cells only
+    % pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
+    pc = logical(iscell(:,1))';
+    [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);
+    fc3_pc = Fc3(:,(pc & ~bordercells)); % remove border cells
+    % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+    dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
+    % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+    nbins = track_length/bin_size;
+    worldf = 7/(1.5*gainf);
+    % late trials
+    [tuning_curves, coms, median_com, peak] = make_tuning_curves_remap(eps, trialnum, rewards, ybinned, ...
+        gainf, ntrials,licks, forwardvel, thres, bin_size, fc3_pc, dff_pc, nbins, worldf);
+
+    % early trials
+    % [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned*gainf, ...
+    %     gainf,licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
+    fprintf('********calculated tuning curves for day %d!********\n', dy)
+    %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % do per ep comparison
-    %% step 3 - compare epochs%%%%%%%%%%%%%%%%%%%fig 3%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% step 3 - compare epochs
+    [p,h,s,~,~] = do_tuning_curve_ranksum_test(tuning_curves{1}, ...
+    tuning_curves{2});    
+    fprintf('********Remap: %i, p-value: %d********\n', p>0.05, round(p,3))
+
+
     %% step 4 - make summary fig for epoch comparisons
     slideId = pptx.addSlide();
     fprintf('Added slide %d\n',slideId);
     fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
-    bin_size=3;
     for ep=1:length(eps)-1
         subplot(1,length(eps)-1,ep)
         plt = tuning_curves{ep};
@@ -145,13 +137,13 @@ for dy=dys % for loop per day
         [~,sorted_idx] = sort(coms{1});
         imagesc(normalize(plt(sorted_idx,:),2));
         hold on;
+        if ep>1
+            bin_size=longtrack_length/nbins;
+        end
         % plot rectangle of rew loc
         % everything divided by 3 (bins of 3cm)
-        if ep>1
-            bin_size=(track_length*worldf)/(nbins*worldf);
-        end
         rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-            rew_zone/bin_size size(plt,1)], ... 
+            rew_zone/bin_size size(plt,1)], ...
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
         % xticks([0:bin_size:ceil(track_length/bin_size)])
         % xticklabels([0:bin_size*bin_size:track_length])
@@ -160,15 +152,11 @@ for dy=dys % for loop per day
     sgtitle(sprintf(['animal %s, day %i'], an, dy))
 
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
-    pptx.addPicture(fig);        
+    pptx.addPicture(fig);
     % close(fig)
     tuning_curves_late_trials = tuning_curves;
-    % also append fall with tables    
-    ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...
-        'VariableNames', {'ep_comparison1', 'ep_comparison2', 'cs_ranksum_pval', 'rewloc1', ...
-        'rewloc2', 'rewzone_ep1', 'rewzone_ep2'});
-    save(fullfile(pth.folder,pth.name), 'ep_comp_pval', 'coms','tuning_curves_early_trials', ...
-        'tuning_curves_late_trials', 'coms_early_trials', '-append')
+    % also append fall with tables
+    save(fullfile(pth.folder,pth.name), 'coms','tuning_curves', '-append')
 end
 
 % save ppt
