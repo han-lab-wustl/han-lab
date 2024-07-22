@@ -84,19 +84,21 @@ def copydopaminefldstruct(src, dst, overwrite=False):
     for day in days:  
         dst_day = os.path.join(dst,os.path.basename(day))
         shutil.copytree(day, dst_day, ignore=ig_f)
-        imgfl = [os.path.join(day, xx) for xx in os.listdir(day) if "suite2p" in xx][0]
+        # for zahra, add the scanbox fld
+        imgfl1 = [os.path.join(day, xx) for xx in os.listdir(day) if "000" in xx][0]
+        imgfl = [os.path.join(imgfl1, xx) for xx in os.listdir(imgfl1) if "suite2p" in xx][0]
         planes = range(len([xx for xx in listdir(imgfl) if "plane" in xx]))
         # imgfl = pth
         for plane in planes:
             mat = os.path.join(imgfl, f"plane{plane}", "reg_tif", "params.mat") 
             if os.path.exists(mat):
-                copypth = os.path.join(dst_day, "suite2p", f"plane{plane}", "reg_tif", "params.mat")
-                if os.path.exists(copypth) and overwrite==False:
-                    print(f"*********Paramas file for day {i} already exists in {dst}*********")    
+                copypth = os.path.join(dst_day, os.path.basename(imgfl1), "suite2p", f"plane{plane}", "reg_tif")
+                # if not os.path.exists(os.path.dirname(copypth)): os.makedirs(os.path.dirname(copypth))
+                if os.path.exists(os.path.join(copypth, 'params.mat')) and overwrite==False:
+                    print(f"*********Paramas file for day {day} already exists in {dst}*********")    
                 else:
                     shutil.copy(mat, copypth)            
                     print(f"*********Copied {day} Paramas file to {dst_day}*********")
-
 
 def copyfmats(src, dst, animal, overwrite=False, days=False, 
             weeks=False, weekdir=False, planes=[0], combined=False):

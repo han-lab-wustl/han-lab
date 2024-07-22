@@ -31,7 +31,7 @@ close all
 % for dopamine
 close all
 
-for dy=1:length(pr_dir)
+for dy=3:length(pr_dir)
     src = fileparts(pr_dir{dy});
     daypth = dir(fullfile(src, "**\behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 

@@ -10,7 +10,7 @@
 % add han-lab and han-lab-archive repos to path!
 clear all;
 an = 'z8';
-dys = [47,48,49];
+dys = [50];
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\analysis\fmats';
@@ -134,7 +134,7 @@ for dy=dys % for loop per day
         subplot(1,length(eps)-1,ep)
         plt = tuning_curves{ep};
         % sort all by ep 1
-        [~,sorted_idx] = sort(coms{1});
+        [~,sorted_idx] = sort(coms{2});
         imagesc(normalize(plt(sorted_idx,:),2));
         hold on;
         if ep>1

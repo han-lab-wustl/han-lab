@@ -30,8 +30,10 @@ condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
 src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
 # first batch
-days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],
-            [82,83,84,85,86,87,88,89,90,91,93,94,95]]
+days_all = [[40,41,42,43,44,45,46,47,48,49,50,51,52,53],
+            [82,83,84,85,86,87,88,89,90,91,92,93,94,95]]
+days_all = [[40,41,43,44,46,47],
+            [82,83,86,87,88,89]]
 numtrialsstim=10 # every 10 trials stim w 1 trial off
 range_val = 8; binsize=0.2 # peri stimulus before/after in s
 opto_cond = 'Opto_opp_loc' # experiment condition
@@ -373,7 +375,7 @@ fig.suptitle('ChR2 per day per + mouse averages')
 #%%
 # plot peri stim mean and sem of opto days vs. control days
 # learning 1 vs. 2
-rz = 1
+rz = 3
 fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
                         figsize=(12,10))
 ymin, ymax= .97, 1.04

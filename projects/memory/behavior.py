@@ -43,6 +43,28 @@ def get_lick_selectivity_post_reward(ypos, trialnum, lick, time, rewloc, rewsize
     
     return lick_selectivity_per_trial
 
+def calculate_lick_rate(recording, sampling_rate = 7.8):
+    """
+    Calculate the lick rate from a recording sampled at 7.8 Hz.
+
+    Parameters:
+    recording (list or array): A list or array where each element represents a sample at 7.8 Hz.
+            A lick is represented by a '1' and no lick by a '0'.
+
+    Returns:
+    float: The lick rate in licks per second.
+    """
+    
+    # Count the number of licks
+    number_of_licks = sum(recording)
+    
+    # Calculate the duration of the recording in seconds
+    duration_seconds = len(recording) / sampling_rate
+    
+    # Calculate the lick rate
+    lick_rate = number_of_licks / duration_seconds
+    
+    return lick_rate
 
 def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
                 fails_only = False):

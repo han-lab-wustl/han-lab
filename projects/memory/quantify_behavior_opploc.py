@@ -8,7 +8,9 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf, matplotlib, matplotlib as mpl, matplotlib.pyplot as plt
 from behavior import consecutive_stretch, get_behavior_tuning_curve, get_success_failure_trials, get_lick_selectivity, \
-    get_lick_selectivity_post_reward
+    get_lick_selectivity_post_reward, calculate_lick_rate
+from dopamine import get_rewzones
+from projects.DLC_behavior_classification.eye import perireward_binned_activity
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
@@ -31,30 +33,22 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],
             [82,83,84,85,86,87,88,89,90,91,93,94,95]]
 
-dark_time=False
-opploc=True
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 numtrailstim = 10 # use 1 for every other trial and 10 for 10 trials on / 1 trial off
 near_reward_per_day = []
 optodays_before_per_an = []
 optodays_per_an = []
 performance_opto = []
+mem_cond = 'Opto_memory_opploc'
+opto_cond = 'Opto_opp_loc'
 for ii,animal in enumerate(animals):
     days = days_all[ii]
     optodays_before = []; optodays = []
     for day in days: 
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
-        rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
-        if dark_time: # get dt columns
-            optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_memory_day'].values[0])
-            optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Dark_time_stim_ctrl'].values[0])
-        elif opploc:
-            optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_opploc'].values[0])    
-            optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_opp_loc'].values[0])
-        else:
-            optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto_memory_day'].values[0])    
-            optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'Opto'].values[0])
-        # for each plane
+        rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]    
+        optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), mem_cond].values[0])
+        optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
         path=list(Path(os.path.join(src, animal, str(day))).rglob('params.mat'))[0]
         params = scipy.io.loadmat(path)
         print(path)
@@ -64,10 +58,7 @@ for ii,animal in enumerate(animals):
         #          ('lickVoltage', 'O'), ('trialNum', 'O'), ('timeROE', 'O'), ('changeRewLoc', 'O'), ('pressedKeys', 'O'), ('world', 'O'), 
         #          ('imageSync', 'O'), ('scalingFACTOR', 'O'), ('wOff', 'O'),
         #          ('catchTrial', 'O'), ('optoTrigger', 'O'), ('settings', 'O')]) 
-        velocity = VR[1][0]
-        lick = VR[5][0]
-        time = VR[4][0]
-        gainf = VR[14][0][0]
+        velocity = VR[1][0]; lick = VR[5][0]; time = VR[4][0]; gainf = VR[14][0][0]
         try:
             rewsize = VR[18][0][0][4][0][0]/gainf
         except:
@@ -76,16 +67,10 @@ for ii,animal in enumerate(animals):
         velocity = np.append(velocity, np.interp(len(velocity)+1, np.arange(len(velocity)),velocity))
         velocitydf = pd.DataFrame({'velocity': velocity})
         velocity = np.hstack(velocitydf.rolling(10).mean().values)
-        rewards = VR[3][0]
-        ypos = VR[6][0]/gainf
-        trialnum = VR[8][0]
+        rewards = VR[3][0]; ypos = VR[6][0]/gainf; trialnum = VR[8][0]
         changerewloc = VR[10][0]
-        rews_centered = np.zeros_like(velocity)
-        rews_centered[(ypos >= rewloc-5) & (ypos <= rewloc)]=1
-        rews_iind = consecutive_stretch(np.where(rews_centered)[0])
-        min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
-        rews_centered = np.zeros_like(velocity)
-        rews_centered[min_iind]=1
+        # get rew zone 
+        rz = get_rewzones([newrewloc], 1/gainf)
         success, fail, str_trials, ftr_trials, ttr, \
         total_trials = get_success_failure_trials(trialnum, rewards)        
         catchtrialsnum = trialnum[VR[16][0].astype(bool)]
@@ -143,21 +128,32 @@ for ii,animal in enumerate(animals):
             lick_selectivity_even = [np.nan]
         
         # velocity and lick rate in opposite stim  loc
-        # stim_opto = failtr_opto = np.array([(xx in ftr_trials) and 
-        #         (xx not in catchtrialsnum) and (xx%numtrailstim==0) 
-        #         for xx in trialnum])
-        # pos_bin, vel_stimarea_opto = get_behavior_tuning_curve(ypos[stim_opto], velocity[stim_opto], 
-        #     bins=270)
+        stim_opto = np.array([(xx not in catchtrialsnum) and ~(xx%numtrailstim==0) 
+                for xx in trialnum])
         stimzone = ((newrewloc*gainf-((rewsize*gainf)/2)+90)%180)/gainf
+        # get velocity 2 s after stimzone
         #todo: make modular
-        secondsstim = 2 #s 
-        fs = 7.8
-        # vel_stimarea_opto = vel_stimarea_opto.interpolate(method='linear').ffill().bfill().values[int(stimzone)-1:(int(stimzone)+(fs*secondsstim))]/np.nanmean(vel_stimarea_opto)
+        rews_centered = np.zeros_like(ypos[stim_opto])
+        rews_centered[(ypos[stim_opto] >= stimzone-3) & (ypos[stim_opto] <= stimzone+3)]=1
+        rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+        min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+        rews_centered = np.zeros_like(ypos[stim_opto])
+        rews_centered[min_iind]=1
+        range_val, binsize = 5, 0.2 #s
+        _, meanrewvel, __, ___ = perireward_binned_activity(velocity[stim_opto], rews_centered, 
+                time[stim_opto], range_val, binsize)
+        # ratios
+        vel_stim_opto = np.nanmean(meanrewvel[:int(range_val/binsize)])/np.nanmean(meanrewvel[int(range_val/binsize):])
+        _, meanrewlick, __, ___ = perireward_binned_activity(lick[stim_opto], rews_centered, 
+                time[stim_opto], range_val, binsize)
+        lick_stim_opto = np.nanmean(meanrewlick[:int(range_val/binsize)])/np.nanmean(meanrewlick[int(range_val/binsize):])
         
-        near_reward_per_day.append([lick_selectivity,vel_probe_near_reward,com_probe,vel_failed_opto,
-                        lick_selectivity_fail_opto,vel_failed_nonopto,lick_selectivity_fail_nonopto,
+        near_reward_per_day.append([lick_selectivity, vel_probe_near_reward, com_probe, vel_failed_opto,
+                        lick_selectivity_fail_opto, vel_failed_nonopto,
+                        lick_selectivity_fail_nonopto,
                         com_opto,com_nonopto,lick_selectivity_during_stim,lick_selectivity_even,
-                        lick_selectivity_success]) 
+                        lick_selectivity_success, vel_stim_opto, 
+                        lick_stim_opto, meanrewvel, meanrewlick, rz]) 
         performance_opto.append(success/(total_trials-len(catchtrialsnum)))   
     optodays_per_an.append(optodays)
     optodays_before_per_an.append(optodays_before)
@@ -180,7 +176,50 @@ df['success_rate'] = performance_opto
 df['lick_selectivity_during_stim_odd'] = [np.nanmean(xx[9]) for xx in near_reward_per_day]
 df['lick_selectivity_during_stim_even'] = [np.nanmean(xx[10]) for xx in near_reward_per_day]
 df['licks_during_failed_trials_stim_odd/even'] = df['lick_selectivity_during_stim_odd']/df['lick_selectivity_during_stim_even']
-df['licks_selectivity_last8trials'] = [np.nanmean(xx[11]) for xx in near_reward_per_day]
+df['licks_selectivity_last5trials'] = [np.nanmean(xx[11]) for xx in near_reward_per_day]
+lick_during_stim = np.array([xx[15] for xx in near_reward_per_day])
+vel_during_stim = np.array([xx[14] for xx in near_reward_per_day])
+df['rewzones'] = np.array([xx[16] for xx in near_reward_per_day])
+#%%
+# plot peri stim velocity and licks
+# split by condition
+rztest = 1
+lick_peth_ledoff = np.array(lick_during_stim[(df['opto']==False) & (df.rewzones==rztest)])
+lick_peth_ledon = np.array(lick_during_stim[(df['opto']==True) & (df.rewzones==rztest)])
+
+fig, ax = plt.subplots()
+ax.plot(lick_peth_ledon.T, color='mediumturquoise', linestyle='--')
+ax.plot(lick_peth_ledoff.T, color='k', linestyle='--')
+ax.plot(np.nanmean(lick_peth_ledon,axis=0), color='mediumturquoise', 
+        linewidth=5)
+ax.plot(np.nanmean(lick_peth_ledoff,axis=0), color='k', linewidth=5)
+ax.set_title(f'Licks before and during stim, rewzone {rztest}')
+height=0.4
+ax.add_patch(
+        mpl.patches.Rectangle(
+            xy=(range_val/binsize,0),  # point of origin.
+            width=2/binsize, height=height, linewidth=1, # width is s
+            color='mediumspringgreen', alpha=0.2))
+vel_peth_ledoff = np.array(vel_during_stim[(df['opto']==False) & (df.rewzones==rztest)])
+vel_peth_ledoff = (vel_peth_ledoff.T/np.nanmean(vel_peth_ledoff[:, :int(range_val/binsize)], axis=1)).T
+vel_peth_ledon = np.array(vel_during_stim[(df['opto']==True) & (df.rewzones==rztest)])
+vel_peth_ledon = (vel_peth_ledon.T/np.nanmean(vel_peth_ledon[:, :int(range_val/binsize)], axis=1)).T
+fig, ax = plt.subplots()
+ax.plot(vel_peth_ledon.T, color='mediumturquoise', linestyle='--')
+ax.plot(vel_peth_ledoff.T, color='k', linestyle='--')
+ax.plot(np.nanmean(vel_peth_ledon,axis=0), color='mediumturquoise', 
+    linewidth=5)
+ax.plot(np.nanmean(vel_peth_ledoff,axis=0), color='k', linewidth=5)
+height=2.5
+ax.add_patch(
+        mpl.patches.Rectangle(
+            xy=(range_val/binsize,0),  # point of origin.
+            width=2/binsize, height=height, linewidth=1, # width is s
+            color='mediumspringgreen', alpha=0.2))
+ax.set_title(f'Velocity before and during stim, rewzone {rztest}')
+#%%
+
+#%%
 # df['lick_prob_near_rewardloc_mean'] = [np.quantile(xx[0], .9) for xx in near_reward_per_day]
 # df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
