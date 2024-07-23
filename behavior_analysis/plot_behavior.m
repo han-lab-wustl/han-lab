@@ -15,7 +15,7 @@ clear all; close all
 
 mouse_name = "e227";
 days = [5];
-src = 'F:\';
+src = 'E:\Ziyi\Data\240327_ZH\';
 % src = '\\storage1.ris.wustl.edu\ebhan\Active\dzahra';
 grayColor = [.7 .7 .7];
 ind = 1;
@@ -23,8 +23,9 @@ savedst = 'E:\Ziyi\results';
 
 for day=days
     %daypth = dir(fullfile(src, mouse_name, string(day), "behavior", "vr\*.mat")); 
-    %daypth = dir(fullfile(src,"vr\*.mat")); % path to vr file per mouse 
-     daypth = dir(fullfile(src,"E227_30_Apr_2024_time(10_25_59).mat"));
+    daypth = dir(fullfile(src,"vr\*.mat")); % path to vr file per mouse 
+    %daypth = dir(fullfile(src,"*.mat"));
+    %daypth = dir(fullfile(src,"E227_30_Apr_2024_time(10_25_59).mat"));
 %     daypth = dir(fullfile(src, mouse_name, string(day), "*time*.mat"));    
     mouse = load(fullfile(daypth.folder,daypth.name));    
     % get success and fail trials
@@ -39,7 +40,7 @@ for day=days
     gainf = 1/mouse.VR.scalingFACTOR;
     rewloc = mouse.VR.changeRewLoc(mouse.VR.changeRewLoc>0)*gainf;
     rewsize = mouse.VR.settings.rewardZone*gainf;    
-    fig = figure('Renderer', 'painters');    
+    fig = figure('Renderer', 'painters', 'Position', [100, 100, 800, 300]);    
     ypos = mouse.VR.ypos*(gainf);
     velocity = mouse.VR.ROE(2:end)*-0.013./diff(mouse.VR.time);
     scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on; 
@@ -61,14 +62,24 @@ for day=days
     yticks([0:90:270])
     yticklabels([0:90:270])
     title(sprintf('day %i', day))  
-    legend({'Position', 'Licks', 'Conditioned Stimulus'})
+    %legend({'Position', 'Licks', 'Conditioned Stimulus'})
     % pptx.addPicture(fig);
     % pptx.addTextbox(sprintf('%s_day%i behavior',mouse_name,day));
 %     saveas(fig, 'C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\behavior.svg')
 %     close(fig)
     ind=ind+1;    
 end
+% Specify the folder path
+folder_path = strcat(src,'\vr\'); % Replace with your desired folder path
 
+% Ensure the folder exists, create it if it does not
+if ~exist(folder_path, 'dir')
+    mkdir(folder_path);
+end
+
+% Save the figure as a PNG file in the specified folder
+%saveas(gcf, fullfile(folder_path, 'behavior_plot.png'));
+%saveas(gcf, 'behavior_plot.png');
 % save ppt
 %fl = pptx.save(fullfile(savedst,sprintf('%s_behavior_opto',mouse_name)));
 % 

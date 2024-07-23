@@ -43,19 +43,19 @@ for allplanes=1:size(planefolders,2)
 %         end
         chone_temp = double(TIFFStack(myfilename));
         
-        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-%         crop_points1=[1 169 619 512]; %%% Direct .sbx crop1
-
-
-        eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
-        eval(['x2=crop_points' num2str(1) '(3)']);
-        eval(['y1=crop_points' num2str(1) '(2)']);
-        eval(['y2=crop_points' num2str(1) '(4)'])
-
-
-        M=size(chone_temp,2);
-        N=size(chone_temp,1);
-        chone_temp=chone_temp(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
+%         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+% %         crop_points1=[1 169 619 512]; %%% Direct .sbx crop1
+% 
+% 
+%         eval(['x1=crop_points' num2str(1) '(1)']);  %x for area for correction
+%         eval(['x2=crop_points' num2str(1) '(3)']);
+%         eval(['y1=crop_points' num2str(1) '(2)']);
+%         eval(['y2=crop_points' num2str(1) '(4)'])
+% 
+% 
+%         M=size(chone_temp,2);
+%         N=size(chone_temp,1);
+%         chone_temp=chone_temp(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
         
         mimg(:,:,allplanes,days)=squeeze(mean(chone_temp(:,:,:),3));
         dir_data{days,1}=pr_dir2;
@@ -255,17 +255,17 @@ for allplanes=1:size(planefolders,2) %1:4
 %         toc
         %%%%%
         
-        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-%          crop_points1=[1 169 619 512]; %%% Direct .sbx crop
-
-        eval(['x1=crop_points' num2str(1) '(1);']);  %x for area for correction
-        eval(['x2=crop_points' num2str(1) '(3);']);
-        eval(['y1=crop_points' num2str(1) '(2);']);
-        eval(['y2=crop_points' num2str(1) '(4);'])
-
-        M=size(chone,2);
-        N=size(chone,1);
-        chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
+%         crop_points1=[41 169 619 512]; %%% Direct .sbx crop
+% %          crop_points1=[1 169 619 512]; %%% Direct .sbx crop
+% 
+%         eval(['x1=crop_points' num2str(1) '(1);']);  %x for area for correction
+%         eval(['x2=crop_points' num2str(1) '(3);']);
+%         eval(['y1=crop_points' num2str(1) '(2);']);
+%         eval(['y2=crop_points' num2str(1) '(4);'])
+% 
+%         M=size(chone,2);
+%         N=size(chone,1);
+%         chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
         
         
         %         toc

@@ -13,8 +13,9 @@ function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto1(varargin)
 % assumption that max value in movie is 65535)
 
 %ZD added for Gerardo's workstation
-javaaddpath 'C:\Program Files\MATLAB\R2017b\java\mij.jar'
-javaaddpath 'C:\Program Files\MATLAB\R2017b\java\ij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\ij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\mij.jar'
+
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
     dir='bi new';
@@ -110,7 +111,7 @@ end
    if ii == 1
        tempstims(1:10) = 0;
    end
-
+stims = [stims; tempstims];
 save([stripped_filename '.mat'],'stims','-append')
 MIJ.exit;
 

@@ -1,6 +1,6 @@
-% clear all
+clear all
 close all
-mouse_id=228;
+mouse_id=227;
 addon = '_dark_reward';
 mov_corr=[]; stop_corr=[]; mov_stop=[];
 mov_corr_success=[]; stop_corr_success=[];
@@ -17,7 +17,7 @@ oldbatch=0;%input('if oldbatch press 1 else 0=');
 
 for alldays = 1:length(pr_dir0)%[3:1
     planeroii=0;
-    for allplanes=1:4 %%change plane info
+    for allplanes=1:4
         plane=allplanes;
         Day=alldays;
         pr_dir1 = strcat(pr_dir0{Day},'\suite2p');
@@ -28,16 +28,16 @@ for alldays = 1:length(pr_dir0)%[3:1
             
             cd (pr_dir)
             
-            load(['file0000_XC_plane_' num2str(allplanes) '_roibyclick_F.mat'])
-            % if isfield(params,'base_mean')
-            %     base_mean = params.base_mean;
-            % else
-            %     oldversionfile = dir('file*.mat');
-            %     load(oldversionfile.name)
-            %     if ~exist('forwardvel')
-            %         forwardvel = speed_binned;
-            %     end
-            % end
+            load('params.mat')
+            if isfield(params,'base_mean')
+                base_mean = params.base_mean;
+            else
+                oldversionfile = dir('file*.mat');
+                load(oldversionfile.name)
+                if ~exist('forwardvel')
+                    forwardvel = speed_binned;
+                end
+            end
             
             if ~exist('lickVoltage')
                 oldversionfile = dir('file*.mat');
@@ -84,9 +84,9 @@ for alldays = 1:length(pr_dir0)%[3:1
             
             
             
-            % mean_base_mean=mean(base_mean);
-            % 
-            % norm_base_mean=base_mean;
+            mean_base_mean=mean(base_mean);
+            
+            norm_base_mean=base_mean;
             
             if exist('forwardvelALL')
                 speed_binned=forwardvelALL;
@@ -95,26 +95,23 @@ for alldays = 1:length(pr_dir0)%[3:1
             % temporary artefact check and remove
             temp= find(reward_binned);
             reward_binned(temp(find(diff(temp) == 1))) = 0;
+            
             speed_smth_1=smoothdata(speed_binned,'gaussian',gauss_win)';
-            % dop_smth=smoothdata(norm_base_mean,'gaussian',gauss_win);
+            dop_smth=smoothdata(norm_base_mean,'gaussian',gauss_win);
             
             if oldbatch==1
                 
                 df_f=params.roibasemean2;
             else
-                df_f=mat2cell(dFF,size(dFF,1),ones(1,size(dFF,2)))';
+                df_f=params.roibasemean3;
             end
-
+            
             find_figure('mean_image')
-                subplot(2,2,allplanes),imagesc(frame)
+                subplot(2,2,allplanes),imagesc(params.mimg)
                 colormap("gray")
                 hold on
             title(strcat('Plane',num2str(allplanes)))
-            reg_name = {};
-            for roii =1:size(df_f,1)
-                reg_name{roii} = ['Plane ' num2str(allplanes) 'ROI ' num2str(roii)]
-            end
-
+            
             for roii = 1:size(df_f,1)
                 planeroii=planeroii+1;
                 
@@ -127,8 +124,9 @@ for alldays = 1:length(pr_dir0)%[3:1
                 
                 
                 find_figure('raw_figure')
-                            
+                            reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP','Plane 4 SO'};
 %                 reg_name={'Plane 1 SR','Plane 2 SR','Plane 3 SR_SP', 'Plane 3 SP ','Plane 4 SP_SO','Plane4 SO'};
+%                  reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP', 'Plane 3 SO ','Plane 3 SP_SO','Plane 4 SO'};
                 
                 
                 planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
@@ -139,25 +137,36 @@ for alldays = 1:length(pr_dir0)%[3:1
                 color(duplicate_indices)=cellfun(@(x) x/2 ,color(duplicate_indices) ,'UniformOutput' ,false)
                 
                 if planeroii == 1
-                    plot(utimedFF,rescale(speed_smth_1,-2,0),'k','LineWidth',1.5)
+                    plot(utimedFF,rescale(speed_smth_1,-1,0),'k','LineWidth',1.5)
                     %
                 end
                 
                 
                 hold on
-                reward_binned
-                plot(timedFF,rescale(roidop_smth,planeroii-1,planeroii),'color',color{roii},'LineWidth',1.5)
+%                 reward_binned
+                plot(timedFF,rescale(roidop_smth,planeroii-1,planeroii),'color',color{planeroii},'LineWidth',1.5)
                 plot([1090 1090]+5,[planeroii-0.5 (0.02)/(range(roidop_smth))+planeroii-0.5],'k-','LineWidth',2)
                 reward_binned(find(reward_binned))=1;
-%                 text(840,[planeroii-0.5],reg_name{planeroii})
-                if roii == length(reg_name) && allplanes ==  4
-                    plot(utimedFF,rescale(reward_binned,0,planeroii),'LineWidth',1.5)
-                    plot(utimedFF,rescale(licksALL,planeroii,planeroii+1),'color',[.7 .7 .7],'LineWidth',1.5)
+                %                 text(840,[planeroii-0.5],reg_name{planeroii})
+                if planeroii == length(reg_name)
+                    plot(utimedFF,rescale(reward_binned,0,length(reg_name)),'LineWidth',1.5)
+                    plot(utimedFF,rescale(solenoid2ALL,0,length(reg_name)),'LineWidth',1.5)
+                    plot(utimedFF,rescale(licksALL,length(reg_name),length(reg_name)+0.5),'color',[.7 .7 .7],'LineWidth',1.5)
+                    if exist("urew_solenoidALL",'var')
+                        unrew_single=find(urew_solenoidALL);
+                        unrew_single(find(diff(unrew_single) == 1)) = 0;
+                        unrew_single=unrew_single(find(unrew_single));
+                        nunrew=zeros(1,length(reward_binned))
+                        nunrew(unrew_single)=1;
+                        plot(utimedFF,rescale(nunrew,0,length(reg_name)),'k','LineWidth',1.5)
+
+                    end
+
                 end
-                
-                
-%                 legend({'Speed','Plane1 SR','2% dF/F','Plane1 SR','2% dF/F','Plane3 SP','2% dF/F','Plane3 SR_SP','2% dF/F',''...
-%                     'Plane4 SP_SO','2% dF/F', 'Plane 4 SO','Reward','Licks'})
+
+
+                %                 legend({'Speed','Plane1 SR','2% dF/F','Plane1 SR','2% dF/F','Plane3 SP','2% dF/F','Plane3 SR_SP','2% dF/F',''...
+                %                     'Plane4 SP_SO','2% dF/F', 'Plane 4 SO','Reward','Licks'})
 
                 legend({'Licks','Plane1 SLM','2% dF/F','Plane 1 SR','2% dF/F','Plane3 SP','2% dF/F','Plane4 SO','Speed','Reward'})
 
@@ -190,14 +199,12 @@ for alldays = 1:length(pr_dir0)%[3:1
                 
                 find_figure('mean_image')
                 
-                newroicoords = mask2poly(squeeze(masks(roii,:,:)),'Outer','CW');
-                % if roii == 1
-
-                    subplot(2,2,allplanes),plot(newroicoords(:,1),newroicoords(:,2),'w-','LineWidth',0.5)
-                % else
-                %     subplot(2,2,allplanes), plot(params.newroicoords{roii}(:,1),params.newroicoords{roii}(:,2),'w--','LineWidth',1.5)
-                % end
-               text(mean(newroicoords(:,1)), mean(newroicoords(:,2)),['Plane ' num2str(allplanes) 'ROI ' num2str(roii)],'Color', 'w', 'FontSize', 12)
+                if roii == 1
+                    subplot(2,2,allplanes),plot(params.newroicoords{roii}(:,1),params.newroicoords{roii}(:,2),'w-','LineWidth',1.5)
+                else
+                    subplot(2,2,allplanes), plot(params.newroicoords{roii}(:,1),params.newroicoords{roii}(:,2),'w--','LineWidth',1.5)
+                end
+               text(mean(params.newroicoords{roii}(:,1)), mean(params.newroicoords{roii}(:,2)),reg_name{planeroii},'Color', 'w', 'FontSize', 12)
                 
                
                %%%%%%%%%%%%%% compute CS for all ROI's
@@ -248,13 +255,10 @@ for alldays = 1:length(pr_dir0)%[3:1
                 
                 
                 roinorm_single_tracesCS=roisingle_tracesCS./mean(roisingle_tracesCS(1:pre_win_frames,:));
-
-                norm_roe=(mean(roisingle_traces_roesmthCS(1:pre_win_framesALL,:)));
-                norm_roe(find(norm_roe<1))=1;
-                roinorm_single_traces_roesmthCS=roisingle_traces_roesmthCS./norm_roe;
+                roinorm_single_traces_roesmthCS=roisingle_traces_roesmthCS;
                 
                 
-                save(['file0000_XC_plane_' num2str(allplanes) '_roibyclick_F.mat'],'roinorm_single_tracesCS','roinorm_single_traces_roesmthCS','-append')
+                save('params','roinorm_single_tracesCS','roinorm_single_traces_roesmthCS','-append')
                 
                 
                 %plot for single reward CS
@@ -268,32 +272,32 @@ for alldays = 1:length(pr_dir0)%[3:1
                 %                 plot(frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames,roinorm_single_tracesCS);%auto color
                 
                 xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
-                yax=mean(roinorm_single_tracesCS,2)'+roii/1.5;
+                yax=mean(roinorm_single_tracesCS,2)';
                 se_yax=std(roinorm_single_tracesCS,[],2)./sqrt(size(roinorm_single_tracesCS,2))';
                 h10=shadedErrorBar(xax,yax,se_yax,[],1);
 %                 legend(['n = ',num2str(size(roinorm_single_tracesCS,2))],'speed')%n=
                 
-                xax=frame_time*(-pre_win_frames)*numplanes:frame_time:frame_time*post_win_frames*numplanes
-                plot(xax,rescale(mean( roinorm_single_traces_roesmthCS,2),0,0.99),'k','LineWidth',2);
-                        xt=[-3*ones(1,length(reg_name))]
-                        yt=[0.992:0.001:(0.992+0.001*(length(reg_name)-1))];
+                xax=frame_time*(-pre_win_frames)*numplanes:frame_time:frame_time*post_win_frames*numplanes;
+                plot(xax,rescale(mean( roinorm_single_traces_roesmthCS,2),0.99,0.995),'k','LineWidth',2);
+                        xt=[-3*ones(1,length(reg_name))];
+                        yt=[0.992:0.001:1];
                 
                 if sum(isnan(se_yax))~=length(se_yax)
-                    h10.patch.FaceColor = color{roii}; h10.mainLine.Color = color{roii}; h10.edge(1).Color = color{roii};
-                    h10.edge(2).Color=color{roii};
+                    h10.patch.FaceColor = color{planeroii}; h10.mainLine.Color = color{planeroii}; h10.edge(1).Color = color{planeroii};
+                    h10.edge(2).Color=color{planeroii};
                     
                     
-                    text(xt(roii),yt(roii),reg_name{roii},'Color',color{roii},'Fontsize',10)
+                    text(xt(planeroii),yt(planeroii),reg_name{planeroii},'Color',color{planeroii},'Fontsize',10)
                 end
                 
                 
-                if roii == length(reg_name)
+                
                 ylims = ylim;
                 pls = plot([0 0],ylims,'--k','Linewidth',1);
                 ylim(ylims)
                 pls.Color(4) = 0.5;
                 
-                end
+                
                 
                 
                 
@@ -313,12 +317,12 @@ for alldays = 1:length(pr_dir0)%[3:1
 end
 
 % 
-% 
+% % 
 % % save all the current figures
 % % %             figHandles = findall(0,'Type','figure');
 % figHandles=gcf;
-% filename = 'behavior_E169_DAY9_HRZsameplane_BEHAV'
-% filepath = 'C:\Users\work7\Desktop\12122022'
+% filename = 'behavior_E213_240506_pavlovian_BEHAV'
+% filepath = 'E:\Ziyi\results'
 % for i = 1:size(figHandles,1)
 %     fn = fullfile(filepath,[filename '.pdf']);   %in this example, we'll save to a temp directory.
 %     exportgraphics(figHandles(i),fn,'ContentType','vector')

@@ -1,6 +1,4 @@
-function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto(varargin)
-%called by "runVideosTiff_EH_new_sbx_uint16"
-%version that doesn't divide by 2 for non-suite2p analysis
+function loadVideoTiffNoSplit_EH2_new_sbxSERVER(varargin)
 % modified from moi's version. 
 % 200329. EH.
 % 200501 EH. changed java path for this computer
@@ -11,13 +9,9 @@ function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto(varargin)
 % values. moi's code scaled all based on max/min of entire movie. current
 % version just divides intensity value by 2 and subtracts 1 to get max value of 32767 (makes
 % assumption that max value in movie is 65535)
-
-%ZD added for Gerardo's workstation
-javaaddpath 'C:\Program Files\MATLAB\R2017b\java\mij.jar'
-javaaddpath 'C:\Program Files\MATLAB\R2017b\java\ij.jar'
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
-    dir='uni';
+    dir='bi new';
 elseif nargin<3
 filepath=varargin{1};
 filename=varargin{2};
@@ -38,6 +32,16 @@ global info;
 % chone = (squeeze(chone)); %WHY DO THIS??? maybe keep as uint16 or change to double
 % framenum=size(chone,3);
 
+% javaaddpath 'C:\Program Files\MATLAB\R2017a\java\mij.jar' %default
+% javaaddpath 'C:\Program Files\MATLAB\R2017a\java\ij.jar'
+% javaaddpath 'C:\Users\Han Lab\Downloads\fiji-win64\Fiji.app\jars\ij-1.52p.jar'
+% javaaddpath 'C:\Users\Han Lab\Downloa-1.5ds\fiji-win64\Fiji.app\jars\mij.jar'
+
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\ij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\mij.jar'
+
+% javaaddpath 'D:\MATLAB\R2023b\java\ij.jar'
+% javaaddpath 'D:\MATLAB\R2023b\java\mij.jar'
 MIJ.start;    %calls Fiji
 
 %%
@@ -46,8 +50,7 @@ numframes = info.max_idx+1;
 % lims(2)=max(chone(:))
 % lims=double(lims); %lims = [min max] pixel values of chone
 lenVid=3000;
-stims = [];
-temps = [];
+
 for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
 % ii=1;
     if ii>9
@@ -70,22 +73,15 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     elseif strcmp(dir,'bi new')
 %         chtemp=chone(:,110:709,((ii-1)*lenVid+1):min(ii*lenVid,length(chone)));
         chtemp=sbxread(stripped_filename,((ii-1)*lenVid),min(lenVid,(numframes-((ii-1)*lenVid))));
-        chtemp_original=double(squeeze(chtemp));
-%         choptotemp = repmat((nanmean(chtemp(:,750:end,:),2)),1,size(chtemp,2),1);
-% %         chtemp=chtemp(:,90:730,:);
-%         chtemp=chtemp(:,90:718,:)-choptotemp(:,90:718,:);
-        choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
-        %         chtemp=chtemp(:,90:730,:);
-        chtemp=chtemp_original(110:end,125:718,:)-choptotemp(110:end,125:718,:); % zd added option to crop etl
+        chtemp=double(squeeze(chtemp));
+%         chtemp=chtemp(:,90:730,:);
+        chtemp=chtemp(90:end,90:718,:);
     end
     
    chtemp=(((double(chtemp))/2)-1); %make max of movie 32767 (assuming it was 65535 before)
    chtemp=uint16(chtemp);
-   temps =  [temps squeeze(nanmean(squeeze(nanmean(chtemp_original(1:20,:,:)))))];
-  
-%    stims = [stims; tempstims];
    
-
+   
 %     chtemp=double(chtemp);
 
     imageJ_savefilename=strrep([filepath,'\',currfile(1:end-4),'.tif'],'\','\\'); %ImageJ needs double slash
@@ -97,23 +93,7 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     MIJ.run('Save', imageJ_savefilename);   %saves with defined filename
     MIJ.run('Close All');
 end
-
- tempstims = zeros(length(temps),1);
-   for p = 1:size(info.etl_table,1)
-       currx = p:size(info.etl_table,1):length(temps);
-       temp2 = (abs(temps(currx)/nanmean(temps(currx))-1));
-       s = find(temp2>0.5);
-       if ~isempty(s)
-       tempstims(currx(s)) = 1;
-       end
-   end
-   if ii == 1
-       tempstims(1:10) = 0;
-   end
-
-save([stripped_filename '.mat'],'stims','-append')
 MIJ.exit;
-
 % 
 % clear chone;
 

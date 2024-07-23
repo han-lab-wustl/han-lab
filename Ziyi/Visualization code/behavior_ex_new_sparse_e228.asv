@@ -20,8 +20,8 @@ for alldays = 1:length(pr_dir0)%[3:1
     for allplanes=1:4 %%change plane info
         plane=allplanes;
         Day=alldays;
-        pr_dir1 = strcat(pr_dir0{Day},'\suite2p');
-        pr_dir=strcat(pr_dir1,'\plane',num2str(plane-1),'\reg_tif\','')
+        pr_dir1 = pr_dir0{Day};
+        pr_dir=strcat(pr_dir1,'\plane',num2str(plane-1),'\')
         
         
         if exist( pr_dir, 'dir')
@@ -104,7 +104,7 @@ for alldays = 1:length(pr_dir0)%[3:1
             else
                 df_f=mat2cell(dFF,size(dFF,1),ones(1,size(dFF,2)))';
             end
-
+            
             find_figure('mean_image')
                 subplot(2,2,allplanes),imagesc(frame)
                 colormap("gray")
@@ -273,10 +273,10 @@ for alldays = 1:length(pr_dir0)%[3:1
                 h10=shadedErrorBar(xax,yax,se_yax,[],1);
 %                 legend(['n = ',num2str(size(roinorm_single_tracesCS,2))],'speed')%n=
                 
-                xax=frame_time*(-pre_win_frames)*numplanes:frame_time:frame_time*post_win_frames*numplanes
+                xax=frame_time*(-pre_win_frames)*numplanes:frame_time:frame_time*post_win_frames*numplanes;
                 plot(xax,rescale(mean( roinorm_single_traces_roesmthCS,2),0,0.99),'k','LineWidth',2);
-                        xt=[-3*ones(1,length(reg_name))]
-                        yt=[0.992:0.001:(0.992+0.001*(length(reg_name)-1))];
+                        xt=[-3*ones(1,length(reg_name))];
+                        yt=[0.992:0.001:1];
                 
                 if sum(isnan(se_yax))~=length(se_yax)
                     h10.patch.FaceColor = color{roii}; h10.mainLine.Color = color{roii}; h10.edge(1).Color = color{roii};
