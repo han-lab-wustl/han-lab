@@ -15,7 +15,7 @@
 % directories
 
 clear all; close all;
-days=[92];
+days=[82 83 86 87 88 89];
 src = 'Z:\chr2_grabda\e232';
 % src = 'X:\vipcre\e217';
 lenVid=3000;

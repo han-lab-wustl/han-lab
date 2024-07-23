@@ -230,13 +230,13 @@ for ii,animal in enumerate(animals):
             ###################### peri stim before vs. after 2s ######################
             # need to split up opto stims with nonopto trials 'stim'
             rews_centered = np.zeros_like(ybinned[trialnum>2])
-            mask = (trialnum[trialnum>2]%2==1)
+            mask = (trialnum[trialnum>2]%2==1) # opto trials only 
             diff = np.append(np.diff(trialnum[trialnum>2]),0)
             rews_centered[diff.astype(bool)]=1
             rews_centered_opto = np.copy(rews_centered)
-            rews_centered_opto[mask]=0 #0 out non opto trials
+            rews_centered_opto[~mask]= 0#0 out non opto trials
             rews_centered_nonopto = np.copy(rews_centered)
-            rews_centered_nonopto[~mask]=0 #0 out opto trials
+            rews_centered_nonopto[mask]=0 #0 out opto trials
             range_val_stim = 5 # just for stim instances
             binsize_stim=0.2 # s            
             __, meanrewdFF_opto, _, rewdFF_opto = eye.perireward_binned_activity(dff[trialnum>2], 
@@ -300,7 +300,8 @@ height = 1.035 # ylim
 # quantify so transients
 # get time period around stim
 time_rng = range(int(range_val/binsize),int(range_val/binsize)*2) # during and after stim
-so_transients_opto = [np.nanmax(day_date_dff_arr_opto[ii,3,0,time_rng]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
+# normally i take the opto only trials ('led off') to avoid artifact
+so_transients_opto = [np.nanmax(day_date_dff_arr_opto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
 so_transients_nonopto = [np.nanmax(day_date_dff_arr_nonopto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]
 fig, ax = plt.subplots(figsize=(2.5,5))
 df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto]),columns=['so_transient_peak'])
@@ -319,9 +320,12 @@ ax.set_title(f'Dark time stim\np={pval:.3f}')
 #%%
 # during stim
 # get time period around stim
-time_rng = range(int(range_val_stim/binsize_stim),int(range_val_stim/binsize_stim)+2) # during and after stim
-so_transients_opto = [np.nanmax(day_date_dff_stim_opto[ii,3,0,time_rng]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
-so_transients_nonopto = [np.nanmax(day_date_dff_stim_nonopto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
+time_rng = range(int(range_val_stim/binsize_stim),int(range_val_stim/binsize_stim+(2/0.2))) # during and after stim
+# normalize pre-window to 1
+so_transients_opto = [day_date_dff_stim_opto[ii,3,0,:]/np.nanmean(day_date_dff_stim_opto[ii,3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
+so_transients_opto = [np.nanmean(xx[time_rng]) for xx in so_transients_opto]
+so_transients_nonopto = [day_date_dff_stim_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_stim_nonopto[ii,3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
+so_transients_nonopto = [np.nanmean(xx[time_rng]) for xx in so_transients_nonopto]
 fig, ax = plt.subplots(figsize=(2.5,5))
 df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto]),columns=['so_transient_peak_during_stim'])
 df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
