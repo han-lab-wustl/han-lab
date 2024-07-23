@@ -10,7 +10,7 @@
 % add han-lab and han-lab-archive repos to path!
 clear all;
 an = 'z8';
-dys = [49];
+dys = [50,51];
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\analysis\fmats';
@@ -67,7 +67,7 @@ for dy=dys % for loop per day
     %% step 1 - calculate dff
     if exist('dFF', 'var')==1
     else % make dff and fc3
-        fprintf('********calculating dFF and Fc3********\n')
+        fprintf('********calculating dFF and Fc3 for day %d********\n', dy)
         [~, dFF, Fc3] = create_dff_fc3(fullfile(pth.folder,pth.name), Fs);
         fprintf('********made dFF and Fc3 since they did not exist in structure********')
     end
@@ -116,14 +116,14 @@ for dy=dys % for loop per day
     % early trials
     % [tuning_curves_early_trials, coms_early_trials, ~,~] = make_tuning_curves_per_trial(eps, trialnum, rewards, ybinned*gainf, ...
     %     gainf,licks, forwardvel, thres, Fs, ftol, bin_size, track_length, fc3_pc, dff_pc, [1,2,3]); % first 3 trials of epoch
-    fprintf('********calculated tuning curves!********\n')
+    fprintf('********calculated tuning curves for day %d!********\n', dy)
     %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % do per ep comparison
     %% step 3 - compare epochs
     [p,h,s,~,~] = do_tuning_curve_ranksum_test(tuning_curves{1}, ...
     tuning_curves{2});    
-    fprintf('Remap: %i, p-value: %d', p>0.05, round(p,3))
+    fprintf('********Remap: %i, p-value: %d********\n', p>0.05, round(p,3))
 
 
     %% step 4 - make summary fig for epoch comparisons
@@ -139,6 +139,8 @@ for dy=dys % for loop per day
         hold on;
         if ep>1
             bin_size=longtrack_length/nbins;
+        else
+            bin_size = 2.5; % cm
         end
         % plot rectangle of rew loc
         % everything divided by 3 (bins of 3cm)

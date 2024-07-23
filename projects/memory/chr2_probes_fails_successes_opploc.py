@@ -32,8 +32,8 @@ animals = ['e231', 'e232']
 # first batch
 days_all = [[40,41,42,43,44,45,46,47,48,49,50,51,52,53],
             [82,83,84,85,86,87,88,89,90,91,92,93,94,95]]
-days_all = [[40,41,43,44,46,47],
-            [82,83,86,87,88,89]]
+# days_all = [[40,41,43,44,46,47],
+#             [82,83,86,87,88,89]]
 numtrialsstim=10 # every 10 trials stim w 1 trial off
 range_val = 8; binsize=0.2 # peri stimulus before/after in s
 opto_cond = 'Opto_opp_loc' # experiment condition
@@ -294,12 +294,14 @@ ax.spines[['top','right']].set_visible(False)
 ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_peak'].values, df.loc[(df.condition=='LED off'), 'so_transient_peak'].values
 t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)]-1, ledoff-1)
 ax.set_title(f'p={pval:.3f}')
-
+#%%
 # during stim
 # get time period around stim
 time_rng = range(int(range_val_stim/binsize_stim),int(range_val_stim/binsize_stim)+2) # during and after stim
-so_transients_opto = [np.nanmax(day_date_dff_stim_opto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
-so_transients_nonopto = [np.nanmax(day_date_dff_stim_nonopto[ii,3,0,time_rng]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
+so_transients_opto = [np.quantile(day_date_dff_stim_opto[ii,3,0,time_rng],.80) for ii,
+            xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
+so_transients_nonopto = [np.quantile(day_date_dff_stim_nonopto[ii,3,1,time_rng],.80) for ii,
+            xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
 fig, ax = plt.subplots(figsize=(2.5,5))
 df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto]),columns=['so_transient_peak_during_stim'])
 df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
@@ -308,11 +310,11 @@ ax = sns.barplot(x='condition', y='so_transient_peak_during_stim',hue='condition
     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
 ax = sns.stripplot(x='condition', y='so_transient_peak_during_stim', hue='condition', data=df,s=10,
     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax.set_ylim(0.985, 1.04)
+ax.set_ylim(0.99, 1.03)
 ax.spines[['top','right']].set_visible(False)
 ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_peak_during_stim'].values, df.loc[(df.condition=='LED off'), 'so_transient_peak_during_stim'].values
 t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)]-1, ledoff-1)
-ax.set_title(f'p={pval:.3f}')
+ax.set_title(f'Opposite loc. stim, p={pval:.3f}\n')
 #%%
 # plot peri rew mean and sem of opto days vs. control days
 # learning 1 vs. 2

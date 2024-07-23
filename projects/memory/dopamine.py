@@ -28,12 +28,12 @@ def extract_vars(path, stims, rewloc, newrewloc, planes=4):
     licks = np.hstack(params['licks'])
     timedFF = np.hstack(params['timedFF'])
     # mask out dark time
-    dff = dff[ybinned>3]
-    rewards = rewards[ybinned>3]
-    trialnum = trialnum[ybinned>3]
-    licks = licks[ybinned>3]
-    timedFF = timedFF[ybinned>3]
-    ybinned = ybinned[ybinned>3]
+    # dff = dff[ybinned>3]
+    # rewards = rewards[ybinned>3]
+    # trialnum = trialnum[ybinned>3]
+    # licks = licks[ybinned>3]
+    # timedFF = timedFF[ybinned>3]
+    # ybinned = ybinned[ybinned>3]
     # plot pre-first reward dop activity    
     firstrew = np.where(rewards==1)[0][0]
     rews_centered = np.zeros_like(ybinned[:firstrew])

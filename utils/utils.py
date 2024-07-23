@@ -83,7 +83,7 @@ def copydopaminefldstruct(src, dst, overwrite=False):
     # move all converted fmats to separate folder
     for day in days:  
         dst_day = os.path.join(dst,os.path.basename(day))
-        shutil.copytree(day, dst_day, ignore=ig_f)
+        if not os.path.exists(dst_day): shutil.copytree(day, dst_day, ignore=ig_f)
         # for zahra, add the scanbox fld
         imgfl1 = [os.path.join(day, xx) for xx in os.listdir(day) if "000" in xx][0]
         imgfl = [os.path.join(imgfl1, xx) for xx in os.listdir(imgfl1) if "suite2p" in xx][0]
@@ -95,10 +95,10 @@ def copydopaminefldstruct(src, dst, overwrite=False):
                 copypth = os.path.join(dst_day, os.path.basename(imgfl1), "suite2p", f"plane{plane}", "reg_tif")
                 # if not os.path.exists(os.path.dirname(copypth)): os.makedirs(os.path.dirname(copypth))
                 if os.path.exists(os.path.join(copypth, 'params.mat')) and overwrite==False:
-                    print(f"*********Paramas file for day {day} already exists in {dst}*********")    
+                    print(f"*********Params file for day {day} already exists in {dst}*********")    
                 else:
                     shutil.copy(mat, copypth)            
-                    print(f"*********Copied {day} Paramas file to {dst_day}*********")
+                    print(f"*********Copied {day} Params file to {dst_day}*********")
 
 def copyfmats(src, dst, animal, overwrite=False, days=False, 
             weeks=False, weekdir=False, planes=[0], combined=False):
