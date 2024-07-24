@@ -64,7 +64,7 @@ for alldays = 1:length(pr_dir0)%
 
             %R = find(rewards);
 
-            roi_event_data_smth=smoothdata(speed_binned,'gaussian',5)';
+            roi_event_data_smth=smoothdata(speed_binned,'gaussian',1)';
 
             if mod(length(roi_event_data_smth), 4) ~= 0
                 error('Data length must be divisible by 4.');
@@ -141,7 +141,7 @@ for p = 1:4
         text(xt(p),yt(p),reg_name{p},'Color',planecolors{p},'Fontsize',10)
     end
     hold on 
-    plot(xax,rescale(mean_speed,0.9,1),'k','LineWidth',2);
+    plot(xax,rescale(mean_speed, 0.96, 0.98),'k','LineWidth',2);
     
     hold on 
     ylims = ylim;

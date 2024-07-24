@@ -1,6 +1,6 @@
 %% Need to store the average for all the roi in each plane for each rewawrd location first, then calcult...
 % late the average 
-close all
+%close all
 clear
 mouse_id = 227;
 day = 3;
@@ -64,14 +64,14 @@ for alldays = 1:length(pr_dir0)%
 
             %R = find(rewards);
 
-            roi_event_data_smth=smoothdata(speed_binned,'gaussian',5)';
+            roi_speed_data_smth=smoothdata(speed_binned,'gaussian',5)';
 
-            if mod(length(roi_event_data_smth), 4) ~= 0
+            if mod(length(roi_speed_data_smth), 4) ~= 0
                 error('Data length must be divisible by 4.');
             end
 
             % Reshape the data into a 4-row matrix
-            reshaped_data = reshape(roi_event_data_smth, 4, []);
+            reshaped_data = reshape(roi_speed_data_smth, 4, []);
 
             % Compute the mean of each column
             binned_speed = mean(reshaped_data, 1);
@@ -136,7 +136,7 @@ figure('Position', [100, 100, 800, 600])
 % Plotting the mean DeltaF/F for each plane
 %allROI_data = all_plane_dff;
 mean_speed_og = mean(speed_event_data_acrossdays,2);
-mean_speed = smoothdata(mean_speed_og,'gaussian',5);
+mean_speed = smoothdata(mean_speed_og,'gaussian',1);
 
 for p = 1:4
     subplot(2,2,p)

@@ -147,10 +147,11 @@ for alldays = 1:length(pr_dir0)
                 end
                 
                 roinorm_single_tracesCS = roisingle_tracesCS ./ mean(roisingle_tracesCS(1:pre_win_frames, :));
+                roinorm_single_tracesCS_smth = smoothdata(roinorm_single_tracesCS,'gaussian',5);
                 roinorm_single_traces_roesmthCS = roisingle_traces_roesmthCS;
                 
                 % Aggregate data across days for each plane
-                all_roinorm_single_tracesCS{plane} = [all_roinorm_single_tracesCS{plane}, roinorm_single_tracesCS];
+                all_roinorm_single_tracesCS{plane} = [all_roinorm_single_tracesCS{plane}, roinorm_single_tracesCS_smth];
                 all_roinorm_single_traces_roesmthCS{plane} = [all_roinorm_single_traces_roesmthCS{plane}, roinorm_single_traces_roesmthCS];
             end
         end
@@ -162,7 +163,7 @@ avg_roinorm_single_tracesCS = cellfun(@(x) mean(x, 2), all_roinorm_single_traces
 avg_roinorm_single_traces_roesmthCS = cellfun(@(x) nanmean(x, 2), all_roinorm_single_traces_roesmthCS, 'UniformOutput', false);
 
 % Plot results for each plane
-figure('Position', [100, 100, 600, 500]);
+figure('Position', [100, 100, 800, 500]);
 for plane = 1:4
     subplot(2, 2, plane);
     xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
