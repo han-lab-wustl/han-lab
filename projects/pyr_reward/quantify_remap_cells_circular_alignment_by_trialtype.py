@@ -24,10 +24,10 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype.p"
-with open(saveddataset, "rb") as fp: #unpickle
-    radian_alignment_saved = pickle.load(fp)
-# radian_alignment_saved = {} # overwrite
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
+# with open(saveddataset, "rb") as fp: #unpickle
+#     radian_alignment_saved = pickle.load(fp)
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -36,12 +36,14 @@ num_epochs = []
 pvals = []
 rates_all = []
 total_cells = []
+epoch_perm = []
 radian_alignment = {}
 #%%
+# iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if animal!='e217':
+    if animal!='e217' and conddf.optoep.values[ii]<2:
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
@@ -96,8 +98,11 @@ for ii in range(len(conddf)):
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
+        # get per comparison
+        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
-        goal_cell_prop.append(goal_cell_p);num_epochs.append(len(coms_correct))
+        epoch_perm.append(perm)
+        goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p]);num_epochs.append(len(coms_correct))
         colors = ['navy', 'red', 'green', 'k','darkorange']
         for gc in goal_cells:
             fig, ax = plt.subplots()
@@ -114,7 +119,8 @@ for ii in range(len(conddf)):
             plt.close(fig)
         # get shuffled iterations
         num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
-        goal_cell_shuf_ps = []
+        # max of 5 epochs = 10 perms
+        goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
         for i in range(num_iterations):
             # shuffle locations
             rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
@@ -130,11 +136,15 @@ for ii in range(len(conddf)):
             com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             # get goal cells across all epochs
             com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+            goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
             goal_cells_shuf = intersect_arrays(*com_goal); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
-            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0]);goal_cell_shuf_ps.append(goal_cell_shuf_p)
+            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
+            goal_cell_shuf_ps.append(goal_cell_shuf_p)
+            goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
         # save median of goal cell shuffle
-        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
-        goal_cell_null.append(goal_cell_shuf_ps_av)
+        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
+        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
+        goal_cell_null.append([goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av])
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         pvals.append(p_value); print(p_value)
         total_cells.append(len(coms_correct[0]))
@@ -148,15 +158,15 @@ with open(saveddataset, "wb") as fp:   #Pickling
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
-df = conddf.copy()
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
-df = df[df.animals!='e217']
+df = conddf.copy()
+df = df[(df.animals!='e217') & (df.optoep<2)]
 df['num_epochs'] = num_epochs
-df['goal_cell_prop'] = goal_cell_prop
+df['goal_cell_prop'] = [xx[1] for xx in goal_cell_prop]
 df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
-df['goal_cell_prop_shuffle'] = goal_cell_null
+df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_null]
 
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
@@ -191,6 +201,71 @@ for ep in eps:
     shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
     t,pval = scipy.stats.ranksums(rewprop, shufprop)
     print(f'{ep} epochs, pval: {pval}')
+#%%    
+# include all comparisons 
+df_perms = pd.DataFrame()
+df_perms['epoch_comparison'] = [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
+goal_cell_perm = [xx[0] for xx in goal_cell_prop]
+goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
+df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
+df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
+df_perms['animals'] = np.concatenate(df_perm_animals)
+df_perms = df_perms[df_perms.animals!='e189']
+df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
+
+fig,ax = plt.subplots(figsize=(7,5))
+sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
+        hue='animals',data=df_permsav,
+        s=8,ax=ax)
+sns.barplot(x='epoch_comparison', y='goal_cell_prop',
+        data=df_permsav,
+        fill=False,ax=ax, color='k', errorbar='se')
+ax = sns.lineplot(data=df_permsav, # correct shift
+        x='epoch_comparison', y='goal_cell_prop_shuffle',
+        color='grey', label='shuffle')
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+
+eps = df_permsav.index.get_level_values("epoch_comparison").unique()
+for ep in eps:
+    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+    rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop'].values
+    shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
+    t,pval = scipy.stats.ranksums(rewprop, shufprop)
+    print(f'{ep} epochs, pval: {pval}')
+
+# take a mean of all epoch comparisons
+df_perms['num_epochs'] = [2]*len(df_perms)
+df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+#%%
+df_plt2 = pd.concat([df_permsav2,df_plt])
+df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+# number of epochs vs. reward cell prop incl combinations    
+fig,ax = plt.subplots(figsize=(5,5))
+# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop',
+        hue='animals',data=df_plt2,
+        s=10)
+sns.barplot(x='num_epochs', y='goal_cell_prop',
+        data=df_plt2,
+        fill=False,ax=ax, color='k', errorbar='se')
+ax = sns.lineplot(data=df_plt2, # correct shift
+        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle')
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+
+eps = [2,3,4]
+for ep in eps:
+    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+    rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
+    shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
+    t,pval = scipy.stats.ranksums(rewprop, shufprop)
+    print(f'{ep} epochs, pval: {pval}')
+    
 #%%
 
 df['recorded_neurons_per_session'] = total_cells

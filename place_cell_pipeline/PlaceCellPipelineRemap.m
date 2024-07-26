@@ -10,7 +10,7 @@
 % add han-lab and han-lab-archive repos to path!
 clear all;
 an = 'z8';
-dys = [50,51];
+dys = [52];
 src = 'X:\vipcre'; % folder where fall is
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
 % src = 'Y:\analysis\fmats';

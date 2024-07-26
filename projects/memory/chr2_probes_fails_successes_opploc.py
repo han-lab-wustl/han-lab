@@ -261,9 +261,13 @@ plt.rc('font', size=20)          # controls default text sizes
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
             opto_cond].values for ii,animal in enumerate(animals)])
+animal = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
+            'Animal'].values for ii,animal in enumerate(animals)])
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
 day_date_dff_arr = np.array([v for k,v in day_date_dff.items()])
 day_date_dff_arr_opto = day_date_dff_arr[opto_condition]
+animal_opto = animal[opto_condition]
+animal_nonopto = animal[~opto_condition]
 day_date_dff_arr_nonopto = day_date_dff_arr[~opto_condition]
 day_date_dff_stim_arr = np.array([v for k,v in day_date_dff_stim.items()])
 day_date_dff_stim_opto = day_date_dff_stim_arr[opto_condition]
@@ -278,47 +282,78 @@ height = 1.035 # ylim
 #%%
 # 2 -quantify so transients
 # get time period around stim
-time_rng = range(int(range_val/binsize),int(range_val/binsize)*2) # during and after stim
-so_transients_opto = [np.nanmax(day_date_dff_arr_opto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
-so_transients_nonopto = [np.nanmax(day_date_dff_arr_nonopto[ii,3,1,time_rng]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]
-fig, ax = plt.subplots(figsize=(2.5,5))
-df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto]),columns=['so_transient_peak'])
-df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
-df = df.sort_values('condition')
-ax = sns.barplot(x='condition', y='so_transient_peak',hue='condition', data=df, fill=False,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax = sns.stripplot(x='condition', y='so_transient_peak', hue='condition', data=df,s=10,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax.set_ylim(0.985, 1.04)
-ax.spines[['top','right']].set_visible(False)
-ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_peak'].values, df.loc[(df.condition=='LED off'), 'so_transient_peak'].values
-t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)]-1, ledoff-1)
-ax.set_title(f'p={pval:.3f}')
-#%%
-# during stim
-# get time period around stim
-time_rng = range(int(range_val_stim/binsize_stim),int(range_val_stim/binsize_stim+2/binsize_stim)) # during and after stim
+time_rng = range(int(range_val/binsize),
+            int(range_val/binsize+2/binsize_stim)) # during and after stim
+before_time_rng = range(int(range_val/binsize-1/binsize_stim),
+            int(range_val/binsize)) # during and after stim
+
 # normalize pre-window to 1
-so_transients_opto = [day_date_dff_stim_opto[ii,3,
-            0,:]/np.nanmean(day_date_dff_stim_opto[ii,3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
-so_transients_opto = [np.quantile(xx[time_rng],.75) for xx in so_transients_opto]
-so_transients_nonopto = [day_date_dff_stim_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_stim_nonopto[ii,
-                    3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
-so_transients_nonopto = [np.quantile(xx[time_rng],.75) for xx in so_transients_nonopto]
+so_transients_opto = [day_date_dff_arr_opto[ii,3,
+            0,:]/np.nanmean(day_date_dff_arr_opto[ii,3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
+so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
+so_transients_nonopto = [day_date_dff_arr_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_arr_nonopto[ii,
+                    3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]
+so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
 fig, ax = plt.subplots(figsize=(2.5,5))
 df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
 df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
+df['animal'] = np.concatenate([animal_opto, animal_nonopto])
 df = df.sort_values('condition')
-ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df, fill=False,
+df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
+ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
+    palette={'LED off': "slategray", 'LED on': "mediumturquoise"},)
+ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=10,
+ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
+    alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+# ax.set_ylim(0.985, 1.04)
+ax.spines[['top','right']].set_visible(False)
+
+ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 'so_transient_dff_difference'].values
+t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
+ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
+                'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
+t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
+
+ax.set_title(f'Opposite rew. loc. stim at reward\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
+#%%# during stim
+# get time period around stim
+time_rng = range(int(range_val_stim/binsize_stim-1/binsize_stim),
+        int(range_val_stim/binsize_stim+.5/binsize_stim)) # during and after stim
+before_time_rng = range(int(range_val_stim/binsize_stim-2/binsize_stim),
+            int(range_val_stim/binsize_stim-1/binsize_stim)) # during and after stim
+
+# normalize pre-window to 1
+so_transients_opto = [day_date_dff_stim_opto[ii,3,
+            0,:]/np.nanmean(day_date_dff_stim_opto[ii,3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
+so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
+so_transients_nonopto = [day_date_dff_stim_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_stim_nonopto[ii,
+                    3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
+so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
+
+fig, ax = plt.subplots(figsize=(2.5,5))
+df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
+df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
+df['animal'] = np.concatenate([animal_opto, animal_nonopto])
+
+df = df.sort_values('condition')
+df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
+ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
+    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
+    alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
 
 ax.spines[['top','right']].set_visible(False)
 ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 
                         'so_transient_dff_difference'].values
 t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
-ax.set_title(f'Opposite loc. stim\n p={pval:.3f}')
+ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
+                'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
+t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
+
+ax.set_title(f'Opposite rew. loc. stim\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
 #%%
 # plot peri rew mean and sem of opto days vs. control days
 # learning 1 vs. 2
