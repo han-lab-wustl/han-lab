@@ -6,9 +6,10 @@ visualize reward-relative cells across days
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
-import pickle, seaborn as sns, random, math, matplotlib as mpl
+import pickle, seaborn as sns, random, math, matplotlib as mpl, os
 from collections import Counter
 from itertools import combinations, chain
+
 import matplotlib.backends.backend_pdf
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
@@ -71,19 +72,21 @@ for ii in range(len(conddf)):
         bin_size=track_length_rad/bins
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum, rewards)
         rates_all.append(success/total_trials)
+        # import fluor
+        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        # skew_mask = skew_filter>2
+        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+                        
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
             tcs_correct, coms_correct, tcs_fail, coms_fail = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
             # takes time
-            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-            Fc3 = fall_fc3['Fc3']
-            dFF = fall_fc3['dFF']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-            # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # skew_mask = skew_filter>2
-            Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
             tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
         goal_window = 30*(2*np.pi/track_length) # cm converted to rad
@@ -100,20 +103,18 @@ for ii in range(len(conddf)):
         goal_cell_prop.append(goal_cell_p)
         num_epochs.append(len(coms_correct))
         # plot trial by trial rew cells
-        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3'])
-        Fc3 = fall_fc3['Fc3']            
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]            
         F_remap = Fc3[:, goal_cells]
         lick = fall['licks']
         lick = np.squeeze(lick)
-        trialstates, licks_trial_by_trial, tcs_trial_by_trial, 
-        coms_trial_by_trial = make_tuning_curves_radians_trial_by_trial(eps,rewlocs,
-                lick,ybinned,rad,F_remap,trialnum,
+        trialstates, licks_trial_by_trial, tcs_trial_by_trial, coms_trial_by_trial = make_tuning_curves_radians_trial_by_trial(eps,rewlocs,
+            lick,ybinned,rad,F_remap,trialnum,
             rewards,forwardvel,rewsize,bin_size)
         plt.rc('font', size=10)
+        # number of epochs to plot
+        num_ep_plt = len(licks_trial_by_trial)
         for gc in range(len(goal_cells)):                        
-            fig,axes = plt.subplots(nrows=len(eps)-1,ncols=2,sharex=True)
-            for ep in range(len(eps)-1):
+            fig,axes = plt.subplots(nrows=num_ep_plt,ncols=2,sharex=True)
+            for ep in range(num_ep_plt):
                 ax = axes[ep,0]
                 mask = ~(trialstates[ep]==0)
                 mask = np.ones_like(licks_trial_by_trial[ep]).T*mask
@@ -121,7 +122,7 @@ for ii in range(len(conddf)):
                 mask = ~(trialstates[ep]==1)
                 mask = np.ones_like(licks_trial_by_trial[ep]).T*mask
                 sns.heatmap(licks_trial_by_trial[ep], mask=mask.T, cmap='Greens', cbar=False, ax=ax)
-                if ep==len(eps)-1: ax.set_title('licks')
+                if ep==num_ep_plt: ax.set_title('licks')
                 ax = axes[ep,1]
                 mask = ~(trialstates[ep]==0)
                 mask = np.ones_like(tcs_trial_by_trial[ep][gc]).T*mask
@@ -131,7 +132,7 @@ for ii in range(len(conddf)):
                 mask = np.ones_like(tcs_trial_by_trial[ep][gc]).T*mask
                 sns.heatmap(tcs_trial_by_trial[ep][gc],  
                     mask=mask.T,cmap='Greens', ax=ax)
-                if ep==len(eps)-1: 
+                if ep==num_ep_plt: 
                     ax.set_title('activity')
                     ax.set_xlabel('Position bin')
             fig.suptitle(f'{animal}, day {day}, remap cell # {gc}')

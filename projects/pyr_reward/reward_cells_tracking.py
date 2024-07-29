@@ -43,7 +43,7 @@ days_tracked_per_an = {'e216':np.concatenate([[32,33],range(35,64),[65]]),
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell.p"
+radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 goal_cell_iind = []
@@ -61,7 +61,7 @@ tracked_rew_cell_inds = {}
 tracked_rew_activity = {}
 for dd,day in enumerate(conddf.days.values):
     animal = conddf.animals.values[dd]
-    if animal in animals:
+    if animal in animals and animal!='e217' and conddf.optoep.values[dd]<2:
         tracked_lut = scipy.io.loadmat(rf"Y:\analysis\celltrack\{animal}_daily_tracking_plane0\Results\commoncells_once_per_week.mat")
         tracked_lut = tracked_lut['commoncells_once_per_week']
         days_tracked = days_tracked_per_an[animal]
@@ -98,7 +98,7 @@ for dd,day in enumerate(conddf.days.values):
         rates_all.append(success/total_trials)
         key = [k for k,v in radian_alignment_saved.items() if f'{animal}_{day:03d}' in k ]
         if len(key)>0:
-            tcs_late, coms = radian_alignment_saved[key[0]]            
+            tcs_late, coms, _,__ = radian_alignment_saved[key[0]]            
         else:# remake tuning curves relative to reward        
             # takes time
             fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3'])
@@ -173,7 +173,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 plt.rc('font', size=16)          # controls default text sizes
 # goal cells across epochs
 df = conddf.copy()
-# df = df[df.animals!='e217']
+df = df[(df.animals!='e217') & (df.optoep<2)]
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = goal_cell_prop
 df['opto'] = df.optoep.values>1
@@ -211,10 +211,13 @@ for k,v in tracked_rew_cell_inds.items():
 # plot
 # compile per animal tuning curves
 dfs = []
+animals = ['e216', 'e218', 'e200', 'e201', 'e186', 'e189', 'e190']
+days_per_animal = [k[:4] for k,v in tracked_rew_cell_inds.items()]
+days_per_animal = Counter(days_per_animal)
 for annm in animals:
     # TODO: nan pad so that we can get all epochs!!
-    an = np.array([v[:3,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
-    ancom = np.array([v[:3] for k,v in com_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
+    an = np.array([v[:2,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
+    ancom = np.array([v[:2] for k,v in com_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
 
     # remove cells that are nan every tracked day
     least_tracked_days = 1
@@ -228,20 +231,21 @@ for annm in animals:
     df = pd.DataFrame()
     df['median_com_across_ep_and_days'] = median_com_across_ep_and_days
     df['num_days_tracked'] = num_days_tracked
+    df['prop_of_days_tracked'] = np.round(num_days_tracked/days_per_animal[annm],3)
     df['animal'] = [annm]*len(num_days_tracked)
     dfs.append(df)
 dfs = pd.concat(dfs)
 # num tracked days vs. median com
 plt.rc('font', size=20) 
 # optional = per animal
-annm = 'e186'
-dfs = dfs.loc[dfs.animal==annm]
+# annm = 'e186'
+# dfs = dfs.loc[dfs.animal==annm]
 fig,ax=plt.subplots(figsize=(10,7))
-ax = sns.stripplot(y='median_com_across_ep_and_days',x='num_days_tracked',
+ax = sns.stripplot(y='median_com_across_ep_and_days',x='prop_of_days_tracked',
             hue='animal',data=dfs,s=10)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.01))
-plt.savefig(os.path.join(savedst, f'com_v_days_tracked_{annm}.jpg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, f'com_v_days_tracked_{annm}.jpg'), bbox_inches='tight')
 # plot individual cell traces
 # shp = int(np.ceil(np.sqrt(an.shape[2])))
 # fig, axes = plt.subplots(ncols=shp,

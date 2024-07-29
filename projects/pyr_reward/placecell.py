@@ -81,7 +81,7 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
                 mask = trialnum[eprng][moving_middle]==trial
                 relpos = rad[eprng][moving_middle][mask]                
                 licks_ep = lick[eprng][moving_middle][mask]                
-                    for celln in range(F.shape[1]):
+                for celln in range(F.shape[1]):
                     f = F[mask,celln]
                     tc = get_tuning_curve(relpos, f, bins=bins)  
                     tc[np.isnan(tc)]=0 # set nans to 0
@@ -91,9 +91,9 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
                 lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
                 lck[np.isnan(lck)]=0
                 licks_per_trial[tt,:] = lck
-        tcs.append(tcs_per_trial)
-        coms.append(coms_per_trial)
-        licks.append(licks_per_trial)
+            tcs.append(tcs_per_trial)
+            coms.append(coms_per_trial)
+            licks.append(licks_per_trial)
 
     return trialstates, licks, tcs, coms
 
