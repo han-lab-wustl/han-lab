@@ -47,11 +47,12 @@ def main(**args):
             # if no vid written 
             # load memmap array 
             arr = np.memmap(flnm[:-4]+'.npy', dtype='uint8', mode='r', shape=(len(fls),y,x))      
+            print(f'*********found memap array! converting to tif...*********')
             vidwrite(flnm,arr)   # make avi 
             del arr # remove var
             # now delete memmap array
             if os.path.exists(flnm): os.remove(flnm[:-4]+'.npy')
-        if delete_fld==True and (os.path.exists(checkflnm) or os.path.exists(flnm)):
+        elif delete_fld==True and (os.path.exists(checkflnm) or os.path.exists(flnm)):
             print(f"***********deleting tif folder {vid} after making avi \n*********** \n")
             shutil.rmtree(vid)
 def fill_params(src,dst,checkdst,delete_fld):

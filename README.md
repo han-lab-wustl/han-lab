@@ -15,6 +15,19 @@ notepad C:\Users\workstation2\anaconda3\envs\suite2p\lib\site-packages\suite2p\g
 ```
 edit `from rastermap.mapping` --> `from rastermap`
 
+## video making install
+
+To convert tifs from bonsai to lossless compression avis, following the instructions to install ffmpeg on Windows:
+https://www.wikihow.com/Install-FFmpeg-on-Windows
+
+Make sure this is added to path!
+
+Then, install ffmpeg-python & other dependencies in your conda environment: `pip install ffmpeg-python SimpleITK`
+
+Follow the scripts in `projects/DlC_behavior_formatting/video_formatting` for the pipeline
+1. `curate_tif_to_video_conversion.py` --> gets # of files per folder to make sure they are aligned with imaging (manually check and remove duplicates)
+2. `convert_tif_to_avi` --> takes tif folder, makes memory mapped array, and converts to avi
+
 ## behavior_analysis
 
 General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
