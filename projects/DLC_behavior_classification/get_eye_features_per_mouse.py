@@ -11,13 +11,8 @@ mpl.rcParams["ytick.major.size"] = 6
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 # path to pickle
-<<<<<<< HEAD
-pdst = r"Z:\E201_26_Apr_2023_vr_dlc_align.p"
-
-=======
-pdst = r"D:\PupilTraining-Matt-2023-07-07\failed_trials\hide\E217_02_Feb_2024_vr_dlc_align.p"
-vrfl = r"D:\PupilTraining-Matt-2023-07-07\failed_trials\hide\E217_02_Feb_2024_time(13_53_42).mat"
->>>>>>> 9058892a5635bedb0bbd627b6e2a0f65388cd902
+pdst = r"D:\PupilTraining-Matt-2023-07-07\failed_trials\E217_02_Feb_2024_vr_dlc_align.p"
+vrfl = r"D:\PupilTraining-Matt-2023-07-07\failed_trials\E217_02_Feb_2024_time(13_53_42).mat"
 with open(pdst, "rb") as fp: #unpickle
         vralign = pickle.load(fp)
 rewards = vralign["rewards"]
@@ -26,15 +21,10 @@ binsize = 0.1 #s
 areas, areas_res, circumferences, centroids_x, centroids_y, \
         meanrew, rewall, meanlicks, meanvel = get_area_circumference_from_vralign(pdst, range_val, binsize)
 
-<<<<<<< HEAD
-areas, areas_res, circumferences, centroids_x, centroids_y, \
-        meanrew_fail, rewall_fail, meanlicks_fail, meanvel_fail = get_area_circumference_from_vralign(pdst, range_val, binsize, fails=True)
-=======
 # get success and fail trials (excludes probes)
 areas, areas_res, circumferences, meanrew, rewall, \
 meanrewfail, rewallfail = get_area_circumference_from_vralign_with_fails(pdst, vrfl,
         range_val, binsize)
->>>>>>> 9058892a5635bedb0bbd627b6e2a0f65388cd902
 
 vralign['areas_residual'] = areas_res
 with open(pdst, "wb") as fp: #unpickle
@@ -42,13 +32,8 @@ with open(pdst, "wb") as fp: #unpickle
 # fix nans
 nans, x= nan_helper(rewall)
 rewall[nans]= np.interp(x(nans), x(~nans), rewall[~nans])
-<<<<<<< HEAD
-rewall_fail[nans]= np.interp(x(nans), x(~nans), rewall_fail[~nans])
-# removes repeated frames of reward delivery (to not double the number of trials)
-=======
 nans, x= nan_helper(rewallfail)
 rewallfail[nans]= np.interp(x(nans), x(~nans), rewallfail[~nans])
->>>>>>> 9058892a5635bedb0bbd627b6e2a0f65388cd902
 #%%
 # plot peri reward
 fig, axes=plt.subplots(2,1,sharex=True)
@@ -74,7 +59,7 @@ axes[0].axvline(int(range_val/binsize), color = 'w', linestyle = '--')
 axes[0].axvline(int(range_val/binsize)+5, color = 'lightgrey', linestyle = '--')
 axes[1].axvline(int(range_val/binsize), color = 'k', linestyle = '--')
 axes[1].axvline(int(range_val/binsize)+5, color = 'gray', linestyle = '--')
-axes[1].set_ylim(-70,70)
+
 divider = make_axes_locatable(axes[0])
 cax = divider.append_axes('right', size='5%', pad=0)
 fig.colorbar(im, cax=cax, orientation='vertical')

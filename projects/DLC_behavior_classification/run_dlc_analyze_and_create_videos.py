@@ -1,10 +1,10 @@
 import deeplabcut, os, pandas as pd
 # face videos
-config_path = r"D:\PupilTraining-Matt-2023-07-07\config.yaml"
+config_path = r"D:\MixedMouse_trial_2\MixedModel_trial_2-Adina-2023-03-27\config.yaml"
 
 # path to videos here - CHANGE
 # iterates through directories
-vids = r"I:\vip_inhibition\videos"
+vids = r"\\storage1.ris.wustl.edu\ebhan\Active\Gerardo\DAvideoLickAnalysisEarlyDaysdays1and2"
 
 deeplabcut.analyze_videos(config_path, vids, shuffle=1, #rrcsv.video.values
         save_as_csv=True, gputouse=0)

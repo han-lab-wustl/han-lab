@@ -30,7 +30,7 @@ picklesrc = r'I:\vip_inhibition'
 df = pd.read_csv(r"I:\pupil_conddf.csv", index_col=None)
 range_val=8 # seconds before and after align
 binsize=0.05
-fs = 31.25 # frame rate
+fs = 31.25*2 # frame rate
 # path to pickle
 dct_pre_reward = {}
 for fl in os.listdir(picklesrc):
@@ -143,8 +143,8 @@ for fl in os.listdir(picklesrc):
 # plot mean and standard error of different trial types
 conditions = ['vip','sst']
 for condition in conditions:
-    if condition=='vip': y1=-100; y2=140 # ylim
-    else: y1=-200; y2=400
+    if condition=='vip': y1=-150; y2=140 # ylim
+    else: y1=-800; y2=300
     arrfs_all = []
     arrff_all = []
     arrss_all = []

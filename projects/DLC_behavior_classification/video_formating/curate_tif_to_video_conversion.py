@@ -4,7 +4,6 @@
 
 import os, pandas as pd
 
-
 src = r'E:'
 for weekfld in os.listdir(src):
     if '24' in weekfld:

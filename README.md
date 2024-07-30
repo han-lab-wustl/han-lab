@@ -4,21 +4,20 @@ Project-specific and general scripts from Han Lab @ WUSTL
 
 **For a lot of analysis scripts involving pyramidal cells, you will need to add the entire directory as well as the directory of 'han-lab-archive' to path in MATLAB. This is being updated to allow depreciation of han-lab-archive scripts**
 
+## suite2p install
+This suite2p install is optimized to avoid errors compared to other suite2p installs we have tested.
+
+In anaconda powershell:
+```
+conda create -n suite2p python=3.9
+pip install suite2p==0.12.1 pyqtgraph pyqt5
+notepad C:\Users\workstation2\anaconda3\envs\suite2p\lib\site-packages\suite2p\gui\visualize.py
+```
+edit `from rastermap.mapping` --> `from rastermap`
+
 ## behavior_analysis
 
 General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
-
-## hidden_reward_zone_task
-
-`MasterHRZ.m`
-
-Eleonora's HRZ (and remapping) analysis
-
-Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
-
-### behavior_analysis
-
-Primarily Gerardo's scripts for HRZ analysis
 
 `COMgeneralview_multiple_EBGMEH1602.m`: Plots HRZ behavior using multiple VR files across multiple days. Relies on `COMgeneralanalysis`.
 ` 
@@ -36,6 +35,14 @@ Primarily Gerardo's scripts for HRZ analysis
  
 `mtit`: if you have matlab earlier than 2018(?) will use this function to put a title on a subplotted figure
 
+## hidden_reward_zone_task
+
+`MasterHRZ.m`
+
+Eleonora's HRZ (and remapping) analysis
+
+Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
+
 ## suite2p_processing_pipeline
 
 Zahra's wrappers around suite2p to make tifs, run motion corr, get ROIs, and make concatenated weekly videos
@@ -49,36 +56,15 @@ Zahra's scripts to get place cells in HRZ, based off Suyash and Tank lab code
 Goal is to track pyramidal cells detected by Suite2p across weeks/days
 
 Procedure:
-1. Concatenate videos of all days per week and run motion registration / ROI detection in Suite2p (done before this step)
-2. Use day and week `Fall.mat` output to run CellReg
+1. Use day `Fall.mat` output to run CellReg
 
 Relies on installation of [CellReg](https://github.com/zivlab/CellReg)
 
 `format_conversion_Suite2p_CNMF_e.m` to convert Suite2p's output `Fall.mat` into spatial footprints
 
-I would suggest copying `Fall.mat` of all your days/week you want to track into one place for this analysis. I use `copy_fmats.py`.
+I would suggest copying `Fall.mat` of all your daysyou want to track into one place for this analysis. I use `copy_fmats.py`.
 
-`run_cellreg_week2week.m`
-
-Cell track across weeks (**map 1**), first block contains all file/folder specific parameters you may need to change
-
-Uses non-rigid transform
-
-Uses the last week (last file in the list) as a reference image, but you may want to change it to a week that has the most cells, etc.
-
-`get_tracked_cells_per_week.m` 
-
-Uses results of the previous run file to get cell indices and plot them on the mean image per day
-
-NOTE: **this relies on a *specific* folder structure**
-
-`run_cellreg_week2day.m`
-
-Cell track cells detected in the weekly concatenated movies across days (**map 2**)
-
-`get_tracked_cells_week2day.m`
-
-Map cells tracked per week back to at least 1 day that week, plot them on the mean image per day, and align to behavior
+Uses non-rigid transform!
 
 ## projects > dopamine
 
