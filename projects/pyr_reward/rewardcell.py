@@ -13,8 +13,11 @@ correct trials
 """
 #%%
 
-import numpy as np
-def get_radian_position(eps,ybinned,rewlocs,track_length):
+import numpy as np, random
+from itertools import combinations, chain
+from placecell import intersect_arrays
+
+def get_radian_position(eps,ybinned,rewlocs,track_length,rewsize):
     rad = [] # get radian coordinates
     # same as giocomo preprint - worked with gerardo
     for i in range(len(eps)-1):
@@ -32,14 +35,14 @@ def get_goal_cells(track_length,coms_correct,window=30):
     perm = list(combinations(range(len(coms_correct)), 2))     
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    dist_to_rew.append(coms_rewrel)
+    
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal)
     # get per comparison
     goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
     goal_cell_p=len(goal_cells)/len(coms_correct[0])        
     
-    return goal_window, goal_cells, perm, goal_cells_p_per_comparison,goal_cell_p
+    return goal_window, goal_cells, perm, goal_cells_p_per_comparison,goal_cell_p, coms_rewrel
 
 def goal_cell_shuffle(rewlocs, coms_correct, goal_window, num_iterations = 1000):
     # get shuffled iterations
@@ -71,14 +74,16 @@ def goal_cell_shuffle(rewlocs, coms_correct, goal_window, num_iterations = 1000)
     
     return goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist
 
-def get_trialtypes(trialnum, rewards, coms_correct, eps):
+def get_trialtypes(trialnum, rewards, ybinned, coms_correct, eps):
     
     per_ep_trialtypes = []
     
-    for ep in range(len(coms_correct)):
-        trialnum_ep = np.array(trialnum)[eps[i]:eps[i+1]]
-        rewards_ep = np.array(rewards)[eps[i]:eps[i+1]]
-        unique_trials = np.unique(trialnum_ep)
+    for i in range(len(coms_correct)):
+        eprng = np.arange(eps[i],eps[i+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        trialnum_ep = np.array(trialnum)[eprng]        
+        rewards_ep = np.array(rewards)[eprng]
+        unique_trials = np.array([xx for xx in np.unique(trialnum_ep) if np.sum(trialnum_ep==xx)>100])
         
         init_fails = [] # initial failed trials
         first_correct = []
@@ -98,7 +103,7 @@ def get_trialtypes(trialnum, rewards, coms_correct, eps):
                 else:
                     inbtw_fails.append(trial)
                                 
-        total_trials = np.sum(unique_trials >= 3)
+        total_trials = np.sum(unique_trials)
         per_ep_trialtypes.append([init_fails, first_correct, correct_trials_besides_first, 
                 inbtw_fails, total_trials])
         

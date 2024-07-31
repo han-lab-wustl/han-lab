@@ -73,11 +73,14 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
         # cells x trial x bin        
-        tcs_per_trial = np.ones((F.shape[1], len(trials), bins))*np.nan
-        coms_per_trial = np.ones((F.shape[1], len(trials)))*np.nan
-        licks_per_trial = np.ones((len(trials), bins))*np.nan        
+        tcs_per_trial = np.ones((F.shape[1], np.max(trials)+1, bins))*np.nan
+        coms_per_trial = np.ones((F.shape[1], np.max(trials)+1))*np.nan
+        licks_per_trial = np.ones((np.max(trials)+1, bins))*np.nan        
         if len(ttr)>lasttr: # only if ep has more than x trials            
-            for tt,trial in enumerate(trials):
+            for tt,trial in enumerate(trials): # iterates through the unique trials and not the
+                # trial number itself
+                # need to account for 0-2 probes in the beginning
+                # that makes the starting trialnum 1 or 2 or 3
                 mask = trialnum[eprng][moving_middle]==trial
                 relpos = rad[eprng][moving_middle][mask]                
                 licks_ep = lick[eprng][moving_middle][mask]                
@@ -85,15 +88,15 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
                     f = F[mask,celln]
                     tc = get_tuning_curve(relpos, f, bins=bins)  
                     tc[np.isnan(tc)]=0 # set nans to 0
-                    tcs_per_trial[celln, tt,:] = tc
-                com = calc_COM_EH(tcs_per_trial[:, tt,:],bin_size)
-                coms_per_trial[:, tt] = com
+                    tcs_per_trial[celln, trial,:] = tc
+                com = calc_COM_EH(tcs_per_trial[:, trial,:],bin_size)
+                coms_per_trial[:, trial] = com
                 lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
                 lck[np.isnan(lck)]=0
-                licks_per_trial[tt,:] = lck
-            tcs.append(tcs_per_trial)
-            coms.append(coms_per_trial)
-            licks.append(licks_per_trial)
+                licks_per_trial[trial,:] = lck
+        tcs.append(tcs_per_trial)
+        coms.append(coms_per_trial)
+        licks.append(licks_per_trial)
 
     return trialstates, licks, tcs, coms
 

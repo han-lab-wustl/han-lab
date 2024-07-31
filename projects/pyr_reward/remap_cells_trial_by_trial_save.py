@@ -164,8 +164,7 @@ for ii in range(len(conddf)):
         pvals.append(p_value)
         print(p_value)
         total_cells.append(len(coms_correct[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_late, coms, 
-                                p_value, trialstates, licks_trial_by_trial, 
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [p_value, trialstates, licks_trial_by_trial, 
                                 tcs_trial_by_trial, coms_trial_by_trial]
 
 pdf.close()
