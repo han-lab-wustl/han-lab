@@ -2,7 +2,7 @@
 feb 2024
 for chr2 experiments
 """
-
+#%%
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
@@ -17,6 +17,7 @@ mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
+from dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
@@ -32,9 +33,12 @@ animals = ['e231', 'e232']
 # first batch
 # days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
 #         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
-days_all = [[28,29,30,31,32,33,34,35,36],
-    [70,71,72,73,74,75,76,77,78]]
+# days_all = [[28,29,30,31,32,33,34,35,36],
+#     [70,71,72,73,74,75,76,77,78]]
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
+days_all=[[57],
+    [99]
+]
 numtrialsstim=10
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -68,34 +72,22 @@ for ii,animal in enumerate(animals):
             # ax.plot(dff)
             # nan out stims
             dff[stims[pln::4].astype(bool)] = np.nan
-            # ax.plot(dff)
-            # # temp remove artifacts
-            # mean = np.mean(dff)
-            # std = np.std(dff)
-            # z_scores = np.abs((dff - mean) / std)
-            # if pln==1:
-            #     artifact_threshold = np.std(z_scores)*2
-            # else:
-            #     artifact_threshold = np.std(z_scores)*3    
-            # if optoday:
-            #     mean = np.mean(dff)
-            #     std = np.std(dff)
-            #     z_scores = np.abs((dff - mean) / std)
-            #     artifact_mask = z_scores > artifact_threshold
-            #     # Remove artifacts by setting them to NaN
-            #     clean_data = dff.copy()
-            #     clean_data[artifact_mask] = np.nan
-            #     ax.plot(clean_data)
-            #     ax.set_ylim(0.9,1.1)
-            #     dff = clean_data
-            # plt.close(fig)
+            
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(3).mean().values)
             rewards = np.hstack(params['solenoid2'])
-            trialnum = np.hstack(params['trialnum'])
-            ybinned = np.hstack(params['ybinned'])/gainf
-            licks = np.hstack(params['licks'])
-            timedFF = np.hstack(params['timedFF'])
+            if dff.shape[0]<rewards.shape[0]:
+                rewards = np.hstack(params['solenoid2'])[:-1]
+                trialnum = np.hstack(params['trialnum'])[:-1]
+                ybinned = np.hstack(params['ybinned'])[:-1]/gainf
+                licks = np.hstack(params['licks'])[:-1]
+                timedFF = np.hstack(params['timedFF'])[:-1]
+            else:
+                rewards = np.hstack(params['solenoid2'])
+                trialnum = np.hstack(params['trialnum'])
+                ybinned = np.hstack(params['ybinned'])/gainf
+                licks = np.hstack(params['licks'])
+                timedFF = np.hstack(params['timedFF'])
             # mask out dark time
             dff = dff[ybinned>3]
             rewards = rewards[ybinned>3]
@@ -111,7 +103,7 @@ for ii,animal in enumerate(animals):
             min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
             rews_centered = np.zeros_like(ybinned[:firstrew])
             rews_centered[min_iind]=1
-            #%%
+            
             # plot behavior
             fig, ax = plt.subplots()
             ax.plot(ybinned)
@@ -265,7 +257,7 @@ for ii,animal in enumerate(animals):
             pdf.savefig(fig2)
             fig.tight_layout()
             fig2.tight_layout()
-            #%%
+            
             plt.close('all')
             plndff.append([meanrewdFF_opto, meanrewdFF_nonopto])
         day_date_dff[str(day)] = plndff

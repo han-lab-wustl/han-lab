@@ -13,7 +13,7 @@ correct trials
 """
 #%%
 
-import numpy as np, random
+import numpy as np, random, re, os
 from itertools import combinations, chain
 from placecell import intersect_arrays
 
@@ -74,6 +74,21 @@ def goal_cell_shuffle(rewlocs, coms_correct, goal_window, num_iterations = 1000)
     
     return goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist
 
+def plot_rew_cell():
+    colors = ['navy', 'red', 'green', 'k','darkorange']
+    for gc in goal_cells:
+        fig, ax = plt.subplots()
+        for ep in range(len(coms_correct)):
+            ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+        ax.axvline((bins/2), color='k')
+        ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+        ax.set_xticks(np.arange(0,bins+1,10))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),2))
+        ax.set_xlabel('Radian position (centered at start of rew loc)')
+        ax.set_ylabel('Fc3')
+        ax.legend()
+        ax.spines[['top','right']].set_visible(False)
+
 def get_trialtypes(trialnum, rewards, ybinned, coms_correct, eps):
     
     per_ep_trialtypes = []
@@ -109,5 +124,46 @@ def get_trialtypes(trialnum, rewards, ybinned, coms_correct, eps):
         
     return per_ep_trialtypes
     
+
+def get_days_from_cellreg_log_file(txtpth):
+    # Specify the path to your text file
+    # Read the file content into a string
+    with open(txtpth, 'r') as file:
+        data = file.read()
+
+    # Split the data into lines
+    lines = data.strip().split('\n')
+
+    # Regular expression pattern to extract session number and day number
+    pattern = r'Session (\d+) - .*_day(\d+)_'
+
+    # List to hold the extracted session and day numbers
+    sessions = []; days = []
+
+    # Extract session and day numbers using regex
+    for line in lines:
+        match = re.search(pattern, line)
+        if match:
+            session_number = match.group(1)
+            day_number = match.group(2)
+            sessions.append(int(session_number))
+            days.append(int(day_number))
+
+    return sessions, days
+
+def find_log_file(pth):
+    """for cell track logs
+
+    Args:
+        pth (_type_): _description_
+    """
+    # Find the first file that matches the criteria
+    matching_file = None
+    for filename in os.listdir(pth):
+        if filename.startswith('logFile') and filename.endswith('.txt'):
+            matching_file = filename
+            break
     
+    return matching_file
+
     

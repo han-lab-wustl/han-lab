@@ -11,10 +11,9 @@ and see what their activity was like on previous days
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
-import pickle, seaborn as sns, random, math
+import pickle, seaborn as sns, random, math, os
 from collections import Counter
-from itertools import combinations
-from itertools import chain
+from itertools import combinations, chain
 import matplotlib.backends.backend_pdf
 import seaborn as sns
 import matplotlib as mpl
@@ -25,27 +24,17 @@ mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians, intersect_arrays
+from rewardcell import get_days_from_cellreg_log_file, find_log_file
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
-animals = ['e216','e218','e217','e200','e201','e186','e189','e190']
-days_tracked_per_an = {'e216':np.concatenate([[32,33],range(35,64),[65]]),
-                    'e217': np.concatenate([range(2,21),[26,27,29,31,32,34,39,43,47]]),
-                    'e218':np.arange(20,51),
-                    'e200':np.concatenate([range(62,71),[72,73,74,76],range(80,91)]),
-                    'e201':np.arange(55,76),
-                    'e186':np.arange(1,52),
-                    'e189':np.concatenate([[7,8],range(10,16),range(17,22),range(24,43),[44,45,46]]),
-                    'e190':np.concatenate([range(6,10),[11,13],range(15,20),[21,22,24,27,28,29,33,34,35],
-                                range(40,44),[45]])
-                    }
+animals = ['e218','e216','e217','e201','e186','e189','e190', 'e145']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'reward_relative_across_days.pdf')
-pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
+celltrackpth = r'Y:\analysis\celltrack'
 goal_cell_iind = []
 goal_cell_prop = []
 dist_to_rew = [] # per epoch
@@ -55,113 +44,72 @@ rates_all = []
 total_cells = []
 radian_alignment = {}
 # cell tracked days
-conddf = pd.read_csv(r"Z:\condition_df\conddf_cell_tracking.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 
 tracked_rew_cell_inds = {}
 tracked_rew_activity = {}
+#%%
 for dd,day in enumerate(conddf.days.values):
     animal = conddf.animals.values[dd]
-    if animal in animals and animal!='e217' and conddf.optoep.values[dd]<2:
-        tracked_lut = scipy.io.loadmat(rf"Y:\analysis\celltrack\{animal}_daily_tracking_plane0\Results\commoncells_once_per_week.mat")
+    if animal in animals and animal!='e217' and conddf.optoep.values[dd]==-1:
+        if animal=='e145': pln=2
+        else: pln=0
+        # get lut
+        tracked_lut = scipy.io.loadmat(os.path.join(celltrackpth, 
+        rf"{animal}_daily_tracking_plane{pln}\Results\commoncells_once_per_week.mat"))
         tracked_lut = tracked_lut['commoncells_once_per_week']
-        days_tracked = days_tracked_per_an[animal]
-        tracked_lut = pd.DataFrame(tracked_lut, columns = days_tracked)
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+        # find day match with session        
+        txtpth = os.path.join(celltrackpth, rf"{animal}_daily_tracking_plane{pln}\Results")
+        txtpth = os.path.join(txtpth, find_log_file(txtpth))
+        sessions, days = get_days_from_cellreg_log_file(txtpth)    
+        tracked_lut = pd.DataFrame(tracked_lut, columns = days)
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 
-            'trialnum', 'rewards', 'iscell', 'bordercells'])
+            'trialnum', 'rewards', 'iscell', 'bordercells', 'dFF'])
+        # to remove skew cells
+        dFF = fall['dFF']
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
-        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
+        try:
+                rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+        except:
+                rewsize = 10
         ybinned = fall['ybinned'][0]/scalingf;track_length=180/scalingf    
         forwardvel = fall['forwardvel'][0]    
         changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum=fall['trialnum'][0]
         rewards = fall['rewards'][0]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        tcs_early = []; tcs_late = []        
-        ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
-        lasttr=8 # last trials
-        bins=90
-        rad = [] # get radian coordinates
-        # same as giocomo preprint - worked with gerardo
-        for i in range(len(eps)-1):
-            y = ybinned[eps[i]:eps[i+1]]
-            rew = rewlocs[i]-rewsize/2
-            # convert to radians and align to rew
-            rad.append((((((y-rew)*2*np.pi)/track_length)+np.pi)%(2*np.pi))-np.pi)
-        rad = np.concatenate(rad)
-        track_length_rad = track_length*(2*np.pi/track_length)
-        bin_size=track_length_rad/bins
-        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum, rewards)
-        rates_all.append(success/total_trials)
-        key = [k for k,v in radian_alignment_saved.items() if f'{animal}_{day:03d}' in k ]
-        if len(key)>0:
-            tcs_late, coms, _,__ = radian_alignment_saved[key[0]]            
-        else:# remake tuning curves relative to reward        
-            # takes time
-            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3'])
-            Fc3 = fall_fc3['Fc3']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            rates, tcs_late, coms = make_tuning_curves_radians(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                rewards,forwardvel,rewsize,bin_size)
-            tcs_late = np.array(tcs_late); coms = np.array(coms)            
-        goal_window = 30*(2*np.pi/track_length) # cm converted to rad
-        # change to relative value 
-        coms_rewrel = np.array([com-np.pi for com in coms])
-        perm = list(combinations(range(len(coms)), 2))     
-        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        dist_to_rew.append(coms_rewrel)
+        if f'{animal}_{day:03d}_index{dd:03d}' in radian_alignment_saved.keys():
+            tcs_correct, coms_correct, tcs_fail, coms_fail, \
+            com_goal, goal_cell_shuf_ps_per_comp_av,\
+            goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{dd:03d}']            
+
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
-        pyr_tc_s2p_cellind = fall['pyr_tc_s2p_cellind'][0]
+        pyr_tc_s2p_cellind = fall['pyr_tc_s2p_cellind'][0][skew>2]
+        # make sure dims are correct for transform
+        assert pyr_tc_s2p_cellind.shape[0]==tcs_correct.shape[1]
         # suite2p indices of rew cells
-        goal_cells_s2p_ind = pyr_tc_s2p_cellind[goal_cells]
-        goal_cell_iind.append(goal_cells)
-        goal_cell_p=len(goal_cells)/len(coms[0])
-        goal_cell_prop.append(goal_cell_p)
-        num_epochs.append(len(coms))
-        # get shuffled iterations
-        num_iterations = 1000
-        shuffled_dist = np.zeros((num_iterations))
-        for i in range(num_iterations):
-            # shuffle locations
-            rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-            shufs = [list(range(coms[ii].shape[0])) for ii in range(1, len(coms))]
-            [random.shuffle(shuf) for shuf in shufs]
-            com_shufs = np.zeros_like(coms)
-            com_shufs[0,:] = coms[0]
-            com_shufs[1:1+len(shufs),:] = [coms[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-            # OR shuffle cell identities
-            # relative to reward
-            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-            perm = list(combinations(range(len(coms)), 2))     
-            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-            # get goal cells across all epochs
-            com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-            goal_cells_shuf = intersect_arrays(*com_goal)
-            shuffled_dist[i] = len(goal_cells_shuf)/len(coms[0])
-        
-        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        pvals.append(p_value)
-        print(p_value)
-        total_cells.append(len(coms[0]))
-        radian_alignment[f'{animal}_{day:03d}'] = [tcs_late, coms]
-        
-        try:
-            tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]
-            tracked_rew_cell_inds[f'{animal}_{day:03d}'] = tracked_rew_cell_ind   
-            tracked_cells_that_are_rew_pyr_id = tracked_lut[day].values[tracked_rew_cell_ind]
-            rew_cells_that_are_tracked_iind = [np.where(pyr_tc_s2p_cellind==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id]
-            # includes s2p indices of inactive cells so you can find them in the tracked lut
-            tracked_rew_activity[f'{animal}_{day:03d}'] = [[tcs_late[c][rew_cells_that_are_tracked_iind] for c in range(len(coms))],\
-                    rewlocs,coms_rewrel[:,[rew_cells_that_are_tracked_iind]]]
-        except Exception as e:
-            print(e)
+        if len(goal_cells)>0:
+            goal_cells_s2p_ind = pyr_tc_s2p_cellind[goal_cells]
+            # change to relative value 
+            coms_rewrel = np.array([com-np.pi for com in coms_correct])
+            try:
+                tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]
+                tracked_rew_cell_inds[f'{animal}_{day:03d}'] = tracked_rew_cell_ind   
+                tracked_cells_that_are_rew_pyr_id = tracked_lut[day].values[tracked_rew_cell_ind]
+                rew_cells_that_are_tracked_iind = [np.where(pyr_tc_s2p_cellind==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id]
+                # includes s2p indices of inactive cells so you can find them in the tracked lut
+                tracked_rew_activity[f'{animal}_{day:03d}'] = [[tcs_correct[c][rew_cells_that_are_tracked_iind] for c in range(len(coms_correct))],\
+                        rewlocs,coms_rewrel[:,[rew_cells_that_are_tracked_iind]]]
+            except Exception as e:
+                print(e)
 
-# pdf.close()
 dct = {}; dct['rew_cells_tracking'] = [tracked_rew_cell_inds,tracked_rew_activity]
 # save pickle of dcts
 rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
@@ -169,22 +117,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
     pickle.dump(dct, fp) 
 
 #%%
-# p-values for sanity check
-plt.rc('font', size=16)          # controls default text sizes
-# goal cells across epochs
-df = conddf.copy()
-df = df[(df.animals!='e217') & (df.optoep<2)]
-df['num_epochs'] = num_epochs
-df['goal_cell_prop'] = goal_cell_prop
-df['opto'] = df.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = pvals
-
-fig,ax = plt.subplots(figsize=(5,5))
-ax.hist(df.loc[df.opto==False,'p_value'].values)
-ax.spines[['top','right']].set_visible(False)
-
-#%%
+bins = 90
 # tracked cell activity
 tc_tracked_per_cond = {}
 com_tracked_per_cond = {}
@@ -194,10 +127,15 @@ for k,v in tracked_rew_cell_inds.items():
         rewlocs = tracked_rew_activity[k][1]
         coms = tracked_rew_activity[k][2]        
         animal = k[:-4]
-        tracked_lut = scipy.io.loadmat(rf"Y:\analysis\celltrack\{animal}_daily_tracking_plane0\Results\commoncells_once_per_week.mat")
+        if animal=='e145': pln=2
+        else: pln=0
+        tracked_lut = scipy.io.loadmat(rf"Y:\analysis\celltrack\{animal}_daily_tracking_plane{pln}\Results\commoncells_once_per_week.mat")
         tracked_lut = tracked_lut['commoncells_once_per_week']
-        days_tracked = days_tracked_per_an[animal]
-        tracked_lut = pd.DataFrame(tracked_lut, columns = days_tracked)
+                # find day match with session        
+        txtpth = os.path.join(celltrackpth, rf"{animal}_daily_tracking_plane{pln}\Results")
+        txtpth = os.path.join(txtpth, find_log_file(txtpth))
+        sessions, days = get_days_from_cellreg_log_file(txtpth)    
+        tracked_lut = pd.DataFrame(tracked_lut, columns = days)
         tc_tracked = np.ones((len(coms), len(tracked_lut), bins))*np.nan        
         tracked_cell_id = v    
         tc_tracked[:,tracked_cell_id,:] = tcs
@@ -211,41 +149,95 @@ for k,v in tracked_rew_cell_inds.items():
 # plot
 # compile per animal tuning curves
 dfs = []
-animals = ['e216', 'e218', 'e200', 'e201', 'e186', 'e189', 'e190']
+animals = ['e218','e216','e200','e201','e186','e189','e190', 'e145']
 days_per_animal = [k[:4] for k,v in tracked_rew_cell_inds.items()]
 days_per_animal = Counter(days_per_animal)
+ancoms={}
 for annm in animals:
     # TODO: nan pad so that we can get all epochs!!
-    an = np.array([v[:2,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
-    ancom = np.array([v[:2] for k,v in com_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
+    an = np.array([v[:3,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
+    ancom = np.array([v[:3] for k,v in com_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
 
     # remove cells that are nan every tracked day
     least_tracked_days = 1
-    mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),axis=0)<((an.shape[3]*an.shape[0])-((least_tracked_days-1)*an.shape[3]))) # not nan in all positions across all days
-    an = an[:,:,mask,:]
-    ancom = ancom[:,:,mask]
-    median_com_across_ep = np.nanmedian(ancom,axis=1)
-    # remember that this is in radian 
-    median_com_across_ep_and_days = np.nanmedian(median_com_across_ep,axis=0)
-    num_days_tracked = np.sum((np.sum(np.isnan(an[:,0,:,:]),axis=2)<90), axis=0)
-    df = pd.DataFrame()
-    df['median_com_across_ep_and_days'] = median_com_across_ep_and_days
-    df['num_days_tracked'] = num_days_tracked
-    df['prop_of_days_tracked'] = np.round(num_days_tracked/days_per_animal[annm],3)
-    df['animal'] = [annm]*len(num_days_tracked)
-    dfs.append(df)
+    if len(an)>0:
+        mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),
+                axis=0)<((an.shape[3]*an.shape[0])-((least_tracked_days-1)*an.shape[3]))) # not nan in all positions across all days
+        an = an[:,:,mask,:]    
+
+        ancom = ancom[:,:,mask]
+        median_com_across_ep = np.nanmedian(ancom,axis=1)
+        # remember that this is in radian 
+        median_com_across_ep_and_days = np.nanmedian(median_com_across_ep,axis=0)
+        num_days_tracked = np.sum((np.sum(np.isnan(an[:,0,:,:]),axis=2)<90), axis=0)
+        df = pd.DataFrame()
+        df['median_com_across_ep_and_days'] = median_com_across_ep_and_days
+        df['num_days_tracked'] = num_days_tracked
+        df['animal'] = [annm]*len(num_days_tracked)
+        dfs.append(df)
+        # alternatively, keep epochs intact
+        ancoms[annm]=ancom
 dfs = pd.concat(dfs)
 # num tracked days vs. median com
-plt.rc('font', size=20) 
+#%%
+plt.rc('font', size=22) 
 # optional = per animal
 # annm = 'e186'
 # dfs = dfs.loc[dfs.animal==annm]
-fig,ax=plt.subplots(figsize=(10,7))
-ax = sns.stripplot(y='median_com_across_ep_and_days',x='prop_of_days_tracked',
-            hue='animal',data=dfs,s=10)
+dfs_av = dfs.groupby(['animal', 'num_days_tracked']).median(numeric_only=True)
+
+dfs = dfs.sort_values(by=['animal'])
+dfs_av = dfs_av.sort_values(by=['animal'])
+fig,ax=plt.subplots(figsize=(4,7))
+ax = sns.stripplot(y='median_com_across_ep_and_days',x='num_days_tracked',
+            hue='animal',data=dfs,s=8,alpha=0.4)
+ax = sns.stripplot(y='median_com_across_ep_and_days',x='num_days_tracked',
+            hue='animal',data=dfs_av,s=10)
+ax = sns.boxplot(y='median_com_across_ep_and_days',x='num_days_tracked',
+            color='k',data=dfs, fill=False, width=.5) 
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.01))
-# plt.savefig(os.path.join(savedst, f'com_v_days_tracked_{annm}.jpg'), bbox_inches='tight')
+ax.legend(bbox_to_anchor=(1.00, 1.00))
+ax.set_ylabel('Median COM (rad.)\ncentered at rew. loc.')
+ax.set_xlabel('# of days tracked')
+
+plt.savefig(os.path.join(savedst, f'rewcom_v_days_tracked.svg'), bbox_inches='tight')
+#%%
+# plot coms across epochs per day
+an='e218'
+ancom = ancoms[an]
+
+dfs=[]
+for dy in range(ancom.shape[0]):   
+    df = pd.DataFrame()     
+    df['com'] = np.ravel(ancom[dy])
+    df['day'] = [dy]*len(df)
+    df['cell'] = np.concatenate([range(ancom[dy].shape[1]),
+                        range(ancom[dy].shape[1]),range(ancom[dy].shape[1])])
+    df['epoch'] = np.concatenate([[1]*ancom[dy].shape[1], [2]*ancom[dy].shape[1],
+                        [3]*ancom[dy].shape[1]])
+    dfs.append(df)
+ancomdf = pd.concat(dfs)
+ancomdf = ancomdf.reset_index()
+#%%
+for c in ancomdf.cell.unique():
+    fig, ax = plt.subplots()
+    ancomdfc = ancomdf[ancomdf.cell==c]
+    sns.stripplot(y='com',x='epoch',hue='day',
+                data=ancomdfc, palette='colorblind', s=10, ax=ax)
+    sns.lineplot(x=ancomdfc.epoch.values-1, y='com',hue='day',
+                data=ancomdfc, palette='colorblind',ax=ax)
+    ax.spines[['top','right']].set_visible(False)
+    ax.legend().set_visible(False)
+    ax.set_title(f'Cell: {c}')
+#%%
+ancomdf = ancomdf[ancomdf.day==1]
+ax = sns.stripplot(y='com',x='epoch',hue='cell',
+            data=ancomdf, palette='colorblind', s=10)
+ax = sns.lineplot(x=ancomdf.epoch.values-1, y='com',hue='cell',
+            data=ancomdf, palette='colorblind')
+ax.spines[['top','right']].set_visible(False)
+ax.legend().set_visible(False)
+
 # plot individual cell traces
 # shp = int(np.ceil(np.sqrt(an.shape[2])))
 # fig, axes = plt.subplots(ncols=shp,

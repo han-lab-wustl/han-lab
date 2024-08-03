@@ -3,31 +3,10 @@
 
 clear all; close all; clear all
 src =  'Y:\analysis'; % main folder for analysis
-animal = 'e190';
+animal = 'e200';
 fld = sprintf('%s_daily_tracking_plane0',animal);
 pth = dir(fullfile(src, 'celltrack', fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
-% split days by week
-% e218 
-weeksplit = [1 1 1 2 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5 5 6 6 6 6 6 6]; % manual input!!
-weekl = [1:6];
-% e145
-weeksplit = [1 1 1 1 2 2 2]; % manual input!!
-weekl = [1:2];
-% e201
-weeksplit = [12 12 12 12 12 13 13 13 13 13 13 14 14 14 14 14 15 15 15 15 15]; % manual input!!
-weekl = [12:15];
-% e186 
-weeksplit = [1	1	1	1	2	2	2	2	2	2	2	3	3	3	4	4	4	4	4	4];
-weekl=[1:4]
-% e216
-weeksplit = [1 1 2 2 2 2 2 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 6 6 6 6 6 7 7 7];
-weekl=1:7;
-% e200
-weeksplit = [1 1 2 2 2 2 2 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 6 6 6 6 6 7 7 7];
-weekl=1:7;
-
-
 % find cells in all sessions
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
