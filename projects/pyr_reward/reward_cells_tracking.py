@@ -74,6 +74,7 @@ for dd,day in enumerate(conddf.days.values):
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
+        # mainly for e145
         try:
                 rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
         except:
@@ -103,10 +104,21 @@ for dd,day in enumerate(conddf.days.values):
                 tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]
                 tracked_rew_cell_inds[f'{animal}_{day:03d}'] = tracked_rew_cell_ind   
                 tracked_cells_that_are_rew_pyr_id = tracked_lut[day].values[tracked_rew_cell_ind]
-                rew_cells_that_are_tracked_iind = [np.where(pyr_tc_s2p_cellind==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id]
+                rew_cells_that_are_tracked_iind = np.array([np.where(pyr_tc_s2p_cellind==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id])
                 # includes s2p indices of inactive cells so you can find them in the tracked lut
-                tracked_rew_activity[f'{animal}_{day:03d}'] = [[tcs_correct[c][rew_cells_that_are_tracked_iind] for c in range(len(coms_correct))],\
-                        rewlocs,coms_rewrel[:,[rew_cells_that_are_tracked_iind]]]
+                # build a mat the same size as the tracked cell dataframe
+                # nan out other cells
+                # ep x cell x bin x days
+                # tcs_rew_tracked = np.ones((tcs_correct.shape[0],tracked_lut.shape[0], 
+                #                 tcs_correct.shape[2],
+                #                 tracked_lut.shape[1]))*np.nan
+                # tcs_rew_tracked[:, tracked_rew_cell_ind, :, 
+                #         np.where(days==day)[0]]=tcs_correct[:,rew_cells_that_are_tracked_iind,:]
+                coms_rewrel_tracked = np.ones((tcs_correct.shape[0],tracked_lut.shape[0],
+                                tracked_lut.shape[1]))*np.nan
+                if len(tracked_rew_cell_ind)>0:                    
+                    coms_rewrel_tracked[:,tracked_rew_cell_ind,np.where(days==day)[0]] = coms_rewrel[:, rew_cells_that_are_tracked_iind]
+                tracked_rew_activity[f'{animal}_{day:03d}'] = [rewlocs,coms_rewrel_tracked]
             except Exception as e:
                 print(e)
 
@@ -116,35 +128,7 @@ rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
 with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
     pickle.dump(dct, fp) 
 
-#%%
-bins = 90
-# tracked cell activity
-tc_tracked_per_cond = {}
-com_tracked_per_cond = {}
-for k,v in tracked_rew_cell_inds.items():
-    if k in tracked_rew_activity.keys():
-        tcs = tracked_rew_activity[k][0]
-        rewlocs = tracked_rew_activity[k][1]
-        coms = tracked_rew_activity[k][2]        
-        animal = k[:-4]
-        if animal=='e145': pln=2
-        else: pln=0
-        tracked_lut = scipy.io.loadmat(rf"Y:\analysis\celltrack\{animal}_daily_tracking_plane{pln}\Results\commoncells_once_per_week.mat")
-        tracked_lut = tracked_lut['commoncells_once_per_week']
-                # find day match with session        
-        txtpth = os.path.join(celltrackpth, rf"{animal}_daily_tracking_plane{pln}\Results")
-        txtpth = os.path.join(txtpth, find_log_file(txtpth))
-        sessions, days = get_days_from_cellreg_log_file(txtpth)    
-        tracked_lut = pd.DataFrame(tracked_lut, columns = days)
-        tc_tracked = np.ones((len(coms), len(tracked_lut), bins))*np.nan        
-        tracked_cell_id = v    
-        tc_tracked[:,tracked_cell_id,:] = tcs
-        tc_tracked_per_cond[k] = tc_tracked
-        coms_tracked = np.ones((len(coms), len(tracked_lut)))*np.nan
-        if len(coms.shape)>2 and coms.shape[2]>1: coms = np.squeeze(coms)
-        elif coms.shape[2]==1: coms = np.reshape(coms, (coms.shape[0],coms.shape[2]))
-        coms_tracked[:,tracked_cell_id] = coms
-        com_tracked_per_cond[k] = coms_tracked
+#
 #%%
 # plot
 # compile per animal tuning curves
@@ -155,26 +139,28 @@ days_per_animal = Counter(days_per_animal)
 ancoms={}
 for annm in animals:
     # TODO: nan pad so that we can get all epochs!!
-    an = np.array([v[:3,:,:] for k,v in tc_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
-    ancom = np.array([v[:3] for k,v in com_tracked_per_cond.items() if k[:-4]==annm and v.shape[0]>2])
+    ancom = np.nansum(np.array([np.nanmedian(v[1],axis=0) for k,v in tracked_rew_activity.items() if k[:-4]==annm]),axis=0)
+    mask1 = np.nansum(ancom,axis=1)>0
+    ancom = ancom[mask1,:]
+    if annm=='e145': pln=2
+    else: pln=0
+    # find day match with session        
+    txtpth = os.path.join(celltrackpth, rf"{annm}_daily_tracking_plane{pln}\Results")
+    txtpth = os.path.join(txtpth, find_log_file(txtpth))
+    sessions, days = get_days_from_cellreg_log_file(txtpth)    
+    days_per_animal = [int(k[5:]) for k,v in tracked_rew_cell_inds.items() if k[:4]==annm]
+    sessions_rec = np.hstack(np.array([np.where(np.array(days)==xx)[0] for xx in days_per_animal]))
+    # cells x days
+    ancom = ancom[:, sessions_rec]
 
-    # remove cells that are nan every tracked day
-    least_tracked_days = 1
-    if len(an)>0:
-        mask = (np.sum(np.sum(np.isnan(an[:,0,:,:]),axis=2),
-                axis=0)<((an.shape[3]*an.shape[0])-((least_tracked_days-1)*an.shape[3]))) # not nan in all positions across all days
-        an = an[:,:,mask,:]    
-
-        ancom = ancom[:,:,mask]
-        median_com_across_ep = np.nanmedian(ancom,axis=1)
-        # remember that this is in radian 
-        median_com_across_ep_and_days = np.nanmedian(median_com_across_ep,axis=0)
-        num_days_tracked = np.sum((np.sum(np.isnan(an[:,0,:,:]),axis=2)<90), axis=0)
-        df = pd.DataFrame()
-        df['median_com_across_ep_and_days'] = median_com_across_ep_and_days
-        df['num_days_tracked'] = num_days_tracked
-        df['animal'] = [annm]*len(num_days_tracked)
-        dfs.append(df)
+    df = pd.DataFrame()
+    df['median_com_across_ep'] = np.ravel(ancom)
+    df['day'] = np.repeat(np.arange(median_com_across_ep.shape[0]), median_com_across_ep.shape[1])
+    df['animal'] = [annm]*len(df)        
+    df['cell'] = np.concatenate([np.arange(median_com_across_ep.shape[1])]*median_com_across_ep.shape[0])
+    df['animal_cell'] = [str(xx)+'_'+str(df.cell.values[ii]) for ii,xx in enumerate(df.animal.values)]
+    df['num_days_tracked'] = np.concatenate([num_days_tracked]*median_com_across_ep.shape[0])
+    dfs.append(df)
         # alternatively, keep epochs intact
         ancoms[annm]=ancom
 dfs = pd.concat(dfs)
@@ -184,23 +170,22 @@ plt.rc('font', size=22)
 # optional = per animal
 # annm = 'e186'
 # dfs = dfs.loc[dfs.animal==annm]
-dfs_av = dfs.groupby(['animal', 'num_days_tracked']).median(numeric_only=True)
+dfs_av = dfs.groupby(['animal_cell', 'day',]).median(numeric_only=True)
 
-dfs = dfs.sort_values(by=['animal'])
-dfs_av = dfs_av.sort_values(by=['animal'])
+dfs = dfs.sort_values(by=['animal_cell'])
+dfs.index = np.arange(len(dfs))
 fig,ax=plt.subplots(figsize=(4,7))
-ax = sns.stripplot(y='median_com_across_ep_and_days',x='num_days_tracked',
-            hue='animal',data=dfs,s=8,alpha=0.4)
-ax = sns.stripplot(y='median_com_across_ep_and_days',x='num_days_tracked',
-            hue='animal',data=dfs_av,s=10)
-ax = sns.boxplot(y='median_com_across_ep_and_days',x='num_days_tracked',
-            color='k',data=dfs, fill=False, width=.5) 
+ax = sns.stripplot(y='median_com_across_ep',x='day',
+            hue='animal_cell',data=dfs,s=8,alpha=0.4)
+
+ax = sns.lineplot(y='median_com_across_ep',x='day',hue='animal_cell',
+            color='k',data=dfs) 
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.00, 1.00))
-ax.set_ylabel('Median COM (rad.)\ncentered at rew. loc.')
+ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
+ax.set_ylabel('Median COM across epochs (rad.)\ncentered at rew. loc.')
 ax.set_xlabel('# of days tracked')
 
-plt.savefig(os.path.join(savedst, f'rewcom_v_days_tracked.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, f'rewcom_v_days_tracked.svg'), bbox_inches='tight')
 #%%
 # plot coms across epochs per day
 an='e218'
