@@ -14,9 +14,9 @@ from projects.DLC_behavior_classification import eye
 
 # Definitions and setups
 mice = ["e216"]#, "e217", "e218"]
-dys_s = [[48]]#, [14, 26, 27], [35, 38, 41, 44, 47, 50]]
+dys_s = [[39]]#, [14, 26, 27], [35, 38, 41, 44, 47, 50]]
 opto_ep_s = [[2]]#, [2, 3, 3], [3, 2, 3, 2, 3, 2]]
-cells_to_plot_s = [[2231]]#, [16,6,9], 
+cells_to_plot_s = [[696]]#, [16,6,9], 
         # [[453,63,26,38], [301, 17, 13, 320], [17, 23, 36, 10], 
         # [6, 114, 11, 24], [49, 47, 6, 37], [434,19,77,5]]]
 src = "X:/vipcre"
@@ -129,8 +129,6 @@ for m, mouse_name in enumerate(mice):
                 dffs_cp_dys.append([meanrewdFF_opto, meanrewdFF_ctrl])
                 indtemp += 1
                 dyind += 1
-#%%
-#%%
 # plot tuning curve before and during opto
 dffarr = np.array(dffs_cp_dys)
 # delete outliers?
@@ -161,3 +159,4 @@ for ii,an in enumerate(an_ranges):
         ax.set_title(f'{mice[ii]}')
 # savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
 # plt.savefig(os.path.join(savedst, 'vip_during_opto.svg'), bbox_inches='tight')
+# %%

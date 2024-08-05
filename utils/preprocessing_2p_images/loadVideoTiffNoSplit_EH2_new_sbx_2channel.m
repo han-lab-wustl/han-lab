@@ -84,16 +84,18 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
    
 %     chtemp=double(chtemp);
 
-    imageJ_savefilename=strrep([filepath,'\',currfile(1:end-4),'.tif'],'\','\\'); %ImageJ needs double slash
-    imageJ_savefilename=['path=[' imageJ_savefilename ']'];
+    imageJ_savefilename1=strrep([filepath,'\',currfile(1:end-4),'_green.tif'],'\','\\'); %ImageJ needs double slash
+    imageJ_savefilename1=['path=[' imageJ_savefilename1 ']'];
+    imageJ_savefilename2=strrep([filepath,'\',currfile(1:end-4),'_red.tif'],'\','\\'); %ImageJ needs double slash
+    imageJ_savefilename2=['path=[' imageJ_savefilename2 ']'];
 %     MIJ.createImage('chone_image', gray2ind(mat2gray(chtemp,[0 32767])), true);
 %     MIJ.createImage('chone_image', gray2ind(mat2gray(chtemp,double(lims)),double(round(ceil(lims(2))/2))), true);
 %     MIJ.createImage('chone_image', uint16(chtemp), true); %creates ImageJ file with 'name', matlab variable name
-    MIJ.createImage('chone_image1',uint16(squeeze(chtemp(1,:,:,:))),true)
+    MIJ.createImage('chone_image1',uint16(squeeze(chtemp(1,:,:,:))),true)  
+    MIJ.run('Save', imageJ_savefilename1);   %saves with defined filename
+    MIJ.run('Close All');
     MIJ.createImage('chone_image2',uint16(squeeze(chtemp(2,:,:,:))),true)
-    MIJ.run('Merge Channels...', 'c1=chone_image2 c2=chone_image1')
-%     MIJ.createImage('chone_image', int16(chtemp), true); %creates ImageJ file with 'name', matlab variable name
-    MIJ.run('Save', imageJ_savefilename);   %saves with defined filename
+    MIJ.run('Save', imageJ_savefilename2);   %saves with defined filename
     MIJ.run('Close All');
 end
 MIJ.exit;

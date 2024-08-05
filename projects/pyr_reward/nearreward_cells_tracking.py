@@ -1,12 +1,9 @@
 
 """
 zahra
-june 2024
-visualize reward-relative cells across days
-idea 1: find all the reward relative cells per day and see if they map onto the same 
-subset of cells
-idea 2: find reward relative cells on the last day (or per week, or per 5 days)
-and see what their activity was like on previous days
+aug 2024
+main idea: find near rew cells on the first day and see if they continue to be 
+near reward
 
 """
 #%%
@@ -31,7 +28,7 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 animals = ['e218','e216','e217','e201','e186','e189','e190', 'e145']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
+radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto.p"
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 celltrackpth = r'Y:\analysis\celltrack'
@@ -124,7 +121,7 @@ for dd,day in enumerate(conddf.days.values):
 
 dct = {}; dct['rew_cells_tracking'] = [tracked_rew_cell_inds,tracked_rew_activity]
 # save pickle of dcts
-rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
+rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_nearrew_cells.p"
 with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
     pickle.dump(dct, fp) 
 
@@ -169,23 +166,6 @@ for annm in animals:
         df2['cell'] = np.arange(ancom.shape[0])
         df2['animal_cell'] = [str(xx)+'_'+str(df2.cell.values[ii]) for ii,xx in enumerate(df2.animal.values)]
         df2s.append(df2)
-        # get epochs separately        
-        ancom = [v[1] for k,v in tracked_rew_activity.items() if k[:-4]==annm]
-        # make nanpad to get all epochs
-        # days x epochs x cells
-        ancom_pad = np.ones((len(ancom), 4, ancom[0].shape[1]))*np.nan
-        for dy in range(len(ancom_pad)):
-            ancom_pad[dy, :ancom[dy].shape[0],:] = ancom[dy][:,:,dy]
-        
-        df3  = pd.DataFrame()
-        df2['com'] = ancom_pad
-        df2['num_days_tracked'] = [np.sum(np.isnan(xx)) for xx in ancom]
-        df2['animal'] = [annm]*len(df2)        
-        df2['cell'] = np.arange(ancom.shape[0])
-        df2['animal_cell'] = [str(xx)+'_'+str(df2.cell.values[ii]) for ii,xx in enumerate(df2.animal.values)]
-        df2s.append(df2)
-        
-
 dfs = pd.concat(dfs)
 df2s = pd.concat(df2s)
 # num tracked days vs. median com
@@ -210,8 +190,8 @@ ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
 ax.set_ylabel('Median COM across epochs (rad.)\ncentered at rew. loc.')
 ax.set_xlabel('# of days tracked')
 
-# plt.savefig(os.path.join(savedst, f'rewcom_v_days_tracked.svg'), bbox_inches='tight')
 #%%
+
 # plot median across days
 plt.rc('font', size=22) 
 dfs_av = df2s.groupby(['animal_cell']).median(numeric_only=True)
@@ -229,39 +209,3 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
 ax.set_ylabel('Median COM across ep. & days\ncentered at rew. loc.')
 ax.set_xlabel('# of days tracked')
-
-#%%
-
-# plot individual cell traces
-# shp = int(np.ceil(np.sqrt(an.shape[2])))
-# fig, axes = plt.subplots(ncols=shp,
-#                     nrows=shp,sharex=True,
-#                     figsize=(30,20))
-# import matplotlib as mpl
-# name = "tab20"
-# cmap = mpl.colormaps[name]  # type: matplotlib.colors.ListedColormap
-# colors = cmap.colors  # type: list
-
-# for dy in range(an.shape[0]):  
-#     plt.rc('font', size=10)
-#     rr=0;cc=0
-#     for ii in range(an.shape[2]):
-#         ax=axes[rr,cc]
-#         # for jj in range(an.shape[1]): # epochs
-#         jj=0;ax.plot(an[dy,jj,ii,:], color=colors[dy]) # just plot epoch 1
-#         cell_days_tracked = np.sum(np.sum(np.isnan(an[:,jj,ii,:]),axis=1)<90)
-#         ax.set_title(f'cell {ii}, days tracked {cell_days_tracked}')
-#         ax.spines[['top','right']].set_visible(False)
-#         ax.axvline(x = int(bins/2), color='k', linestyle='--')
-#         ax.set_xticks(np.arange(0,bins+1,10))
-#         ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),1))
-#         if ii==an.shape[0]-1:
-#             ax.set_xlabel('Radian position \n(centered at start of rew loc)')
-#         rr+=1
-#         if rr>np.ceil(np.sqrt(an.shape[2]))-1:cc+=1;rr=0        
-#     # fig.suptitle(f'Day {dy}')
-# fig.suptitle(f'{annm}, all days')
-# fig.tight_layout()
-# plt.savefig(os.path.join(savedst, f'{annm}.svg'))
-# %%
-# plot com of a cell vs. number of tracked days
