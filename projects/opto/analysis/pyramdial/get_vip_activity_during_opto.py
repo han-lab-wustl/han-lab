@@ -14,9 +14,11 @@ from projects.DLC_behavior_classification import eye
 
 # Definitions and setups
 mice = ["e216"]#, "e217", "e218"]
-dys_s = [[39]]#, [14, 26, 27], [35, 38, 41, 44, 47, 50]]
-opto_ep_s = [[2]]#, [2, 3, 3], [3, 2, 3, 2, 3, 2]]
-cells_to_plot_s = [[696]]#, [16,6,9], 
+dys_s = [[37,38,39,40,41]]#, [14, 26, 27], [35, 38, 41, 44, 47, 50]]
+dys_s = [[43,44,45,48]]
+opto_ep_s = [[2,2,2,2]]#, [2, 3, 3], [3, 2, 3, 2, 3, 2]]
+cells_to_plot_s = [[466,159,423,200,299]]#, [16,6,9], 
+cells_to_plot_s = [[2352,1804,751,2231]]#, [16,6,9], 
         # [[453,63,26,38], [301, 17, 13, 320], [17, 23, 36, 10], 
         # [6, 114, 11, 24], [49, 47, 6, 37], [434,19,77,5]]]
 src = "X:/vipcre"
@@ -129,34 +131,59 @@ for m, mouse_name in enumerate(mice):
                 dffs_cp_dys.append([meanrewdFF_opto, meanrewdFF_ctrl])
                 indtemp += 1
                 dyind += 1
+#%%
 # plot tuning curve before and during opto
 dffarr = np.array(dffs_cp_dys)
 # delete outliers?
 # dffarr = np.delete(dffarr,2,0)
 # dffarr = np.delete(dffarr,5,0)
-an_ranges = [range(4), range(4,7), range(7,11)]
-an_ranges = [range(1)]
-for ii,an in enumerate(an_ranges):
-        fig, ax = plt.subplots()
-        meantc = np.nanmean(dffarr[an,1,:],axis=0)
-        ax.plot(meantc, color='k', label='LED off')   
+dyrng = dffarr.shape[0]
+sq = int(np.ceil(np.sqrt(dyrng)))
+fig, axes = plt.subplots(nrows=sq,ncols=sq, figsize=(14,9))
+r=0;c=0
+for ii,dy in enumerate(range(dyrng)):
+        ax = axes[r,c]
+        meantc = dffarr[dy,1,:]
+        ax.plot(meantc, color='k')   
         xmin,xmax = ax.get_xlim()     
-        ax.fill_between(np.arange(0,(range_val*2)/binsize), 
-                meantc-scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'),
-                meantc+scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'), color = 'k', alpha=0.2)        
-        meantc = np.nanmean(dffarr[an,0,:],axis=0)
-        ax.plot(meantc, color='r', label='LED on')   
-        xmin,xmax = ax.get_xlim()     
-        ax.fill_between(np.arange(0,(range_val*2)/binsize), 
-                meantc-scipy.stats.sem(dffarr[:,1,:],axis=0,nan_policy='omit'),
-                meantc+scipy.stats.sem(dffarr[:,1,:],axis=0,nan_policy='omit'), color = 'r', alpha=0.2)        
+        # ax.fill_between(np.arange(0,(range_val*2)/binsize), 
+        #         meantc-scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'),
+        #         meantc+scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'), 
+        #         color = 'k', alpha=0.2)        
         ax.set_xlabel('Time from reward (s)')
         ax.set_ylabel('dF/F')
+        ax.axvline(int(range_val/binsize), color='slategray', linestyle='--')
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.spines[['top','right']].set_visible(False)
-        ax.legend()
-        ax.set_title(f'{mice[ii]}')
-# savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
-# plt.savefig(os.path.join(savedst, 'vip_during_opto.svg'), bbox_inches='tight')
+        ax.set_title(f'Day {dy+1}, e216')
+        if r<int(np.ceil(np.sqrt(dyrng)))-1: r+=1
+        else: c+=1; r=0
+fig.tight_layout()
+savedst = r'C:\Users\Han\Box\Han_lab_dropbox\UndergradRA\Maggie\2p_images\figures_from_zahra'
+plt.savefig(os.path.join(savedst, 'vip_cck_per_day.svg'), bbox_inches='tight')
+
+#%%
+# plot overlay of days
+fig, ax = plt.subplots(figsize=(8,5))
+
+for ii,dy in enumerate(range(dyrng)):
+        meantc = dffarr[dy,1,:]
+        ax.plot(meantc, label=f'Day {dy+1}')   
+xmin,xmax = ax.get_xlim()     
+# ax.fill_between(np.arange(0,(range_val*2)/binsize), 
+#         meantc-scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'),
+#         meantc+scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'), 
+#         color = 'k', alpha=0.2)        
+ax.set_xlabel('Time from reward (s)')
+ax.set_ylabel('dF/F')
+ax.legend(bbox_to_anchor=(1.00, 1.00))
+ax.axvline(int(range_val/binsize), color='slategray', linestyle='--')
+ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+ax.set_xticklabels(range(-range_val, range_val+1, 1))
+ax.spines[['top','right']].set_visible(False)
+ax.set_title(f'e216')        
+fig.tight_layout()
+
+plt.savefig(os.path.join(savedst, 'vip_cck_across_days.svg'), bbox_inches='tight')
 # %%
