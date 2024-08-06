@@ -1,5 +1,8 @@
 """
 calculate proportion of goal cells using old way
+eleonora's method of using absolute distance
+added ways to take mean across null distribution
+matched to radian alignment distance method for getting goal cells
 zahra
 aug 2024
 """
@@ -39,10 +42,11 @@ epoch_perm = []
 
 for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
-    if not animal=='e217':
+    if (animal!='e217') & (conddf.optoep.values[ii]==-1):
         day = conddf.days.values[ii]
-        plane=0 #TODO: make modular  
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
+        pln=0
+        if animal=='e145': pln=2
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
         #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
         fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
@@ -51,7 +55,10 @@ for ii in range(len(conddf)):
         changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum = fall['trialnum'][0]; rewards = fall['rewards'][0]
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
-        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf
+        try:
+                rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+        except:
+                rewsize = 10
         ybinned = fall['ybinned'][0]/scalingf; timedFF = fall['timedFF'][0]
         forwardvel = fall['forwardvel'][0]
         eptest = conddf.optoep.values[ii]
@@ -77,10 +84,13 @@ for ii in range(len(conddf)):
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in coms_rewrel]
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
+        # get per comparison
+        goal_cells_p_per_comparison = [len(xx)/len(coms[0]) for xx in com_goal]
+
         dist_to_rew.append(np.array([com-rewlocs[ii] for ii, com in enumerate(coms)]))        
         goal_cell_iind.append(goal_cells)
         goal_cell_p=len(goal_cells)/len(coms[0])
-        goal_cell_prop.append(goal_cell_p)
+        goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p])
         num_epochs.append(len(coms))
         colors = ['navy', 'red', 'green', 'k','darkorange']
         for gc in goal_cells:
@@ -128,12 +138,10 @@ for ii in range(len(conddf)):
 
 pdf.close()
 # %%
-
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
-inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep==-1) & (df.index.isin(inds))]
+df = df[((df.animals!='e217')) & (df.optoep==-1)]
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = [xx[1] for xx in goal_cell_prop]
 df['opto'] = df.optoep.values>1

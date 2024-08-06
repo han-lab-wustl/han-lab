@@ -150,7 +150,8 @@ for ii in range(len(conddf)):
         goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
         goal_cell_null.append([goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av])
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        pvals.append(p_value); print(p_value)
+        pvals.append(p_value)
+        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
         total_cells.append(len(coms_correct[0])) 
         radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
                         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
