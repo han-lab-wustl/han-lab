@@ -51,9 +51,13 @@ for ii in range(len(conddf)):
         #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
         fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_early_trials',
             'tuning_curves_late_trials', 'coms', 'coms_early_trials', 'trialnum', 'rewards',
-            'ybinned', 'forwardvel', 'timedFF', 'VR'])        
+            'ybinned', 'forwardvel', 'timedFF', 'VR', 'dFF', 'iscell', 'bordercells'])        
         changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum = fall['trialnum'][0]; rewards = fall['rewards'][0]
         VR = fall['VR'][0][0][()]
+        dFF = fall['dFF']
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+
         scalingf = VR['scalingFACTOR'][0][0]
         try:
                 rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
@@ -73,21 +77,23 @@ for ii in range(len(conddf)):
         tcs_early = fall['tuning_curves_early_trials'][0]
         tcs_late = fall['tuning_curves_late_trials'][0]
         # coms_early = fall['coms_pc_early_trials'][0]
-        coms = fall['coms'][0]
-        coms_early = fall['coms_early_trials'][0]    
+        coms = fall['coms'][0]        
         goal_window = 20 # cm
-        coms = np.array([np.hstack(xx) for xx in coms])
+        # removes interneurons
+        coms = np.array([np.hstack(xx)[skew>2] for xx in coms])
         # relative to reward
         coms_rewrel = np.array([com-rewlocs[ii] for ii, com in enumerate(coms)])                 
         perm = list(combinations(range(len(coms)), 2))     
         epoch_perm.append(perm)
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in coms_rewrel]
+        
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
         # get per comparison
-        goal_cells_p_per_comparison = [len(xx)/len(coms[0]) for xx in com_goal]
+        goal_cells_p_per_comparison = [len(np.intersect1d(com_goal[perm[jj][0]],
+                com_goal[perm[jj][1]]))/len(coms[0]) for jj in range(len(perm))]
 
-        dist_to_rew.append(np.array([com-rewlocs[ii] for ii, com in enumerate(coms)]))        
+        dist_to_rew.append(coms_rewrel)        
         goal_cell_iind.append(goal_cells)
         goal_cell_p=len(goal_cells)/len(coms[0])
         goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p])
@@ -118,10 +124,10 @@ for ii in range(len(conddf)):
             # relative to reward
             coms_rewrel = np.array([com-rewlocs_shuf[ii] for ii, com in enumerate(com_shufs)])             
             perm = list(combinations(range(len(coms)), 2))     
-            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             # get goal cells across all epochs
-            com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-            goal_cells_shuf_p_per_comparison = [len(xx)/len(coms[0]) for xx in com_goal]
+            com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in coms_rewrel]
+            goal_cells_shuf_p_per_comparison = np.array([len(np.intersect1d(com_goal[perm[jj][0]],
+                com_goal[perm[jj][1]]))/len(coms[0]) for jj in range(len(perm))])
             goal_cells_shuf = intersect_arrays(*com_goal); shuffled_dist[i] = len(goal_cells_shuf)/len(coms[0])
             goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
             goal_cell_shuf_ps.append(goal_cell_shuf_p)
@@ -134,7 +140,7 @@ for ii in range(len(conddf)):
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         pvals.append(p_value)
         total_cells.append(len(coms[0]))
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
+        print(f'{animal}, day {day}: significant goal cells p-value: {p_value}')
 
 pdf.close()
 # %%
@@ -241,7 +247,7 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 
 eps = [2,3,4]
-y = 0.45
+y = 0.08
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -255,4 +261,4 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+.05, f'p={pval:.3g}')
+        ax.text(ii, y+.01, f'p={pval:.3g}')
