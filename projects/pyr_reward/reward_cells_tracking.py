@@ -137,7 +137,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 #%%
 # plot
 # compile per animal tuning curves
-dfs = []; df2s = []
+dfs = []; df2s = []; df3s = []
 animals = ['e218','e216','e200','e201','e186','e189','e190', 'e145']
 for annm in animals:
     # TODO: nan pad so that we can get all epochs!!
@@ -154,19 +154,19 @@ for annm in animals:
             txtpth = os.path.join(celltrackpth, rf"{annm}_daily_tracking_plane{pln}\Results")
             txtpth = os.path.join(txtpth, find_log_file(txtpth))
             sessions, days = get_days_from_cellreg_log_file(txtpth)    
-            days_per_animal = [int(k[5:]) for k,v in tracked_rew_cell_inds.items() if k[:4]==annm]
+            days_per_animal = conddf.loc[((conddf.animals.values==annm) & (conddf.optoep.values==-1)),'days'].values
             sessions_rec = np.hstack(np.array([np.where(np.array(days)==xx)[0] for xx in days_per_animal]))
             # cells x days
-            # get only recorded sessions
+            # get only recorded sessions            
             ancom = ancom[:, sessions_rec]
-
             df = pd.DataFrame()
             df['median_com_across_ep'] = np.ravel(ancom)
-            df['day'] = np.concatenate([np.arange(ancom.shape[1])]*ancom.shape[0])
+            df['day'] = np.concatenate([np.arange(ancom.shape[1])]*ancom.shape[0])+1
             df['animal'] = [annm]*len(df)        
             df['cell'] = np.repeat(tracked_cell_ind, ancom.shape[1])+1
             df['animal_cell'] = [str(xx)+'_'+str(df.cell.values[ii]) for ii,xx in enumerate(df.animal.values)]
             dfs.append(df)
+                    
             df2  = pd.DataFrame()
             df2['median_com_across_ep_days'] = np.nanmedian(ancom,axis=1)
             df2['num_days_tracked'] = [np.sum(~np.isnan(xx)) for xx in ancom]
@@ -175,14 +175,30 @@ for annm in animals:
             df2['animal_cell'] = [str(xx)+'_'+str(df2.cell.values[ii]) for ii,xx in enumerate(df2.animal.values)]
             df2s.append(df2)
             # get epochs separately        
-            # ancom = [v[1] for k,v in tracked_rew_activity.items() if k[:-4]==annm]
-            # # make nanpad to get all epochs
-            # # days x epochs x cells
-            # ancom_pad = np.ones((len(ancom), 4, ancom[0].shape[1]))*np.nan
-            # for dy in range(len(ancom_pad)):
-            #     ancom_pad[dy, :ancom[dy].shape[0],:] = ancom[dy][:,:,dy]
+            ancom=coms[annm]
+            tracked_cell_ind = np.arange(ancom.shape[1])
+            # mask of epoch 1 only
+            mask1 = np.nansum(ancom[0,:,:],axis=1)>0
+            ancom = ancom[:,mask1,:]
+            tracked_cell_ind = tracked_cell_ind[mask1]
+            ancom = ancom[:, :, sessions_rec]
+            print(f'animal: {annm}, days rec: {ancom.shape[2]}')
+            # ravel  = day 1,2,3... x cell 1,2,3 ... x epoch CHECKED THIS
+            df3  = pd.DataFrame()
+            df3['com'] = np.ravel(ancom)
+            df3['day'] =  np.concatenate([np.concatenate([list(range(ancom.shape[2]))]*(ancom.shape[1]))]*ancom.shape[0])
+            df3['cell'] = np.repeat(np.repeat(tracked_cell_ind, ancom.shape[2])+1, ancom.shape[0])
+            df3['epoch'] = np.repeat(list(range(ancom.shape[0])), ancom.shape[2]*ancom.shape[1])
+            df3['epoch_day'] = [str(xx)+'_'+str(df3.day.values[ii]) for ii,xx in enumerate(df3.epoch.values)]
+            df3['animal'] = [annm]*len(df3)   
+            df3['epoch_animal_day'] = [str(xx)+'_'+str(df3.day.values[ii])+'_'+str(df3.animal.values[ii]) for ii,
+                    xx in enumerate(df3.epoch.values)]   
+            df3['animal_cell'] = [str(xx)+'_'+str(df3.cell.values[ii]) for ii,xx in enumerate(df3.animal.values)]    
+            df3s.append(df3)  
 dfs = pd.concat(dfs)
 df2s = pd.concat(df2s)
+df3s = pd.concat(df3s)
+
 # num tracked days vs. median com
 #%%
 plt.rc('font', size=22) 
@@ -204,6 +220,26 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
 ax.set_ylabel('Median COM across epochs (rad.)\ncentered at rew. loc.')
 ax.set_xlabel('Day')
+dfsplt.to_csv(r'C:\Users\Han\Desktop\test.csv')
+#%%
+# per epoch
+plt.rc('font', size=12) 
+dfsplt = df3s.sort_values(by=['epoch_day', 'animal_cell'])
+dfsplt.index = np.arange(len(dfsplt))
+# optional = per animal
+annm = 'e216'
+dfsplt = dfsplt.loc[dfsplt.animal==annm]
+
+fig,ax=plt.subplots(figsize=(10,7))
+ax = sns.stripplot(y='com',x='epoch_day',
+            hue='animal_cell',data=dfsplt,s=8,alpha=0.4)
+sns.lineplot(y='com',x='epoch_day',
+            hue='animal_cell',data=dfsplt,ax=ax)
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
+ax.set_ylabel('COM\ncentered at rew. loc.')
+ax.tick_params(axis='x', rotation=90)
 
 #%%
 sns.histplot(dfsplt.median_com_across_ep,bins=50)

@@ -1,4 +1,4 @@
-function loadVideoTiffNoSplit_Opto(src, days, lenVid)
+function loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold)
 %called by "runVideosTiff_EH_new_sbx_uint16"
 %version that doesn't divide by 2 for non-suite2p analysis
 % modified from moi's version.
@@ -21,7 +21,7 @@ MIJ.start;    %calls Fiji
 
 for day=days
     filename = dir(fullfile(src, string(day), '*2*', '*.sbx'));
-    cd (filename.folder); %set path    
+    cd (filename.folder); %set path
     stripped_filename=fullfile(filename.folder,filename.name);
     stripped_filename= strtok(stripped_filename,'.');
     z = sbxread(stripped_filename,1,1);
@@ -64,7 +64,7 @@ for day=days
         for p = 1:size(info.etl_table,1)
             currx = p:size(info.etl_table,1):length(temp);
             temp2 = (abs(temp(currx)/nanmean(temp(currx))-1));
-            s = find(temp2>0.4);
+            s = find(temp2>threshold);
             if ~isempty(s)
                 tempstims(currx(s)) = 1;
             end

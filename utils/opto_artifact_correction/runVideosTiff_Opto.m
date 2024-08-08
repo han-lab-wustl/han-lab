@@ -15,11 +15,12 @@
 % directories
 
 clear all; close all;
-days=[103];
-src = 'Z:\chr2_grabda\e232';
+days=[63];
+src = 'Z:\chr2_grabda\e231';
 % src = 'X:\vipcre\e217';
 lenVid=3000;
-loadVideoTiffNoSplit_Opto(src, days, lenVid);
+threshold = 0.4; % a tunable parameter to find stims, set at 0.4 for chr2 data 
+loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold);
 
 
 
