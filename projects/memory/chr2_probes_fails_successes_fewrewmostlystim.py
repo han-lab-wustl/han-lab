@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
-from dopamine import get_rewzones
+from dopamine import extract_vars, get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
@@ -38,8 +38,8 @@ animals = ['e231', 'e232']
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
 days_all = [[57,58,59,60,61,62,63],
             [99,100,101,102,103,104,105]]
-numtrialsstim=10
-range_val = 8; binsize=0.2
+numtrialsstim=10 # stim every 10 trials
+range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 opto_cond = 'Opto' # experiment condition
 # optodays = [18, 19, 22, 23, 24]
@@ -58,52 +58,18 @@ for ii,animal in enumerate(animals):
         stims = scipy.io.loadmat(stimspth)
         stims = np.hstack(stims['stims']) # nan out stims
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
-            params = scipy.io.loadmat(path)
-            VR = params['VR'][0][0]; gainf = VR[14][0][0]             
-            planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
-            pln = int(planenum[-1])
-            layer = planelut[pln]
-            params_keys = params.keys()
-            keys = params['params'].dtype
-            # dff is in row 7 - roibasemean3/average
-            dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))#/np.hstack(params['params'][0][0][9])
-            # fig, ax = plt.subplots()
-            # ax.plot(dff)
-            # nan out stims
-            dff[stims[pln::4].astype(bool)] = np.nan
-            
-            dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(3).mean().values)
-            rewards = np.hstack(params['solenoid2'])
+            # get vars
+            dff, rewards, trialnum, ybinned, licks, \
+            timedFF, rews_centered, layer, firstrew, catchtrialsnum, gainf, rewsize = extract_vars(path, stims, rewloc, newrewloc)
+            # in case of uneven rec planes, etc.
             if dff.shape[0]<rewards.shape[0]:
-                rewards = np.hstack(params['solenoid2'])[:-1]
-                trialnum = np.hstack(params['trialnum'])[:-1]
-                ybinned = np.hstack(params['ybinned'])[:-1]/gainf
-                licks = np.hstack(params['licks'])[:-1]
-                timedFF = np.hstack(params['timedFF'])[:-1]
-            else:
-                rewards = np.hstack(params['solenoid2'])
-                trialnum = np.hstack(params['trialnum'])
-                ybinned = np.hstack(params['ybinned'])/gainf
-                licks = np.hstack(params['licks'])
-                timedFF = np.hstack(params['timedFF'])
-            # mask out dark time
-            dff = dff[ybinned>3]
-            rewards = rewards[ybinned>3]
-            trialnum = trialnum[ybinned>3]
-            licks = licks[ybinned>3]
-            timedFF = timedFF[ybinned>3]
-            ybinned = ybinned[ybinned>3]
-            # plot pre-first reward dop activity    
-            firstrew = np.where(rewards==1)[0][0]
-            rews_centered = np.zeros_like(ybinned[:firstrew])
-            rews_centered[(ybinned[:firstrew] >= rewloc-3) & (ybinned[:firstrew] <= rewloc+3)]=1
-            rews_iind = consecutive_stretch(np.where(rews_centered)[0])
-            min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
-            rews_centered = np.zeros_like(ybinned[:firstrew])
-            rews_centered[min_iind]=1
-            
-            # plot behavior
+                rewards = rewards[:-1]
+                trialnum = trialnum[:-1]
+                ybinned = ybinned[:-1]
+                licks = licks[:-1]
+                timedFF = timedFF[:-1]
+
+            ###################### plot behavior ######################
             fig, ax = plt.subplots()
             ax.plot(ybinned)
             ax.scatter(np.where(rewards>0)[0], ybinned[np.where(rewards>0)[0]], color = 'cyan', s=30)
@@ -114,7 +80,6 @@ for ii,animal in enumerate(animals):
             ax.set_title(f'Animal {animal}, Day {day}, {layer}')
             fig.tight_layout()
             pdf.savefig(fig)
-
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF = eye.perireward_binned_activity(dff[:firstrew], rews_centered, timedFF[:firstrew], range_val, binsize)
             # peri reward initial probes        
@@ -138,25 +103,13 @@ for ii,animal in enumerate(animals):
             ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
             ax.set_title('Probe Trials (Centered by prev. rewloc)')
-            # # center by old rew zone
-            # rews_centered = np.zeros_like(ybinned)
-            # rews_centered[(ybinned > rewloc-2) & (ybinned < rewloc+2)]=1
-            # rews_iind = consecutive_stretch(np.where(rews_centered)[0])
-            # min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
-            # rews_centered = np.zeros_like(ybinned)
-            # rews_centered[min_iind]=1
-            
-            #TODO: peri reward catch trials
-            # failed trials
-            trialnumvr = VR[8][0]
-            catchtrialsnum = trialnumvr[VR[16][0].astype(bool)]
-            
+            # note that in this experiment file, catch trials are 'reward eligible'
+            # trials            
             success, fail, str_trials, ftr_trials, ttr, \
             total_trials = get_success_failure_trials(trialnum, rewards)
             # split into opto vs. non opto
             # opto
-            failtr_bool = np.array([(xx in ftr_trials) and 
-                    (xx not in catchtrialsnum) and (xx%numtrialsstim==0) for xx in trialnum])
+            failtr_bool = np.array([(xx in ftr_trials) and (xx%numtrialsstim==0) for xx in trialnum])
             failed_trialnum = trialnum[failtr_bool]
             rews_centered = np.zeros_like(failed_trialnum)
             rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1
@@ -169,8 +122,7 @@ for ii,animal in enumerate(animals):
                 rews_centered, timedFF[failtr_bool], range_val, binsize)
             
             # nonopto  
-            failtr_bool = np.array([(xx in ftr_trials) and 
-                    (xx not in catchtrialsnum) and (xx%numtrialsstim==1) for xx in trialnum])        
+            failtr_bool = np.array([(xx in ftr_trials)and (xx%numtrialsstim==1) for xx in trialnum])        
             failed_trialnum = trialnum[failtr_bool]
             rews_centered = np.zeros_like(failed_trialnum)
             rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1

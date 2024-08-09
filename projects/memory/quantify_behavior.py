@@ -1,5 +1,7 @@
 """
 quantify licks and velocity during consolidation task
+aug 24
+TODO: get first lick during probes
 """
 #%%
 import os, numpy as np, h5py, scipy, seaborn as sns, sys, pandas as pd, itertools
@@ -33,7 +35,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 #     [70,71,72,73,74,75,76,77,78,79]]
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],
 #             [82,83,84,85,86,87,88,89,90,91,93,94,95]]
-days_all = [[57,58,59,60,61,62],[99,100,101,102,103,104]]
+days_all = [[57,58,59,60,61,62,63],
+            [99,100,101,102,103,104,105]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
