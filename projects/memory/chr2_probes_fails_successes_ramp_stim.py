@@ -22,7 +22,7 @@ import matplotlib.patches as patches
 #%%
 plt.close('all')
 # save to pdf
-dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
+dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"chr2_ramp_opto_peri_analysis.pdf"))
 

@@ -21,9 +21,9 @@ for ep=1:length(eps)-1
             strials(trial)=trial; % successful and fail trials
         end
     end
-    % strials = strials(~isnan(strials)); % only uses successful trials
-    % mask = ismember(trn, strials);
-    % eprng = eprng(mask);
+    strials = strials(~isnan(strials)); % only uses successful trials or specified trials
+    mask = ismember(trn, strials);
+    eprng = eprng(mask);
     if ~isempty(eprng)
         ypos = ybinned(eprng);
         % ypos = ceil(ypos*(gainf));
@@ -90,7 +90,7 @@ for ep=1:length(eps)-1
         peak(c) = 0;
     end
     end
-    % coms{ep} = peak; %median_com;
+    % coms{ep} = peak;
     coms{ep} = median_com;
 end
 % end

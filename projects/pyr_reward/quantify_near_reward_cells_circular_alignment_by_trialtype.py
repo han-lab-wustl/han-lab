@@ -40,6 +40,7 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
+goal_window = 50 # to search for rew cells
 #%%
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -95,7 +96,7 @@ for ii in range(len(conddf)):
             Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
             tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
-        goal_window = 30*(2*np.pi/track_length) # cm converted to rad
+        goal_window = goal_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         # only get cells near reward        

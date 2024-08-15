@@ -17,6 +17,7 @@ mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -38,6 +39,7 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
+cm_window = 50 # cm
 #%%
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -75,14 +77,7 @@ for ii in range(len(conddf)):
         ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
         lasttr=8 # last trials
         bins=90
-        rad = [] # get radian coordinates
-        # same as giocomo preprint - worked with gerardo
-        for i in range(len(eps)-1):
-            y = ybinned[eps[i]:eps[i+1]]
-            rew = rewlocs[i]-rewsize/2
-            # convert to radians and align to rew
-            rad.append((((((y-rew)*2*np.pi)/track_length)+np.pi)%(2*np.pi))-np.pi)
-        rad = np.concatenate(rad)
+        rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum, rewards)
@@ -103,7 +98,7 @@ for ii in range(len(conddf)):
             Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
             tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
-        goal_window = 30*(2*np.pi/track_length) # cm converted to rad
+        goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         perm = list(combinations(range(len(coms_correct)), 2))     
@@ -131,7 +126,7 @@ for ii in range(len(conddf)):
             ax.legend()
             pdf.savefig(fig)
             plt.close(fig)
-        # get shuffled iterations
+        # get shuffled iterationsollllllpoik
         num_iterations = 5000; shuffled_dist = np.zeros((num_iterations))
         # max of 5 epochs = 10 perms
         goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
@@ -276,7 +271,8 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 
 eps = [2,3,4]
-y = 0.45
+y = 0.55
+pshift = 0.1
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -290,7 +286,7 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+.05, f'p={pval:.3g}')
+        ax.text(ii, y+pshift, f'p={pval:.3g}')
 
 plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.svg'), 
         bbox_inches='tight')

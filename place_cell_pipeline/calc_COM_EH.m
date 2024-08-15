@@ -8,9 +8,9 @@ function com = calc_COM_EH(spatial_act,bin_width)
 bin = zeros(size(spatial_act,1),1);%1st bin above mid pt
 frac = zeros(size(spatial_act,1),1);%fraction for interpolated COM
 com = zeros(size(spatial_act,1),1);%interpolated COM in cm
-sum_spatial_act=sum(spatial_act,2);%get total fl. from tuning curve
+sum_spatial_act=sum(spatial_act,2,'omitnan');%get total fl. from tuning curve
 mid_sum=sum_spatial_act/2;%mid point of total fl.
-spatial_act_cum_sum=cumsum(spatial_act,2);%cumulative sum of fl in tuning curve
+spatial_act_cum_sum=cumsum(spatial_act,2,'omitnan');%cumulative sum of fl in tuning curve
 idx_above_mid=spatial_act_cum_sum>=mid_sum;%logical of indexes above mid fl
 for i = 1:size(spatial_act,1)
     if ~isnan(sum_spatial_act(i))

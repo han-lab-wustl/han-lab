@@ -36,8 +36,8 @@ animals = ['e231', 'e232']
 # days_all = [[28,29,30,31,32,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
-days_all = [[57,58,59,60,61,62,63],
-            [99,100,101,102,103,104,105]]
+days_all = [[57,58,59,60,61,62,63,64],
+            [99,100,101,102,103,104,105,106]]
 numtrialsstim=10 # stim every 10 trials
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -60,7 +60,8 @@ for ii,animal in enumerate(animals):
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             # get vars
             dff, rewards, trialnum, ybinned, licks, \
-            timedFF, rews_centered, layer, firstrew, catchtrialsnum, gainf, rewsize = extract_vars(path, stims, rewloc, newrewloc)
+            timedFF, rews_centered, layer, firstrew, catchtrialsnum, \
+            gainf, rewsize = extract_vars(path, stims, rewloc, newrewloc)
             # in case of uneven rec planes, etc.
             if dff.shape[0]<rewards.shape[0]:
                 rewards = rewards[:-1]
@@ -109,7 +110,7 @@ for ii,animal in enumerate(animals):
             total_trials = get_success_failure_trials(trialnum, rewards)
             # split into opto vs. non opto
             # opto
-            failtr_bool = np.array([(xx in ftr_trials) and (xx%numtrialsstim==0) for xx in trialnum])
+            failtr_bool = np.array([(xx in ftr_trials) and (xx%numtrialsstim==1) for xx in trialnum])
             failed_trialnum = trialnum[failtr_bool]
             rews_centered = np.zeros_like(failed_trialnum)
             rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1
@@ -122,7 +123,7 @@ for ii,animal in enumerate(animals):
                 rews_centered, timedFF[failtr_bool], range_val, binsize)
             
             # nonopto  
-            failtr_bool = np.array([(xx in ftr_trials)and (xx%numtrialsstim==1) for xx in trialnum])        
+            failtr_bool = np.array([(xx in ftr_trials)and (xx%numtrialsstim==0) for xx in trialnum])        
             failed_trialnum = trialnum[failtr_bool]
             rews_centered = np.zeros_like(failed_trialnum)
             rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1
@@ -239,14 +240,16 @@ height = 1.035 # ylim
 #%%
 # 2 -quantify so transients
 # get time period around stim
-time_rng = range(int(range_val/binsize-0/binsize),
+time_rng = range(int(range_val/binsize-0.5/binsize),
             int(range_val/binsize+(2/binsize))) # during and after stim
 before_time_rng = range(int(range_val/binsize-1/binsize),
             int(range_val/binsize-0/binsize)) # during and after stim
 
 # normalize pre-window to 1
 # remember than here we only take led off trials bc of artifact
-so_transients_opto = [day_date_dff_arr_opto[ii,3,1,:]/np.nanmean(day_date_dff_arr_opto[ii,3,1,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
+# in array: 1 - index = nonopto; 0 = opto
+so_transients_opto = [day_date_dff_arr_opto[ii,3,1,:]/np.nanmean(day_date_dff_arr_opto[ii,3,1,:int(range_val/binsize)]) for ii,
+                    xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
 so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
 so_transients_nonopto = [day_date_dff_arr_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_arr_nonopto[ii,
                     3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]

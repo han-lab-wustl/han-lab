@@ -3,7 +3,7 @@
 
 clear all; close all; clear all
 src =  'Y:\analysis'; % main folder for analysis
-animal = 'e200';
+animal = 'e218';
 fld = sprintf('%s_daily_tracking_plane0',animal);
 pth = dir(fullfile(src, 'celltrack', fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
@@ -11,7 +11,7 @@ load(fullfile(pth.folder, pth.name))
 [r,c] = find(cell_registered_struct.cell_to_index_map~=0);
 [counts, bins] = hist(r,1:size(r,1));
 sessions=length(cell_registered_struct.centroid_locations_corrected);% specify no of sessions
-cindex = bins(counts>=2); % finding cells in all sessions
+cindex = bins(counts>=2); % finding cells in at least 2 sessions
 commoncells=zeros(length(cindex),sessions);
 % make matrix of commoncells
 for ci=1:length(cindex)

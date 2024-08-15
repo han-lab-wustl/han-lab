@@ -1,6 +1,6 @@
 """
 quantify licks and velocity during consolidation task
-aug 24
+aug 2024
 TODO: get first lick during probes
 """
 #%%
@@ -27,16 +27,17 @@ src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
 # animals = ['e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-# days_all = [[2,3,4,5,6,7,8,9,10,11],#,12,13,15,16],
-#         [44,45,46,47,48,49,50,51]]#,54,55,56,57]]
-# days_all = [[17,18,19,20,21,23,24,25,26,27], # dark time
-#         [59,60,61,62,63,65,66,67,68,69]]
-# days_all = [[28,29,31,33,34,36,37], # excluded some days
-#     [70,71,72,73,74,75,76,77,78,79]]
-# days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],
-#             [82,83,84,85,86,87,88,89,90,91,93,94,95]]
-days_all = [[57,58,59,60,61,62,63],
-            [99,100,101,102,103,104,105]]
+# days_all = [[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,
+# 28,29,30,31,32,33,34,35,36],
+#         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,
+#         70,71,72,73,74,75,76,77,78]]
+
+# days to quantify for stim @ reward memory analysis
+# days_all = [[28,29,31,33,34,35,36],
+#     [70,71,72,73,74,75,76,77,78]]
+# days to quantify for stim @ reward with limited rew eligible
+days_all = [[57,58,59,60,61,62,63,64],
+            [99,100,101,102,103,104,105,106]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -203,6 +204,8 @@ ax = sns.stripplot(x='opto_day_before', y='velocity_near_rewardloc_mean', hue='o
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=12)
 ax.get_legend().set_visible(False)
+ax.set_ylabel('Velocity near reward zone\nmemory probes')
+ax.spines[['top','right']].set_visible(False)
 
 plt.figure(figsize=(3,6))
 ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', hue='opto_day_before', 
@@ -214,6 +217,8 @@ ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean'
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=12)
 ax.get_legend().set_visible(False)
+ax.set_ylabel('Memory lick selectivity\nnear reward zone')
+ax.spines[['top','right']].set_visible(False)
 
 # plt.figure(figsize=(3,6))
 # ax = sns.barplot(x='opto_day_before', y='com_lick_probe', hue='opto_day_before', data=df, fill=False,
@@ -280,13 +285,13 @@ dfagg = df#.groupby(['animal', 'opto']).mean(numeric_only = True)
 x1 = df.loc[df.opto_day_before==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = df.loc[df.opto_day_before==False, 'lick_selectivity_near_rewardloc_mean'].values
 t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-print(f'Per session t-test p-value: {pval:02f}')
+print(f'Lick selectivity near reward in memory probes\nPer session t-test p-value: {pval:02f}')
 
 dfagg = df.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'lick_selectivity_near_rewardloc_mean'].values
 t,pval = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-print(f'Paired t-test (n=2) p-value: {pval:02f}')
+print(f'Lick selectivity near reward in memory probes\nPaired t-test (n=2) p-value: {pval:02f}')
 
 # velocity
 x1 = df.loc[df.opto_day_before==True, 'velocity_near_rewardloc_mean'].values
