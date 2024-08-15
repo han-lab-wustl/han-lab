@@ -3,7 +3,7 @@
 
 clear all; close all; clear all
 src =  'Y:\analysis'; % main folder for analysis
-animal = 'e218';
+animal = 'z8';
 fld = sprintf('%s_daily_tracking_plane0',animal);
 pth = dir(fullfile(src, 'celltrack', fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))

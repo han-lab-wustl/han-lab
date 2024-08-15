@@ -25,10 +25,10 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
-# with open(saveddataset, "rb") as fp: #unpickle
-#         radian_alignment_saved = pickle.load(fp)
+with open(saveddataset, "rb") as fp: #unpickle
+        radian_alignment_saved = pickle.load(fp)
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -39,7 +39,8 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_window = 50 # cm
+cm_window = 30
+# cm_window = [10,20,30,40,50,60,70,80] # cm
 #%%
 # iterate through all animals
 for ii in range(len(conddf)):

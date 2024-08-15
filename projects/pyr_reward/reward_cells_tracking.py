@@ -27,7 +27,7 @@ from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
-animals = ['e218','e216','e217','e201','e186','e189','e190', 'e145']
+animals = ['e218','e216','e217','e201','e186','e189','e190', 'e145', 'z8', 'z9']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
@@ -114,7 +114,7 @@ for animal in animals:
                 Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
                 tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                     rewards,forwardvel,rewsize,bin_size)          
-                goal_window = 50*(2*np.pi/track_length) # cm converted to rad
+                goal_window = 30*(2*np.pi/track_length) # cm converted to rad
                 # change to relative value 
                 coms_rewrel = np.array([com-np.pi for com in coms_correct])
                 perm = list(combinations(range(len(coms_correct)), 2))     
@@ -152,7 +152,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 # compile per animal tuning curves
 dfs = []; df2s = []; df3s = []
 animals = ['e218','e216','e201',
-        'e186','e189','e190', 'e145']
+        'e186','e189','e190', 'e145', 'z8', 'z9']
 for annm in animals:
     # TODO: nan pad so that we can get all epochs!!
     ancom = np.nanmedian(coms[annm],axis=0)    
@@ -218,21 +218,22 @@ df3s = pd.concat(df3s)
 plt.rc('font', size=22) 
 dfs_av = dfs.groupby(['animal_cell', 'day',]).median(numeric_only=True)
 # optional = per animal
-# annm = 'e216'
-# dfsplt = dfs.loc[dfs.animal==annm]
+annm = 'e190'
+dfsplt = dfs.loc[dfs.animal.values==annm]
 
-dfsplt = dfs.sort_values(by=['animal_cell'])
+dfsplt = dfsplt.sort_values(by=['animal_cell'])
 dfsplt.index = np.arange(len(dfsplt))
 fig,ax=plt.subplots(figsize=(5,7))
 ax = sns.stripplot(y='median_com_across_ep',x='day',
-            hue='animal_cell',data=dfsplt,s=8,alpha=0.4)
+            hue='animal',data=dfsplt,s=8,alpha=0.4)
+
 sns.lineplot(y='median_com_across_ep',x=dfsplt.day.values-1,
             hue='animal_cell',data=dfsplt,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
 ax.set_ylabel('Median COM across epochs (rad.)\ncentered at rew. loc.')
 ax.set_xlabel('Day')
-dfsplt.to_csv(r'C:\Users\Han\Desktop\test.csv')
+plt.savefig(os.path.join(savedst, 'cell_com_across_dys.svg'), bbox_inches='tight')
 
 #%%
 sns.histplot(dfsplt.median_com_across_ep,bins=50)
@@ -247,15 +248,17 @@ dfs_av = df2s.groupby(['animal_cell']).median(numeric_only=True)
 
 dfsplt = df2s.sort_values(by=['animal_cell'])
 dfsplt.index = np.arange(len(dfsplt))
-fig,ax=plt.subplots()
+fig,ax=plt.subplots(figsize=(6,9))
 ax = sns.stripplot(y='median_com_across_ep_days',x='num_days_tracked',
-            hue='animal',data=dfsplt,s=8)
+            hue='animal',data=dfsplt,s=10,alpha=0.7)
 
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
-ax.set_ylabel('Median COM across ep. & days\ncentered at rew. loc.')
+ax.legend(bbox_to_anchor=(1.00, 1.00))
+ax.set_ylabel('Median COM\nacross rew. loc. & days')
+ax.axhline(0, color='slategrey', linewidth=3, linestyle='--')
+ax.text(2.2,0.1,'Reward loc.')
 ax.set_xlabel('# of days tracked')
-
+plt.savefig(os.path.join(savedst, 'com_across_days.svg'), bbox_inches='tight')
 #%%
 
 # plot individual cell traces

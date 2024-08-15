@@ -102,7 +102,7 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
 
 
 def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):
     rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
     # remake tuning curves relative to reward        
     for ep in range(len(eps)-1):
@@ -114,7 +114,10 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
         rates.append(success/total_trials)
         F = Fc3[eprng,:]            
         # simpler metric to get moving time
-        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
         if len(ttr)>lasttr: # only if ep has more than x trials
