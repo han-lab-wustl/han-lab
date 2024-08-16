@@ -22,15 +22,17 @@ mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian_position
+from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian_position, \
+    get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices
 
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
-animals = ['e218','e216','e217','e201','e186','e189','e190', 'e145', 'z8', 'z9']
+animals = ['e218','e216','e217','e201','e186','e189',
+        'e190', 'e145', 'z8', 'z9']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-radian_tuning_dct = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
+radian_tuning_dct = r'Z:\\saved_datasets\\radian_tuning_curves_reward_cell_bytrialtype_nopto_window060.p'
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 celltrackpth = r'Y:\analysis\celltrack'
@@ -45,60 +47,35 @@ total_cells = []
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 
 tracked_rew_cell_inds = {}
+tracked_rew_cell_inds_shuf = {}
 tracked_rew_activity = {}
 #%%
 coms = {}
 maxep = 5
+shuffles = 1000
 # redo across days analysis but init array per animal
 for animal in animals:
+    # all rec days
     dys = conddf.loc[conddf.animals==animal, 'days'].values
-    # index
+    # index compared to org df
     dds = list(conddf[conddf.animals==animal].index)
     for ii, day in enumerate(dys): # iterate per day
         if animal!='e217' and conddf.optoep.values[dds[ii]]==-1:
             if animal=='e145': pln=2
             else: pln=0
             # get lut
-            tracked_lut = scipy.io.loadmat(os.path.join(celltrackpth, 
-            rf"{animal}_daily_tracking_plane{pln}\Results\commoncells_once_per_week.mat"))
-            tracked_lut = tracked_lut['commoncells_once_per_week'].astype(int)
-            # CHANGE INDEX TO MATCH SUITE2P INDEX!! -1!!!
-            tracked_lut = tracked_lut-1
-            # find day match with session        
-            txtpth = os.path.join(celltrackpth, rf"{animal}_daily_tracking_plane{pln}\Results")
-            txtpth = os.path.join(txtpth, find_log_file(txtpth))
-            sessions, days = get_days_from_cellreg_log_file(txtpth)    
-            tracked_lut = pd.DataFrame(tracked_lut, columns = days)
+            tracked_lut = get_tracked_lut(celltrackpth,animal,pln)
             if ii==0:
                 # init with min 4 epochs
+                # ep x cells x days
                 coms_rewrel_tracked = np.ones((maxep,tracked_lut.shape[0],
                                 tracked_lut.shape[1]))*np.nan
+                coms_rewrel_tracked_shuf = np.ones((shuffles, maxep,tracked_lut.shape[0],
+                                tracked_lut.shape[1]))*np.nan
+            # get vars
             params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-            print(params_pth)
-            fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 
-                'ybinned', 'VR', 'forwardvel', 
-                'trialnum', 'rewards', 'iscell', 'bordercells', 'dFF'])
-            # to remove skew cells
-            dFF = fall['dFF']
-            suite2pind = np.arange(dFF.shape[1])
-            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # we need to find cells to map back to suite2p indexes
-            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-            suite2pind_remain = suite2pind_remain[skew>2]
-            VR = fall['VR'][0][0][()]
-            scalingf = VR['scalingFACTOR'][0][0]
-            # mainly for e145
-            try:
-                    rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
-            except:
-                    rewsize = 10
-            ybinned = fall['ybinned'][0]/scalingf;track_length=180/scalingf    
-            forwardvel = fall['forwardvel'][0]    
-            changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum=fall['trialnum'][0]
-            rewards = fall['rewards'][0]
-            # set vars
-            eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+            dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
+                rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
             if f'{animal}_{day:03d}_index{dds[ii]:03d}' in radian_alignment_saved.keys():
                 tcs_correct, coms_correct, tcs_fail, coms_fail, \
                 com_goal, goal_cell_shuf_ps_per_comp_av,\
@@ -114,7 +91,7 @@ for animal in animals:
                 Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
                 tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                     rewards,forwardvel,rewsize,bin_size)          
-                goal_window = 30*(2*np.pi/track_length) # cm converted to rad
+                goal_window = 60*(2*np.pi/track_length) # cm converted to rad
                 # change to relative value 
                 coms_rewrel = np.array([com-np.pi for com in coms_correct])
                 perm = list(combinations(range(len(coms_correct)), 2))     
@@ -123,23 +100,33 @@ for animal in animals:
             assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
             # get goal cells across all epochs        
             goal_cells = intersect_arrays(*com_goal)            
-            # suite2p indices of rew cells
             if len(goal_cells)>0:
+                # suite2p indices of rew cells
                 goal_cells_s2p_ind = suite2pind_remain[goal_cells]
+                goal_window = 60*(2*np.pi/track_length) # cm converted to rad
+                # get shuffled goal cell indices
+                # + save indices for each shuffle
+                goal_cells_shuf_s2pind, coms_rewrel_shuf = get_shuffled_goal_cell_indices(rewlocs, 
+                                coms_correct, goal_window, suite2pind_remain)
                 # change to relative value 
                 coms_rewrel = np.array([com-np.pi for com in coms_correct])
-                tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]
-                tracked_rew_cell_inds[f'{animal}_{day:03d}'] = tracked_rew_cell_ind   
-                tracked_cells_that_are_rew_pyr_id = tracked_lut[day].values[tracked_rew_cell_ind]
-                rew_cells_that_are_tracked_iind = np.array([np.where(suite2pind_remain==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id])
+                tracked_rew_cell_ind, rew_cells_that_are_tracked_iind = get_reward_cells_that_are_tracked(tracked_lut, goal_cells_s2p_ind, 
+                    animal, day, tracked_rew_cell_inds, suite2pind_remain)
                 # includes s2p indices of inactive cells so you can find them in the tracked lut
                 # build a mat the same size as the tracked cell dataframe
                 # nan out other cells
                 if len(tracked_rew_cell_ind)>0:                    
                     coms_rewrel_tracked[:coms_correct.shape[0],tracked_rew_cell_ind,
                         np.where(days==day)[0]] = coms_rewrel[:, rew_cells_that_are_tracked_iind]
+                # populate shuffles
+                for i in range(shuffles):
+                    tracked_rew_cell_ind_shuf, rew_cells_that_are_tracked_iind_shuf = get_reward_cells_that_are_tracked(tracked_lut, goal_cells_shuf_s2pind[i], 
+                    animal, day, tracked_rew_cell_inds_shuf, suite2pind_remain)            
+                    if len(rew_cells_that_are_tracked_iind_shuf)>0:                    
+                        coms_rewrel_tracked_shuf[i, :coms_correct.shape[0],tracked_rew_cell_ind_shuf,
+                            np.where(days==day)[0]] = coms_rewrel_shuf[:, rew_cells_that_are_tracked_iind_shuf]
 
-    coms[animal] = coms_rewrel_tracked
+    coms[animal] = [coms_rewrel_tracked, coms_rewrel_tracked_shuf]
 
 dct = {}; dct['rew_cells_coms_tracked'] = [coms]
 # save pickle of dcts
@@ -231,7 +218,7 @@ sns.lineplot(y='median_com_across_ep',x=dfsplt.day.values-1,
             hue='animal_cell',data=dfsplt,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
-ax.set_ylabel('Median COM across epochs (rad.)\ncentered at rew. loc.')
+ax.set_ylabel('COM across epochs (rad.)\ncentered at rew. loc.')
 ax.set_xlabel('Day')
 plt.savefig(os.path.join(savedst, 'cell_com_across_dys.svg'), bbox_inches='tight')
 
@@ -254,7 +241,7 @@ ax = sns.stripplot(y='median_com_across_ep_days',x='num_days_tracked',
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.05, 1.00))
-ax.set_ylabel('Median COM\nacross rew. loc. & days')
+ax.set_ylabel('COM across rew. loc. & days')
 ax.axhline(0, color='slategrey', linewidth=3, linestyle='--')
 ax.text(2.2,0.1,'Reward loc.')
 ax.set_xlabel('# of days tracked')

@@ -13,7 +13,7 @@ correct trials
 """
 #%%
 
-import numpy as np, random, re, os
+import numpy as np, random, re, os, scipy, pandas as pd
 from itertools import combinations, chain
 from placecell import intersect_arrays
 
@@ -166,4 +166,89 @@ def find_log_file(pth):
     
     return matching_file
 
+def get_tracking_vars(params_pth):                
+    print(params_pth)
+    fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 
+        'ybinned', 'VR', 'forwardvel', 
+        'trialnum', 'rewards', 'iscell', 'bordercells', 'dFF'])
+    # to remove skew cells
+    dFF = fall['dFF']
+    suite2pind = np.arange(dFF.shape[1])
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    # we need to find cells to map back to suite2p indexes
+    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+    suite2pind_remain = suite2pind_remain[skew>2]
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    # mainly for e145
+    try:
+            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+            rewsize = 10
+    ybinned = fall['ybinned'][0]/scalingf;track_length=180/scalingf    
+    forwardvel = fall['forwardvel'][0]    
+    changeRewLoc = np.hstack(fall['changeRewLoc']); trialnum=fall['trialnum'][0]
+    rewards = fall['rewards'][0]
+    # set vars
+    eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf
+    eps = np.append(eps, len(changeRewLoc))
     
+    return dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
+        rewards, eps, rewlocs, track_length
+
+def get_tracked_lut(celltrackpth, animal, pln):
+    
+    tracked_lut = scipy.io.loadmat(os.path.join(celltrackpth, 
+    rf"{animal}_daily_tracking_plane{pln}\Results\commoncells_once_per_week.mat"))
+    tracked_lut = tracked_lut['commoncells_once_per_week'].astype(int)
+    # CHANGE INDEX TO MATCH SUITE2P INDEX!! -1!!!
+    tracked_lut = tracked_lut-1
+    # find day match with session        
+    txtpth = os.path.join(celltrackpth, rf"{animal}_daily_tracking_plane{pln}\Results")
+    txtpth = os.path.join(txtpth, find_log_file(txtpth))
+    sessions, days = get_days_from_cellreg_log_file(txtpth)    
+    tracked_lut = pd.DataFrame(tracked_lut, columns = days)
+
+    return tracked_lut
+
+def get_shuffled_goal_cell_indices(rewlocs, coms_correct, goal_window, suite2pind_remain,
+                num_iterations = 1000):
+    # get shuffled iterations
+    shuffled_dist = np.zeros((num_iterations))
+    # max of 5 epochs = 10 perms
+    goal_cells_shuf_s2pind = []
+    goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
+    for i in range(num_iterations):
+        # shuffle locations
+        rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
+        shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, 
+                len(coms_correct))]
+        [random.shuffle(shuf) for shuf in shufs]
+        # first com is as ep 1, others are shuffled cell identities
+        com_shufs = np.zeros_like(coms_correct)
+        com_shufs[0,:] = coms_correct[0]
+        com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+        # OR shuffle cell identities
+        # relative to reward
+        coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+        perm = list(combinations(range(len(coms_correct)), 2))     
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) 
+                    for jj in range(len(perm))])        
+        # get goal cells across all epochs
+        com_goal = [np.where((comr<goal_window) & 
+                (comr>-goal_window))[0] for comr in com_remap]            
+        goal_cells = intersect_arrays(*com_goal)
+        goal_cells_s2p_ind = suite2pind_remain[goal_cells]
+        goal_cells_shuf_s2pind.append(goal_cells_s2p_ind)
+    return goal_cells_shuf_s2pind, coms_rewrel
+
+def get_reward_cells_that_are_tracked(tracked_lut, goal_cells_s2p_ind, 
+        animal, day, tracked_rew_cell_inds, suite2pind_remain):
+    tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]
+    tracked_rew_cell_inds[f'{animal}_{day:03d}'] = tracked_rew_cell_ind   
+    tracked_cells_that_are_rew_pyr_id = tracked_lut[day].values[tracked_rew_cell_ind]
+    rew_cells_that_are_tracked_iind = np.array([np.where(suite2pind_remain==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id])
+    
+    return tracked_rew_cell_ind, rew_cells_that_are_tracked_iind
+                

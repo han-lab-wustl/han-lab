@@ -24,9 +24,6 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
-with open(saveddataset, "rb") as fp: #unpickle
-        radian_alignment_saved = pickle.load(fp)
 # initialize var
 radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
@@ -40,6 +37,8 @@ total_cells = []
 epoch_perm = []
 radian_alignment = {}
 cm_window = 60
+saveddataset = rf"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_window{cm_window:03d}.p"
+
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 #%%
 # iterate through all animals
@@ -127,7 +126,7 @@ for ii in range(len(conddf)):
             ax.legend()
             pdf.savefig(fig)
             plt.close(fig)
-        # get shuffled iterationsollllllpoik
+        # get shuffled iterations
         num_iterations = 5000; shuffled_dist = np.zeros((num_iterations))
         # max of 5 epochs = 10 perms
         goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
