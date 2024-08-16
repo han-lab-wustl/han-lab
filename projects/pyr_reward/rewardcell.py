@@ -210,7 +210,7 @@ def get_tracked_lut(celltrackpth, animal, pln):
     sessions, days = get_days_from_cellreg_log_file(txtpth)    
     tracked_lut = pd.DataFrame(tracked_lut, columns = days)
 
-    return tracked_lut
+    return tracked_lut, days
 
 def get_shuffled_goal_cell_indices(rewlocs, coms_correct, goal_window, suite2pind_remain,
                 num_iterations = 1000):

@@ -23,7 +23,7 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian_position, \
-    get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices
+    get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices, get_reward_cells_that_are_tracked
 
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
@@ -51,8 +51,10 @@ tracked_rew_cell_inds_shuf = {}
 tracked_rew_activity = {}
 #%%
 coms = {}
+# defined vars
 maxep = 5
 shuffles = 1000
+goal_window = 60*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
 # redo across days analysis but init array per animal
 for animal in animals:
     # all rec days
@@ -64,12 +66,13 @@ for animal in animals:
             if animal=='e145': pln=2
             else: pln=0
             # get lut
-            tracked_lut = get_tracked_lut(celltrackpth,animal,pln)
+            tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
             if ii==0:
                 # init with min 4 epochs
                 # ep x cells x days
                 coms_rewrel_tracked = np.ones((maxep,tracked_lut.shape[0],
                                 tracked_lut.shape[1]))*np.nan
+                # shuffles x ep x cells x days
                 coms_rewrel_tracked_shuf = np.ones((shuffles, maxep,tracked_lut.shape[0],
                                 tracked_lut.shape[1]))*np.nan
             # get vars
@@ -102,8 +105,7 @@ for animal in animals:
             goal_cells = intersect_arrays(*com_goal)            
             if len(goal_cells)>0:
                 # suite2p indices of rew cells
-                goal_cells_s2p_ind = suite2pind_remain[goal_cells]
-                goal_window = 60*(2*np.pi/track_length) # cm converted to rad
+                goal_cells_s2p_ind = suite2pind_remain[goal_cells]                
                 # get shuffled goal cell indices
                 # + save indices for each shuffle
                 goal_cells_shuf_s2pind, coms_rewrel_shuf = get_shuffled_goal_cell_indices(rewlocs, 
@@ -124,7 +126,7 @@ for animal in animals:
                     animal, day, tracked_rew_cell_inds_shuf, suite2pind_remain)            
                     if len(rew_cells_that_are_tracked_iind_shuf)>0:                    
                         coms_rewrel_tracked_shuf[i, :coms_correct.shape[0],tracked_rew_cell_ind_shuf,
-                            np.where(days==day)[0]] = coms_rewrel_shuf[:, rew_cells_that_are_tracked_iind_shuf]
+                            np.where(days==day)[0][0]] = coms_rewrel_shuf[:, rew_cells_that_are_tracked_iind_shuf].T
 
     coms[animal] = [coms_rewrel_tracked, coms_rewrel_tracked_shuf]
 
