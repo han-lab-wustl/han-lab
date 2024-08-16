@@ -8,7 +8,7 @@
 %%
 clear all
 close all 
-mouse_id=214;
+mouse_id=247;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 ref_exist=1;%%% if reference image hase been already choosen

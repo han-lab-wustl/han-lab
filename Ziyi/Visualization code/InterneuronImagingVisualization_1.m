@@ -60,8 +60,8 @@ for alldays = 1:length(pr_dir0)%
             % Variable definitions here for clarity
             %frame_rate = 31.25;
 
-            R = find(rewards);
-            %R = find(solenoid2);
+            %R = find(rewards);
+            R = find(solenoid2);
             temp = consecutive_stretch(R);
             reward_indices = cellfun(@(x) x(1), temp,'UniformOutput',1);
 

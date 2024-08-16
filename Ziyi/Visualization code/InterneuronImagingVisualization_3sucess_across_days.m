@@ -1,5 +1,5 @@
 clear all; % Clear workspace variables
-close all; % Close all figure windows
+%close all; % Close all figure windows
 
 % Mouse information and file selection
 mouse_id = 227;

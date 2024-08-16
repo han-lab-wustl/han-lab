@@ -1,6 +1,6 @@
 %% Need to store the average for all the roi in each plane for each rewawrd location first, then calcult...
 % late the average 
-close all
+%close all
 clear
 mouse_id = 227;
 day = 3;
