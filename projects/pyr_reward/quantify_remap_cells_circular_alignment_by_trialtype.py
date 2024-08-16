@@ -28,7 +28,7 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -39,7 +39,7 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_window = 30
+cm_window = 10
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 #%%
 # iterate through all animals
@@ -165,8 +165,8 @@ for ii in range(len(conddf)):
 pdf.close()
 
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-    pickle.dump(radian_alignment, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#     pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs

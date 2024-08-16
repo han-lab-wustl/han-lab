@@ -19,11 +19,14 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
+
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_paramsweep.p"
-with open(saveddataset, "rb") as fp: #unpickle
+# import tuning curve
+tc = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
+with open(tc, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 # radian_alignment_saved = {} # overwrite
@@ -37,7 +40,7 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_windows = [10,20,30,40,50,60,70,80,100,120,150] # cm
+cm_windows = [10,20,30,40,50,60,70,80,100,120,150,200] # cm
 #%%
 # iterate through all animals
 for cm_window in cm_windows:
@@ -143,7 +146,7 @@ for cm_window in cm_windows:
             pvals.append(p_value);             
             print(f'{animal}, day {day}, window {cm_window}\n significant goal cells proportion p-value: {p_value}')
             total_cells.append(len(coms_correct[0]))
-            radian_alignment[f'{animal}_{day:03d}_index{ii:03d}_cm_window{cm_window:02d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
+            radian_alignment[f'{animal}_{day:03d}_index{ii:03d}_cm_window{cm_window:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
                             com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 
@@ -153,8 +156,8 @@ with open(saveddataset, "wb") as fp:   #Pickling
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
-windows = [int(xx[-2:]) for xx in radian_alignment.keys()]
-inds = [int(xx[-15:-12]) for xx in radian_alignment.keys()]
+windows = [int(xx[-3:]) for xx in radian_alignment.keys()]
+inds = [int(xx[-16:-13]) for xx in radian_alignment.keys()]
 df = pd.DataFrame()
 orgdf = conddf[((conddf.animals!='e217')) & (conddf.optoep==-1) & (conddf.index.isin(inds))]
 df['num_epochs'] = num_epochs
@@ -163,6 +166,7 @@ df['p_value'] = pvals
 df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_null]
 df['window'] = windows
 df['animals'] = np.concatenate([orgdf.animals.values]*len(cm_windows))
+
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df, x='p_value', hue='animals', bins=40)
 ax.spines[['top','right']].set_visible(False)
@@ -277,6 +281,14 @@ for ii,win in enumerate(cm_windows):
     else:
         r+=1
 fig.tight_layout()
+#%%
+# plot p value as a function of window
+fig,ax = plt.subplots()
+sns.stripplot(x='window', y='p_value',hue='num_epochs',data=df_plt2[df_plt2.index.get_level_values('num_epochs')<5],s=7,ax=ax,
+            palette='colorblind')
+ax.spines[['top','right']].set_visible(False)
+ax.set_xlabel('Window for distance (cm)')
+ax.axhline(0.05, color='slategray',linestyle='--')
 #%%
 
 df['recorded_neurons_per_session'] = total_cells

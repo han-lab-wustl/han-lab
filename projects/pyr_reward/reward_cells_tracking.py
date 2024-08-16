@@ -218,8 +218,8 @@ df3s = pd.concat(df3s)
 plt.rc('font', size=22) 
 dfs_av = dfs.groupby(['animal_cell', 'day',]).median(numeric_only=True)
 # optional = per animal
-annm = 'e190'
-dfsplt = dfs.loc[dfs.animal.values==annm]
+# annm = 'e190'
+dfsplt = dfs#.loc[dfs.animal.values==annm]
 
 dfsplt = dfsplt.sort_values(by=['animal_cell'])
 dfsplt.index = np.arange(len(dfsplt))
@@ -253,7 +253,7 @@ ax = sns.stripplot(y='median_com_across_ep_days',x='num_days_tracked',
             hue='animal',data=dfsplt,s=10,alpha=0.7)
 
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.00, 1.00))
+ax.legend(bbox_to_anchor=(1.05, 1.00))
 ax.set_ylabel('Median COM\nacross rew. loc. & days')
 ax.axhline(0, color='slategrey', linewidth=3, linestyle='--')
 ax.text(2.2,0.1,'Reward loc.')
