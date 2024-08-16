@@ -165,8 +165,8 @@ for ii in range(len(conddf)):
 pdf.close()
 
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -257,7 +257,7 @@ df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(5,5))
+fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
         data=df_plt2,
@@ -270,10 +270,11 @@ ax = sns.lineplot(data=df_plt2, # correct shift
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
-
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('Reward cell proportion')
 eps = [2,3,4]
-y = 0.55
-pshift = 0.1
+y = 0.27
+pshift = 0.04
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -287,7 +288,7 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+pshift, f'p={pval:.3g}')
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10)
 
 plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.svg'), 
         bbox_inches='tight')
@@ -314,6 +315,9 @@ ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.set_xlabel('Av. # of neurons per session')
+ax.set_ylabel('Reward cell proportion')
+
 plt.savefig(os.path.join(savedst, 'rec_cell_rew_prop_per_an.svg'), 
         bbox_inches='tight')
 
