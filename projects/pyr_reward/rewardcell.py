@@ -244,9 +244,8 @@ def get_shuffled_goal_cell_indices(rewlocs, coms_correct, goal_window, suite2pin
     return goal_cells_shuf_s2pind, coms_rewrel
 
 def get_reward_cells_that_are_tracked(tracked_lut, goal_cells_s2p_ind, 
-        animal, day, tracked_rew_cell_inds, suite2pind_remain):
+        animal, day,  suite2pind_remain):
     tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]
-    tracked_rew_cell_inds[f'{animal}_{day:03d}'] = tracked_rew_cell_ind   
     tracked_cells_that_are_rew_pyr_id = tracked_lut[day].values[tracked_rew_cell_ind]
     rew_cells_that_are_tracked_iind = np.array([np.where(suite2pind_remain==xx)[0][0] for xx in tracked_cells_that_are_rew_pyr_id])
     

@@ -36,7 +36,7 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_window = 60
+cm_window = 30
 saveddataset = rf"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_window{cm_window:03d}.p"
 
 # cm_window = [10,20,30,40,50,60,70,80] # cm
