@@ -139,30 +139,43 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 #%%
 # plot
 # compile per animal tuning curves
-dfs = []; df2s = []; df3s = []
+dfs = []; df2s = []; df3s = []; df_shuf = []
 animals = ['e218','e216','e201',
         'e186','e189','e190', 'e145', 'z8', 'z9']
 for annm in animals:
+    print(annm)
     # TODO: nan pad so that we can get all epochs!!
-    ancom = np.nanmedian(coms[annm],axis=0)    
+    ancom = np.nanmedian(coms[annm][0],axis=0)    
+    # shuffle
+    ancom_shuf = np.nanmedian(coms[annm][1],axis=1)    
     if len(ancom.shape)>0:
-        tracked_cell_ind = np.arange(ancom.shape[0])
-        # remove all nancells aka those without any relative coms across days
+        tracked_cell_ind_ = np.arange(ancom.shape[0])
+        # remove all nancells aka those without any relative coms 
+        # across days
         mask1 = np.nansum(ancom,axis=1)==0
+        # median across shuffles
+        # or take one of the shuffles
+        ancom_shuf = ancom_shuf[random.randint(0,ancom_shuf.shape[0])]
+        mask2 = np.nansum(ancom_shuf,axis=1)==0
         ancom = ancom[~mask1,:]
+        ancom_shuf = ancom_shuf[~mask2,:]
         if ancom.shape[0]>0:
-            tracked_cell_ind = tracked_cell_ind[~mask1]
+            tracked_cell_ind = tracked_cell_ind_[~mask1]
+            tracked_cell_ind_shuf = tracked_cell_ind_[~mask2]
             if annm=='e145': pln=2
             else: pln=0
             # find day match with session        
             txtpth = os.path.join(celltrackpth, rf"{annm}_daily_tracking_plane{pln}\Results")
             txtpth = os.path.join(txtpth, find_log_file(txtpth))
             sessions, days = get_days_from_cellreg_log_file(txtpth)    
-            days_per_animal = conddf.loc[((conddf.animals.values==annm) & (conddf.optoep.values==-1)),'days'].values
-            sessions_rec = np.hstack(np.array([np.where(np.array(days)==xx)[0] for xx in days_per_animal]))
+            days_per_animal = conddf.loc[((conddf.animals.values==annm) & 
+                    (conddf.optoep.values==-1)),'days'].values
+            sessions_rec = np.hstack(np.array([np.where(np.array(days)==xx)[0] 
+                for xx in days_per_animal]))
             # cells x days
             # get only recorded sessions            
             ancom = ancom[:, sessions_rec]
+            ancom_shuf = ancom_shuf[:,sessions_rec]
             df = pd.DataFrame()
             df['median_com_across_ep'] = np.ravel(ancom)
             df['day'] = np.concatenate([np.arange(ancom.shape[1])]*ancom.shape[0])+1
@@ -172,14 +185,21 @@ for annm in animals:
             dfs.append(df)
                     
             df2  = pd.DataFrame()
-            df2['median_com_across_ep_days'] = np.nanmedian(ancom,axis=1)
+            dfshuf = pd.DataFrame() # add shuffle data
+            df2['median_com_across_ep_days'] = np.nanmedian(ancom,axis=1)            
+            dfshuf['median_com_across_ep_days_shuf'] = np.nanmedian(ancom_shuf,axis=1)            
             df2['num_days_tracked'] = [np.sum(~np.isnan(xx)) for xx in ancom]
+            dfshuf['num_days_tracked'] = [np.sum(~np.isnan(xx)) for xx in ancom_shuf]
+            dfshuf['animal'] = [annm]*len(dfshuf)        
             df2['animal'] = [annm]*len(df2)        
             df2['cell'] =tracked_cell_ind
+            dfshuf['cell'] = tracked_cell_ind_shuf
             df2['animal_cell'] = [str(xx)+'_'+str(df2.cell.values[ii]) for ii,xx in enumerate(df2.animal.values)]
+            dfshuf['animal_cell'] = [str(xx)+'_'+str(dfshuf.cell.values[ii]) for ii,xx in enumerate(dfshuf.animal.values)]
             df2s.append(df2)
+            df_shuf.append(dfshuf)
             # get epochs separately        
-            ancom=coms[annm]
+            ancom=coms[annm][0]
             tracked_cell_ind = np.arange(ancom.shape[1])
             # mask of epoch 1 only
             mask1 = np.nansum(ancom[0,:,:],axis=1)>0
@@ -202,27 +222,29 @@ for annm in animals:
 dfs = pd.concat(dfs)
 df2s = pd.concat(df2s)
 df3s = pd.concat(df3s)
-# num tracked days vs. median com
+df_shuf = pd.concat(df_shuf)
+
 #%%
-plt.rc('font', size=22) 
-dfs_av = dfs.groupby(['animal_cell', 'day',]).median(numeric_only=True)
-# optional = per animal
-# annm = 'e190'
-dfsplt = dfs#.loc[dfs.animal.values==annm]
+# plot com of same cell across days
+# plt.rc('font', size=22) 
+# dfs_av = dfs.groupby(['animal_cell', 'day',]).median(numeric_only=True)
+# # optional = per animal
+# # annm = 'e190'
+# dfsplt = dfs#.loc[dfs.animal.values==annm]
 
-dfsplt = dfsplt.sort_values(by=['animal_cell'])
-dfsplt.index = np.arange(len(dfsplt))
-fig,ax=plt.subplots(figsize=(5,7))
-ax = sns.stripplot(y='median_com_across_ep',x='day',
-            hue='animal',data=dfsplt,s=8,alpha=0.4)
+# dfsplt = dfsplt.sort_values(by=['animal_cell'])
+# dfsplt.index = np.arange(len(dfsplt))
+# fig,ax=plt.subplots(figsize=(5,7))
+# ax = sns.stripplot(y='median_com_across_ep',x='day',
+#             hue='animal',data=dfsplt,s=8,alpha=0.4)
 
-sns.lineplot(y='median_com_across_ep',x=dfsplt.day.values-1,
-            hue='animal_cell',data=dfsplt,ax=ax)
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
-ax.set_ylabel('COM across epochs (rad.)\ncentered at rew. loc.')
-ax.set_xlabel('Day')
-plt.savefig(os.path.join(savedst, 'cell_com_across_dys.svg'), bbox_inches='tight')
+# sns.lineplot(y='median_com_across_ep',x=dfsplt.day.values-1,
+#             hue='animal_cell',data=dfsplt,ax=ax)
+# ax.spines[['top','right']].set_visible(False)
+# ax.legend(bbox_to_anchor=(1.00, 1.00)).set_visible(False)
+# ax.set_ylabel('COM across epochs (rad.)\ncentered at rew. loc.')
+# ax.set_xlabel('Day')
+# plt.savefig(os.path.join(savedst, 'cell_com_across_dys.svg'), bbox_inches='tight')
 
 #%%
 sns.histplot(dfsplt.median_com_across_ep,bins=50)
@@ -237,17 +259,31 @@ dfs_av = df2s.groupby(['animal_cell']).median(numeric_only=True)
 
 dfsplt = df2s.sort_values(by=['animal_cell'])
 dfsplt.index = np.arange(len(dfsplt))
+df_shuf.index = np.arange(len(df_shuf))
+# average out shufles
+df_shufav = df_shuf.groupby(['num_days_tracked', 'animal_cell', 'animal']).mean(numeric_only=True)
 fig,ax=plt.subplots(figsize=(6,9))
-ax = sns.stripplot(y='median_com_across_ep_days',x='num_days_tracked',
-            hue='animal',data=dfsplt,s=10,alpha=0.7)
-
+sns.stripplot(y='median_com_across_ep_days',
+            x='num_days_tracked',
+            hue='animal',data=dfsplt,s=10,palette='colorblind',ax=ax)
+sns.stripplot(y='median_com_across_ep_days_shuf',
+            x='num_days_tracked',color='k',data=df_shufav,
+            ax=ax,s=10,alpha=0.7)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.05, 1.00))
 ax.set_ylabel('COM across rew. loc. & days')
 ax.axhline(0, color='slategrey', linewidth=3, linestyle='--')
 ax.text(2.2,0.1,'Reward loc.')
 ax.set_xlabel('# of days tracked')
-plt.savefig(os.path.join(savedst, 'com_across_days.svg'), bbox_inches='tight')
+
+days_tracked = dfsplt.num_days_tracked.unique()
+for dy in days_tracked:
+    num_cells = [len(dfsplt.loc[(dfsplt.num_days_tracked==dy) & ((dfsplt.animal==annm)), 
+                                        'cell']) for annm in animals]
+
+    num_cells_ctrl = [len(df_shuf.loc[(df_shuf.num_days_tracked==dy) & ((df_shuf.animal==annm)), 
+                                        'cell']) for annm in animals]
+# plt.savefig(os.path.join(savedst, 'com_across_days.svg'), bbox_inches='tight')
 #%%
 
 # plot individual cell traces
