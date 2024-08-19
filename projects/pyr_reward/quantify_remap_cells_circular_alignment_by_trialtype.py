@@ -181,7 +181,8 @@ df['p_value'] = pvals
 df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_null]
 
 fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
+ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', 
+                hue='animals', bins=40)
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(x=0.05, color='k', linestyle='--')
 sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
