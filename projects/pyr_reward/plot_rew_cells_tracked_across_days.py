@@ -43,7 +43,7 @@ with open(rew_cells_tracked_dct, "rb") as fp:   #Pickling
 #
 #%%
 # plot dff / tuning curves of cells tracked > 1
-an = 'e201'
+an = 'z9'
 pln=0
 trackedcellarr = np.array(trackeddct[an][0]).astype(int)
 trackedcellind = np.where(trackedcellarr>1)[0]
@@ -60,4 +60,4 @@ for day in days_rec:
     dFF = fall['dFF']
     cells2plt = tracked_lut_multiday_rew_cells[day].values
     fig,ax=plt.subplots()
-    ax.plot(dFF[5000:30000, cells2plt])
+    ax.plot(dFF[10000:15000, cells2plt])
