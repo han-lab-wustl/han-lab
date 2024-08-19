@@ -36,17 +36,11 @@ radian_tuning_dct = r'Z:\\saved_datasets\\radian_tuning_curves_reward_cell_bytri
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 celltrackpth = r'Y:\analysis\celltrack'
-goal_cell_iind = []
-goal_cell_prop = []
-dist_to_rew = [] # per epoch
-num_epochs = []
-pvals = []
-rates_all = []
-total_cells = []
 # cell tracked days
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 
 tracked_rew_cell_inds_all = {}
+trackeddct = {}
 #%%
 coms = {}
 # defined vars
@@ -69,41 +63,19 @@ for animal in animals:
             if ii==0:
                 # init with min 4 epochs
                 # ep x cells x days
-                coms_rewrel_tracked = np.ones((maxep,tracked_lut.shape[0],
+                # instead of filling w/ coms, fill w/ binary
+                tracked = np.ones((maxep,tracked_lut.shape[0],
                                 tracked_lut.shape[1]))*np.nan
-                # shuffles x ep x cells x days
-                coms_rewrel_tracked_shuf = np.ones((shuffles, maxep,tracked_lut.shape[0],
+                tracked_shuf =np.ones((shuffles, maxep,tracked_lut.shape[0],
                                 tracked_lut.shape[1]))*np.nan
             # get vars
             params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
             dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
                 rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
             goal_window = 30*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
-            if f'{animal}_{day:03d}_index{dds[ii]:03d}' in radian_alignment_saved.keys():
-                tcs_correct, coms_correct, tcs_fail, coms_fail, \
+            tcs_correct, coms_correct, tcs_fail, coms_fail, \
                 com_goal, goal_cell_shuf_ps_per_comp_av,\
                 goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{dds[ii]:03d}']            
-            else: #TODO: fix skew
-                # takes time
-                rad = get_radian_position(eps,ybinned,rewlocs,
-                                track_length,rewsize) # get radian coordinates
-                fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3'])
-                Fc3 = fall_fc3['Fc3']
-                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & 
-                        (~fall['bordercells'][0].astype(bool)))]
-                # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-                # skew_mask = skew_filter>2
-                Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,
-                                rewlocs,ybinned,rad,Fc3,trialnum,
-                    rewards,forwardvel,rewsize,bin_size)          
-                goal_window = 30*(2*np.pi/track_length) # cm converted to rad
-                # change to relative value 
-                coms_rewrel = np.array([com-np.pi for com in coms_correct])
-                perm = list(combinations(range(len(coms_correct)), 2))     
-                com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) 
-                            for jj in range(len(perm))])        
-                com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
             assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
             # get goal cells across all epochs        
             goal_cells = intersect_arrays(*com_goal)            
@@ -126,6 +98,8 @@ for animal in animals:
                     coms_rewrel_tracked[:coms_correct.shape[0],tracked_rew_cell_ind,
                         np.where(np.array(days)==day)[0]] = coms_rewrel[:,
                         rew_cells_that_are_tracked_iind]
+                    tracked[:coms_correct.shape[0],tracked_rew_cell_ind,
+                        np.where(np.array(days)==day)[0]] = 1
                 # populate shuffles
                 tracked_rew_cell_ind_shufs_ = []
                 for sh in range(shuffles):
@@ -136,6 +110,8 @@ for animal in animals:
                         coms_rewrel_tracked_shuf[sh, :coms_correct.shape[0],tracked_rew_cell_ind_shuf,
                             np.where(np.array(days)==day)[0][0]] = coms_rewrel_shuf[sh][:, 
                                 rew_cells_that_are_tracked_iind_shuf].T
+                        tracked_shuf[sh, :coms_correct.shape[0],tracked_rew_cell_ind,
+                        np.where(np.array(days)==day)[0]] = 1
                     tracked_rew_cell_ind_shufs_.append(tracked_rew_cell_ind_shuf)
                 tracked_rew_cell_inds.append(tracked_rew_cell_ind)           
                 # add each shuffle     
@@ -143,8 +119,9 @@ for animal in animals:
                 
     coms[animal] = [coms_rewrel_tracked, coms_rewrel_tracked_shuf]
     tracked_rew_cell_inds_all[animal] = [tracked_rew_cell_inds,tracked_rew_cell_ind_shufs]
+    trackeddct[animal] = [tracked, tracked_shuf]
 
-dct = {}; dct['rew_cells_coms_tracked'] = [coms, tracked_rew_cell_inds_all]
+dct = {}; dct['rew_cells_coms_tracked'] = [coms, tracked_rew_cell_inds_all, tracked]
 # save pickle of dcts
 rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
 with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
@@ -156,7 +133,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 animals = ['e218','e216','e201',
         'e186','e189','e145', 'z8', 'z9']
 tracked_num_rew_c = [np.nanmean(np.array([len(xx) for xx in
-                tracked_rew_cell_inds_all[animal][0]])) for animal in animals]
+                trackeddct[animal][0]])) for animal in animals]
 tracked_num_rew_shuf = [np.nanmean(np.array([np.nanmean(np.array([len(yy) for yy in xx])) for xx in 
         tracked_rew_cell_inds_all[animal][1]])) for animal in animals]
 #%%

@@ -52,7 +52,7 @@ def main(**args):
             del arr # remove var
             # now delete memmap array
             if os.path.exists(flnm): os.remove(flnm[:-4]+'.npy')
-        elif delete_fld==True and (os.path.exists(checkflnm) or os.path.exists(flnm)):
+        if delete_fld==True and (os.path.exists(checkflnm) or os.path.exists(flnm)):
             print(f"***********deleting tif folder {vid} after making avi \n*********** \n")
             shutil.rmtree(vid)
 def fill_params(src,dst,checkdst,delete_fld):
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                         help="where to save avis")
     parser.add_argument("checkdst", type=str,
                         help="check to see if video does not already exist")
-    parser.add_argument("--delete_fld", default = 'True',
+    parser.add_argument("--delete_fld", default = 'False',
                         help="delete tifs after making avi")
     
     args = parser.parse_args()

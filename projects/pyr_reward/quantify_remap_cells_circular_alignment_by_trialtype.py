@@ -39,7 +39,7 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_window = 60
+cm_window = 10
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 #%%
 # iterate through all animals
