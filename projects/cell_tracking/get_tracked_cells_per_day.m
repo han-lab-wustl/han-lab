@@ -3,7 +3,7 @@
 
 clear all; close all; clear all
 src =  'Y:\analysis'; % main folder for analysis
-animal = 'z8';
+animal = 'e186';
 fld = sprintf('%s_daily_tracking_plane0',animal);
 pth = dir(fullfile(src, 'celltrack', fld, "Results\*cellRegistered*"));
 load(fullfile(pth.folder, pth.name))
@@ -21,36 +21,6 @@ commoncells_once_per_week = commoncells;
 % save
 save(fullfile(pth.folder,'commoncells_once_per_week.mat'),'commoncells_once_per_week') 
 fprintf('\n *************number of common cells: %i************* \n', size(commoncells,1))
-
-%%
- % find indicies of cells active at least once a week
-weekind = {};
-for week=1:length(weekl)
-    weekmap = cell_registered_struct.cell_to_index_map(:, weeksplit==weekl(week));
-    [r,c] = find(weekmap~=0);
-    [counts, bins] = hist(r,1:size(r,1));
-    weekind{week} = bins(counts>=2); % finding cells in all sessions
-end
-lln = cellfun(@length, weekind);
-% get week with most cells
-weekmax = find(lln==max(lln));
-otherweeks = weekl(weekl~=weekmax);
-iind_activeonceweek = zeros(length(otherweeks), length(weekind{weekmax}));
-for wk=1:length(otherweeks)
-    active_other_weeks = ismember(weekind{weekmax},weekind{wk});
-    iind_activeonceweek(wk,:) = active_other_weeks;
-end
-bool_activeonceweek = sum(iind_activeonceweek,1)==length(otherweeks);
-iind = weekind{weekmax};
-iind_activeonceweek = iind(bool_activeonceweek);
-commoncells_once_per_week=zeros(length(iind_activeonceweek),sessions);
-% make matrix of commoncells
-for ci=1:length(iind_activeonceweek)
-     commoncells_once_per_week(ci,:)=cell_registered_struct.cell_to_index_map(iind_activeonceweek(ci),:);
-end
-save(fullfile(pth.folder,'commoncells_once_per_week.mat'),'commoncells_once_per_week') 
-fprintf('\n *************number of common cells: %i************* \n', size(commoncells,1))
-fprintf('\n *************number of common cells detected once per week: %i************* \n', size(commoncells_once_per_week,1))
 
 %%
 % load mats from all days
