@@ -36,8 +36,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,68],
-            [107,108,109,111]]
+days_all = [[65,66,67,68,69,70,71,72],
+            [107,108,109,111,112,113]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -286,6 +286,11 @@ x1 = df.loc[df.opto_day_before==True, 'lick_selectivity_near_rewardloc_mean'].va
 x2 = df.loc[df.opto_day_before==False, 'lick_selectivity_near_rewardloc_mean'].values
 t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 print(f'Lick selectivity near reward in memory probes\nPer session t-test p-value: {pval:02f}')
+
+x1 = df.loc[(df.opto==1), 'licks_selectivity_last8trials'].values
+x2 = df.loc[df.opto==False, 'licks_selectivity_last8trials'].values
+t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+print(f'Lick selectivity during learning\nPer session t-test p-value: {pval:02f}')
 
 dfagg = df.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lick_selectivity_near_rewardloc_mean'].values

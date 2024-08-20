@@ -11,11 +11,16 @@
 %Allows you to select multiple sbx files, separates out and stabilizes each
 %plane, currently using the HMM method from SIMA
 
+% zahra modified on 5/1/24 to not pick files and run through her day
+% directories
+
 clear all; close all;
-days = [40,41,42,43,44,45,46,47,48,49];
-src = 'Z:\chr2_grabda\e232';
+days=[115];
+src = 'Z:\chr2_grabda\e231';
+% src = 'X:\vipcre\e217';
 lenVid=3000;
-loadVideoTiffNoSplit_Opto(src, days, lenVid);
+threshold = 0.4; % a tunable parameter to find stims, set at 0.4 for chr2 data 
+loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold);
 
 
 

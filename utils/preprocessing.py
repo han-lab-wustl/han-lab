@@ -5,6 +5,7 @@ import os , numpy as np, tifffile, SimpleITK as sitk, sys, shutil
 from math import ceil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir, listdir
+from distutils.dir_util import copy_tree
 
 def makeflds(datadir, mouse_name, day):
     if not os.path.exists(os.path.join(datadir,mouse_name)): #first make mouse dir
@@ -34,30 +35,22 @@ def copy_folder(src_folder, dest_folder):
     Returns:
     - None
     """
-    try:
-        # Check if the source folder exists
-        if not os.path.exists(src_folder):
-            print(f"The source folder '{src_folder}' does not exist.")
-            return
-        
-        # Ensure the destination folder exists; if not, create it
-        makedir(dest_folder)
-        makedir(os.path.join(dest_folder,os.path.basename(src_folder)))
-        print(f"\n************Folder '{src_folder}' copying to '{os.path.join(dest_folder,os.path.basename(src_folder))}'************")
-        # Copy the entire folder structure and files
-        if not os.path.exists(os.path.join(dest_folder,os.path.basename(src_folder))):
-            shutil.copytree(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)))
-        # copy excel sheet
-        xlsx = os.path.dirname(src_folder)
-        xlsx = [xx for xx in listdir(xlsx, ifstring='xlsx')][0]
-        shutil.copy(xlsx, os.path.join(dest_folder))
-        print(f"\n******Folder {src_folder} and excel sheet has been copied to {os.path.join(dest_folder,os.path.basename(src_folder))} successfully ;)******")
-        
-    except shutil.Error as e:
-        print(f"Error: {e}")
-    except OSError as e:
-        print(f"Error: {e.strerror}")
-
+    # Check if the source folder exists
+    if not os.path.exists(src_folder):
+        print(f"The source folder '{src_folder}' does not exist.")
+        return
+    
+    # Ensure the destination folder exists; if not, create it
+    if not os.path.exists(dest_folder): os.mkdir(dest_folder)
+    # Copy the entire folder structure and files
+    print(f"\n***Folder '{src_folder}' copying to '{os.path.join(dest_folder,os.path.basename(src_folder))}'***")
+    copy_tree(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)))    
+    # copy excel sheet
+    xlsx = os.path.dirname(src_folder)
+    xlsx = [xx for xx in listdir(xlsx, ifstring='xlsx')][0]
+    shutil.copy(xlsx, os.path.join(dest_folder))
+    print(f"\n***Folder {src_folder} and excel sheet has been copied to {os.path.join(dest_folder,os.path.basename(src_folder))} successfully ;)***")
+    
 
 def getmeanimg(pth):
     """coverts tif to mean img
