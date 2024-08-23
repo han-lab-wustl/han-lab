@@ -1,6 +1,7 @@
 
 """
 zahra's analysis for initial com and enrichment of pyramidal cell data
+updated aug 2024
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -12,11 +13,12 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
 #%% - re-run dct making
 dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
+    print(dd/len(conddf))
     threshold = 7
     pc = False
     dct = get_pyr_metrics_opto(conddf, dd, day, 
@@ -41,7 +43,8 @@ for dd,day in enumerate(conddf.days.values):
     dffs.append([dff_opto, dff_prev])
     
 #%%
-# plot
+s =12 # pointsize
+# plot relative fc3 transients
 plt.rc('font', size=20)          # controls default text sizes
 df = conddf.copy()[:len(dffs)]
 df['dff_target'] = np.array(dffs)[:,0]
@@ -52,23 +55,42 @@ df['opto'] = df.optoep.values>1
 # only initial days as controls
 # df['opto'] = [True if xx>1 else False if xx==-1 else np.nan for xx in conddf.optoep.values]
 df = df.loc[~((df.animals=='e217')&(df.days.isin([12,26,29])))] # exclude noisy days
-df=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
-fig,ax = plt.subplots(figsize=(2.5,6))
-ax = sns.barplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
-                palette={'Control': "slategray", 'VIP': "red"},
-                errorbar='se', fill=False)
-ax = sns.stripplot(x="opto", y="dff_target-prev", hue = 'condition', data=df,
-                palette={'Control': "slategray", 'VIP': "red"},
-                s=10)
-ax.spines[['top','right']].set_visible(False)
-ax.get_legend().set_visible(False)
+df = df.loc[~((df.animals=='e190')|(df.animals=='e189'))] # exclude noisy days
+df=df[df.optoep.values>1]
+df=df.groupby(['animals', 'condition']).mean(numeric_only=True)
 
-t,pval = scipy.stats.ranksums(df.loc[((df.index.get_level_values('condition')=='VIP')&(df.index.get_level_values('opto')==True)),
+fig,ax = plt.subplots(figsize=(2,5))
+sns.barplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
+                palette={'Control': "slategray", 'VIP': "red"},
+                errorbar='se', fill=False,ax=ax)
+sns.stripplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
+                palette={'Control': "slategray", 'VIP': "red"},
+                s=s,ax=ax,dodge=True)
+
+ax.spines[['top','right']].set_visible(False)
+# ax.get_legend().set_visible(False)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
+ax.set_ylabel(f'Norm. place cell activity')
+ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
+ax.set_xlabel('')
+# pvalues needed
+t,pval = scipy.stats.ranksums(df.loc[((df.index.get_level_values('condition')=='VIP')),
             'dff_target-prev'].values, \
-            df.loc[((df.index.get_level_values('condition')=='VIP')&(df.index.get_level_values('opto')==False)),
+            df.loc[((df.index.get_level_values('condition')=='Control')),
             'dff_target-prev'].values)
-# plt.savefig(os.path.join(savedst, 'dff.jpg'), bbox_inches='tight')
-ax.set_title(f'p-value: {pval:.2f}')
+
+# statistical annotation    
+fs=46
+ii=1; y=.003; pshift=.0002
+if pval < 0.001:
+        ax.text(ii, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+        ax.text(ii, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+        ax.text(ii, y, "*", ha='center', fontsize=fs)
+ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+
+plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
 #%%
 # plot fraction of cells near reward
 df = conddf
@@ -80,38 +102,59 @@ df['frac_pc_prev_late'] = [dct['frac_place_cells_tc1_late_trials'] for dct in dc
 df['frac_pc_opto_late'] = [dct['frac_place_cells_tc2_late_trials'] for dct in dcts]
 df['frac_pc_prev'] = df['frac_pc_prev_late']-df['frac_pc_prev_early']
 df['frac_pc_opto'] = df['frac_pc_opto_late']-df['frac_pc_opto_early']
-df['opto'] = [True if xx>1 else False if xx==-1 else np.nan for xx in conddf.optoep.values]
+df['opto'] = [True if xx>1 else False if xx<1 else np.nan for xx in conddf.optoep.values]
 # df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
-df = df.loc[df.animals!='e189']
+df = df.loc[(df.animals!='e189')&(df.animals!='e190')]
 bigdf=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 
 fig,ax = plt.subplots(figsize=(4,6))
-ax = sns.barplot(x="opto", y="frac_pc_prev", hue = 'condition', data=bigdf,
+sns.barplot(x="opto", y="frac_pc_opto", hue = 'condition', data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                errorbar='se', fill=False)
-ax = sns.stripplot(x="opto", y="frac_pc_prev", hue = 'condition', data=bigdf,
-                palette={'ctrl': "slategray", 'vip': "red"},
-                s=10)
-ax.spines[['top', 'right']].set_visible(False)
-ax.get_legend().set_visible(False)
-t,pval = scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_prev.values, \
-            bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='ctrl')].frac_pc_prev.values)
-ax.set_title(f'p = {pval:02f}')
+                errorbar='se', fill=False,ax=ax)
+ax1 = sns.stripplot(x="opto", y="frac_pc_opto", hue = 'condition', data=bigdf,
+                palette={'ctrl': "slategray", 'vip': "red"},dodge=True,
+                s=s)
+ax.spines[['top', 'right']].set_visible(False); 
+ax1.legend(bbox_to_anchor=(1.1, 1.05))
 
-fig,ax = plt.subplots(figsize=(4,6))
-ax = sns.barplot(x="opto", y="frac_pc_opto", hue = 'condition', data=bigdf,
-                palette={'ctrl': "slategray", 'vip': "red"},
-                errorbar='se', fill=False)
-ax = sns.stripplot(x="opto", y="frac_pc_opto", hue = 'condition', data=bigdf,
-                palette={'ctrl': "slategray", 'vip': "red"},
-                s=10)
-ax.spines[['top', 'right']].set_visible(False); ax.get_legend().set_visible(False)
+# ctrl v.s vip
 t,pval = scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_opto.values, \
             bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='ctrl')].frac_pc_opto.values)
-ax.set_title(f'p = {pval:02f}')
-# # plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
 
+ax.set_ylabel(f'Fraction of place cells near rew. loc.')
+ax.set_xticks([0,1], labels=['LED off', 'LED on'])
+ax.set_xlabel('')
+# statistical annotation    
+fs=46
+ii=1; y=.13; pshift=.02
+if pval < 0.001:
+        ax.text(ii, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+        ax.text(ii, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+        ax.text(ii, y, "*", ha='center', fontsize=fs)
+ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+
+# ctrl v.s vip
+t,pval = scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_opto.values, \
+            bigdf[(bigdf.index.get_level_values('opto')==False) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_opto.values)
+
+ax.set_ylabel(f'Fraction of place cells near rew. loc.')
+ax.set_xticks([0,1], labels=['LED off', 'LED on'])
+ax.set_xlabel('')
+# statistical annotation    
+fs=46; ii=0.5
+if pval < 0.001:
+        ax.text(ii, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+        ax.text(ii, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+        ax.text(ii, y, "*", ha='center', fontsize=fs)
+ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+
+plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
+#%%
 # average enrichment
 # not as robust effect with 3 mice
 df['enrichment_prev'] = [np.nanmean(dct['difftc1']) for dct in dcts]
@@ -176,22 +219,26 @@ ax.set_title('Shift = VIP Inhibition-Before Inhibition')
 #%%
 # bar plot of shift
 dfagg = dfagg.sort_values('vipcond')
-fig, ax = plt.subplots(figsize=(2.5,6))
+fig, ax = plt.subplots(figsize=(2.5,5))
 ax = sns.barplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg, fill=False,
                 palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se')
 ax = sns.stripplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
-                s=10)
+                s=s)
 
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
+ax.spines[['top','right']].set_visible(False)
+
 vipshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='vip', 'com_shift_inactive'].values
 ctrlshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='ctrl', 'com_shift_inactive'].values
 t,pval=scipy.stats.ranksums(vipshift, ctrlshift)
-plt.title(f"p-value = {pval:03f}")
-# plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
-
+ii=0.5; y= 35
+ax.text(ii-0.5, y, f'p={pval:.3g}',fontsize=12)
+ax.set_ylabel('Av. Inactive PC rel. center-of-mass')
+ax.set_xticks([0,1], labels=['Control', 'VIP \nInhibition'])
+ax.set_xlabel('')
+plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
+#%%
 # active
 dfagg = dfagg.sort_values('vipcond')
 fig, ax = plt.subplots(figsize=(2.5,6))

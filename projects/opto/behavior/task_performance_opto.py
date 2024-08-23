@@ -17,7 +17,7 @@ from behavior import get_success_failure_trials, get_performance, get_rewzones
 
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
 # corresponding to days analysing
@@ -63,43 +63,47 @@ for dd,day in enumerate(conddf.days.values):
     dct['trials_before_success'] = [trials_bwn_success_prev, trials_bwn_success_opto]
     dcts.append(dct)
 #%%
-# plot performance by rewzones
+# plot performance 
+s = 12 # pontsize
 dcts_opto = np.array(dcts)
 df = conddf
 df['rates_diff'] = [np.diff(dct['rates'])[0] for dct in dcts]
 df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
 df['velocity'] = [dct['velocity'][0] for dct in dcts]
-
 df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
 # plot rates vip vs. ctl led off and on
-df = df[(df.animals!='e189')&(df.animals!='e190')]
-
+df = df[(df.animals!='e189')&(df.animals!='z9')]
+df=df[(df.optoep.values>1)]
 bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
-plt.figure(figsize=(3.5,6))
-ax = sns.barplot(x="opto", y="rates_diff",hue='condition', data=bigdf_plot,
+fig,ax = plt.subplots(figsize=(2,5))
+sns.barplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
     palette={'ctrl': "slategray", 'vip': "red"},                
-            errorbar='se', fill=False)
-sns.stripplot(x="opto", y="rates_diff",hue='condition', data=bigdf_plot,
+            errorbar='se', fill=False,ax=ax)
+sns.stripplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
             palette={'ctrl': 'slategray','vip': "red"},                
-            s=10)
-ax.tick_params(axis='x', labelrotation=90)
+            s=s,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
-ax.get_legend().set_visible(False)
-# sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
+ax.set_ylabel(f'Performance (LEDoff-LEDon)')
+ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
+ax.set_xlabel('')
 
 x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
-x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==False)), 'rates_diff'].values
-x3 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
-x4 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==False)), 'rates_diff'].values
-scipy.stats.f_oneway(x1[~np.isnan(x1)], x2, x3, x4[~np.isnan(x4)])
-import scikit_posthocs as sp
-p_values= sp.posthoc_ttest([x1,x2,x3,x4])#,p_adjust='holm-sidak')
-p_values.columns = ['vip_ledon','vip_ledoff','ctrl_ledon','ctrl_ledoff']
-print(p_values)
+x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
+t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+# statistical annotation    
+fs=46
+ii=0.5; y=.05; pshift=.07
+if pval < 0.001:
+        ax.text(ii, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+        ax.text(ii, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+        ax.text(ii, y, "*", ha='center', fontsize=fs)
+ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
-plt.tight_layout()
-# plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
 #%%
 # velocity
 plt.figure()
@@ -322,8 +326,8 @@ for ii,dct in enumerate(dcts_opto):
     try:
         df = pd.DataFrame([ts[0][0]], columns = ['trials_before_first_success_prev'])
         df['trials_before_first_success_opto'] = ts[1][0]
-        df['trials_before_success_median_prev'] = np.mean(ts[0])
-        df['trials_before_success_median_opto'] = np.mean(ts[1])
+        df['trials_before_success_median_prev'] = np.nanmean(ts[0])
+        df['trials_before_success_median_opto'] = np.nanmean(ts[1])
         
         df['trials_before_first_success_ledoff-on'] = df['trials_before_first_success_opto'].astype(int)-df['trials_before_first_success_prev'].astype(int)
         df['trials_before_success_med_ledoff-on'] = df['trials_before_success_median_opto']-df['trials_before_success_median_prev']
@@ -359,7 +363,7 @@ ax = sns.barplot(x="led", y="trials_before_first_success_ledoff-on", hue='in_typ
     palette={'ctrl': 'slategray','vip': "red"}, 
     errorbar='se', fill=False)
 ax = sns.stripplot(x="led", y="trials_before_first_success_ledoff-on", hue='in_type',data=bigdf_plot,
-                palette={'ctrl': 'slategray','vip': "red"},s=8)
+                palette={'ctrl': 'slategray','vip': "red"},s=s)
 ax.tick_params(axis='x', labelrotation=90)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)
@@ -386,7 +390,7 @@ ax = sns.barplot(x="led", y="trials_before_success_med_ledoff-on", hue='in_type'
     palette={'ctrl': 'slategray','vip': "red"}, 
     errorbar='se', fill=False)
 ax = sns.stripplot(x="led", y="trials_before_success_med_ledoff-on", hue='in_type',data=bigdf_plot,
-                palette={'ctrl': 'slategray','vip': "red"},s=8)
+                palette={'ctrl': 'slategray','vip': "red"},s=s)
 ax.tick_params(axis='x', labelrotation=90)
 # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
 ax.spines['top'].set_visible(False)

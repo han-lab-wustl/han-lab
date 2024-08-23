@@ -10,10 +10,10 @@
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
 
-an = 'z9';
+an = 'e216';
 % an = 'e190';%an='e189';
 % individual day analysis 
-dys = [45];
+dys = [37];
 % dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
 % dys = [9 10 37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
 % dys = [2 3 4 5 6 7 8 9 11 12 13	14	15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
@@ -136,6 +136,7 @@ for dy=dys % for loop per day
     %% step 3 - compare epochs
     comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
     rewloccomp = zeros(size(comparisons,1),2); rewzonecomp = zeros(size(comparisons,1),2);
+    set(gca,'FontName','Arial')  % Set it to arail
     for i=1:size(comparisons,1)
         comparison = comparisons(i,:);
         if exist('ep_comp_pval', 'var') == 1 % if pvals already calculated

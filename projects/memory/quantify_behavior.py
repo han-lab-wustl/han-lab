@@ -36,8 +36,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,68,69,70,71,72],
-            [107,108,109,111,112,113]]
+days_all = [[65,66,67,68,69,70,71,72,73,74],
+            [107,108,109,111,112,113,114,115,116,117]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -52,6 +52,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
+        
         optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), memory_cond].values[0])    
         optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
         # for each plane
@@ -153,6 +154,9 @@ for ii,animal in enumerate(animals):
 df = pd.DataFrame()
 df['days'] = list(itertools.chain(*days_all))
 df['animal'] = list(itertools.chain(*[[xx]*len(days_all[ii]) for ii,xx in enumerate(animals)]))
+lds = [[condrewloc.loc[((condrewloc.Day==dy)&(condrewloc.Animal==animals[ii])), 'learning_date'].values[0] for dy in dys] 
+    for ii,dys in enumerate(days_all)]
+df['learning_day'] = list(itertools.chain(*lds))
 df['opto_day_before'] = [xx if xx==True else False for xx in list(itertools.chain(*optodays_before_per_an))]
 df['opto'] = [xx if xx==True else False for xx in list(itertools.chain(*optodays_per_an))]
 df['lick_selectivity_near_rewardloc_mean'] = [np.nanmean(xx[0]) for xx in near_reward_per_day]
@@ -172,9 +176,10 @@ df['licks_selectivity_last8trials'] = [np.nanmean(xx[11]) for xx in near_reward_
 # df['lick_prob_near_rewardloc_mean'] = [np.quantile(xx[0], .9) for xx in near_reward_per_day]
 # df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
-dfagg = df#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+df = df[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+dfagg = df
 # drop 1st row
-
+#%%
 # performance on opto days
 plt.figure(figsize=(3,6))
 ax = sns.barplot(x='opto', y='success_rate', hue='opto', data=df, fill=False,

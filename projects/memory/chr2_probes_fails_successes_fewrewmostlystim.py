@@ -36,8 +36,8 @@ animals = ['e231', 'e232']
 # days_all = [[28,29,30,31,32,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
-days_all = [[65,66,67,68],
-            [107,108,109,111]]
+days_all = [[65,66,67,68,69,70,71,72,73,74],
+            [107,108,109,111,112,113,114]]
 numtrialsstim=10 # stim every 10 trials
 range_val = 10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -240,7 +240,7 @@ height = 1.035 # ylim
 #%%
 # 2 -quantify so transients
 # get time period around stim
-time_rng = range(int(range_val/binsize-0.5/binsize),
+time_rng = range(int(range_val/binsize-(1/binsize)),
             int(range_val/binsize+(2/binsize))) # during and after stim
 before_time_rng = range(int(range_val/binsize-1/binsize),
             int(range_val/binsize-0/binsize)) # during and after stim
@@ -248,7 +248,7 @@ before_time_rng = range(int(range_val/binsize-1/binsize),
 # normalize pre-window to 1
 # remember than here we only take led off trials bc of artifact
 # in array: 1 - index = nonopto; 0 = opto
-so_transients_opto = [day_date_dff_arr_opto[ii,3,1,:]/np.nanmean(day_date_dff_arr_opto[ii,3,1,:int(range_val/binsize)]) for ii,
+so_transients_opto = [day_date_dff_arr_opto[ii,3,0,:]/np.nanmean(day_date_dff_arr_opto[ii,3,0,:int(range_val/binsize)]) for ii,
                     xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
 so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
 so_transients_nonopto = [day_date_dff_arr_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_arr_nonopto[ii,

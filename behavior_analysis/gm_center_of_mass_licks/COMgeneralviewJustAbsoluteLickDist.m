@@ -66,7 +66,7 @@ else
     %     days = [55:75];
     %     days = [4:7,9:11];
     %     days = [62:67,69:70,72:74,76,81:85];
-    days = [37 41 46 47 48 50 51 52 54 55 56 57 60];
+    days = [33 37 41];
     %     src = "Z:\sstcre_imaging";
     %     src = "X:\pyramidal_cell_data";
     %     src = "Y:\sstcre_imaging";
@@ -113,7 +113,7 @@ for dy=1:length(days)
         end
         scatter(time_min,ypos,1,'o','MarkerEdgeColor',[0.6 0.6 0.6])
         hold on
-        scatter(islickX,islickYpos,10,'r','filled')
+        scatter(islickYpos,10,'r','filled')
         scatter(rewX,rewYpos,10,'b','filled')
         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
@@ -201,148 +201,148 @@ for dy=1:length(days)
         % close(fig)
         %% Speed Mean Plots
 
-%         fig = figure;
-%         slideId = pptx.addSlide();
-%         fprintf('Added slide %d\n',slideId);
-%         %raw data plot
-%         subplot(3,8,[1 2 9 10 17 18])
-%         sgtitle([VR.name_date_vr(1:end-15) ' Mean ROE by trial'],'fontsize',14,'interpreter','none')
-%         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
-%         hold on
-%         for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
-%             for yy = 1:numel(ROE{xx})
-%                 scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
-%                 colormap(flipud(parula()))
-%             end
-%         end
-%         scatter(islickX,islickYpos,10,'r','x')
-%         scatter(rewX,rewYpos,10,'b','filled')
-% 
-%         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-%             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-%         end
-%         ylabel('track position - cm')
-%         xlabel('time - minutes')
-%         title ('lick (red) along track - and reward (blue)')
-% 
-%         %meanROE plots
-%         for tt = 1:length(RewLoc) % for the three reward locations..
-%             if tt<=3 && ~isempty(allCOM{tt})
-%                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
-%                 hold on
-%                 for i=1:numel(ROE{tt}) %plot all the ROE values
-%                     scatter(ones(size(ROE{tt}{i})).*i,(ROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
-%                 end
-%                 alpha(.05)
-%                 scatter((1:length(meanROE{tt})),meanROE{tt},50,'filled') %plot the mean on top
-%                 scatter(find(failure{tt}),meanROE{tt}(find(failure{tt})),50,'r','filled')
-%                 first5success = find(failure{tt} == 0,5,'first');
-%                 last5success = find(failure{tt} == 0,5,'last');
-% 
-%                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
-%                 errorbar(meanROE{tt},stdROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
-%                 hold on
-%                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
-% 
-%                 if sum(abs(allCOM{tt})>0)>10
-%                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
-%                     y=[abs(mean(meanROE{tt}(first5success), 'omitnan')) abs(nanmean(meanROE{tt}(last5success)))];
-%                     [h,p1]=ttest2(meanROE{tt}(first5success),meanROE{tt}(last5success));
-%                     hBar=bar(y);
-%                     Labels = {'first five trials', 'last five trials'};
-%                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
-%                     ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
-%                     if p1<0.05
-%                         hold on
-%                         plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
-%                         plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
-%                         hold off
-%                     end
-%                     text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
-% 
-%                 else
-%                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
-%                 end
-%             end
-%         end
-%         pptx.addPicture(fig);
-%         pptx.addTextbox(sprintf('%s_day%i mean ROE',mouse_name,days(dy)));
-%         close(fig)
+        %         fig = figure;
+        %         slideId = pptx.addSlide();
+        %         fprintf('Added slide %d\n',slideId);
+        %         %raw data plot
+        %         subplot(3,8,[1 2 9 10 17 18])
+        %         sgtitle([VR.name_date_vr(1:end-15) ' Mean ROE by trial'],'fontsize',14,'interpreter','none')
+        %         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
+        %         hold on
+        %         for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
+        %             for yy = 1:numel(ROE{xx})
+        %                 scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
+        %                 colormap(flipud(parula()))
+        %             end
+        %         end
+        %         scatter(islickX,islickYpos,10,'r','x')
+        %         scatter(rewX,rewYpos,10,'b','filled')
+        %
+        %         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+        %             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+        %         end
+        %         ylabel('track position - cm')
+        %         xlabel('time - minutes')
+        %         title ('lick (red) along track - and reward (blue)')
+        %
+        %         %meanROE plots
+        %         for tt = 1:length(RewLoc) % for the three reward locations..
+        %             if tt<=3 && ~isempty(allCOM{tt})
+        %                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
+        %                 hold on
+        %                 for i=1:numel(ROE{tt}) %plot all the ROE values
+        %                     scatter(ones(size(ROE{tt}{i})).*i,(ROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
+        %                 end
+        %                 alpha(.05)
+        %                 scatter((1:length(meanROE{tt})),meanROE{tt},50,'filled') %plot the mean on top
+        %                 scatter(find(failure{tt}),meanROE{tt}(find(failure{tt})),50,'r','filled')
+        %                 first5success = find(failure{tt} == 0,5,'first');
+        %                 last5success = find(failure{tt} == 0,5,'last');
+        %
+        %                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
+        %                 errorbar(meanROE{tt},stdROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
+        %                 hold on
+        %                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
+        %
+        %                 if sum(abs(allCOM{tt})>0)>10
+        %                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
+        %                     y=[abs(mean(meanROE{tt}(first5success), 'omitnan')) abs(nanmean(meanROE{tt}(last5success)))];
+        %                     [h,p1]=ttest2(meanROE{tt}(first5success),meanROE{tt}(last5success));
+        %                     hBar=bar(y);
+        %                     Labels = {'first five trials', 'last five trials'};
+        %                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
+        %                     ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
+        %                     if p1<0.05
+        %                         hold on
+        %                         plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
+        %                         plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
+        %                         hold off
+        %                     end
+        %                     text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
+        %
+        %                 else
+        %                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
+        %                 end
+        %             end
+        %         end
+        %         pptx.addPicture(fig);
+        %         pptx.addTextbox(sprintf('%s_day%i mean ROE',mouse_name,days(dy)));
+        %         close(fig)
 
 
         %% Speed Mean cut to only first portion in common Plots
         % velocity only up to position 60
-%         fig = figure;
-%         slideId = pptx.addSlide();
-%         fprintf('Added slide %d\n',slideId);
-%         %raw data plot
-%         subplot(3,8,[1 2 9 10 17 18])
-%         sgtitle([VR.name_date_vr(1:end-15) ' Mean ROE by trial < 60 cm'],'fontsize',14,'interpreter','none')
-%         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
-%         hold on
-%         for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
-%             for yy = 1:numel(ROE{xx})
-%                 scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
-%                 colormap(flipud(parula()))
-%                 %         colormap((viridis())) % for a personal choice of colormap,
-%                 %         but commented out because requires download of code
-% 
-%             end
-%         end
-%         scatter(islickX,islickYpos,10,'r','x')
-%         scatter(rewX,rewYpos,10,'b','filled')
-% 
-%         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
-%             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
-%         end
-%         ylabel('track position - cm')
-%         xlabel('time - minutes')
-%         title ('lick (red) along track - and reward (blue)')
-% 
-%         %meanROE plots
-%         for tt = 1:length(RewLoc) % for the three reward locations..
-%             if tt<=3 && ~isempty(allCOM{tt})
-%                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
-%                 hold on
-%                 for i=1:numel(cutROE{tt}) %plot all the ROE values
-%                     scatter(ones(size(cutROE{tt}{i})).*i,(cutROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
-%                 end
-%                 alpha(.05)
-%                 scatter((1:length(meancutROE{tt})),meancutROE{tt},50,'filled') %plot the mean on top
-%                 scatter(find(failure{tt}),meancutROE{tt}(find(failure{tt})),50,'r','filled')
-%                 first5success = find(failure{tt} == 0,5,'first');
-%                 last5success = find(failure{tt} == 0,5,'last');
-% 
-% 
-%                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
-%                 errorbar(meancutROE{tt},semcutROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
-%                 hold on
-%                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
-% 
-%                 if sum(abs(allCOM{tt})>0)>10
-%                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
-%                     y=[abs(mean(meancutROE{tt}(first5success), 'omitnan')) abs(mean(meancutROE{tt}(last5success), 'omitnan'))];
-%                     [h,p1]=ttest2(meancutROE{tt}(first5success),meancutROE{tt}(last5success));
-%                     hBar=bar(y);
-%                     Labels = {'first five trials', 'last five trials'};
-%                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
-%                     ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
-%                     if p1<0.05
-%                         hold on
-%                         plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
-%                         plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
-%                         hold off
-%                     end
-%                     text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
-% 
-%                 else
-%                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
-%                 end
-%             end
-%         end
-%         pptx.addPicture(fig);
-%         pptx.addTextbox(sprintf('%s_day%i mean ROE < 60 cm',mouse_name,days(dy)));
-%         close(fig)
+        %         fig = figure;
+        %         slideId = pptx.addSlide();
+        %         fprintf('Added slide %d\n',slideId);
+        %         %raw data plot
+        %         subplot(3,8,[1 2 9 10 17 18])
+        %         sgtitle([VR.name_date_vr(1:end-15) ' Mean ROE by trial < 60 cm'],'fontsize',14,'interpreter','none')
+        %         scatter(time_min,ypos,1,'.','MarkerEdgeColor',[0.6 0.6 0.6])
+        %         hold on
+        %         for xx = 1:numel(ROE) %plots the binned ROE overlaying the raw data
+        %             for yy = 1:numel(ROE{xx})
+        %                 scatter(VR.time(binypos{xx}{yy}(~isnan(binypos{xx}{yy})))/60,VR.ypos(binypos{xx}{yy}(~isnan(binypos{xx}{yy}))),2*rewSize,ROE{xx}{yy}(~isnan(binypos{xx}{yy})),'filled')
+        %                 colormap(flipud(parula()))
+        %                 %         colormap((viridis())) % for a personal choice of colormap,
+        %                 %         but commented out because requires download of code
+        %
+        %             end
+        %         end
+        %         scatter(islickX,islickYpos,10,'r','x')
+        %         scatter(rewX,rewYpos,10,'b','filled')
+        %
+        %         for mm = 1:length(changeRewLoc)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
+        %             rectangle('position',[time_min(changeRewLoc(mm)) RewLoc(mm)-rewSize time_min(changeRewLoc(mm+1))-time_min(changeRewLoc(mm)) 2*rewSize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
+        %         end
+        %         ylabel('track position - cm')
+        %         xlabel('time - minutes')
+        %         title ('lick (red) along track - and reward (blue)')
+        %
+        %         %meanROE plots
+        %         for tt = 1:length(RewLoc) % for the three reward locations..
+        %             if tt<=3 && ~isempty(allCOM{tt})
+        %                 subplot(3,8,[3+8*(tt-1) 4+8*(tt-1)]) %plot the first column
+        %                 hold on
+        %                 for i=1:numel(cutROE{tt}) %plot all the ROE values
+        %                     scatter(ones(size(cutROE{tt}{i})).*i,(cutROE{tt}{i}),38,[0 0.4470 0.7410],'filled')
+        %                 end
+        %                 alpha(.05)
+        %                 scatter((1:length(meancutROE{tt})),meancutROE{tt},50,'filled') %plot the mean on top
+        %                 scatter(find(failure{tt}),meancutROE{tt}(find(failure{tt})),50,'r','filled')
+        %                 first5success = find(failure{tt} == 0,5,'first');
+        %                 last5success = find(failure{tt} == 0,5,'last');
+        %
+        %
+        %                 subplot(3,8,[5+8*(tt-1) 6+8*(tt-1)]) %plot the mean velocity with std Error
+        %                 errorbar(meancutROE{tt},semcutROE{tt},'k.','LineWidth',1.5,'CapSize',0,'MarkerFaceColor','k','MarkerSize',25);
+        %                 hold on
+        %                 title([ 'reward location ' num2str(tt) ' = ' num2str(RewLoc(tt))])
+        %
+        %                 if sum(abs(allCOM{tt})>0)>10
+        %                     subplot(3,8, [7+8*(tt-1) 8+8*(tt-1)]) %plot a paired t-test of the average velocity
+        %                     y=[abs(mean(meancutROE{tt}(first5success), 'omitnan')) abs(mean(meancutROE{tt}(last5success), 'omitnan'))];
+        %                     [h,p1]=ttest2(meancutROE{tt}(first5success),meancutROE{tt}(last5success));
+        %                     hBar=bar(y);
+        %                     Labels = {'first five trials', 'last five trials'};
+        %                     set(gca,'XTick', 1:2, 'XTickLabel', Labels);
+        %                     ctr2 = bsxfun(@plus, hBar(1).XData, [hBar(1).XOffset]');
+        %                     if p1<0.05
+        %                         hold on
+        %                         plot(ctr2(1:2), [1 1]*y(1,1)*1.1, '-k', 'LineWidth',2)
+        %                         plot(mean(ctr2(1:2)), y(1,1)*1.15, '*k')
+        %                         hold off
+        %                     end
+        %                     text(mean(ctr2(1:2))+0.3,y(1,1)*1.15,['p = ' num2str(round(p1,3))])
+        %
+        %                 else
+        %                     disp('Not enough succesfull trials in the last reward zone to compute t-test');
+        %                 end
+        %             end
+        %         end
+        %         pptx.addPicture(fig);
+        %         pptx.addTextbox(sprintf('%s_day%i mean ROE < 60 cm',mouse_name,days(dy)));
+        %         close(fig)
         %
         %         %     %% Analysis of speed distribution between Epoch 1 and Epoch 2 to show different behavior
         %         learnnumtrials = 5; %how many "learned" trials you want to compare

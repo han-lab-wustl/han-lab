@@ -19,7 +19,7 @@ from behavior import get_success_failure_trials, get_performance, get_rewzones, 
 
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_licks.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\thesis_proposal'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
 bin_size = 1
 lick_tc_vip_opto = {} # collecting
 lick_tc_vip_ledoff = {}
@@ -61,8 +61,8 @@ for dd,day in enumerate(conddf.days.values):
 #%%
 
 # Function to plot and calculate average licks
-def plot_lick_vis(dct_to_use, condition, probes=False,
-            plot_all_probes=False, probe2plot=1):
+def plot_lick_vis(dct_to_use, condition, savedst, probes=False,
+            plot_all_probes=False, probe2plot=1,save=False):
     expandrzwindow = 5
     scalingf = 2/3
     rz1 = np.ceil(np.array([67-expandrzwindow,86+expandrzwindow])/scalingf)
@@ -138,7 +138,8 @@ def plot_lick_vis(dct_to_use, condition, probes=False,
 
         av_licks_in_rewzone[zone] = av_licks_in_rewzones
         av_licks_in_prevrewzone[zone] = av_licks_in_prevrewzones
-        
+    
+    plt.savefig(os.path.join(savedst, condition+'.jpg'),bbox_inches='tight')        
     if (plot_all_probes==False) and (probes==True):
         plt.suptitle(f'Probe {probe2plot}, {condition}')
     else:
@@ -150,10 +151,12 @@ def plot_lick_vis(dct_to_use, condition, probes=False,
 # Plot and compute licks for each condition
 dct_to_use = lick_tc_ctrl_opto
 condition = 'Control LED on'
-av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition)
+av_licks_in_rewzone_ctrl, 
+av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition,savedst, save=True)
 dct_to_use = lick_tc_vip_opto
 condition = 'VIP LED on'
-av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition)
+av_licks_in_rewzone_vip, 
+av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use,condition,savedst, save=True)
 
 #%%
 dct_to_use = probe_lick_tc_ctrl_opto

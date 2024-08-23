@@ -153,7 +153,8 @@ fig,ax=plt.subplots()
 for day in tracked_lut.columns.values[:10]:  
     print(day)  
     params_pth = rf"Y:\analysis\fmats\{an}\days\{an}_day{day:03d}_plane{pln}_Fall.mat"
-    fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel','rewards', 'timedFF'])
+    fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel',
+                                        'rewards', 'timedFF'])
     dayidx = np.where(tracked_lut.columns==day)[0][0]
     if an=='e145':
         rewards = fall['rewards'][0]==1
@@ -168,3 +169,4 @@ for day in tracked_lut.columns.values[:10]:
         ax.set_title(f'Acceleration-correlated tracked cell # {acctr}')
 ax.legend()
 # %%
+ 
