@@ -1,13 +1,8 @@
 
 """
 zahra
-june 2024
-visualize reward-relative cells across days
-idea 1: find all the reward relative cells per day and see if they map onto the same 
-subset of cells
-idea 2: find reward relative cells on the last day (or per week, or per 5 days)
-and see what their activity was like on previous days
-
+aug. 2024
+get post rew cells based on acc
 """
 #%%
 
@@ -78,9 +73,9 @@ with open(rew_cells_tracked_dct, "rb") as fp:   #Pickling
 #
 #%%
 # plot dff / tuning curves of cells tracked > 1
-an = 'e145'
-pln=2
-day=11
+an = 'e186'
+pln=0
+day=2
 trackedcellarr = np.array(trackeddct[an][0]).astype(int)
 trackedcellind = np.where(trackedcellarr>1)[0] # more that 1 day tracjed
 tracked_lut, days= get_tracked_lut(celltrackpth,an,pln)
@@ -90,15 +85,15 @@ tracked_lut_multiday_rew_cells = tracked_lut_multiday_rew_cells[days_rec] # only
 num_days_tracked = trackedcellarr[np.where(trackedcellarr>1)[0]]
 #%%
 # sanity check plot cell per day
-range_val=10; binsize=0.1
+range_val=15; binsize=0.1
 params_pth = rf"Y:\analysis\fmats\{an}\days\{an}_day{day:03d}_plane{pln}_Fall.mat"
 fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel','rewards', 'timedFF'])
 dayidx = np.where(tracked_lut.columns==day)[0][0]
 dFF = fall['dFF']
 if an=='e145':
-    rewards = fall['rewards'][0]==1
+    rewards = (fall['rewards'][0]==1).astype(int)
 else:
-    rewards = fall['rewards'][0]==.5
+    rewards = (fall['rewards'][0]==.5).astype(int)
 timedFF = fall['timedFF'][0]
 
 acc = np.diff(fall['forwardvel'][0])/np.diff(timedFF)
@@ -107,7 +102,7 @@ acc = np.hstack(accdf.rolling(100).mean().fillna(0).values)
 # cells correlated with acc
 # Calculate phase-shifted correlation
 max_shift = int(np.ceil(31.25/(pln+1)))  # You can adjust the max shift based on your data
-# ~ 3 s phase shifts
+# ~ 1 s phase shifts
 rshiftmax = []
 for i in range(dFF.shape[1]):
     dff = dFF[1:,i]
@@ -116,8 +111,8 @@ for i in range(dFF.shape[1]):
     rshiftmax.append(np.max(r))
 
 plt.hist(rshiftmax)
-# only plot top 50 for now
-acccells = np.where(np.array(rshiftmax)>0.3)[0]
+# only plot top 5% for now
+acccells = np.where(np.array(rshiftmax)>np.quantile(rshiftmax,.95))[0]
 # remove INs
 skew = scipy.stats.skew(dFF[:,acccells], nan_policy='omit', axis=0)
 acccells = acccells[skew>2]
@@ -128,6 +123,7 @@ for acccell in acccells:
     rewdFF = perireward_binned_activity(dFF[:, acccell], rewards, timedFF, \
         range_val, binsize)    
     meandf.append(meanrewdFF)
+    
 __, meanrewacc, _, ___ = perireward_binned_activity(acc, rewards[1:], timedFF[1:], \
         range_val, binsize)
 velocity = fall['forwardvel'][0]
@@ -139,34 +135,35 @@ fig,ax=plt.subplots()
 ax.plot(np.array(meandf).T)
 ax.plot(meanrewacc/20,'k')
 ax.plot(meanrewvel/100,'k--')
-ax.set_ylim([-.5,2])
+# ax.set_ylim([-.5,2])
 
 #%%
 # see if a couple of these cells are consistent over days
-dy=11
+# get last day
+dy=conddf.loc[(conddf.animals==an) & (conddf.optoep<0), 'days'].values[-1]
+dys = conddf.loc[(conddf.animals==an) & (conddf.optoep<0), 'days'].values
 trackedidxacc = [np.where(tracked_lut[dy].values==acc)[0] for acc in acccells]
 # test with 1 i know is stop and lick cell
 # but does not pass acc criteria?
-acctr = 1#trackedidxacc[3][0]
-
+acctrs = [xx[0] for xx in trackedidxacc if len(xx)>0]  
+acctr=acctrs[1]
 fig,ax=plt.subplots()
-for day in tracked_lut.columns.values[:10]:  
+for day in dys:  
     print(day)  
     params_pth = rf"Y:\analysis\fmats\{an}\days\{an}_day{day:03d}_plane{pln}_Fall.mat"
-    fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'forwardvel',
-                                        'rewards', 'timedFF'])
+    fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 
+        'forwardvel','rewards', 'timedFF'])
+    dFF = fall['dFF']
     dayidx = np.where(tracked_lut.columns==day)[0][0]
     if an=='e145':
-        rewards = fall['rewards'][0]==1
+        rewards = (fall['rewards'][0]==1).astype(int)
     else:
-        rewards = fall['rewards'][0]==.5
-    timedFF = fall['timedFF'][0]
+        rewards = (fall['rewards'][0]==.5).astype(int)
+    timedFF = fall['timedFF'][0]        
     if tracked_lut.iloc[acctr][day]>-1:
         normmeanrewdFF, meanrewdFF, normrewdFF, \
-        rewdFF = perireward_binned_activity(dFF[:, tracked_lut.iloc[acctr][day]], rewards, timedFF, \
-            range_val, binsize)     
+        rewdFF = perireward_binned_activity(dFF[:, tracked_lut.iloc[acctr][day]], \
+            rewards, timedFF, range_val, binsize)     
         ax.plot(meanrewdFF,label=f'Day {day}')
         ax.set_title(f'Acceleration-correlated tracked cell # {acctr}')
 ax.legend()
-# %%
- 
