@@ -17,6 +17,107 @@ import numpy as np, random, re, os, scipy, pandas as pd
 from itertools import combinations, chain
 from placecell import intersect_arrays
 
+def phase_shifted_correlation(acceleration, neural_activity, max_shift):
+    """
+    Calculate phase-shifted correlation between acceleration and neural activity.
+    
+    Parameters:
+        acceleration (np.array): The acceleration data.
+        neural_activity (np.array): The neural activity data.
+        max_shift (int): The maximum shift (in samples) to apply for phase-shifting.
+        
+    Returns:
+        shifts (np.array): Array of shift values.
+        correlations (np.array): Correlation values for each shift.
+    """
+    
+    # Ensure the signals have the same length
+    assert len(acceleration) == len(neural_activity), "Signals must have the same length"
+    
+    shifts = np.arange(-max_shift, max_shift + 1, 5)
+    correlations = np.zeros(len(shifts))
+    
+    for i, shift in enumerate(shifts):
+        if shift < 0:
+            shifted_neural_activity = np.roll(neural_activity, shift)
+            shifted_neural_activity[shift:] = 0
+        else:
+            shifted_neural_activity = np.roll(neural_activity, shift)
+            shifted_neural_activity[:shift] = 0
+        
+        # Calculate the correlation for this shift
+        correlation, _ = scipy.stats.pearsonr(acceleration, shifted_neural_activity)
+        correlations[i] = correlation
+    return correlations
+    
+    
+def consecutive_stretch(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+
+    if len(break_point) == 0:
+        return [x]
+
+    y = [x[:break_point[0]]]
+    for i in range(1, len(break_point)):
+        y.append(x[break_point[i - 1] + 1:break_point[i]])
+    y.append(x[break_point[-1] + 1:])
+    
+    return y 
+
+def perireward_binned_activity(dFF, rewards, timedFF, 
+        trialnum, range_val, binsize):
+    """adaptation of gerardo's code to align IN BOTH TIME AND POSITION, dff or pose data to 
+    rewards within a certain window on a per-trial basis, only considering trials with trialnum > 3
+
+    Args:
+        dFF (_type_): _description_
+        rewards (_type_): _description_
+        timedFF (_type_): _description_
+        trialnum (_type_): array denoting the trial number per frame
+        range_val (_type_): _description_
+        binsize (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    Rewindx = np.where(rewards & (trialnum > 3))[0]  # Filter rewards for trialnum > 3
+    rewdFF = np.ones((int(np.ceil(range_val * 2 / binsize)), len(Rewindx)))*np.nan
+
+    for rr in range(0, len(Rewindx)):
+        current_trial = trialnum[Rewindx[rr]]
+        rewtime = timedFF[Rewindx[rr]]
+        currentrewchecks = np.where((timedFF > rewtime - range_val) & 
+                                    (timedFF <= rewtime + range_val) & 
+                                    (trialnum == current_trial))[0]
+        currentrewcheckscell = consecutive_stretch(currentrewchecks)  # Get consecutive stretch of reward ind
+        # Check for missing vals
+        currentrewcheckscell = [xx for xx in currentrewcheckscell if len(xx) > 0]
+        currentrewcheckscell = np.array(currentrewcheckscell)  # Reformat for Python
+        currentrewardlogical = np.array([sum(Rewindx[rr] == x).astype(bool) for x in currentrewcheckscell])
+        val = 0
+        for bin_val in range(int(np.ceil(range_val * 2 / binsize))):
+            val = bin_val + 1
+            currentidxt = np.where((timedFF > (rewtime - range_val + (val * binsize) - binsize)) & 
+                                   (timedFF <= rewtime - range_val + val * binsize) &
+                                (trialnum == current_trial))[0]
+            checks = consecutive_stretch(currentidxt)
+            checks = [list(xx) for xx in checks]
+            if len(checks[0]) > 0:
+                currentidxlogical = np.array([np.isin(x, currentrewcheckscell[currentrewardlogical][0]) \
+                                for x in checks])
+                for i, cidx in enumerate(currentidxlogical):
+                    cidx = [bool(xx) for xx in cidx]
+                    if sum(cidx) > 0:
+                        checkidx = np.array(np.array(checks)[i])[np.array(cidx)]
+                        rewdFF[bin_val, rr] = np.nanmean(dFF[checkidx])
+
+    meanrewdFF = np.nanmean(rewdFF, axis=1)
+    normmeanrewdFF = (meanrewdFF - np.min(meanrewdFF)) / (np.max(meanrewdFF) - np.min(meanrewdFF))
+    normrewdFF = np.array([(xx - np.min(xx)) / ((np.max(xx) - np.min(xx))) for xx in rewdFF.T])
+    
+    return normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF
+
 def get_radian_position(eps,ybinned,rewlocs,track_length,rewsize):
     rad = [] # get radian coordinates
     # same as giocomo preprint - worked with gerardo
