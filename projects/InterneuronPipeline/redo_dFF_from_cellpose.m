@@ -1,7 +1,8 @@
 function [dFF, F0] = redo_dFF_from_cellpose(fmatfl,Fs,time)
 load(fmatfl);
 Fmat = load(fmatfl); % to avoid conflicts with iscell function
-
+F = F(logical(Fmat.iscell(:,1)),:);
+Fneu = Fneu(logical(Fmat.iscell(:,1)),:);
 dFF=zeros(size(F));
 Fc=zeros(size(F));
 % time=300; %size of moving avg window (s)
@@ -28,6 +29,6 @@ for j=1:size(F,1)
     F0=mean(junk2);
     %Fc(:,i)=(junk-junk2)-mean((junk-junk2));
 end
-dFF_iscell = dFF(logical(Fmat.iscell(:,1)),:);
+dFF_iscell = dFF;
 save(fmatfl, 'dFF_iscell', '-append')
 end

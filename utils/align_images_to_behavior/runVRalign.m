@@ -3,9 +3,9 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "z9";
-days = [10,11,12];
-src = "X:\vipcre";
+mouse_name = "e256";
+days = [1];
+src = "Y:\drd2";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));

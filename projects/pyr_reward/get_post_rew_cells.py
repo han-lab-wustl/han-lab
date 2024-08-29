@@ -31,6 +31,8 @@ celltrackpth = r'Y:\analysis\celltrack'
 # cell tracked days
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 #
+# TODO: make for loop to get acccells, tracked across days like
+# distance cells, plot their activity in different trial types?
 #%%
 # plot dff / tuning curves of cells tracked > 1
 an = 'e186'
@@ -45,7 +47,6 @@ tracked_lut_multiday_rew_cells = tracked_lut_multiday_rew_cells[days_rec] # only
 num_days_tracked = trackedcellarr[np.where(trackedcellarr>1)[0]]
 #%%
 # sanity check plot cell per day
-range_val=15; binsize=0.1
 params_pth = rf"Y:\analysis\fmats\{an}\days\{an}_day{day:03d}_plane{pln}_Fall.mat"
 fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 
     'forwardvel','rewards', 'timedFF', 'trialnum'])
@@ -72,32 +73,11 @@ for i in range(dFF.shape[1]):
     r=phase_shifted_correlation(acc, dff, max_shift)
     rshiftmax.append(np.max(r))
 
-plt.hist(rshiftmax)
 # only plot top 5% for now
 acccells = np.where(np.array(rshiftmax)>np.quantile(rshiftmax,.95))[0]
 # remove INs
 skew = scipy.stats.skew(dFF[:,acccells], nan_policy='omit', axis=0)
 acccells = acccells[skew>2]
-
-meandf = []
-for acccell in acccells:
-    normmeanrewdFF, meanrewdFF, normrewdFF, \
-    rewdFF = perireward_binned_activity(dFF[:, acccell], rewards, timedFF, \
-        trialnum, range_val, binsize)    
-    meandf.append(meanrewdFF)
-    
-__, meanrewacc, _, ___ = perireward_binned_activity(acc, rewards[1:], timedFF[1:], \
-        trialnum,range_val, binsize)
-velocity = fall['forwardvel'][0]
-velocitydf = pd.DataFrame({'velocity': velocity})
-__, meanrewvel, _, ___ = perireward_binned_activity(velocity, rewards, timedFF, \
-        trialnum,range_val, binsize)
-#%%
-fig,ax=plt.subplots()
-ax.plot(np.array(meandf).T)
-ax.plot(meanrewacc/20,'k')
-ax.plot(meanrewvel/100,'k--')
-# ax.set_ylim([-.5,2])
 
 #%%
 # see if a couple of these cells are consistent over days

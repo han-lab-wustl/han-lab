@@ -36,8 +36,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,68,69,70,71,72,73,74],
-            [107,108,109,111,112,113,114,115,116,117]]
+days_all = [[65,66,67,68,69,70,71,72,73,74,75,76,77],
+            [107,108,109,111,112,113,114,115,116,117,118,119]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -176,7 +176,7 @@ df['licks_selectivity_last8trials'] = [np.nanmean(xx[11]) for xx in near_reward_
 # df['lick_prob_near_rewardloc_mean'] = [np.quantile(xx[0], .9) for xx in near_reward_per_day]
 # df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
-df = df[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+df = df[df.learning_day==2]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 dfagg = df
 # drop 1st row
 #%%
