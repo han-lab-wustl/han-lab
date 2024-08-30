@@ -200,3 +200,15 @@ elif pval < 0.05:
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
 plt.savefig(os.path.join(savedst,'vip_pre_reward_dff.svg'),bbox_inches='tight')
+
+#%% 
+# plot individual traces
+fig,axes = plt.subplots(nrows=2,ncols=1, figsize=(6,6))
+axes[0].plot(prevepdff[7000:12000,0], 'k')
+axes[1].plot(optodff[15000:20000,0], 'r')
+axes[0].set_ylim([-0.2,2])
+axes[1].set_ylim([-0.2,2])
+axes[0].spines[['top','right']].set_visible(False)
+axes[1].spines[['top','right']].set_visible(False)
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
+plt.savefig(os.path.join(savedst,'vip_traces.svg'),bbox_inches='tight')
