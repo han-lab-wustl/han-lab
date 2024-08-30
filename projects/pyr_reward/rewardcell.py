@@ -13,9 +13,10 @@ correct trials
 """
 #%%
 
-import numpy as np, random, re, os, scipy, pandas as pd
+import numpy as np, random, re, os, scipy, pandas as pd, sys
 from itertools import combinations, chain
-from placecell import intersect_arrays
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+from projects.pyr_reward.placecell import intersect_arrays
 
 def phase_shifted_correlation(acceleration, neural_activity, max_shift):
     """

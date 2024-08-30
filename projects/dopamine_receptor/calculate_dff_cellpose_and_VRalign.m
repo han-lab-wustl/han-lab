@@ -5,7 +5,7 @@
 clear all; clear all;
 src = 'Y:\drd2';
 mouse_name = 'e256';
-days = [2];
+days = [3];
 plns = [0:2];
 Fs = 31.25/length(plns);
 time = 300; % ms

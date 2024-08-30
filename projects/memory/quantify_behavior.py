@@ -36,8 +36,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,68,69,70,71,72,73,74,75,76,77],
-            [107,108,109,111,112,113,114,115,116,117,118,119]]
+days_all = [[65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,81],
+            [107,108,109,111,112,113,114,115,116,117,118,119,120,121,122,123]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -198,6 +198,7 @@ ax = sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=d
 ax = sns.stripplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=12)
+ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 
 # memory performance the next day
@@ -309,6 +310,11 @@ x2 = df.loc[df.opto_day_before==False, 'velocity_near_rewardloc_mean'].values
 t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 print(f'Velocity near reward in memory probes\nPer session t-test p-value: {pval:02f}')
 
+
+x1 = df.loc[df.opto_day_before==True, 'licks_selectivity_last8trials'].values
+x2 = df.loc[df.opto_day_before==False, 'licks_selectivity_last8trials'].values
+t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+print(f'Lick selectivity last 8 trials\nPer session t-test p-value: {pval:02f}')
 
 # x1 = df.loc[df.opto_day_before==True, 'vel_failed_odd'].values
 # x2 = df.loc[df.opto_day_before==False, 'vel_failed_odd'].values
