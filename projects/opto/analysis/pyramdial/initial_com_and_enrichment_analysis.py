@@ -6,7 +6,6 @@ updated aug 2024
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math,  matplotlib as mpl, matplotlib.backends.backend_pdf
-from sklearn.cluster import KMeans
 from placecell import get_pyr_metrics_opto, get_dff_opto
 mpl.rcParams['svg.fonttype'] = 'none'; mpl.rcParams["xtick.major.size"] = 8; mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
@@ -18,15 +17,16 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
 dcts = []
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
-    print(dd/len(conddf))
+    if dd%10==0: print(f'{dd}/{len(conddf)}')
     threshold = 7
     pc = False
     dct = get_pyr_metrics_opto(conddf, dd, day, 
                 threshold=threshold, pc=pc)
     dcts.append(dct)
 # save pickle of dcts
-# with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
-#     pickle.dump(dcts, fp)   
+# SAVED CORRECT VERSION 9/2/24
+with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
+    pickle.dump(dcts, fp)   
 #%%
 # open previously saved dcts
 # with open(r"Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
@@ -103,24 +103,30 @@ df['frac_pc_opto_late'] = [dct['frac_place_cells_tc2_late_trials'] for dct in dc
 df['frac_pc_prev'] = df['frac_pc_prev_late']-df['frac_pc_prev_early']
 df['frac_pc_opto'] = df['frac_pc_opto_late']-df['frac_pc_opto_early']
 df['opto'] = [True if xx>1 else False if xx<1 else np.nan for xx in conddf.optoep.values]
+
 # df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
 df = df.loc[(df.animals!='e189')&(df.animals!='e190')]
 bigdf=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
+bigdf = bigdf.reset_index()
 
 fig,ax = plt.subplots(figsize=(4,6))
-sns.barplot(x="opto", y="frac_pc_opto", hue = 'condition', data=bigdf,
+sns.barplot(data=bigdf,
+            x='opto', 
+            y="frac_pc_opto", 
+            hue='condition',        
                 palette={'ctrl': "slategray", 'vip': "red"},
-                errorbar='se', fill=False,ax=ax)
-ax1 = sns.stripplot(x="opto", y="frac_pc_opto", hue = 'condition', data=bigdf,
+                errorbar='se',ax=ax)
+sns.stripplot(x="opto", y="frac_pc_opto", hue = 'condition',
+                data=bigdf,
                 palette={'ctrl': "slategray", 'vip': "red"},dodge=True,
-                s=s)
+                s=s,ax=ax)
 ax.spines[['top', 'right']].set_visible(False); 
-ax1.legend(bbox_to_anchor=(1.1, 1.05))
+ax.legend(bbox_to_anchor=(1.05, 1.05))
 
 # ctrl v.s vip
-t,pval = scipy.stats.ranksums(bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_opto.values, \
-            bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='ctrl')].frac_pc_opto.values)
+t,pval = scipy.stats.ranksums(bigdf[(bigdf.opto==True) & (bigdf.condition=='vip')].frac_pc_opto.values, \
+            bigdf[(bigdf.opto==True) & (bigdf.condition=='ctrl')].frac_pc_opto.values)
 
 ax.set_ylabel(f'Fraction of place cells near rew. loc.')
 ax.set_xticks([0,1], labels=['LED off', 'LED on'])
@@ -137,8 +143,8 @@ elif pval < 0.05:
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
 # ctrl v.s vip
-t,pval = scipy.stats.ttest_rel(bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_opto.values, \
-            bigdf[(bigdf.index.get_level_values('opto')==False) & (bigdf.index.get_level_values('condition')=='vip')].frac_pc_opto.values)
+t,pval = scipy.stats.ttest_rel(bigdf[(bigdf.opto==True) & (bigdf.condition=='vip')].frac_pc_opto.values, \
+            bigdf[(bigdf.opto==False) & (bigdf.condition=='vip')].frac_pc_opto.values)
 
 ax.set_ylabel(f'Fraction of place cells near rew. loc.')
 ax.set_xticks([0,1], labels=['LED off', 'LED on'])
@@ -152,8 +158,27 @@ elif pval < 0.01:
 elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+from statsmodels.stats.power import TTestPower
 
-plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
+# Extract the relevant data
+vip_on = bigdf[(bigdf.opto == True) & (bigdf.condition == 'vip')].frac_pc_opto.values
+vip_off = bigdf[(bigdf.opto == False) & (bigdf.condition == 'vip')].frac_pc_opto.values
+
+# Calculate the mean difference and pooled standard deviation
+mean_diff = np.mean(vip_on) - np.mean(vip_off)
+pooled_std = np.sqrt((np.std(vip_on, ddof=1) ** 2 + np.std(vip_off, ddof=1) ** 2) / 2)
+
+# Calculate Cohen's d (effect size)
+cohen_d = mean_diff / pooled_std
+
+# Initialize power analysis object
+analysis = TTestPower()
+
+# Calculate the required sample size for 80% power
+sample_size = analysis.solve_power(effect_size=cohen_d, power=0.8, alpha=0.05, alternative='two-sided')
+
+print(f"Estimated required sample size per group: {np.ceil(sample_size):.0f}")
+# plt.savefig(os.path.join(savedst, 'frac_pc.svg'), bbox_inches='tight')
 #%%
 # average enrichment
 # not as robust effect with 3 mice
@@ -219,8 +244,9 @@ ax.set_title('Shift = VIP Inhibition-Before Inhibition')
 #%%
 # bar plot of shift
 dfagg = dfagg.sort_values('vipcond')
+dfagg = dfagg.reset_index()
 fig, ax = plt.subplots(figsize=(2.5,5))
-ax = sns.barplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg, fill=False,
+ax = sns.barplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg,
                 palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se')
 ax = sns.stripplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg,
@@ -229,15 +255,41 @@ ax = sns.stripplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', dat
 
 ax.spines[['top','right']].set_visible(False)
 
-vipshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='vip', 'com_shift_inactive'].values
-ctrlshift = dfagg.loc[dfagg.index.get_level_values('vipcond')=='ctrl', 'com_shift_inactive'].values
+vipshift = dfagg.loc[dfagg.vipcond=='vip', 'com_shift_inactive'].values
+ctrlshift = dfagg.loc[dfagg.vipcond=='ctrl', 'com_shift_inactive'].values
 t,pval=scipy.stats.ranksums(vipshift, ctrlshift)
 ii=0.5; y= 35
 ax.text(ii-0.5, y, f'p={pval:.3g}',fontsize=12)
 ax.set_ylabel('Av. Inactive PC rel. center-of-mass')
 ax.set_xticks([0,1], labels=['Control', 'VIP \nInhibition'])
 ax.set_xlabel('')
-plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
+
+from statsmodels.stats.power import TTestIndPower
+
+# Means and standard deviations for each group
+mean_vip = dfagg.loc[dfagg['vipcond'] == 'vip', 'com_shift_inactive'].mean()
+mean_ctrl = dfagg.loc[dfagg['vipcond'] == 'ctrl', 'com_shift_inactive'].mean()
+
+std_vip = dfagg.loc[dfagg['vipcond'] == 'vip', 'com_shift_inactive'].std()
+std_ctrl = dfagg.loc[dfagg['vipcond'] == 'ctrl', 'com_shift_inactive'].std()
+
+# Number of samples in each group
+n_vip = dfagg[dfagg['vipcond'] == 'vip'].shape[0]
+n_ctrl = dfagg[dfagg['vipcond'] == 'ctrl'].shape[0]
+
+# Pooled standard deviation
+pooled_std = np.sqrt(((n_vip - 1) * std_vip**2 + (n_ctrl - 1) * std_ctrl**2) / (n_vip + n_ctrl - 2))
+
+# Calculate Cohen's d
+cohen_d = (mean_vip - mean_ctrl) / pooled_std
+
+# Perform power analysis
+analysis = TTestIndPower()
+power = analysis.power(effect_size=cohen_d, nobs1=n_vip, alpha=0.05, ratio=n_ctrl/n_vip, alternative='two-sided')
+
+print(f"Cohen's d: {cohen_d:.3f}")
+print(f"Power: {power:.3f}")
+# plt.savefig(os.path.join(savedst, 'barplot_comshift.svg'), bbox_inches='tight')
 #%%
 # active
 dfagg = dfagg.sort_values('vipcond')

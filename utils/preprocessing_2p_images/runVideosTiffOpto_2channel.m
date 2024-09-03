@@ -29,7 +29,7 @@ end
 %Send sbx files to be split into a mat file for each plane
 for f=1:num_files
 %     loadVideoTiff(paths{f},files{f},num_planes(f),Fs);
-    loadVideoTiffNoSplit_EH2_new_sbx_2channel(paths{f},files{f},scan_type{f});
+    loadVideoTiffNoSplitOpto_2channel_woetl(paths{f},files{f},scan_type{f});
 end
 % loadVideo('F:\MA Data\Videos\111215\','1112_MA_000_002',4);
 % loadVideo(path, filename, num_planes);

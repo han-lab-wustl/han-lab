@@ -103,6 +103,29 @@ elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
+# Step 1: Calculate the means and standard deviations
+mean1 = np.mean(group1)
+mean2 = np.mean(group2)
+std1 = np.std(group1, ddof=1)
+std2 = np.std(group2, ddof=1)
+
+# Step 2: Calculate pooled standard deviation
+n1, n2 = len(group1), len(group2)
+pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
+
+# Step 3: Calculate Cohen's d
+cohens_d = (mean1 - mean2) / pooled_std
+
+# Step 4: Perform Power Analysis using the calculated Cohen's d
+alpha = 0.05  # Significance level
+power = 0.8   # Desired power
+
+analysis = smp.TTestIndPower()
+sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=power, alternative='two-sided')
+
+print(f"Cohen's d: {cohens_d:.4f}")
+print(f"Required sample size per group: {sample_size:.2f}")
+
 plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
 #%%
 # velocity

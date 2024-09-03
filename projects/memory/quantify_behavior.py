@@ -6,7 +6,6 @@ TODO: get first lick during probes
 #%%
 import os, numpy as np, h5py, scipy, seaborn as sns, sys, pandas as pd, itertools
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib
@@ -27,17 +26,18 @@ src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
 # animals = ['e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-# days_all = [[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,
-# 28,29,30,31,32,33,34,35,36],
-#         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,
-#         70,71,72,73,74,75,76,77,78]]
+# all days to quantify for stim @ reward memory analysis
+days_all = [[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,
+28,29,30,31,32,33,34,35,36],
+        [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,
+        70,71,72,73,74,75,76,77,78]]
 
 # days to quantify for stim @ reward memory analysis
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,81],
-            [107,108,109,111,112,113,114,115,116,117,118,119,120,121,122,123]]
+# days_all = [[65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,81],
+#             [107,108,109,111,112,113,114,115,116,117,118,119,120,121,122,123]]
 memory_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -214,9 +214,8 @@ ax.set_ylabel('Velocity near reward zone\nmemory probes')
 ax.spines[['top','right']].set_visible(False)
 
 plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', hue='opto_day_before', 
-                data=dfagg, fill=False,
-                errorbar='se',
+ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
+                hue='opto_day_before', data=dfagg, fill=False,errorbar='se',
                 palette={False: "slategray", True: "mediumturquoise"})
 ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
                 hue='opto_day_before', data=dfagg,

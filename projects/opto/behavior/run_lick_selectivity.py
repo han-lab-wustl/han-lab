@@ -111,8 +111,9 @@ x3 = dfagg.loc[((dfagg.index.get_level_values('condition') == 'ctrl') &
             (dfagg.index.get_level_values('opto') == 'LED on')), 'lick_rate'].values
 t, pval = scipy.stats.ranksums(x1, x3)
 
-plt.savefig(os.path.join(savedst, 'lick_rate_first_5_trials.svg'), bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'lick_rate_first_5_trials.svg'), bbox_inches='tight')
 #%%
+# lick selectivity last 5 trials
 plt.figure(figsize=(2,5))
 ax = sns.barplot(x='condition', y='lick_selectivity_last5trials', hue='condition', data=dfagg, fill=False,
                 errorbar='se',
@@ -143,7 +144,27 @@ elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
-plt.savefig(os.path.join(savedst, 'lick_selectivity_success_trials.svg'), bbox_inches='tight')
+from statsmodels.stats.power import TTestPower
+
+# Extract data
+vip_led_on = dfagg.loc[(dfagg.index.get_level_values('condition') == 'vip') &
+                       (dfagg.index.get_level_values('opto') == 'LED on'), 'lick_selectivity_last5trials'].values
+ctrl_led_on = dfagg.loc[(dfagg.index.get_level_values('condition') == 'ctrl') &
+                        (dfagg.index.get_level_values('opto') == 'LED on'), 'lick_selectivity_last5trials'].values
+
+# Calculate effect size
+mean_diff = np.mean(vip_led_on) - np.mean(ctrl_led_on)
+pooled_std = np.sqrt((np.std(vip_led_on, ddof=1) ** 2 + np.std(ctrl_led_on, ddof=1) ** 2) / 2)
+
+# Cohen's d
+cohen_d = mean_diff / pooled_std
+# Initialize power analysis object
+analysis = TTestPower()
+# Calculate required sample size for 80% power
+sample_size = analysis.solve_power(effect_size=cohen_d, power=0.8, alpha=0.05, alternative='two-sided')
+print(f"Estimated required sample size per group: {np.ceil(sample_size):.0f}")
+
+# plt.savefig(os.path.join(savedst, 'lick_selectivity_success_trials.svg'), bbox_inches='tight')
 #%%
 # probes
 plt.figure(figsize=(3,6))

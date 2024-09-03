@@ -18,6 +18,31 @@ from itertools import combinations, chain
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import intersect_arrays
 
+def acc_corr_cells(forwardvel, timedFF, pln, dFF, eps):
+    acccells_per_ep = []
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep], eps[ep+1])
+        # get acceleration correlated cells across all trials
+        # get goal cells across all epochs      
+        acc = np.diff(forwardvel[eprng])/np.diff(timedFF[eprng])
+        accdf = pd.DataFrame({'acc': acc})
+        acc = np.hstack(accdf.rolling(100).mean().fillna(0).values)
+        # cells correlated with acc
+        # Calculate phase-shifted correlation
+        max_shift = int(np.ceil(31.25/(pln+1)))  # You can adjust the max shift based on your data
+        # ~ 1 s phase shifts
+        rshiftmax = []
+        for i in range(dFF.shape[1]):
+            dff = dFF[eprng[:-1],i]
+            dff[np.isnan(dff)]=0 # nan to 0
+            r=phase_shifted_correlation(acc, dff, max_shift)
+            rshiftmax.append(np.max(r))
+        # only get top 10% for now
+        acccells = np.where(np.array(rshiftmax)>np.nanquantile(rshiftmax,.90))[0]
+        acccells_per_ep.append(acccells)        
+        
+    return acccells_per_ep
+
 def phase_shifted_correlation(acceleration, neural_activity, max_shift):
     """
     Calculate phase-shifted correlation between acceleration and neural activity.

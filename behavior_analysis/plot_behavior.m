@@ -1,4 +1,4 @@
-% Zahra
+c% Zahra
 % analyze behavior of mouse in HRZ
 % look at fraction of licks in normal vs. probe trials
 % https://www.nature.com/articles/s41593-022-01050-4

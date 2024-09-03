@@ -43,8 +43,8 @@ def copy_folder(src_folder, dest_folder):
     # Ensure the destination folder exists; if not, create it
     if not os.path.exists(dest_folder): os.mkdir(dest_folder)
     # Copy the entire folder structure and files
-    print(f"\n***Folder '{src_folder}' copying to '{os.path.join(dest_folder,os.path.basename(src_folder))}'***")
-    copy_tree(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)))    
+    print(f"\n***Folder '{src_folder}' moving to '{os.path.join(dest_folder,os.path.basename(src_folder))}'***")
+    shutil.move(src_folder, os.path.join(dest_folder,os.path.basename(src_folder)))    
     # copy excel sheet
     xlsx = os.path.dirname(src_folder)
     xlsx = [xx for xx in listdir(xlsx, ifstring='xlsx')][0]

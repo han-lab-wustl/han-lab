@@ -1,6 +1,6 @@
 import os, re, numpy as np
 #change
-srcpth = r'Y:\tarikul_test\1\240723'
+srcpth = r'Y:\E247_GrabDA_red\red'
 pths = []
 planes = [0,1,2,3] # specify number of planes
 for plane in planes:
