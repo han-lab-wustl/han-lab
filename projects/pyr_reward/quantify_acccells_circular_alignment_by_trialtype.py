@@ -21,7 +21,7 @@ from rewardcell import get_radian_position, acc_corr_cells
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\retreat_2024'
 savepth = os.path.join(savedst, 'acc_corr_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\acc_corr_cell_bytrialtype_nopto.p"
@@ -194,7 +194,6 @@ ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
 # number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(5,5))
 df_plt = df[(df.opto==False)]
 # av across mice
 df_plt = df_plt[df_plt.num_epochs<5]
@@ -230,6 +229,8 @@ for ii,ep in enumerate(eps):
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10)
+        
+plt.savefig(os.path.join(savedst, 'acc_post_rew_cells_sig.svg'), bbox_inches='tight')
 #%%    
 
 df['recorded_neurons_per_session'] = total_cells
