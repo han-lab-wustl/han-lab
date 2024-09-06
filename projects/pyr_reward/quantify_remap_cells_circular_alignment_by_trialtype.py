@@ -399,3 +399,19 @@ fig.tight_layout()
 # axes[3].set_xlabel('Reward-relative distance (rad)')
 # fig.tight_layout()
 # plt.savefig(os.path.join(savedst, 'tuning_curves_4_ep.png'), bbox_inches='tight')
+for gc in goal_cells:
+        plt.rc('font', size=22)  
+        fig2,ax2 = plt.subplots(figsize=(5,5))
+
+        for ep in range(3):        
+                ax2.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
+                ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
+                
+                ax2.spines[['top','right']].set_visible(False)
+        ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+        ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,15))
+        ax2.set_xticklabels(np.arange(0,track_length+bin_size*15,bin_size*15).astype(int))
+        ax2.set_xlabel('Absolute position (cm)')
+        ax2.set_ylabel('$\Delta$ F/F')
+        
+plt.savefig(os.path.join(savedst, f'rewardd_cell_{gc}_tuning_per_ep.svg'), bbox_inches='tight')

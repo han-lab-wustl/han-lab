@@ -136,3 +136,34 @@ fig.tight_layout()
 axes[0].set_ylabel('All cells')
 axes[3].set_xlabel('Absolute distance (cm)')
 plt.savefig(os.path.join(savedst, 'place_cell_only_tuning_curves_4_ep.png'), bbox_inches='tight')
+
+#%% plot place cell per epoch
+plt.rc('font', size=14)  
+fig,axes = plt.subplots(1,4,figsize=(20,5), sharey = True)
+for ep in range(len(eps)-1):
+        ax=axes[ep]
+        ax.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
+        ax.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
+        
+        ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+        ax.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,15))
+        ax.set_xticklabels(np.arange(0,track_length+bin_size*15,bin_size*15).astype(int))
+        ax.set_xlabel('Absolute position (cm)')
+        ax.set_ylabel('Fc3')
+        ax.spines[['top','right']].set_visible(False)        
+        
+plt.savefig(os.path.join(savedst, f'reward_cell_{gc}_tuning_per_ep.svg'), bbox_inches='tight')
+fig2,ax2 = plt.subplots(figsize=(5,5))
+
+for ep in range(len(eps)-1):        
+        ax2.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
+        ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
+        
+        ax2.spines[['top','right']].set_visible(False)
+        ax2.legend()
+ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,15))
+ax2.set_xticklabels(np.arange(0,track_length+bin_size*15,bin_size*15).astype(int))
+ax2.set_xlabel('Absolute position (cm)')
+ax2.set_ylabel('Fc3')
+plt.savefig(os.path.join(savedst, f'reward_cell_{gc}_tuning_allep.svg'), bbox_inches='tight')

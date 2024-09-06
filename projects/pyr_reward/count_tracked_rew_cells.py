@@ -118,13 +118,57 @@ df['p_values_per_cell'] = np.concatenate([sum(trackeddct[an][1][:,(trackeddct[an
 df['animals'] = np.concatenate([[an]*len(trackeddct[an][0][trackeddct[an][0]>0]) for an in animals])
 df['animals_shuf'] = np.concatenate([[an+'_shuf']*len(trackeddct[an][0][trackeddct[an][0]>0]) for an in animals])
 #%%
+# average counts per animal
 fig,ax=plt.subplots(figsize=(3,6))
-sns.histplot(data=df[df.p_values_per_cell<0.05], x='tracked_cells_num', hue='animals', alpha=0.5, bins=3, 
-            palette='hls')
+
+df_plt = df[df.p_values_per_cell<0.05]
+
+sns.histplot(data=df[df.p_values_per_cell<0.05], x='tracked_cells_num', color='darkcyan',
+            bins=3, label = 'Reward-distance cells')
 sns.histplot(data=df[(df.p_values_per_cell<0.05) & 
-        (df['tracked_cells_shuf_1']>1)], x='tracked_cells_shuf_1', color='k', 
-        bins=3)
+        (df['tracked_cells_shuf_1']>=1)], x='tracked_cells_shuf_1',  color='dimgray',
+        bins=3,alpha=0.5, label='shuffle')
+ax.legend(bbox_to_anchor=(1.001, 1.001))
+
+dfs_av = df
+# reorganize
+df2 = pd.DataFrame()
+days = [1,2,3]
+tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day) for an in animals] for day in range(1,4)]
+tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']==day) for an in df.animals_shuf.unique()] for day in range(1,4)]
+df2['num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse)
+df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse_shuf)
+df2['animal'] = np.concatenate([animals]*len(days))
+df2['days_tracked'] = np.concatenate(np.concatenate([[[day]*len(animals)] for day in days]))
+fig,ax=plt.subplots(figsize=(3,6))
+sns.stripplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',s=8, color='k',ax=ax)
+sns.barplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',fill=False, color='k',ax=ax, errorbar='se')
+sns.lineplot(data=df2, # correct shift
+        x=df2.days_tracked.values-1, y='shuf_num_tracked_cells_per_mouse',
+        color='grey', label='shuffle',ax=ax)
+
+ax.set_xlabel('# of days tracked')
+ax.set_ylabel('# of reward-distance cells')
+eps = [1,2,3]
+y = 180
+pshift = 20
+fs=36
+for ii,ep in enumerate(eps):
+        rewprop = df2.loc[(df2.days_tracked==ep), 'num_tracked_cells_per_mouse']
+        shufprop = df2.loc[(df2.days_tracked==ep), 'shuf_num_tracked_cells_per_mouse']
+        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
+        print(f'{ep} epochs, pval: {pval}')
+        # statistical annotation        
+        if pval < 0.001:
+                plt.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                plt.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                plt.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10)
+
 ax.spines[['top','right']].set_visible(False)
+plt.savefig(os.path.join(savedst, 'across_days_rew_cells.png'), bbox_inches='tight', dpi=500)
 #%%
 fig,ax=plt.subplots(figsize=(7,8))
 sns.barplot(data=df[df.p_values_per_cell<0.05], y='tracked_cells_num', x='animals',

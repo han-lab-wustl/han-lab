@@ -55,7 +55,7 @@ for ii in range(len(conddf)):
             changeRewLoc=changeRewLoc[:-1]
             trialnum=trialnum[:-1]
             rewards=rewards[:-1]        # set vars
-        eps = np.where(changeRewLoc>0)[0];
+        eps = np.where(changeRewLoc>0)[0]
         rewlocs = changeRewLoc[eps]/scalingf
         eps = np.append(eps, len(changeRewLoc))
         # exclude last ep if too little trials
@@ -80,5 +80,29 @@ for ii in range(len(conddf)):
             tcs_correct, coms_correct, tcs_fail, coms_fail, \
             com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']                   
             coms_correct = coms_correct-np.pi
+            # get goal cells across all epochs        
+            goal_cells = intersect_arrays(*com_goal)
 
-            coms[f'{animal}_{day:03d}_index{ii:03d}'] = [coms_correct_abs_rel, coms_correct]
+            coms[f'{animal}_{day:03d}_index{ii:03d}'] = [coms_correct_abs_rel, coms_correct, goal_cells]
+#%%
+# plot average coms in all cells / vs. goal cells
+coms_goal_abs = []; coms_all_abs = []
+for k,com in coms.items():
+    coms_correct_abs_rel, coms_correct, goal_cells = com
+    coms_goal_abs.append(np.ravel(coms_correct_abs_rel[:,goal_cells]))
+    coms_all_abs.append(np.ravel(coms_correct_abs_rel[:,[xx for xx in range(coms_correct_abs_rel.shape[1]) if xx not in goal_cells]]))
+#%%    
+fig, axes = plt.subplots(1,2,figsize = (12,7), sharex=True)
+axes[0].hist(np.concatenate(coms_all_abs), color='slategray')
+axes[1].hist(np.concatenate(coms_goal_abs))
+axes[1].set_xlabel('Center-of-mass rel. dist. rew.(cm)')
+axes[1].set_ylabel('# cells')
+axes[0].spines[['top','right']].set_visible(False)
+axes[1].spines[['top','right']].set_visible(False)
+axes[0].axvline(0, color='k', linestyle='--', linewidth = 3)
+axes[1].axvline(0, color='k', linestyle='--', linewidth = 3)
+
+axes[0].set_title('Other pyramidal cells')
+axes[1].set_title('Reward-distance cells')
+plt.savefig(os.path.join(savedst, 'hist_of_coms.png'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'hist_of_coms.svg'))
