@@ -112,7 +112,9 @@ def main(**args):
             # temp
             ops["threshold_scaling"]=1 #TODO: make modular
             ops["max_iterations"]=30
-            ops["anatomical_only"]=1            
+            ops["anatomical_only"]=1
+            ops["delete_bin"]=1            
+            ops["reg_tif"]=1            
             # test for e216
             # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
