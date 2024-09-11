@@ -344,75 +344,90 @@ fig.tight_layout()
 #%%
 
 
-# # #examples
-fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-Fc3 = fall_fc3['Fc3']
-dFF = fall_fc3['dFF']
-Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-Fc3 = Fc3[:,(skew>2)] # only keep cells with skew greateer than 2
-bin_size=3 # cm
-# get abs dist tuning 
-tcs_correct_abs, coms_correct_abs, tcs_fail, coms_fail = make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,
-Fc3,trialnum,rewards,forwardvel,rewsize,bin_size)
 
-# # #plot example tuning curve
-# plt.rc('font', size=14)  
-# fig,axes = plt.subplots(1,4,figsize=(15,20), sharey=True, sharex = True)
-# axes[0].imshow(tcs_correct_abs[0,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
-# axes[0].set_title('Epoch 1')
-# im = axes[1].imshow(tcs_correct_abs[1,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
-# axes[1].set_title('Epoch 2')
-# im = axes[2].imshow(tcs_correct_abs[2,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
-# axes[2].set_title('Epoch 3')
-# im = axes[3].imshow(tcs_correct_abs[3,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
-# axes[3].set_title('Epoch 4')
-# ax = axes[1]
-# ax.axvline((rewlocs[1]-rewsize/2)/bin_size, color='w', linestyle='--')
-# axes[0].axvline((rewlocs[0]-rewsize/2)/bin_size, color='w', linestyle='--')
-# axes[2].axvline((rewlocs[2]-rewsize/2)/bin_size, color='w', linestyle='--')
-# axes[3].axvline((rewlocs[3]-rewsize/2)/bin_size, color='w', linestyle='--')
-# ax.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,15))
-# ax.set_xticklabels(np.arange(0,track_length+bin_size*15,bin_size*15).astype(int))
-# axes[0].set_ylabel('Reward distance cells')
-# axes[3].set_xlabel('Absolute distance (cm)')
-# fig.tight_layout()
-# plt.savefig(os.path.join(savedst, 'abs_dist_tuning_curves_4_ep.png'), bbox_inches='tight')
+# # # #examples
+# fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+# Fc3 = fall_fc3['Fc3']
+# dFF = fall_fc3['dFF']
+# Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+# dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+# skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+# Fc3 = Fc3[:,(skew>2)] # only keep cells with skew greateer than 2
+# bin_size=3 # cm
+# # get abs dist tuning 
+# tcs_correct_abs, coms_correct_abs, tcs_fail, coms_fail = make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,
+# Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=5)
 
-# fig,axes = plt.subplots(1,4,figsize=(15,20), sharey=True, sharex = True)
-# axes[0].imshow(tcs_correct[0,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[0].set_title('Epoch 1')
-# im = axes[1].imshow(tcs_correct[1,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[1].set_title('Epoch 2')
-# im = axes[2].imshow(tcs_correct[2,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[2].set_title('Epoch 3')
-# im = axes[3].imshow(tcs_correct[3,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[3].set_title('Epoch 4')
-# ax = axes[1]
-# ax.set_xticks(np.arange(0,bins+1,10))
-# ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),1))
-# ax.axvline((bins/2), color='w', linestyle='--')
-# axes[0].axvline((bins/2), color='w', linestyle='--')
-# axes[2].axvline((bins/2), color='w', linestyle='--')
-# axes[3].axvline((bins/2), color='w', linestyle='--')
-# axes[0].set_ylabel('Reward distance cells')
-# axes[3].set_xlabel('Reward-relative distance (rad)')
-# fig.tight_layout()
-# plt.savefig(os.path.join(savedst, 'tuning_curves_4_ep.png'), bbox_inches='tight')
-plt.rc('font', size=22) 
-for gc in goal_cells:         
-        fig2,ax2 = plt.subplots(figsize=(5,5))
+# # # #plot example tuning curve
+# # plt.rc('font', size=14)  
+# # fig,axes = plt.subplots(1,4,figsize=(15,20), sharey=True, sharex = True)
+# # axes[0].imshow(tcs_correct_abs[0,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
+# # axes[0].set_title('Epoch 1')
+# # im = axes[1].imshow(tcs_correct_abs[1,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
+# # axes[1].set_title('Epoch 2')
+# # im = axes[2].imshow(tcs_correct_abs[2,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
+# # axes[2].set_title('Epoch 3')
+# # im = axes[3].imshow(tcs_correct_abs[3,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.5)
+# # axes[3].set_title('Epoch 4')
+# # ax = axes[1]
+# # ax.axvline((rewlocs[1]-rewsize/2)/bin_size, color='w', linestyle='--')
+# # axes[0].axvline((rewlocs[0]-rewsize/2)/bin_size, color='w', linestyle='--')
+# # axes[2].axvline((rewlocs[2]-rewsize/2)/bin_size, color='w', linestyle='--')
+# # axes[3].axvline((rewlocs[3]-rewsize/2)/bin_size, color='w', linestyle='--')
+# # ax.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,15))
+# # ax.set_xticklabels(np.arange(0,track_length+bin_size*15,bin_size*15).astype(int))
+# # axes[0].set_ylabel('Reward distance cells')
+# # axes[3].set_xlabel('Absolute distance (cm)')
+# # fig.tight_layout()
+# # plt.savefig(os.path.join(savedst, 'abs_dist_tuning_curves_4_ep.png'), bbox_inches='tight')
 
-        for ep in range(3):        
-                ax2.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
-                ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
-                
-                ax2.spines[['top','right']].set_visible(False)
-        ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-        ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
-        ax2.set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
-        ax2.set_xlabel('Absolute position (cm)')
-        ax2.set_ylabel('$\Delta$ F/F')
+# # fig,axes = plt.subplots(1,4,figsize=(15,20), sharey=True, sharex = True)
+# # axes[0].imshow(tcs_correct[0,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
+# # axes[0].set_title('Epoch 1')
+# # im = axes[1].imshow(tcs_correct[1,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
+# # axes[1].set_title('Epoch 2')
+# # im = axes[2].imshow(tcs_correct[2,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
+# # axes[2].set_title('Epoch 3')
+# # im = axes[3].imshow(tcs_correct[3,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
+# # axes[3].set_title('Epoch 4')
+# # ax = axes[1]
+# # ax.set_xticks(np.arange(0,bins+1,10))
+# # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),1))
+# # ax.axvline((bins/2), color='w', linestyle='--')
+# # axes[0].axvline((bins/2), color='w', linestyle='--')
+# # axes[2].axvline((bins/2), color='w', linestyle='--')
+# # axes[3].axvline((bins/2), color='w', linestyle='--')
+# # axes[0].set_ylabel('Reward distance cells')
+# # axes[3].set_xlabel('Reward-relative distance (rad)')
+# # fig.tight_layout()
+# # plt.savefig(os.path.join(savedst, 'tuning_curves_4_ep.png'), bbox_inches='tight')
+# plt.rc('font', size=24) 
+# # for gc in goal_cells:         
+# gc = 16
+# fig2,ax2 = plt.subplots(figsize=(5,5))
+
+# for ep in range(3):        
+#         ax2.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
+#         ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
         
+#         ax2.spines[['top','right']].set_visible(False)
+# ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+# ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
+# ax2.set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
+# ax2.set_xlabel('Absolute position (cm)')
+# ax2.set_ylabel('$\Delta$ F/F')
+
+# gc = 16
+# fig2,ax2 = plt.subplots(figsize=(5,5))
+# for ep in range(3):        
+#         ax2.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
+#         ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
+        
+#         ax2.spines[['top','right']].set_visible(False)
+# ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+# ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
+# ax2.set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
+# ax2.set_xlabel('Radian position ($\Theta$)')
+# ax2.set_ylabel('$\Delta$ F/F')
+
 # plt.savefig(os.path.join(savedst, f'rewardd_cell_{gc}_tuning_per_ep.svg'), bbox_inches='tight')

@@ -108,7 +108,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 #
 #%%
 # get number of tracked rew cells across days (vs. shuf cells)
-plt.rc('font', size=16)
+plt.rc('font', size=24)
 animals = ['e218','e216','e201',
         'e186','e189','e145', 'z8', 'z9']
 df = pd.DataFrame()
@@ -151,8 +151,9 @@ ax.set_xlabel('# of days tracked')
 ax.set_ylabel('# of reward-distance cells')
 eps = [1,2,3]
 y = 180
-pshift = 20
-fs=36
+pshift = 30
+fs=50
+pfs = 12
 for ii,ep in enumerate(eps):
         rewprop = df2.loc[(df2.days_tracked==ep), 'num_tracked_cells_per_mouse']
         shufprop = df2.loc[(df2.days_tracked==ep), 'shuf_num_tracked_cells_per_mouse']
@@ -165,10 +166,10 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=pfs)
 
 ax.spines[['top','right']].set_visible(False)
-plt.savefig(os.path.join(savedst, 'across_days_rew_cells.png'), bbox_inches='tight', dpi=500)
+plt.savefig(os.path.join(savedst, 'across_days_rew_cells.svg'), bbox_inches='tight', dpi=500)
 #%%
 fig,ax=plt.subplots(figsize=(7,8))
 sns.barplot(data=df[df.p_values_per_cell<0.05], y='tracked_cells_num', x='animals',
