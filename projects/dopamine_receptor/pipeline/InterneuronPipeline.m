@@ -25,31 +25,34 @@
 %tiffs put together
 
 pr_dir=uipickfiles;
-regtifs = dir(fullfile(pr_dir{dy}, '**', 'plane*'));
-get_stabilized_mat_file_per_day
 
-%just put in the number of planes and then select the reg_tif folder for
-%each of those planes. Since this does a for loop for each plane you can do
-%multiple days by say number of planes = dxn where d is number of days and
-%n is number of planes. then simply select all of the reg_tiff folders
+%%
+for dy=1:length(pr_dir) % per day
+    regtifs = dir(fullfile(pr_dir{dy}, '**', 'plane*'));
+    get_stabilized_mat_file_per_day(length(regtifs), regtifs);
+    
+    %run this section to select cells. start by picking your file made from the
+    %last script. input  a frequency that is the recording frequency of one
+    %plane only. (31.25/nplanes). when a figure pops up. write 1 to adjust the
+    %clip brightness. Adjusting the brightness may impact what is determined to
+    %be an roi so keep this in mind. a new figure will pop up with blue circled
+    %rois. click all of the rois you believe are cells and then simply click on
+    %the background when you are done selecting.
+    %it will ask you if there are any cells it missed that you would like to
+    %add by hand. if you say yes, a new figure will pop up where you can draw
+    %lines around the first cell you would like to add. when you complete a
+    %polygon double click on the center and it will assign that polygon a
+    %number and prompt you in the command window if you would like to add
+    %another. repeat until you have drawn all cells and hit 0 for no.
+    time=300; %size of moving avg window (s)
+    Fs=7.8;
+    mats = dir(fullfile(pr_dir{dy}, '**', '*XC_plane*.mat'));
+    for m=1:length(mats)
+        click_ROIs(time, Fs, mats(m)) % per plane
+    end
 
-%% section 4 click_rois_GM
+end
 
-%run this section to select cells. start by picking your file made from the
-%last script. input  a frequency that is the recording frequency of one
-%plane only. (31.25/nplanes). when a figure pops up. write 1 to adjust the
-%clip brightness. Adjusting the brightness may impact what is determined to
-%be an roi so keep this in mind. a new figure will pop up with blue circled
-%rois. click all of the rois you believe are cells and then simply click on
-%the background when you are done selecting.
-%it will ask you if there are any cells it missed that you would like to
-%add by hand. if you say yes, a new figure will pop up where you can draw
-%lines around the first cell you would like to add. when you complete a
-%polygon double click on the center and it will assign that polygon a
-%number and prompt you in the command window if you would like to add
-%another. repeat until you have drawn all cells and hit 0 for no.
-
-click_ROIs_GM
 
 %% section 5 elim_oversample_multiplane
 

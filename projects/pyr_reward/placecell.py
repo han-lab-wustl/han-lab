@@ -189,6 +189,38 @@ def make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,Fc3,trialnum,
     
     return tcs_correct, coms_correct, tcs_fail, coms_fail
 
+def make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,
+            velocity_filter=False):
+    rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = ybinned[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+        F = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F = F[moving_middle,:]
+        relpos = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            # last 8 trials            
+            mask = [True if xx in ttr[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+            F = F[mask,:]
+            relpos = relpos[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,bin_size)
+            tcs_correct.append(tc)
+            coms_correct.append(com)
+    tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)      
+    
+    return tcs_correct, coms_correct
 
 def make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
             rewards,forwardvel,rewsize,lasttr=5,bins=100):

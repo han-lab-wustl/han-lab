@@ -55,7 +55,7 @@ def main(**args):
         import suite2p
         ops = suite2p.default_ops() # populates ops with the default options
         #edit ops if needed, based on user input
-        ops = preprocessing.fillops(ops, params)
+        ops = preprocessing.fillops_drd(ops, params)
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -70,7 +70,16 @@ def main(**args):
             }
 
         # run one experiment
+        print(ops)
         opsEnd = suite2p.run_s2p(ops=ops, db=db)
+        # fix reg tif order -_- TODO: make into function
+        for npln in range(ops['nplanes']):
+            pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
+            fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
+            order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])
+            for i,fl in enumerate(fls):
+                os.rename(fl,os.path.join(pth,f'file{order[i]:06d}.tif'))
+        print(f"\n ************Fixed reg tif order for dopamine!************")
         save_params(params, imagingflnm)
 
     elif args["stepid"] == 3:
@@ -108,13 +117,7 @@ def main(**args):
             import suite2p
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
-            ops = preprocessing.fillops(ops, params)
-            # temp
-            ops["threshold_scaling"]=1 #TODO: make modular
-            ops["max_iterations"]=30
-            ops["anatomical_only"]=1
-            ops["delete_bin"]=1            
-            ops["reg_tif"]=1            
+            ops = preprocessing.fillops_drd(ops, params)
             # test for e216
             # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
