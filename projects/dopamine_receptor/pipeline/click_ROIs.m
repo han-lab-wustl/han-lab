@@ -5,9 +5,10 @@ function click_ROIs(time, Fs, mat)
 % visualization
 % first select how many well isolated cells you can select by hand
 % afterwards you can add cells by manually drawing ROIs
-
-disp(mat)
-load(mat);
+close all
+disp(fullfile(mat.folder, mat.name))
+load(fullfile(mat.folder, mat.name));
+inputdir = mat.folder; fn = mat.name;
 if exist('chone_corr','var')
     video=chone_corr;
     clear chone_corr;
@@ -29,7 +30,7 @@ tolerance = 300;
 
 figure;
 imagesc(framestd)
-elide=input('Clip Brightness?: ');
+elide=input('Clip Brightness? (0 = no; 1 = yes): ');
 
 
 if elide
@@ -101,7 +102,7 @@ while 1
     pic(:,:,3)=mat2gray(frame2)+mat2gray(squeeze(abs(gx)+abs(gy)));
     subplot(8,1,1:7)
     imagesc(pic)
-    display(['total cells ' num2str(i)])
+    display(['Total cells = ' num2str(i)])
         break
     end
     [dx,dy]=gradient(double(tem_roi));
@@ -135,7 +136,7 @@ end
 frameout=frame2;
 i=num_cells;
 
-byhand=input('Add cells by hand? ');
+byhand=input('Add cells by hand? (0 = no; 1 = yes) ');
 %%
 if byhand
  [masks_hand,colors]=select_polys_GM(pic,45);

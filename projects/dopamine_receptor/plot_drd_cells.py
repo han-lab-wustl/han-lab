@@ -18,8 +18,8 @@ from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e255'
-days = [1]
+mouse_name = 'e256'
+days = [3]
 planelut = {0: 'SR', 1: 'SP', 2: 'SO'}
 
 for dy in days:

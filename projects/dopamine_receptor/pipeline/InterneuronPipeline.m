@@ -45,14 +45,22 @@ for dy=1:length(pr_dir) % per day
     %number and prompt you in the command window if you would like to add
     %another. repeat until you have drawn all cells and hit 0 for no.
     time=300; %size of moving avg window (s)
-    Fs=7.8;
+    Fs=7.8; % 31.25/nplanes
     mats = dir(fullfile(pr_dir{dy}, '**', '*XC_plane*.mat'));
     for m=1:length(mats)
         click_ROIs(time, Fs, mats(m)) % per plane
     end
-
 end
-
+%%
+for dy=1:length(pr_dir) % per day
+    % align images to behavior
+    src = pr_dir{dy};
+    daypth = dir(fullfile(src, "**\behavior", "vr\*.mat"));
+%     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+    fmatfl = dir(fullfile(src, '**\*roibyclick_F.mat')); 
+    savepthfmat = VRalign_INpipeline(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    disp(savepthfmat)
+end
 
 %% section 5 elim_oversample_multiplane
 
