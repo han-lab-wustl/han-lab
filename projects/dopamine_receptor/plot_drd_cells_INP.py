@@ -19,9 +19,10 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity
 # Define source directory and mouse name
 src = r'Y:\drd'
 mouse_name = 'e256'
-days = [3]
-planelut = {0: 'SR', 1: 'SP', 2: 'SO'}
-
+days = [2]
+planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
+range_val, binsize = 8, 0.2 # s
+#%%
 for dy in days:
     day_dir = os.path.join(src, mouse_name, str(dy))
     for root, dirs, files in os.walk(day_dir):
@@ -31,31 +32,10 @@ for dy in days:
                 
                 # Extract necessary variables
                 dFF_iscell = f['dFF']
-                stat = f['stat'][0]
-                iscell = f['iscell'][:, 0].astype(bool)
-                
-                # Determine the cells to keep, excluding merged ROIs
-                statiscell = [stat[i] for i in range(len(stat)) if iscell[i]]
-                garbage = []
-                for st in statiscell:
-                    if 'imerge' in st.dtype.names and len(st['imerge'][0]) > 0:
-                        garb =  st['imerge'][0].flatten().tolist()
-                        garbage.extend(garb)
-                arr = [x[0] for x in garbage if len(x)>0]
-                if len(arr)>0:
-                    garbage = np.unique(np.concatenate(arr))
-                else:
-                    garbage = []
-                cllsind = np.arange(f['F'].shape[0])
-                cllsindiscell = cllsind[iscell]
-                keepind = ~np.isin(cllsindiscell, garbage)
-
                 # Filter dFF_iscell
-                dFF_iscell_filtered = dFF_iscell[keepind, :]
-                
+                dFF_iscell_filtered = dFF_iscell.T                
                 # run glm
                 dff_res = []; perirew = []
-                range_val, binsize = 12, 0.2 # s
                 for cll in range(dFF_iscell_filtered.shape[0]):
                     X = np.array([f['forwardvel'][0]]).T # Predictor(s)
                     X = sm.add_constant(X) # Adds a constant term to the predictor(s)
@@ -69,11 +49,12 @@ for dy in days:
                     dff = dFF_iscell_filtered[cll,:]
                     # dff = result.resid_pearson
                     normmeanrewdFF, meanrewdFF, normrewdFF, \
-                    rewdFF = perireward_binned_activity(dff, (f['rewards'][0]==0.5).astype(int), 
+                    rewdFF = perireward_binned_activity(dff, (f['solenoid2'][0]).astype(int), 
                             f['timedFF'][0], f['trialnum'][0],range_val, binsize)
                     perirew.append([meanrewdFF, rewdFF])
                 dff_res = np.array(dff_res)
-                dff_res = dFF_iscell_filtered
+                # dff_res = dFF_iscell_filtered
+                
                 
                 # Plotting
                 clls = dff_res.shape[0]
