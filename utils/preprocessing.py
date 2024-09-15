@@ -149,7 +149,5 @@ def fillops_drd(ops, params):
     ops["max_iterations"]=30
     ops["delete_bin"]=True            
     ops["reg_tif"]=True            
-    ops["keep_movie_raw"]=True          
-    ops["two_step_registration"]=True
 
     return ops

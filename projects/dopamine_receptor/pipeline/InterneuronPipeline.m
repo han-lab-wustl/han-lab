@@ -28,6 +28,7 @@ pr_dir=uipickfiles;
 
 %%
 for dy=1:length(pr_dir) % per day
+    close all
     regtifs = dir(fullfile(pr_dir{dy}, '**', 'plane*'));
     get_stabilized_mat_file_per_day(length(regtifs), regtifs);
     
@@ -44,9 +45,9 @@ for dy=1:length(pr_dir) % per day
     %polygon double click on the center and it will assign that polygon a
     %number and prompt you in the command window if you would like to add
     %another. repeat until you have drawn all cells and hit 0 for no.
-    time=300; %size of moving avg window (s)
-    Fs=7.8; % 31.25/nplanes
-    mats = dir(fullfile(pr_dir{dy}, '**', '*XC_plane*.mat'));
+    time=300; %size of moving avg window (s)    
+    mats = dir(fullfile(pr_dir{dy}, '**', 'file*XC_plane*.mat'));
+    Fs=31.25/length(mats);
     for m=1:length(mats)
         click_ROIs(time, Fs, mats(m)) % per plane
     end
@@ -109,7 +110,7 @@ end
 % % passed this point is HRZ specific
 %% section 10 vrselect startend split
 
-VRselectstartendsplit
+% VRselectstartendsplit
 % abffileSelectStartEndSplit
 
 %% section 11 Interneuron Struture PV
