@@ -19,6 +19,7 @@ ind = 1;
 [filename,path]=uigetfile('*.mat','Pick your behavior file','MultiSelect','on');
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data';
 % assume files are in the same fld
+%%
 for day=1:length(filename)
     mouse = load(fullfile(path,filename{day}));    
     % get success and fail trials
@@ -32,13 +33,17 @@ for day=1:length(filename)
     eps = [eps length(mouse.VR.changeRewLoc)]; 
     gainf = 1/mouse.VR.scalingFACTOR;
     rewloc = mouse.VR.changeRewLoc(mouse.VR.changeRewLoc>0)*gainf;
-    rewsize = mouse.VR.settings.rewardZone*gainf;    
+    try
+        rewsize = mouse.VR.settings.rewardZone*gainf;    
+    catch
+        rewsize = 20;
+    end
     fig = figure('Renderer', 'painters');    
     ypos = mouse.VR.ypos*(gainf);
     velocity = mouse.VR.ROE(2:end)*-0.013./diff(mouse.VR.time);
     scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on; 
     plot(find(mouse.VR.lick),ypos(find(mouse.VR.lick)), ...
-        'r.', 'MarkerSize',5) 
+        'k.', 'MarkerSize',8) 
     for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location
         rectangle('position',[eps(mm) rewloc(mm)-rewsize/2 ...
             eps(mm+1)-eps(mm) rewsize],'EdgeColor',[0 0 0 0],'FaceColor',[0 .5 .5 0.3])
@@ -64,7 +69,7 @@ for day=1:length(filename)
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,'behavior_opto'));
+fl = pptx.save(fullfile(savedst,'behavior'));
 % 
 % plot trial performance as bar graph
 % x = [success_prop{:}];

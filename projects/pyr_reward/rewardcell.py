@@ -91,6 +91,82 @@ def consecutive_stretch(x):
     
     return y 
 
+def perireward_binned_activity_early_late(dFF, rewards, timedFF, trialnum, range_val, binsize,
+                                          early_trial=2, late_trial=5):
+    """Adapts code to align dFF or pose data to rewards within a certain window on a per-trial basis,
+    only considering trials with trialnum > 3. Calculates activity for the first 5 and last 5 trials separately.
+
+    Args:
+        dFF (_type_): _description_
+        rewards (_type_): _description_
+        timedFF (_type_): _description_
+        trialnum (_type_): array denoting the trial number per frame
+        range_val (_type_): _description_
+        binsize (_type_): _description_
+
+    Returns:
+        dict: Contains mean and normalized activity for first and last 5 trials.
+    """
+    # Filter rewards for trialnum > 3
+    Rewindx = np.where(rewards & (trialnum > 3))[0]
+    
+    # Calculate separately for first 5 trials
+    first_trials = Rewindx[:early_trial]
+    last_trials = Rewindx[-late_trial:]
+    
+    def calculate_activity(TrialIndexes):
+        rewdFF = np.ones((int(np.ceil(range_val * 2 / binsize)), len(TrialIndexes)))*np.nan
+        for rr in range(0, len(TrialIndexes)):
+            current_trial = trialnum[TrialIndexes[rr]]
+            rewtime = timedFF[TrialIndexes[rr]]
+            currentrewchecks = np.where((timedFF > rewtime - range_val) & 
+                                        (timedFF <= rewtime + range_val) & 
+                                        (trialnum == current_trial))[0]
+            currentrewcheckscell = consecutive_stretch(currentrewchecks)
+            currentrewcheckscell = [xx for xx in currentrewcheckscell if len(xx) > 0]
+            currentrewcheckscell = np.array(currentrewcheckscell)
+            currentrewardlogical = np.array([sum(TrialIndexes[rr] == x).astype(bool) for x in currentrewcheckscell])
+            val = 0
+            for bin_val in range(int(np.ceil(range_val * 2 / binsize))):
+                val = bin_val + 1
+                currentidxt = np.where((timedFF > (rewtime - range_val + (val * binsize) - binsize)) & 
+                                       (timedFF <= rewtime - range_val + val * binsize) &
+                                    (trialnum == current_trial))[0]
+                checks = consecutive_stretch(currentidxt)
+                checks = [list(xx) for xx in checks]
+                if len(checks[0]) > 0:
+                    currentidxlogical = np.array([np.isin(x, currentrewcheckscell[currentrewardlogical][0]) \
+                                    for x in checks])
+                    for i, cidx in enumerate(currentidxlogical):
+                        cidx = [bool(xx) for xx in cidx]
+                        if sum(cidx) > 0:
+                            checkidx = np.array(np.array(checks)[i])[np.array(cidx)]
+                            rewdFF[bin_val, rr] = np.nanmean(dFF[checkidx])
+
+        meanrewdFF = np.nanmean(rewdFF, axis=1)
+        normmeanrewdFF = (meanrewdFF - np.min(meanrewdFF)) / (np.max(meanrewdFF) - np.min(meanrewdFF))
+        normrewdFF = np.array([(xx - np.min(xx)) / ((np.max(xx) - np.min(xx))) for xx in rewdFF.T])
+
+        return normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF
+    
+    normmeanrewdFF_first, meanrewdFF_first, normrewdFF_first, rewdFF_first = calculate_activity(first_trials)
+    normmeanrewdFF_last, meanrewdFF_last, normrewdFF_last, rewdFF_last = calculate_activity(last_trials)
+
+    return {
+        'first_5': {
+            'normmeanrewdFF': normmeanrewdFF_first,
+            'meanrewdFF': meanrewdFF_first,
+            'normrewdFF': normrewdFF_first,
+            'rewdFF': rewdFF_first
+        },
+        'last_5': {
+            'normmeanrewdFF': normmeanrewdFF_last,
+            'meanrewdFF': meanrewdFF_last,
+            'normrewdFF': normrewdFF_last,
+            'rewdFF': rewdFF_last
+        }
+    }
+
 def perireward_binned_activity(dFF, rewards, timedFF, 
         trialnum, range_val, binsize):
     """adaptation of gerardo's code to align IN BOTH TIME AND POSITION, dff or pose data to 

@@ -18,8 +18,8 @@ from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e256'
-days = [2]
+mouse_name = 'e255'
+days = [5]
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 range_val, binsize = 8, 0.2 # s
 #%%
@@ -29,7 +29,7 @@ for dy in days:
         for file in files:
             if 'plane' in root and file.endswith('roibyclick_F.mat'):
                 f = loadmat(os.path.join(root, file))
-                
+
                 # Extract necessary variables
                 dFF_iscell = f['dFF']
                 # Filter dFF_iscell
@@ -46,8 +46,8 @@ for dy in days:
                     result = model.fit()
                     dff_res.append(result.resid_pearson)    
                     # peri reward
-                    dff = dFF_iscell_filtered[cll,:]
-                    # dff = result.resid_pearson
+                    # dff = dFF_iscell_filtered[cll,:]
+                    dff = result.resid_pearson
                     normmeanrewdFF, meanrewdFF, normrewdFF, \
                     rewdFF = perireward_binned_activity(dff, (f['solenoid2'][0]).astype(int), 
                             f['timedFF'][0], f['trialnum'][0],range_val, binsize)

@@ -2,14 +2,13 @@
 %align to behavior
 %also used to plot cells with behavior
 clear all; clear all;
-Fs = 31.25;
 time = 300; % ms
-for i=6:7 % days
-    Fmat  = dir(fullfile('F:\E136', sprintf('D%i', i), '**', 'plane*', 'Fall.mat'));
-    
-    for i=1:length(Fmat)
-        disp(Fmat(i).folder)
-        [dff,f0] = redo_dFF_from_cellpose(fullfile(Fmat(i).folder, Fmat(i).name), ...
+for i=1:4 % days
+    Fmat  = dir(fullfile('J:\E135', sprintf('D*%i', i), '**', 'plane*', 'Fall.mat'));
+    Fs = 31.25/length(Fmat);
+    for ii=1:length(Fmat)
+        disp(Fmat(ii).folder)
+        [dff,f0] = redo_dFF_from_cellpose(fullfile(Fmat(ii).folder, Fmat(ii).name), ...
             Fs, time);
     
     end
@@ -17,13 +16,13 @@ end
 % align to behavior
 clear all;
 mouse_name = "E136";
-days = [3:7];
+days = [2:8];
 src = "F:\";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, ...
     sprintf('D%i',day), sprintf('%s*mat', mouse_name)));%, "behavior", "vr\*.mat"));
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('D%i',day), '**\Fall.mat')); 
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('D%i',day), '**\plane*', '**\Fall.mat')); 
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 
@@ -115,15 +114,26 @@ end
 
 %%
 % align to reward
+animal = 'E135';
+srcdir = 'G:\\%s\\Day%i';
 animal = 'E136';
-days = [5]; % compile across all days
+srcdir = 'F:\\%s\\D%i';
+days = [1:4]; % compile across all days
+days = [2:7];
+binnedPerirewards_d = {};
 for d=days
-    Fmat  = dir(fullfile(sprintf('F:\\%s\\D%i', animal, d), '**', 'plane*', 'Fall.mat')); %'G:\\%s\\Day%i
+    Fmat  = dir(fullfile(sprintf(srcdir, animal, d), '**', 'plane*', 'Fall.mat')); %'G:\\%s\\Day%i
     binnedPerirewards = {};
     for plane=1:length(Fmat)
         load(fullfile(Fmat(plane).folder, Fmat(plane).name))
-        [binnedPerireward,allbins,rewdFF] = perirewardbinnedactivity(dFF_iscell',rewards,timedFF,5,0.1);
-        binnedPerirewards{plane} = binnedPerireward;
+        [binnedPerireward,allbins,rewdFF,normmeanrewdFF] = perirewardbinnedactivity(dFF_iscell',rewards,timedFF,7,0.1);        
+        normmeanrewdFFs{plane} = normmeanrewdFF;
     end
-    
+    daycells_rewbin = [normmeanrewdFFs{1} normmeanrewdFFs{2} normmeanrewdFFs{3}]';
+    figure; imagesc(daycells_rewbin); colorbar
+    xline(median(1:140),'w-',{'Reward'});
+    title(sprintf('animal = %s, day = %i', animal, d))
+    binnedPerirewards_d{d} = binnedPerirewards;    
 end
+binnedPerirewards_d = binnedPerirewards_d(~cellfun('isempty',binnedPerirewards_d));
+allcells_rewbin = cell2mat(cellfun(@(x) [x{1}; x{2}; x{3}]', binnedPerirewards_d, 'UniformOutput', false));

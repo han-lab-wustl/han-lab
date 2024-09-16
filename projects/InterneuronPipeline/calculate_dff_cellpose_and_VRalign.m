@@ -2,14 +2,13 @@
 %align to behavior
 %also used to plot cells with behavior
 clear all; clear all;
-Fs = 31.25;
 time = 300; % ms
-for i=6:7 % days
-    Fmat  = dir(fullfile('F:\E136', sprintf('D%i', i), '**', 'plane*', 'Fall.mat'));
-    
-    for i=1:length(Fmat)
-        disp(Fmat(i).folder)
-        [dff,f0] = redo_dFF_from_cellpose(fullfile(Fmat(i).folder, Fmat(i).name), ...
+for i=1:4 % days
+    Fmat  = dir(fullfile('J:\E135', sprintf('D*%i', i), '**', 'plane*', 'Fall.mat'));
+    Fs = 31.25/length(Fmat);
+    for ii=1:length(Fmat)
+        disp(Fmat(ii).folder)
+        [dff,f0] = redo_dFF_from_cellpose(fullfile(Fmat(ii).folder, Fmat(ii).name), ...
             Fs, time);
     
     end
@@ -17,13 +16,13 @@ end
 % align to behavior
 clear all;
 mouse_name = "E136";
-days = [3:7];
+days = [2:8];
 src = "F:\";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, ...
-    sprintf('D%i',day), sprintf('%s*mat', mouse_name)));%, "behavior", "vr\*.mat"));
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('D%i',day), '**\Fall.mat')); 
+    sprintf('D*%i',day), sprintf('%s*mat', mouse_name)));%, "behavior", "vr\*.mat"));
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('D*%i',day), '**\plane*', '**\Fall.mat')); 
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 
