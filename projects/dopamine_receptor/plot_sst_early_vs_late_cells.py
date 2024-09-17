@@ -25,7 +25,6 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 srcs = [r'J:', r'F:']
 mice = ['E135', 'E136']
 days_all = [[1,2,3,4], [2, 3, 4, 5, 6, 7, 8]]
-planelut = {0: 'SR', 1: 'SP', 2: 'SO'}
 range_val, binsize = 8, 0.2 # s
 for ii,days in enumerate(days_all):
     mouse_name = mice[ii]
@@ -33,6 +32,7 @@ for ii,days in enumerate(days_all):
     for dy in days:
         # for e135
         if mouse_name=='E135' and dy == 4: planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
+        else: planelut = {0: 'SR', 1: 'SP', 2: 'SO'}
         if mouse_name=='E135': day_dir = os.path.join(src, mouse_name, f'Day{dy}')
         else: day_dir = os.path.join(src, mouse_name, f'D{dy}')
         for root, dirs, files in os.walk(day_dir):
@@ -45,7 +45,7 @@ for ii,days in enumerate(days_all):
                     stat = f['stat'][0]
                     iscell = f['iscell'][:, 0].astype(bool)
                     eps = np.where(f['changeRewLoc']>0)[1]
-                    eps = np.append(eps,len(f['changeRewLoc'][0]))
+                    eps = np.append(eps,dFF_iscell.shape[1])
                     rewlocs = f['changeRewLoc'][0][f['changeRewLoc'][0]>0]
                     # Determine the cells to keep, excluding merged ROIs
                     statiscell = [stat[i] for i in range(len(stat)) if iscell[i]]
@@ -70,9 +70,11 @@ for ii,days in enumerate(days_all):
                     dff_res = []; perirew = []
                     
                     for cll in range(dFF_iscell_filtered.shape[0]):
+                        # for uneven plane nums
                         X = np.array([f['forwardvel'][0]]).T # Predictor(s)
-                        X = sm.add_constant(X) # Adds a constant term to the predictor(s)
-                        y = dFF_iscell_filtered[cll,:] # Outcome
+                        y = dFF_iscell_filtered[cll,:] # Outcome                        
+                        if X.shape[0]>y.shape[0]: X = X[:-1]
+                        X = sm.add_constant(X) # Adds a constant term to the predictor(s)                        
                         ############## GLM ##############
                         # Fit a regression model
                         model = sm.GLM(y, X, family=sm.families.Gaussian())
@@ -164,7 +166,7 @@ for ii,days in enumerate(days_all):
                             ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 20))
                             ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
                             ax.spines[['top', 'right']].set_visible(False)
-                            if cll==clls-1: ax.legend(bbox_to_anchor=(1.01, 1.05))
+                            if cll==clls-1 and ep==0 and int(root.split("plane")[1])==0: ax.legend(bbox_to_anchor=(1.01, 1.05))
                         # Hide any unused subplots
                         for i in range(clls, len(axes)):
                             axes[i].axis('off')

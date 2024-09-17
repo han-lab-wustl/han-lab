@@ -16,16 +16,16 @@ plt.rc('font', size=20)          # controls default text sizes
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-savepth = os.path.join(savedst, 'sst.pdf')
+savepth = os.path.join(savedst, 'sst_per_epoch_earlyvlate_allep.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 from scipy.io import loadmat
-from projects.pyr_reward.rewardcell import perireward_binned_activity
+from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 # Define source directory and mouse name
 srcs = [r'J:', r'F:']
 mice = ['E135', 'E136']
 days_all = [[1,2,3,4], [2, 3, 4, 5, 6, 7, 8]]
-range_val, binsize = 6, 0.2 # s
+range_val, binsize = 8, 0.2 # s
 for ii,days in enumerate(days_all):
     mouse_name = mice[ii]
     src = srcs[ii]
@@ -44,7 +44,9 @@ for ii,days in enumerate(days_all):
                     dFF_iscell = f['dFF_iscell']
                     stat = f['stat'][0]
                     iscell = f['iscell'][:, 0].astype(bool)
-                    
+                    eps = np.where(f['changeRewLoc']>0)[1]
+                    eps = np.append(eps,dFF_iscell.shape[1])
+                    rewlocs = f['changeRewLoc'][0][f['changeRewLoc'][0]>0]
                     # Determine the cells to keep, excluding merged ROIs
                     statiscell = [stat[i] for i in range(len(stat)) if iscell[i]]
                     garbage = []
@@ -81,10 +83,12 @@ for ii,days in enumerate(days_all):
                         # peri reward
                         # dff = dFF_iscell_filtered[cll,:]
                         dff = result.resid_pearson
-                        normmeanrewdFF, meanrewdFF, normrewdFF, \
-                        rewdFF = perireward_binned_activity(dff, (f['rewards'][0]==1).astype(int), 
+                        early_v_late = perireward_binned_activity_early_late(dff, 
+                                (f['rewards'][0]==1).astype(int), 
                                 f['timedFF'][0], f['trialnum'][0],range_val, binsize)
-                        perirew.append([meanrewdFF, rewdFF])
+                        perirew.append([[early_v_late['first_5']['meanrewdFF'], 
+                                early_v_late['first_5']['rewdFF']], [early_v_late['last_5']['meanrewdFF'], 
+                                early_v_late['last_5']['rewdFF']]])
                     dff_res = np.array(dff_res)
                     # dff_res = dFF_iscell_filtered
                     
@@ -122,32 +126,46 @@ for ii,days in enumerate(days_all):
                     fig.suptitle(f'GLM residuals \n {mouse_name}, Day={dy}, {planelut[int(root.split("plane")[1])]}')
                     pdf.savefig(fig)
                     plt.close(fig)
-                                    
+                    
                     subpl = int(np.ceil(np.sqrt(clls)))
                     fig, axes = plt.subplots(subpl, subpl, figsize=(30, 15))
                     axes = axes.flatten()  # Flatten the array to easily index axes
                     
                     for cll in range(clls):
                         ax = axes[cll]
-                        ax.plot(perirew[cll][0], 'slategray')
+                        # first 5 
+                        meanrew = perirew[cll][0][0]
+                        rewall = perirew[cll][0][1]
+                        ax.plot(meanrew, 'slategray', label='early_trials')
                         ax.fill_between(
                             range(0, int(range_val / binsize) * 2),
-                            perirew[cll][0] - scipy.stats.sem(perirew[cll][1], axis=1, nan_policy='omit'),
-                            perirew[cll][0] + scipy.stats.sem(perirew[cll][1], axis=1, nan_policy='omit'),
+                            meanrew - scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
+                            meanrew + scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
                             alpha=0.5, color='slategray'
                         )
+                        # last 5
+                        meanrew = perirew[cll][1][0]
+                        rewall = perirew[cll][1][1]
+
+                        ax.plot(meanrew, 'darkcyan', label='late_trials')
+                        ax.fill_between(
+                            range(0, int(range_val / binsize) * 2),
+                            meanrew - scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
+                            meanrew + scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
+                            alpha=0.5, color='darkcyan'
+                        )                            
                         ax.set_title(f'Cell {cll + 1}')
                         ax.axvline(int(range_val / binsize), color='k', linestyle='--')
                         ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 20))
                         ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
                         ax.spines[['top', 'right']].set_visible(False)
-
+                        if cll==clls-1 and int(root.split("plane")[1])==0: ax.legend(bbox_to_anchor=(1.01, 1.05))
                     # Hide any unused subplots
                     for i in range(clls, len(axes)):
                         axes[i].axis('off')
 
                     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust 'rect' to accommodate any titles if necessary
-                    fig.suptitle(f'Peri-reward \n {mouse_name}, Day={dy}, {planelut[int(root.split("plane")[1])]}')
+                    fig.suptitle(f'Peri-reward, \n {mouse_name}, Day={dy}, {planelut[int(root.split("plane")[1])]}')
                     plt.show()
                     pdf.savefig(fig)
                     plt.close(fig)
