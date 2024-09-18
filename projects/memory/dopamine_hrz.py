@@ -21,7 +21,7 @@ plt.close('all')
 src = r"Z:\chr2_grabda\e232"
 # src = r'\\storage1.ris.wustl.edu\ebhan\Active\calvin\E231'
 # src = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\HRZ\E168HRZparams"
-dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data"
+dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
 days = []
 # days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
@@ -110,4 +110,32 @@ for day in days:
 
         plndff.append(meanrewdFF)
     day_date_dff[str(day)] = plndff
+pdf.close()
+
+#%%
+
+pln_mean = np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()])
+fig, axes = plt.subplots(nrows = 4, sharex=True,
+                        figsize=(6,10))
+ymin, ymax = .98, 1.03
+for pln in range(4):    
+        ax = axes[pln]
+        ax.plot(np.nanmean(pln_mean[:,pln,:], axis=0), 
+                color='slategray')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(pln_mean[:,pln,:],axis=0)-scipy.stats.sem(pln_mean[:,pln,:],
+                                    axis=0,nan_policy='omit'),
+                    np.nanmean(pln_mean[:,pln,:],axis=0)+scipy.stats.sem(pln_mean[:,pln,:],
+                                    axis=0,nan_policy='omit'), 
+                    alpha=0.5, color='slategray')
+        ax.set_ylim(ymin, ymax)
+        if pln==3: ax.set_xlabel('Time from CS (s)')
+        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+        ax.set_xticklabels(range(-range_val, range_val+1, 1))
+        ax.set_title(f'Plane {planelut[pln]}')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+fig.suptitle('ChR2 per day per + mouse averages')
+pdf.savefig(fig)
 pdf.close()

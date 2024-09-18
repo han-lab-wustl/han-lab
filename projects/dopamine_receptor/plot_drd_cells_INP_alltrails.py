@@ -17,17 +17,17 @@ plt.rc('font', size=20)
 
 # Define save path for PDF
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-savepth = os.path.join(savedst, 'drd1_allep_earlyvlate.pdf')
+savepth = os.path.join(savedst, 'drd2ko.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 from scipy.io import loadmat
-from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
+from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e255'
-days = [5,6]
-range_val, binsize = 6, 0.2 # seconds
+mouse_name = 'e262'
+days = [1,2,3]
+range_val, binsize = 6 , 0.2 # seconds
 
 # Iterate through specified days
 for dy in days:
@@ -73,20 +73,15 @@ for dy in days:
                     dffdf = pd.DataFrame({'dff': dff})
                     dff = np.hstack(dffdf.rolling(5).mean().values)
                 
-                    early_v_late = perireward_binned_activity_early_late(
+                    normmeanrewdFF, meanrewdFF, normrewdFF, rewdFF = perireward_binned_activity(
                         dff, 
                         f['solenoid2'][0].astype(int), 
                         f['timedFF'][0], 
                         f['trialnum'][0], 
                         range_val, 
                         binsize,
-                        early_trial=2, 
-                        late_trial=8
                     )
-                    perirew.append([
-                        [early_v_late['first_5']['meanrewdFF'], early_v_late['first_5']['rewdFF']],
-                        [early_v_late['last_5']['meanrewdFF'], early_v_late['last_5']['rewdFF']]
-                    ])
+                    perirew.append([meanrewdFF, rewdFF])
             
                 dff_res = np.array(dff_res)
                 
@@ -132,33 +127,21 @@ for dy in days:
                     else:
                         ax = axes  # single cell case
 
-                    meanrew = perirew[cll][0][0]
-                    rewall = perirew[cll][0][1]
+                    meanrew = perirew[cll][0]
+                    rewall = perirew[cll][1]
                     ax.plot(meanrew, 'slategray', label='early_trials')
                     ax.fill_between(
                         range(0, int(range_val / binsize) * 2),
                         meanrew - scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
                         meanrew + scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
                         alpha=0.5, color='slategray'
-                    )
-                    
-                    meanrew = perirew[cll][1][0]
-                    rewall = perirew[cll][1][1]
-                    ax.plot(meanrew, 'darkcyan', label='late_trials')
-                    ax.fill_between(
-                        range(0, int(range_val / binsize) * 2),
-                        meanrew - scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
-                        meanrew + scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
-                        alpha=0.5, color='darkcyan'
-                    )
+                    )                    
                     
                     ax.set_title(f'Cell {cll + 1}')
                     ax.axvline(int(range_val / binsize), color='k', linestyle='--')
                     ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 20))
                     ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
                     ax.spines[['top', 'right']].set_visible(False)
-                    if cll == clls - 1 and plane == 0:
-                        ax.legend(bbox_to_anchor=(1.01, 1.05))
                 
                 if clls > 1:
                     for i in range(clls, len(axes)):

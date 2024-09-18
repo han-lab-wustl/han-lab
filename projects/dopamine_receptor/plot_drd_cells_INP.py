@@ -16,16 +16,16 @@ plt.rc('font', size=20)          # controls default text sizes
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-savepth = os.path.join(savedst, 'drd2_per_epoch_earlyvlate.pdf')
+savepth = os.path.join(savedst, 'drd1_per_epoch_earlyvlate.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e256'
-days = [8]
-range_val, binsize = 8, 0.2 # s
+mouse_name = 'e255'
+days = [5,6]
+range_val, binsize = 6, 0.2 # s
 #%%
 for dy in days:
     day_dir = os.path.join(src, mouse_name, str(dy))
@@ -76,8 +76,10 @@ for dy in days:
                         eprng = np.arange(eps[ep],eps[ep+1])
                     # eprng = np.arange(0, eps[-1])
                         early_v_late = perireward_binned_activity_early_late(dff[eprng], 
-                                (f['rewards'][0]==1).astype(int)[eprng], 
-                                f['timedFF'][0][eprng], f['trialnum'][0][eprng],range_val, binsize)
+                                (f['solenoid2'][0]).astype(int)[eprng], 
+                                f['timedFF'][0][eprng], f['trialnum'][0][eprng],range_val, binsize,
+                                early_trial=2, 
+                                late_trial=8)
                         perirew_ep.append([[early_v_late['first_5']['meanrewdFF'], 
                                 early_v_late['first_5']['rewdFF']], [early_v_late['last_5']['meanrewdFF'], 
                                 early_v_late['last_5']['rewdFF']]])

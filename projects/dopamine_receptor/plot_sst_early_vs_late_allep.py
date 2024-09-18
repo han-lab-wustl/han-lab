@@ -2,7 +2,7 @@
 aug 2024
 """
 
-import os, sys, scipy
+import os, sys, scipy, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 import numpy as np, statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -83,6 +83,8 @@ for ii,days in enumerate(days_all):
                         # peri reward
                         # dff = dFF_iscell_filtered[cll,:]
                         dff = result.resid_pearson
+                        dffdf = pd.DataFrame({'dff': dff})
+                        dff = np.hstack(dffdf.rolling(5).mean().values)
                         early_v_late = perireward_binned_activity_early_late(dff, 
                                 (f['rewards'][0]==1).astype(int), 
                                 f['timedFF'][0], f['trialnum'][0],range_val, binsize)

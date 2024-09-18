@@ -129,7 +129,7 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
         print(i)   
         # pth = os.path.join(src, str(i))
         pth = os.path.join(src, str(i))
-        imgfl = [os.path .join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
+        imgfl = [os.path.join(pth, xx) for xx in os.listdir(pth) if "000" in xx][0]
         # imgfl = pth
         if combined:
             mat = os.path.join(imgfl, "suite2p", "combined", "Fall.mat") 
@@ -319,7 +319,7 @@ def compresssbx_move_to_archive(sbxsrc, dst, compress=True):
         file.close() 
     
 if __name__ == "__main__":
-    usb = r"F:\2023-2024_ZD_VR"
+    usb = r"G:\2023-2024_ZD_VR"
     drives = [r'Z:\chr2_grabda', r'Y:\drd', r'Y:\drd', r'Y:\drd']
     animals = ['e232', 'e262', 'e255', 'e256']
     for i,drive in enumerate(drives):
