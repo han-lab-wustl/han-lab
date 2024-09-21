@@ -320,7 +320,7 @@ def compresssbx_move_to_archive(sbxsrc, dst, compress=True):
     
 if __name__ == "__main__":
     usb = r"G:\2023-2024_ZD_VR"
-    drives = [r'Z:\chr2_grabda', r'Y:\drd', r'Y:\drd', r'Y:\drd']
-    animals = ['e232', 'e262', 'e255', 'e256']
+    drives = [r'Y:\drd', r'Y:\drd', r'Y:\drd']
+    animals = ['e262', 'e255', 'e256']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

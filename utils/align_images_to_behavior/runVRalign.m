@@ -3,15 +3,15 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e256";
-days = [1];
-src = "Y:\drd2";
+mouse_name = "e255";
+days = [7,9];
+src = "Y:\drd";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\Fall.mat')); 
-    savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\*roibyclick_F.mat')); 
+    savepthfmat = VRalign_INpipeline(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
 %%

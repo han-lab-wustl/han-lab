@@ -24,11 +24,11 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_across_days_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto.p"
-with open(saveddataset, "rb") as fp: #unpickle
-        radian_alignment_saved = pickle.load(fp)
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_20240919.p"
+# with open(saveddataset, "rb") as fp: #unpickle
+#         radian_alignment_saved = pickle.load(fp)
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -80,9 +80,8 @@ for ii in range(len(conddf)):
         bins=90
         rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
-        bin_size=track_length_rad/bins
-        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum, rewards)
-        rates_all.append(success/total_trials)
+        bin_size=track_length_rad/bins        
+        
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
             tcs_correct, coms_correct, tcs_fail, coms_fail, \
             com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
@@ -97,6 +96,8 @@ for ii in range(len(conddf)):
             # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
             # skew_mask = skew_filter>2
             Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+            # 9/19/24
+            # find correct trials within each epoch!!!!
             tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
@@ -118,6 +119,8 @@ for ii in range(len(conddf)):
             fig, ax = plt.subplots()
             for ep in range(len(coms_correct)):
                 ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                if len(tcs_fail)>0:
+                        ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
                 ax.axvline((bins/2), color='k')
                 ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
                 ax.set_xticks(np.arange(0,bins+1,10))
@@ -274,8 +277,8 @@ ax.legend().set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Reward cell proportion')
 eps = [2,3,4]
-y = 0.27
-pshift = 0.04
+y = 0.16
+pshift = 0.02
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -291,8 +294,8 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10)
 
-plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
+#         bbox_inches='tight')
 #%%
 
 df['recorded_neurons_per_session'] = total_cells

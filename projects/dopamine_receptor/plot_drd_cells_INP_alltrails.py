@@ -1,3 +1,6 @@
+"""zahra
+sept 2024
+"""
 
 import os, sys, scipy, imageio, pandas as pd
 import numpy as np, statsmodels.api as sm
@@ -16,8 +19,9 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
+condition = 'drd2'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-savepth = os.path.join(savedst, 'drd2ko.pdf')
+savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 from scipy.io import loadmat
@@ -25,13 +29,14 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e262'
-days = [1,2,3]
+mouse_name = 'e256'
+days = [3,4,5,6,7,8,9,10,12]
 range_val, binsize = 6 , 0.2 # seconds
-
+postrew_dff_all_days = []
 # Iterate through specified days
 for dy in days:
     day_dir = os.path.join(src, mouse_name, str(dy))
+    postrew_dff_all_planes = []
     for root, dirs, files in os.walk(day_dir):
         for file in files:
             if 'plane' in root and file.endswith('roibyclick_F.mat'):
@@ -55,6 +60,10 @@ for dy in days:
 
                 plane = int(root.split("plane")[1][0])
                 dFF_iscell = f['dFF']
+                F_iscell = f['F']
+                means = np.nanmean(F_iscell, axis=0)
+                # remove dim cells
+                dFF_iscell = dFF_iscell[:, means>450]
                 dFF_iscell_filtered = dFF_iscell.T
                 dff_res = []
                 perirew = []
@@ -84,6 +93,16 @@ for dy in days:
                     perirew.append([meanrewdFF, rewdFF])
             
                 dff_res = np.array(dff_res)
+                # normalize post reward activity
+                clls = dff_res.shape[0]
+                prewin = 1
+                binss = np.ceil(prewin/binsize).astype(int)
+                bound = int(range_val/binsize)
+                postwin = 2 #s
+                postbound = np.ceil(postwin/binsize).astype(int)
+                meanrewall = np.array([perirew[cll][0]-np.nanmean(perirew[cll][0][(bound-binss):bound]) for cll in range(clls)])
+                postrew_dff = np.nanmean(meanrewall[:, bound:bound+postbound],axis=1)
+                postrew_dff_all_planes.append(postrew_dff)
                 
                 # Plot mean image
                 fig, ax = plt.subplots()
@@ -92,8 +111,6 @@ for dy in days:
                 ax.set_axis_off()
                 pdf.savefig(fig)
                 plt.close(fig)
-            
-                clls = dff_res.shape[0]
                 
                 if clls == 1:
                     fig, ax = plt.subplots(figsize=(10, 5))
@@ -152,6 +169,7 @@ for dy in days:
                 plt.show()
                 pdf.savefig(fig)
                 plt.close(fig)
+    postrew_dff_all_days.append(postrew_dff_all_planes)
 
 pdf.close()
 # ```
@@ -166,3 +184,27 @@ pdf.close()
 # 5. **Legends and Titles**: Adjusted legend placement and subplot handling for clarity.
 
 # This script handles the specific case where `clls = 1` and ensures proper plotting regardless of the number of cells processed.
+#%%
+# histogram of post rew activity
+arr = np.concatenate([np.concatenate(pr) for pr in postrew_dff_all_days])
+arr = arr[arr<5] # remove outliers
+bins=np.histogram(arr, bins=30)[1] #get the bin edges
+fig,axes = plt.subplots(nrows=4, sharex=True, figsize = (8,12))
+for d,pr in enumerate(postrew_dff_all_days):
+    for pln in range(4):
+        ax = axes[pln]
+        if len(pr[pln])>0:
+            pr[pln] = pr[pln][pr[pln]<5] # remove outliers
+            ax.hist(pr[pln],bins=bins,label = f'Day {d:02d}', alpha=0.4)
+            ax.set_title(f'Plane {pln}')
+            ax.axvline(0, color='slategray', linestyle='--', linewidth=4)
+            ax.spines[['top','right']].set_visible(False)            
+            # ax.set_xlim([-.5, .5])
+    ax.legend(bbox_to_anchor=(1.1, 1.05))
+    ax.set_xlabel('Mean $\Delta$ F/F-Baseline(pre-reward)')
+    ax.set_ylabel('# cells')
+        
+
+
+    fig.suptitle(f'{condition} \n Post reward activity \n planes (0: superficial; 4: deep)')
+    fig.tight_layout()

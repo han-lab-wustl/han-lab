@@ -17,7 +17,7 @@ plt.rc('font', size=20)
 
 # Define save path for PDF
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-savepth = os.path.join(savedst, 'drd1_allep_earlyvlate.pdf')
+savepth = os.path.join(savedst, 'drd2ko_allep_earlyvlate.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 from scipy.io import loadmat
@@ -26,7 +26,7 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 # Define source directory and mouse name
 src = r'Y:\drd'
 mouse_name = 'e255'
-days = [5,6]
+days = [5,6,7,8,9]
 range_val, binsize = 6, 0.2 # seconds
 
 # Iterate through specified days
