@@ -1,7 +1,7 @@
 """
 functions for drd cell analysis
 """
-import os, sys
+import os, sys, re
 import numpy as np
 import statsmodels.api as sm
 import scipy
@@ -10,6 +10,16 @@ from scipy.io import loadmat
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 
 from projects.pyr_reward.rewardcell import perireward_binned_activity
+
+
+def extract_plane_number(path):
+    # Search for 'plane' followed by a number
+    match = re.search(r'plane(\d+)', path)
+    if match:
+        return int(match.group(1))
+    else:
+        raise ValueError("No plane number found in the path")
+
 
 # Function to load and filter dFF_iscell data
 def load_and_filter_fall_data(fall_file):

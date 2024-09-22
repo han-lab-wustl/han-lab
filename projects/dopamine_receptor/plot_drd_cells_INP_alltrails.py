@@ -30,6 +30,7 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 # Define source directory and mouse name
 src = r'Y:\drd'
 mouse_name = 'e256'
+# days = [3,4,5,6,7,9]
 days = [3,4,5,6,7,8,9,10,12]
 range_val, binsize = 6 , 0.2 # seconds
 postrew_dff_all_days = []
@@ -102,6 +103,9 @@ for dy in days:
                 postbound = np.ceil(postwin/binsize).astype(int)
                 meanrewall = np.array([perirew[cll][0]-np.nanmean(perirew[cll][0][(bound-binss):bound]) for cll in range(clls)])
                 postrew_dff = np.nanmean(meanrewall[:, bound:bound+postbound],axis=1)
+                # or quantile
+                postrew_dff = np.nanquantile(meanrewall[:, bound:bound+postbound], 
+                        .75, axis=1)
                 postrew_dff_all_planes.append(postrew_dff)
                 
                 # Plot mean image
@@ -185,26 +189,49 @@ pdf.close()
 
 # This script handles the specific case where `clls = 1` and ensures proper plotting regardless of the number of cells processed.
 #%%
-# histogram of post rew activity
+# histogram of post rew activity per plane
 arr = np.concatenate([np.concatenate(pr) for pr in postrew_dff_all_days])
 arr = arr[arr<5] # remove outliers
 bins=np.histogram(arr, bins=30)[1] #get the bin edges
-fig,axes = plt.subplots(nrows=4, sharex=True, figsize = (8,12))
+plns = 4
+fig,axes = plt.subplots(nrows=plns, sharex=True, figsize = (8,12))
 for d,pr in enumerate(postrew_dff_all_days):
-    for pln in range(4):
+    for pln in range(plns):
         ax = axes[pln]
-        if len(pr[pln])>0:
+        try:
             pr[pln] = pr[pln][pr[pln]<5] # remove outliers
             ax.hist(pr[pln],bins=bins,label = f'Day {d:02d}', alpha=0.4)
             ax.set_title(f'Plane {pln}')
             ax.axvline(0, color='slategray', linestyle='--', linewidth=4)
-            ax.spines[['top','right']].set_visible(False)            
-            # ax.set_xlim([-.5, .5])
-    ax.legend(bbox_to_anchor=(1.1, 1.05))
+            ax.spines[['top','right']].set_visible(False)                        
+            ax.set_xlim([-1, .5])        
+        except Exception as e:
+            print(e)
+        if pln==3: ax.legend(bbox_to_anchor=(1.01, 1.30))
+            
     ax.set_xlabel('Mean $\Delta$ F/F-Baseline(pre-reward)')
     ax.set_ylabel('# cells')
         
-
-
     fig.suptitle(f'{condition} \n Post reward activity \n planes (0: superficial; 4: deep)')
     fig.tight_layout()
+
+#%%
+# all planes
+# histogram of post rew activity per plane
+arr = np.concatenate([np.concatenate(pr) for pr in postrew_dff_all_days])
+arr = arr[arr<5] # remove outliers
+bins=np.histogram(arr, bins=20)[1] #get the bin edges
+plns = 4
+fig,ax = plt.subplots(figsize = (8,7))
+for d,pr in enumerate(postrew_dff_all_days):
+    allplnpr = np.concatenate(pr)
+    
+    ax.hist(allplnpr,bins=bins,label = f'Day {d:02d}', alpha=0.6)        
+    ax.axvline(0, color='slategray', linestyle='--', linewidth=4)
+    ax.spines[['top','right']].set_visible(False)                        
+    ax.set_xlim([-1, .5])            
+ax.set_xlabel('Mean $\Delta$ F/F-Baseline(pre-reward)')
+ax.set_ylabel('# cells')
+ax.legend(bbox_to_anchor=(1.01, 1.01))
+fig.suptitle(f'{condition} \n Post reward activity, all planes')
+fig.tight_layout()
