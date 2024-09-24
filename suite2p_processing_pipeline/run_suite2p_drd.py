@@ -17,14 +17,13 @@ def main(**args):
     #args should be the info you need to specify the params
     # for a given experiment, but only params should be used below
     params = fill_params(**args)    
-    if args["stepid"] == 0:
+    if args["stepid"] == 1:
         ###############################MAKE FOLDERS#############################
         #check to see if day directory exists
         preprocessing.makeflds(params["datadir"], params["mouse_name"], params["day"])
         ##########################TRANSFER (COPY) DATA##########################
         preprocessing.copy_folder(params["transferdir"], os.path.join(params["datadir"], params["mouse_name"], params["day"]))
 
-    elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
         #args should be the info you need to specify the params
         # for a given experiment, but only params should be used below        

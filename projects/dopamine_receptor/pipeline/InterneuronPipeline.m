@@ -55,28 +55,28 @@ end
 
 %% cell detect only
 
-for dy=1:length(pr_dir) % per day
-    close all
-    %run this section to select cells. start by picking your file made from the
-    %last script. input  a frequency that is the recording frequency of one
-    %plane only. (31.25/nplanes). when a figure pops up. write 1 to adjust the
-    %clip brightness. Adjusting the brightness may impact what is determined to
-    %be an roi so keep this in mind. a new figure will pop up with blue circled
-    %rois. click all of the rois you believe are cells and then simply click on
-    %the background when you are done selecting.
-    %it will ask you if there are any cells it missed that you would like to
-    %add by hand. if you say yes, a new figure will pop up where you can draw
-    %lines around the first cell you would like to add. when you complete a
-    %polygon double click on the center and it will assign that polygon a
-    %number and prompt you in the command window if you would like to add
-    %another. repeat until you have drawn all cells and hit 0 for no.
-    time=300; %size of moving avg window (s)    
-    mats = dir(fullfile(pr_dir{dy}, '**', 'file*XC_plane*.mat'));
-    Fs=31.25/length(mats);
-    for m=1:length(mats)
-        click_ROIs(time, Fs, mats(m)) % per plane
-    end
-end
+% for dy=1:length(pr_dir) % per day
+%     close all
+%     %run this section to select cells. start by picking your file made from the
+%     %last script. input  a frequency that is the recording frequency of one
+%     %plane only. (31.25/nplanes). when a figure pops up. write 1 to adjust the
+%     %clip brightness. Adjusting the brightness may impact what is determined to
+%     %be an roi so keep this in mind. a new figure will pop up with blue circled
+%     %rois. click all of the rois you believe are cells and then simply click on
+%     %the background when you are done selecting.
+%     %it will ask you if there are any cells it missed that you would like to
+%     %add by hand. if you say yes, a new figure will pop up where you can draw
+%     %lines around the first cell you would like to add. when you complete a
+%     %polygon double click on the center and it will assign that polygon a
+%     %number and prompt you in the command window if you would like to add
+%     %another. repeat until you have drawn all cells and hit 0 for no.
+%     time=300; %size of moving avg window (s)    
+%     mats = dir(fullfile(pr_dir{dy}, '**', 'file*XC_plane*.mat'));
+%     Fs=31.25/length(mats);
+%     for m=1:length(mats)
+%         click_ROIs(time, Fs, mats(m)) % per plane
+%     end
+% end
 %%
 for dy=1:length(pr_dir) % per day
     % align images to behavior

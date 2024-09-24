@@ -12,8 +12,8 @@ import matplotlib, seaborn as sns
 from behavior import get_success_failure_trials, consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
@@ -297,7 +297,7 @@ so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) fo
 so_transients_nonopto = [day_date_dff_arr_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_arr_nonopto[ii,
                     3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]
 so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
-fig, ax = plt.subplots(figsize=(2.5,5))
+fig, ax = plt.subplots(figsize=(2.2,5))
 df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
 df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
 df['animal'] = np.concatenate([animal_opto, animal_nonopto])
@@ -305,20 +305,77 @@ df = df.sort_values('condition')
 df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
 ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
     palette={'LED off': "slategray", 'LED on': "mediumturquoise"},)
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
+ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=15,
     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
+ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=12,
     alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
 # ax.set_ylim(0, 1.04)
 ax.spines[['top','right']].set_visible(False)
-
+ax.set_ylabel('$\Delta$ F/F-baseline (stratum oriens)')
 ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 'so_transient_dff_difference'].values
 t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
 ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
                 'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
 t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
 
-ax.set_title(f'Stim at reward\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
+ax.set_title(f'Stim at reward\n\
+    per session p={pval:.4f}\n per animal p={pval_an:.4f}')
+
+plt.savefig(os.path.join(dst, 'so_transient_quant.svg'), bbox_inches='tight')
+
+#%%
+# transient trace of so
+height=1.04
+fig, axes = plt.subplots(nrows = 1, ncols = 2, sharex=True,
+                        figsize=(13,5))
+pln=3
+for ld in range(2): # per learning day
+        trialtype = 0 # opto trials
+        ax = axes[ld]
+       
+        trialtype = 1 # even
+        ax.plot(np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0), 
+                color='mediumturquoise',label='LED on')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
+                    np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
+                    alpha=0.5, color='mediumturquoise')
+        ax.add_patch(
+        patches.Rectangle(
+            xy=(range_val/binsize,0),  # point of origin.
+            width=2/binsize, height=height, linewidth=1, # width is s
+            color='mediumspringgreen', alpha=0.15))
+        ax.set_ylim(.97, height) 
+        ax.set_xlabel('Time from CS (s)')
+        trialtype = 0 # odd
+        ax = axes[ld]
+        ax.plot(np.nanmean(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0), 
+                color='k', label='LED off')
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                    np.nanmean(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
+                    np.nanmean(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
+                    alpha=0.3, color='k')
+        # trialtype = 1 # even
+        # ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+        #         color='peru', label='even, 0mA')
+        # ax.fill_between(range(0,int(range_val/binsize)*2), 
+        #             np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+        #             np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+        #             alpha=0.5, color='peru')
+
+        if ld==1: ax.legend(bbox_to_anchor=(1.1, 1.05))
+        # else: ax.get_legend().set_visible(False)
+        ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,20))
+        ax.set_xticklabels(np.arange(-range_val, range_val+1, 4))
+        ax.set_title(f'Day {ld+1}')
+        ax.set_ylim(.97, height)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+fig.suptitle('Basal dendrite layer (stratum oriens)')
+fig.tight_layout()
+plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
+
 #%%
 fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
                         figsize=(12,10))
