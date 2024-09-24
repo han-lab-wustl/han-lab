@@ -13,8 +13,8 @@ from behavior import consecutive_stretch, get_behavior_tuning_curve, get_success
     get_lick_selectivity_post_reward
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)          # controls default text sizes
@@ -53,7 +53,8 @@ for ii,animal in enumerate(animals):
         newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
         rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
         
-        optodays_before.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), memory_cond].values[0])    
+        before = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), memory_cond].values[0]
+        optodays_before.append(before)    
         optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
         # for each plane
         path=list(Path(os.path.join(src, animal, str(day))).rglob('params.mat'))[0]
@@ -93,6 +94,22 @@ for ii,animal in enumerate(animals):
         
         # probe trials
         probe = trialnum<3
+        
+        # example plot
+        if before==True:
+            import matplotlib.patches as patches
+            fig, ax = plt.subplots()
+            ax.plot(ypos[probe])
+            ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], color='k')
+            ax.add_patch(
+            patches.Rectangle(
+                xy=(0,rewloc-10),  # point of origin.
+                width=len(ypos[probe]), height=20, linewidth=1, # width is s
+                color='slategray', alpha=0.3))
+            ax.set_ylim([0,270])
+            ax.spines[['top','right']].set_visible(False)
+            ax.set_title(f'{day}')
+
         # probe = trialnum<str_trials[0] # trials before first successful trial as probes
         com_probe = np.nanmean(ypos[probe][lick.astype(bool)[probe]])-rewloc
         pos_bin, vel_probe = get_behavior_tuning_curve(ypos[probe], velocity[probe], bins=270)
@@ -213,17 +230,6 @@ ax.get_legend().set_visible(False)
 ax.set_ylabel('Velocity near reward zone\nmemory probes')
 ax.spines[['top','right']].set_visible(False)
 
-plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
-                hue='opto_day_before', data=dfagg, fill=False,errorbar='se',
-                palette={False: "slategray", True: "mediumturquoise"})
-ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
-                hue='opto_day_before', data=dfagg,
-                palette={False: "slategray", True: "mediumturquoise"},
-                s=12)
-ax.get_legend().set_visible(False)
-ax.set_ylabel('Memory lick selectivity\nnear reward zone')
-ax.spines[['top','right']].set_visible(False)
 
 # plt.figure(figsize=(3,6))
 # ax = sns.barplot(x='opto_day_before', y='com_lick_probe', hue='opto_day_before', data=df, fill=False,
@@ -289,8 +295,9 @@ dfagg = df#.groupby(['animal', 'opto']).mean(numeric_only = True)
 # #%%
 x1 = df.loc[df.opto_day_before==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = df.loc[df.opto_day_before==False, 'lick_selectivity_near_rewardloc_mean'].values
-t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-print(f'Lick selectivity near reward in memory probes\nPer session t-test p-value: {pval:02f}')
+t,pvals1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+print(f'Lick selectivity near reward in memory probes\n\
+    Per session ranksums p-value: {pvals1:02f}')
 
 x1 = df.loc[(df.opto==1), 'licks_selectivity_last8trials'].values
 x2 = df.loc[df.opto==False, 'licks_selectivity_last8trials'].values
@@ -300,9 +307,29 @@ print(f'Lick selectivity during learning\nPer session t-test p-value: {pval:02f}
 dfagg = df.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'lick_selectivity_near_rewardloc_mean'].values
-t,pval = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-print(f'Lick selectivity near reward in memory probes\nPaired t-test (n=2) p-value: {pval:02f}')
+t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+print(f'Lick selectivity near reward in memory probes\n\
+    Paired t-test (n=2) p-value: {pvals2:02f}')
 
+
+plt.figure(figsize=(2.2,5))
+ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
+                hue='opto_day_before', data=df, fill=False,errorbar='se',
+                palette={False: "slategray", True: "mediumturquoise"})
+ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
+                hue='opto_day_before', data=df,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=12, alpha=0.4)
+sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
+                hue='opto_day_before', data=dfagg,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=15,ax=ax)
+
+ax.get_legend().set_visible(False)
+ax.set_ylabel('Memory lick selectivity')
+ax.spines[['top','right']].set_visible(False)
+plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}')
+plt.savefig(os.path.join(dst, 'memory_lick_selectivity.svg'), bbox_inches='tight')
 # velocity
 x1 = df.loc[df.opto_day_before==True, 'velocity_near_rewardloc_mean'].values
 x2 = df.loc[df.opto_day_before==False, 'velocity_near_rewardloc_mean'].values

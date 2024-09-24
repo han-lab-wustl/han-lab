@@ -20,7 +20,7 @@ plt.rc('font', size=20)
 from projects.dopamine_receptor.drd import extract_plane_number
 
 # Define save path for PDF
-condition = 'drd2'
+condition = 'drd2ko'
 
 from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
@@ -30,13 +30,13 @@ fluor_thres = 400
 src = r'Y:\drd'
 if condition=='drd1':
     mice = ['e255', 'e254']
-    days_s = [[3,4,5,6,7,8,9], [1, 2,3]]
+    days_s = [[3,4,5,6,7,8,9,10], [1, 2,3]]
 elif condition=='drd2':
     mice = ['e256', 'e253']
-    days_s = [[3,4,5,6,7,8,9,10,11,12], [1,2,3,5]]
+    days_s = [[3,4,5,6,7,8,9,10,11,12,13], [1,2,3,5]]
 elif condition=='drd2ko':
     mice = ['e262']
-    days_s = [[1,2,3,4,5]]
+    days_s = [[1,2,3,4,5,6]]
     fluor_thres = 600
 
 # days = [3,4,5,6,7,8,9,10,12]
@@ -171,7 +171,7 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
 # early vs. late days
 arr = np.concatenate([np.concatenate([np.concatenate(pr) for pr in dy if len(pr)>0]) for dy in postrew_dff_all_mice])
 arr = arr[arr<5] # remove outliers
-bins=np.histogram(arr, bins=50)[1] #get the bin edges
+bins=np.histogram(arr, bins=10)[1] #get the bin edges
 plns = 4
 for dd, pr_dy in enumerate(postrew_dff_all_mice):
     fig,axes = plt.subplots(ncols =2,figsize = (15,8))
@@ -194,3 +194,5 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
                 Early vs. late days')
     fig.tight_layout()
 
+
+# %%
