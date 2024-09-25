@@ -19,7 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd2'
+condition = 'drd2ko'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
 savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -29,10 +29,11 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e256'
+mouse_name = 'e262'
 # days = [3,4,5,6,7,9]
-days = [3,4,5,6,7,8,9,10,12]
-range_val, binsize = 6 , 0.2 # seconds
+# days = [3,4,5,6,7,8,9,10,12]
+days = [7]
+range_val, binsize = 7 , 0.2 # seconds
 postrew_dff_all_days = []
 # Iterate through specified days
 for dy in days:
@@ -96,7 +97,7 @@ for dy in days:
                 dff_res = np.array(dff_res)
                 # normalize post reward activity
                 clls = dff_res.shape[0]
-                prewin = 1
+                prewin = 2
                 binss = np.ceil(prewin/binsize).astype(int)
                 bound = int(range_val/binsize)
                 postwin = 2 #s
@@ -104,8 +105,8 @@ for dy in days:
                 meanrewall = np.array([perirew[cll][0]-np.nanmean(perirew[cll][0][(bound-binss):bound]) for cll in range(clls)])
                 postrew_dff = np.nanmean(meanrewall[:, bound:bound+postbound],axis=1)
                 # or quantile
-                postrew_dff = np.nanquantile(meanrewall[:, bound:bound+postbound], 
-                        .75, axis=1)
+                # postrew_dff = np.nanquantile(meanrewall[:, bound:bound+postbound], 
+                #         .75, axis=1)
                 postrew_dff_all_planes.append(postrew_dff)
                 
                 # Plot mean image

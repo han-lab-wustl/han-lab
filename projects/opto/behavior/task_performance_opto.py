@@ -13,7 +13,8 @@ plt.rc('font', size=20)          # controls default text sizes
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 
-from behavior import get_success_failure_trials, get_performance, get_rewzones
+from behavior import get_success_failure_trials,\
+get_performance, get_rewzones
 
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)

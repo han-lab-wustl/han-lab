@@ -179,3 +179,40 @@ def get_success_failure_trials(trialnum, reward):
     ttr = np.unique(trialnum)[np.unique(trialnum) > 2]  # Remove probe trials
 
     return success, fail, str_trials, ftr_trials, ttr, total_trials
+
+
+def calculate_lick_rate(licks, window_size, sampling_rate=31.25):
+    """
+    Calculate lick rate in a time series data where licks is a binary variable.
+
+    Parameters:
+    licks (numpy array): Binary array where 1 represents a lick and 0 represents no lick.
+    window_size (int): The size of the window (in number of samples) over which to calculate the lick rate.
+    sampling_rate (float): The sampling rate in Hz (default is 31.25 Hz).
+
+    Returns:
+    numpy array: Array of lick rates (licks per second) for each window.
+    """
+    # Sampling frequency
+    sampling_interval = 1 / sampling_rate  # seconds per sample
+
+    # Define the time window for calculating lick rate (e.g., 1 second)
+    window_length_seconds = 1  # seconds
+    window_length_samples = int(window_length_seconds * sampling_rate)
+
+    # Calculate the number of windows
+    num_windows = int(np.ceil(len(licks) / window_length_samples))
+
+    # Initialize the lick rate array
+    lick_rate = np.zeros(num_windows)
+
+    # Calculate lick rate for each window
+    for i in range(num_windows):
+        start_index = i * window_length_samples
+        end_index = min((i + 1) * window_length_samples, len(licks))
+        licks_in_window = np.sum(licks[start_index:end_index])
+        lick_rate[i] = licks_in_window / window_length_seconds
+
+    # print("Lick rate (licks/second):", lick_rate)
+
+    return lick_rate
