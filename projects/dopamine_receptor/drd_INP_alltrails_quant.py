@@ -30,13 +30,13 @@ fluor_thres = 400
 src = r'Y:\drd'
 if condition=='drd1':
     mice = ['e255', 'e254']
-    days_s = [[3,4,5,6,7,8,9,10], [1, 2,3]]
+    days_s = [[3,4,5,6,7,8,9,10,11,12], [1, 2,3]]
 elif condition=='drd2':
     mice = ['e256', 'e253']
-    days_s = [[3,4,5,6,7,8,9,10,11,12,13], [1,2,3,5]]
+    days_s = [[3,4,5,6,7,8,9,10,11,12,13,14,15], [1,2,3,5]]
 elif condition=='drd2ko':
     mice = ['e262']
-    days_s = [[1,2,3,4,5,6]]
+    days_s = [[1,2,3,4,5,6,7,8]]
     fluor_thres = 600
 
 # days = [3,4,5,6,7,8,9,10,12]
@@ -55,16 +55,7 @@ for ii,mouse_name in enumerate(mice):
                     f = loadmat(os.path.join(root, file))
                     print(os.path.join(root, file))
                     plane = extract_plane_number(os.path.join(root, file))
-                    # Filename pattern to match
-                    target_filename = 'masks.jpg'
-                    blotches_file_path = None
                     
-                    # Check for the blotches.jpg file
-                    for file in os.listdir(root):
-                        if os.path.isfile(os.path.join(root, file)) and file.endswith(target_filename):
-                            blotches_file_path = os.path.join(root, file)
-                            break
-
                     eps = np.where(f['changeRewLoc'] > 0)[1]
                     eps = np.append(eps, len(f['changeRewLoc'][0]))
                     rewlocs = f['changeRewLoc'][0][f['changeRewLoc'][0] > 0]

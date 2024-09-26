@@ -2,7 +2,7 @@
 sept 2024
 """
 
-import os, sys, numpy as np, re, pandas as pd
+import os, sys, numpy as np, re, pandas as pd, seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.io import loadmat
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab')
@@ -49,7 +49,9 @@ def get_name_date(input_string):
         return date_str, first_word
 #%%
         
-mice = ['e256', 'e262']
+mice = ['e256', 'e253', 'e262', 'e261']
+condition = ['drd2', 'drd2', 'drd2ko', 'drd2ko']
+
 matsrc = r'Y:\drd\ko_behavior_analysis'
 mats = [os.path.join(matsrc,xx) for xx in os.listdir(matsrc)]
 
@@ -88,7 +90,7 @@ for i in range(len(mouse_name_date)):
     # min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
     # rews_centered = np.zeros_like(velocity)
     # rews_centered[min_iind]=1
-    rates = []
+    rates = []; num_trials = []
     for ep in range(len(eps)-1):
         eprng = np.arange(eps[ep],eps[ep+1])
         tr = trialnum[eprng]
@@ -97,13 +99,43 @@ for i in range(len(mouse_name_date)):
             success, fail, str_trials, ftr_trials, ttr, \
             total_trials = get_success_failure_trials(tr, rew)        
             rates.append(success/total_trials)
+            num_trials.append(total_trials)
+    num_trials = np.sum(np.array(num_trials))
     rates_av = np.nanmean(np.array(rates))
     dct[f'{mouse_name_date[i][0]}_{mouse_name_date[i][1]}']=[rates_av, 
-        np.nanmean(velocity)]
+        np.nanmean(velocity), num_trials]
     
 #%%
 df = pd.DataFrame()
-df['rates'] = [v[0] for k,v in dct.items()]
-df['date'] = [xx[1] for xx in mouse_name_date]
-df['mouse_name'] = [xx[1] for xx in mouse_name_date]
-df.sort_values(by=['date'])
+
+df['success_rate'] = [v[0] for k,v in dct.items()]
+df['average_velocity'] = [v[1] for k,v in dct.items()]
+df['date'] = [xx[0] for xx in mouse_name_date]
+df['mouse_name'] = [xx[1].lower() for xx in mouse_name_date]
+df['condition'] = ['ko' if '26' in df.mouse_name.values[ii] else 'drd2' for ii,xx in enumerate(df.mouse_name.values)]
+df = df.sort_values(by=['mouse_name','date'])
+df['hrz_day'] = np.concatenate([[ii+1 for ii,xx in enumerate(df.loc[df.mouse_name==nm, 'date'])] for nm in mice])
+df['trials_per_day'] = [v[2] for k,v in dct.items()]
+
+fig,axes = plt.subplots(figsize=(15,5),ncols=3)
+ax = axes[0]
+sns.lineplot(x='hrz_day', y='success_rate', hue='mouse_name', data=df,ax=ax)
+sns.scatterplot(x='hrz_day', y='success_rate', hue='mouse_name', data=df,ax=ax,s=150)
+ax.legend_.remove()  # Remove the legend
+ax.set_ylim([.2,1])
+
+ax = axes[1]
+sns.lineplot(x='hrz_day', y='average_velocity', hue='mouse_name', data=df,
+    ax=ax)
+sns.scatterplot(x='hrz_day', y='average_velocity', hue='mouse_name', data=df,ax=ax,s=150)
+ax.legend_.remove()  # Remove the legend
+
+ax = axes[2]
+sns.lineplot(x='hrz_day', y='trials_per_day', hue='mouse_name', data=df,
+    ax=ax)
+sns.scatterplot(x='hrz_day', y='trials_per_day', hue='mouse_name', data=df,ax=ax,s=150)
+ax.legend(bbox_to_anchor=(1.01, 1.01))
+
+
+fig.tight_layout()
+# %%

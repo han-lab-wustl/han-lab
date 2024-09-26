@@ -19,7 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd2ko'
+condition = 'drd1'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
 savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -29,10 +29,16 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 
 # Define source directory and mouse name
 src = r'Y:\drd'
-mouse_name = 'e262'
+if condition=='drd2ko':
+    mouse_name = 'e262'
+elif condition=='drd2':
+    mouse_name = 'e256'
+elif condition=='drd1':
+    mouse_name = 'e255'
+
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [7]
+days = [12]
 range_val, binsize = 7 , 0.2 # seconds
 postrew_dff_all_days = []
 # Iterate through specified days
