@@ -115,22 +115,22 @@ for ii,animal in enumerate(animals):
 
         
         # example plot during learning
-        rew = (rewards==1).astype(int)
-        mask = np.array([True if xx>15 and xx<28 else False for xx in trialnum])
-        import matplotlib.patches as patches
-        fig, ax = plt.subplots()
-        ax.plot(ypos[mask])
-        ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k')
-        ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan')
-        ax.add_patch(
-        patches.Rectangle(
-            xy=(0,newrewloc-10),  # point of origin.
-            width=len(ypos[mask]), height=20, linewidth=1, # width is s
-            color='slategray', alpha=0.3))
-        ax.set_ylim([0,270])
-        ax.spines[['top','right']].set_visible(False)
-        ax.set_title(f'{day}')
-        plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
+        # rew = (rewards==1).astype(int)
+        # mask = np.array([True if xx>15 and xx<28 else False for xx in trialnum])
+        # import matplotlib.patches as patches
+        # fig, ax = plt.subplots()
+        # ax.plot(ypos[mask])
+        # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k')
+        # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan')
+        # ax.add_patch(
+        # patches.Rectangle(
+        #     xy=(0,newrewloc-10),  # point of origin.
+        #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
+        #     color='slategray', alpha=0.3))
+        # ax.set_ylim([0,270])
+        # ax.spines[['top','right']].set_visible(False)
+        # ax.set_title(f'{day}')
+        # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
 
         # probe = trialnum<str_trials[0] # trials before first successful trial as probes
         com_probe = np.nanmean(ypos[probe][lick.astype(bool)[probe]])-rewloc

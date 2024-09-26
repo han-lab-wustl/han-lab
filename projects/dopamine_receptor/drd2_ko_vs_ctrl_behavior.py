@@ -1,12 +1,13 @@
 """zahra
 sept 2024
 """
-
+#%%
 import os, sys, numpy as np, re, pandas as pd, seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.io import loadmat
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab')
-from projects.memory.behavior import get_success_failure_trials, calculate_lick_rate
+from projects.memory.behavior import get_success_failure_trials, calculate_lick_rate, \
+    get_lick_selectivity, calculate_lick_rate
 import matplotlib as mpl
 from datetime import datetime
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -47,10 +48,8 @@ def get_name_date(input_string):
     if underscore_index != -1:
         first_word = input_string[:underscore_index]
         return date_str, first_word
-#%%
         
-mice = ['e256', 'e253', 'e262', 'e261']
-condition = ['drd2', 'drd2', 'drd2ko', 'drd2ko']
+mice = ['e256', 'e255', 'e253', 'e254', 'e262', 'e261']
 
 matsrc = r'Y:\drd\ko_behavior_analysis'
 mats = [os.path.join(matsrc,xx) for xx in os.listdir(matsrc)]
@@ -82,6 +81,7 @@ for i in range(len(mouse_name_date)):
     ypos = VR[6][0]/gainf
     trialnum = VR[8][0]
     changerewloc = VR[10][0]
+    rewlocs = changerewloc[changerewloc>0]/gainf
     eps = np.where(changerewloc>0)[0]
     eps=np.append(eps,len(changerewloc))
     # rews_centered = np.zeros_like(velocity)
@@ -90,7 +90,16 @@ for i in range(len(mouse_name_date)):
     # min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
     # rews_centered = np.zeros_like(velocity)
     # rews_centered[min_iind]=1
-    rates = []; num_trials = []
+    # lick rate
+        # from vip opto
+    window_size = 5
+    # also estimate sampling rate
+    lick_rate = calculate_lick_rate(lick, 
+                window_size, sampling_rate=31.25*1.5)
+
+    rates = []; num_trials = []; ls = []
+    # last few trials to get lick selectivity
+    lasttr = 10
     for ep in range(len(eps)-1):
         eprng = np.arange(eps[ep],eps[ep+1])
         tr = trialnum[eprng]
@@ -100,10 +109,17 @@ for i in range(len(mouse_name_date)):
             total_trials = get_success_failure_trials(tr, rew)        
             rates.append(success/total_trials)
             num_trials.append(total_trials)
+            lick_selectivity_success = get_lick_selectivity(ypos[eprng], 
+                trialnum[eprng], lick[eprng], rewlocs[ep], rewsize,
+                fails_only = False)     
+            ls.append(np.nanmean(np.array(lick_selectivity_success)[:-lasttr]))      
     num_trials = np.sum(np.array(num_trials))
     rates_av = np.nanmean(np.array(rates))
+    ls_av = np.nanmean(np.array(ls))
+
     dct[f'{mouse_name_date[i][0]}_{mouse_name_date[i][1]}']=[rates_av, 
-        np.nanmean(velocity), num_trials]
+        np.nanmean(velocity), num_trials/(time[-1]/60), len(eps)-1, ls_av,
+    np.nanmean(lick_rate)]
     
 #%%
 df = pd.DataFrame()
@@ -112,30 +128,62 @@ df['success_rate'] = [v[0] for k,v in dct.items()]
 df['average_velocity'] = [v[1] for k,v in dct.items()]
 df['date'] = [xx[0] for xx in mouse_name_date]
 df['mouse_name'] = [xx[1].lower() for xx in mouse_name_date]
-df['condition'] = ['ko' if '26' in df.mouse_name.values[ii] else 'drd2' for ii,xx in enumerate(df.mouse_name.values)]
+condition = []
+for ii,xx in enumerate(df.mouse_name.values):
+    if '26' in df.mouse_name.values[ii]:
+        cond = 'drd2ko'
+    else:
+        cond = 'drd1_2'
+    # elif xx=='e256' or xx=='e253':
+    #     cond = 'drd2'
+    # else:
+    #     cond = 'drd1'
+    condition.append(cond)
+df['condition'] = condition
 df = df.sort_values(by=['mouse_name','date'])
 df['hrz_day'] = np.concatenate([[ii+1 for ii,xx in enumerate(df.loc[df.mouse_name==nm, 'date'])] for nm in mice])
-df['trials_per_day'] = [v[2] for k,v in dct.items()]
+df['trials_per_min'] = [v[2] for k,v in dct.items()]
+df['epochs_per_day'] = [v[3] for k,v in dct.items()]
+df['lick_selectivity'] = [v[4] for k,v in dct.items()]
+df['lick_rate'] = [v[5] for k,v in dct.items()]
 
-fig,axes = plt.subplots(figsize=(15,5),ncols=3)
-ax = axes[0]
-sns.lineplot(x='hrz_day', y='success_rate', hue='mouse_name', data=df,ax=ax)
-sns.scatterplot(x='hrz_day', y='success_rate', hue='mouse_name', data=df,ax=ax,s=150)
-ax.legend_.remove()  # Remove the legend
-ax.set_ylim([.2,1])
+fig,axes = plt.subplots(figsize=(12,12),nrows = 3, ncols=2)
+metrics = ['success_rate', 'average_velocity', 'trials_per_min', 
+        'lick_rate', 'lick_selectivity']
+axes = np.concatenate(axes)
 
-ax = axes[1]
-sns.lineplot(x='hrz_day', y='average_velocity', hue='mouse_name', data=df,
-    ax=ax)
-sns.scatterplot(x='hrz_day', y='average_velocity', hue='mouse_name', data=df,ax=ax,s=150)
-ax.legend_.remove()  # Remove the legend
+plt.rc('font', size=20)          # controls default text sizes
+for ii, m in enumerate(metrics):
+    ax = axes[ii]
+    sns.lineplot(x='hrz_day', y=m, hue='mouse_name', data=df,ax=ax)
+    sns.scatterplot(x='hrz_day', y=m, hue='mouse_name', data=df,ax=ax,s=150)
+    ax.legend_.remove()  # Remove the legend
+    if ii==len(metrics)-1:
+        ax.legend(bbox_to_anchor=(1.01, 1.01))
 
-ax = axes[2]
-sns.lineplot(x='hrz_day', y='trials_per_day', hue='mouse_name', data=df,
-    ax=ax)
-sns.scatterplot(x='hrz_day', y='trials_per_day', hue='mouse_name', data=df,ax=ax,s=150)
-ax.legend(bbox_to_anchor=(1.01, 1.01))
-
+# Hide any remaining empty axes
+for jj in range(len(metrics), len(axes)):
+    fig.delaxes(axes[jj])
 
 fig.tight_layout()
 # %%
+
+fig,axes = plt.subplots(figsize=(12,12),nrows = 3, ncols=2)
+metrics = ['success_rate', 'average_velocity', 'trials_per_min', 
+        'lick_rate', 'lick_selectivity']
+axes = np.concatenate(axes)
+
+plt.rc('font', size=20)          # controls default text sizes
+for ii, m in enumerate(metrics):
+    ax = axes[ii]
+    sns.lineplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax)
+    sns.scatterplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax,s=150)
+    ax.legend_.remove()  # Remove the legend
+    if ii==len(metrics)-1:
+        ax.legend(bbox_to_anchor=(1.01, 1.01))
+
+# Hide any remaining empty axes
+for jj in range(len(metrics), len(axes)):
+    fig.delaxes(axes[jj])
+
+fig.tight_layout()
