@@ -11,6 +11,155 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 
 from projects.pyr_reward.rewardcell import perireward_binned_activity
 
+import numpy as np
+
+def consecutive_stretch(x):
+    z = np.diff(x)
+    break_point = np.where(z != 1)[0]
+
+    if len(break_point) == 0:
+        return [x]
+
+    y = []
+    if 0 in break_point: y.append([x[break_point[0]]]) # since it does not iterate from 0
+    for i in range(1, len(break_point)):
+        xx = x[break_point[i - 1] + 1:break_point[i]]
+        if len(xx)==0: xx = [x[break_point[i]]]
+        y.append(xx)
+    y.append(x[break_point[-1] + 1:])
+    
+    return y
+
+def get_moving_time_v3(velocity, thres, Fs, ftol):
+    """
+    Returns time points when the animal is considered moving based on the animal's change in velocity
+
+    Parameters:
+    velocity - ndarray: velocity of the animal
+    thres - float: Threshold speed in cm/s
+    Fs - int: Number of frames minimum to be considered stopped
+    ftol - int: Frame tolerance for merging stop periods
+
+    Returns:
+    moving_middle - ndarray: Indices of points when the animal is moving
+    stop - ndarray: Indices of points when the animal is stopped
+    """
+    vr_speed = velocity
+    vr_thresh = thres
+
+    moving = np.where(vr_speed > vr_thresh)[0]
+    stop = np.where(vr_speed <= vr_thresh)[0]
+
+    stop_time_stretch = consecutive_stretch(stop)
+    stop_time_length = [len(stretch) for stretch in stop_time_stretch]
+    stop_time_stretch = [stretch for stretch, length in zip(stop_time_stretch, stop_time_length) if length >= Fs]
+
+    if len(stop_time_stretch) > 0:
+        for s in range(len(stop_time_stretch)-1):  # Using min to prevent indexing beyond list
+            d = 1
+            while s + d < len(stop_time_stretch):
+                if not np.isnan(stop_time_stretch[s + d]).any():
+                    while abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) \
+                        <= ftol \
+                        and s + d < len(stop_time_stretch):
+                        stop_time_stretch[s] = np.concatenate((stop_time_stretch[s], 
+                                    np.arange(stop_time_stretch[s][-1] + 1,
+                                    stop_time_stretch[s + d][0]), stop_time_stretch[s + d]))
+                        # stop_time_stretch[s + d] = np.nan
+                        d += 1
+                d += 1
+
+        stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).any()]
+        stop = np.concatenate(stop_time_stretch)
+        moving_time = np.ones(len(vr_speed))
+        moving_time[stop] = 0
+    else:
+        moving_time = np.ones(len(vr_speed))
+
+    moving = np.where(moving_time == 1)[0]
+    moving_middle = moving
+    return moving_middle, stop
+
+# The script using this function:
+def get_stops(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
+        forwardvelALL, reward_binned, max_reward_stop=31.25*5):
+    """from gerardo
+
+    Args:
+        moving_middle (_type_): _description_
+        stop (_type_): _description_
+        pre_win_framesALL (_type_): _description_
+        post_win_framesALL (_type_): _description_
+        forwardvelALL (_type_): _description_
+        reward_binned (_type_): _description_
+        max_reward_stop (_type_, optional): number of seconds after reward for a stop
+        to be considered a reward related stop * frame rate.
+
+    Returns:
+        _type_: _description_
+    """
+    mov_success_tmpts = moving_middle[np.where(np.diff(moving_middle) > 1)[0] + 1]
+
+    idx_rm = (mov_success_tmpts - pre_win_framesALL) <= 0
+    rm_idx = np.where(idx_rm)[0]
+    mov_success_tmpts = np.delete(mov_success_tmpts, rm_idx)
+
+    if len(mov_success_tmpts) > 0:
+        mov_success_tmpts = np.delete(mov_success_tmpts, -1)  # Remove the last element
+        
+    idx_rm = (mov_success_tmpts + post_win_framesALL) > len(forwardvelALL) - 10
+    rm_idx = np.where(idx_rm)[0]
+    mov_success_tmpts = np.delete(mov_success_tmpts, rm_idx)
+
+    stop_success_tmpts = moving_middle[np.where(np.diff(moving_middle) > 1)[0]] + 1
+
+    idx_rm = (stop_success_tmpts - pre_win_framesALL) < 0
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+
+    if len(stop_success_tmpts) > 0:
+        stop_success_tmpts = np.delete(stop_success_tmpts, -1)  # Remove the last element
+
+    idx_rm = (stop_success_tmpts + post_win_framesALL) > len(forwardvelALL) - 10
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+
+    rew_idx = np.where(reward_binned)[0]
+
+    rew_stop_success_tmpts = []
+    for r in rew_idx: # iterate through all rewards
+        if r in stop:
+            last_stop_before_rew = stop_success_tmpts[np.where(stop_success_tmpts < r)[0]]
+            if len(last_stop_before_rew) > 0:
+                rew_stop_success_tmpts.append(last_stop_before_rew[-1])
+            else:
+                rew_stop_success_tmpts.append(np.nan)
+        else:
+            closest_future_stop = stop_success_tmpts[np.where((stop_success_tmpts - r >= 0) \
+            & (stop_success_tmpts - r < max_reward_stop))[0]]
+            if len(closest_future_stop) > 0:
+                rew_stop_success_tmpts.append(closest_future_stop[0])
+            else:
+                rew_stop_success_tmpts.append(np.nan)
+
+    rew_stop_success_tmpts = np.array(rew_stop_success_tmpts)
+    didntstoprew = np.isnan(rew_stop_success_tmpts)
+    rew_stop_success_tmpts = rew_stop_success_tmpts[~didntstoprew]
+    rew_stop_success_tmpts = np.unique(rew_stop_success_tmpts)
+    nonrew_stop_success_tmpts = np.setxor1d(rew_stop_success_tmpts, stop_success_tmpts)
+
+    idx_rm = (stop_success_tmpts - pre_win_framesALL) <= 0
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+
+    if len(stop_success_tmpts) > 0:
+        stop_success_tmpts = np.delete(stop_success_tmpts, -1)  # Remove the last element
+
+    idx_rm = (stop_success_tmpts + post_win_framesALL) > len(forwardvelALL) - 10
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+    
+    return nonrew_stop_success_tmpts, rew_stop_success_tmpts
 
 def extract_plane_number(path):
     # Search for 'plane' followed by a number
@@ -78,47 +227,3 @@ def run_glm(dFF_iscell_filtered, f):
 
     dff_res = np.array(dff_res)
     return dff_res, perirew
-
-# Function to plot GLM results
-def plot_glm_results(dff_res, dy, planelut, root):
-    clls = dff_res.shape[0]
-    subpl = int(np.ceil(np.sqrt(clls)))
-    
-    plt.figure(figsize=(20, 10))
-    for cll in range(clls):
-        plt.subplot(subpl, subpl, cll + 1)
-        plt.plot(dff_res[cll, :])
-        plt.title(f'Cell {cll + 1}')
-    
-    plt.suptitle(f'GLM residuals; Day={dy}, {planelut[int(root.split("plane")[1])]}')
-    plt.show()
-
-# Function to plot peri-reward activity
-def plot_peri_reward(perirew, dy, planelut, root, range_val, binsize):
-    clls = len(perirew)
-    subpl = int(np.ceil(np.sqrt(clls)))
-    fig, axes = plt.subplots(subpl, subpl, figsize=(30, 15))      
-    rr, cc = 0, 0
-
-    for cll in range(clls):
-        ax = axes[rr, cc] if subpl > 1 else axes
-        ax.plot(perirew[cll][0], 'slategray')
-        ax.fill_between(range(0, int(range_val/binsize)*2), 
-            perirew[cll][0] - scipy.stats.sem(perirew[cll][1], axis=1, nan_policy='omit'),
-            perirew[cll][0] + scipy.stats.sem(perirew[cll][1], axis=1, nan_policy='omit'),
-            alpha=0.5, color='slategray')
-        ax.set_title(f'Cell {cll + 1}')
-        ax.axvline(int(range_val/binsize), color='k', linestyle='--')
-        ax.set_xticks(np.arange(0, (int(range_val/binsize) * 2) + 1, 20))
-        ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
-        ax.spines[['top', 'right']].set_visible(False)
-        
-        if rr >= subpl - 1:
-            rr = 0
-            cc += 1
-        else:
-            rr += 1
-
-    fig.tight_layout()
-    plt.suptitle(f'Peri-reward activity; Day={dy}, {planelut[int(root.split("plane")[1])]}')
-    plt.show()

@@ -19,7 +19,7 @@ days=[1];
 src = 'Z:\halo_grabda\e243';
 % src = 'X:\vipcre\e217';
 lenVid=3000;
-threshold = 0.4; % a tunable parameter to find stims, set at 0.4 for chr2 data 
+threshold = 0.5; % a tunable parameter to find stims, set at 0.4 for chr2 data 
 loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold);
 
 

@@ -19,7 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd2ko'
+condition = 'drd1'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -38,8 +38,8 @@ elif condition=='drd1':
 
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [8]
-range_val, binsize = 8 , 0.2 # seconds
+days = [13]
+range_val, binsize = 5 , 0.2 # seconds
 postrew_dff_all_days = []
 # Iterate through specified days
 for dy in days:

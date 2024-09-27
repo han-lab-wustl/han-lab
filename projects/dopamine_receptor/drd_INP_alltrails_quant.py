@@ -20,7 +20,7 @@ plt.rc('font', size=20)
 from projects.dopamine_receptor.drd import extract_plane_number
 
 # Define save path for PDF
-condition = 'drd2ko'
+condition = 'drd1'
 
 from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
@@ -28,15 +28,16 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 fluor_thres = 400
 # Define source directory and mouse name
 src = r'Y:\drd'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 if condition=='drd1':
     mice = ['e255', 'e254']
-    days_s = [[3,4,5,6,7,8,9,10,11,12], [1, 2,3]]
+    days_s = [[3,4,5,6,7,8,9,10,11,12], [1,2,3]]
 elif condition=='drd2':
     mice = ['e256', 'e253']
     days_s = [[3,4,5,6,7,8,9,10,11,12,13,14,15], [1,2,3,5]]
 elif condition=='drd2ko':
     mice = ['e262']
-    days_s = [[1,2,3,4,5,6,7,8]]
+    days_s = [[1,2,3,4,5,6,7,8,9]]
     fluor_thres = 600
 
 # days = [3,4,5,6,7,8,9,10,12]
@@ -161,29 +162,29 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
 # histogram of post rew activity per plane
 # early vs. late days
 arr = np.concatenate([np.concatenate([np.concatenate(pr) for pr in dy if len(pr)>0]) for dy in postrew_dff_all_mice])
-arr = arr[arr<5] # remove outliers
-bins=np.histogram(arr, bins=10)[1] #get the bin edges
+# arr = arr[arr<5] # remove outliers
+bins=np.histogram(arr, bins=40)[1] #get the bin edges
 plns = 4
 for dd, pr_dy in enumerate(postrew_dff_all_mice):
     fig,axes = plt.subplots(ncols =2,figsize = (15,8))
     for d,pr in enumerate(pr_dy):
-        if d <= 2:
+        if d <= 3:
             ax = axes[0]
         else: 
             ax = axes[1]
         if len(pr)>0:
             allplnpr = np.concatenate(pr)
             
-            ax.hist(allplnpr,bins=bins,label = f'Day {d:02d}', alpha=0.6)        
+            ax.hist(allplnpr,bins=bins,label = f'Day {d+1:02d}', alpha=0.6)        
             ax.axvline(0, color='slategray', linestyle='--', linewidth=4)
             ax.spines[['top','right']].set_visible(False)                        
             ax.set_xlim([-1, 1])            
+            ax.legend(bbox_to_anchor=(1.01, 1.01))
     ax.set_xlabel('Mean $\Delta$ F/F-Baseline(pre-reward)')
-    ax.set_ylabel('# cells')
-    ax.legend(bbox_to_anchor=(1.01, 1.01))
+    ax.set_ylabel('# cells')        
     fig.suptitle(f'{condition} \n Post reward activity; mouse {mice[dd]}, all planes\n\
                 Early vs. late days')
     fig.tight_layout()
-
+    plt.savefig(os.path.join(savedst, f'{condition}_{mice[dd]}histogram.svg'), bbox_inches='tight')
 
 # %%
