@@ -1,7 +1,7 @@
 """zahra
 sept 2024
 """
-
+#%%
 import os, sys, scipy, imageio, pandas as pd
 import numpy as np, statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -19,8 +19,8 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd1'
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
+condition = 'drd2ko'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
@@ -38,13 +38,13 @@ elif condition=='drd1':
 
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [12]
-range_val, binsize = 7 , 0.2 # seconds
+days = [8]
+range_val, binsize = 8 , 0.2 # seconds
 postrew_dff_all_days = []
 # Iterate through specified days
 for dy in days:
     day_dir = os.path.join(src, mouse_name, str(dy))
-    postrew_dff_all_planes = []
+    postrew_dff_all_planes = []; perirew_all_planes = []
     for root, dirs, files in os.walk(day_dir):
         for file in files:
             if 'plane' in root and file.endswith('roibyclick_F.mat'):
@@ -149,6 +149,7 @@ for dy in days:
                 fig, axes = plt.subplots(subpl, subpl, figsize=(30, 15))
                 if clls > 1:
                     axes = axes.flatten()
+                perirewcll = []
                 for cll in range(clls):
                     if clls > 1:
                         ax = axes[cll]
@@ -157,7 +158,8 @@ for dy in days:
 
                     meanrew = perirew[cll][0]
                     rewall = perirew[cll][1]
-                    ax.plot(meanrew, 'slategray', label='early_trials')
+                    perirewcll.append(meanrew)
+                    ax.plot(meanrew, 'slategray')
                     ax.fill_between(
                         range(0, int(range_val / binsize) * 2),
                         meanrew - scipy.stats.sem(rewall, axis=1, nan_policy='omit'),
@@ -170,7 +172,8 @@ for dy in days:
                     ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 20))
                     ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
                     ax.spines[['top', 'right']].set_visible(False)
-                
+                #save
+                perirew_all_planes.append(perirewcll)
                 if clls > 1:
                     for i in range(clls, len(axes)):
                         axes[i].axis('off')
@@ -183,6 +186,7 @@ for dy in days:
     postrew_dff_all_days.append(postrew_dff_all_planes)
 
 pdf.close()
+#%%
 # ```
 
 # ### Changes Made:
@@ -195,6 +199,26 @@ pdf.close()
 # 5. **Legends and Titles**: Adjusted legend placement and subplot handling for clarity.
 
 # This script handles the specific case where `clls = 1` and ensures proper plotting regardless of the number of cells processed.
+#%%
+# average cell activity for one day
+
+fig, ax = plt.subplots()
+meanrew = np.vstack(perirew_all_planes)
+ax.plot(np.nanmean(meanrew,axis=0), color='slategray',linewidth=3)
+ax.fill_between(
+    range(0, int(range_val / binsize) * 2),
+    np.nanmean(meanrew,axis=0) - scipy.stats.sem(meanrew, axis=0, nan_policy='omit'),
+    np.nanmean(meanrew,axis=0) + scipy.stats.sem(meanrew, axis=0, nan_policy='omit'),
+    alpha=0.5, color='slategray'
+)                    
+ax.set_ylabel('$\Delta$ F/F')
+ax.set_xlabel('Time from Conditioned Stimulus (s)')
+ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 20))
+ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_title(f'{condition}, {meanrew.shape[0]} cells')
+ax.axvline(int(range_val / binsize), linestyle='--', color='k', linewidth=3)
+plt.savefig(os.path.join(savedst, f'{condition}_av_trace.svg'), bbox_inches='tight')
 #%%
 # histogram of post rew activity per plane
 arr = np.concatenate([np.concatenate(pr) for pr in postrew_dff_all_days])

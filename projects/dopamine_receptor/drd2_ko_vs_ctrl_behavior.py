@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)          # controls default text sizes
 
-
 def get_name_date(input_string):
     # Use regular expressions to find the date in 'dd_MMM_yyyy' format
     match = re.search(r'(\d{2})_(\w{3})_(\d{4})', input_string)
@@ -177,7 +176,7 @@ plt.rc('font', size=20)          # controls default text sizes
 for ii, m in enumerate(metrics):
     ax = axes[ii]
     sns.lineplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax)
-    sns.scatterplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax,s=150)
+    # sns.scatterplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax,s=150)
     ax.legend_.remove()  # Remove the legend
     if ii==len(metrics)-1:
         ax.legend(bbox_to_anchor=(1.01, 1.01))
