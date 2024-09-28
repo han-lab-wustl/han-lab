@@ -78,10 +78,16 @@ end
 %     end
 % end
 %%
+
+pr_dir=uipickfiles;
+
 for dy=1:length(pr_dir) % per day
     % align images to behavior
+    
     src = pr_dir{dy};
     daypth = dir(fullfile(src, "**\behavior", "vr\*.mat"));
+    daypth = dir(fullfile(src, "**\*).mat"));
+
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, '**\*roibyclick_F.mat')); 
     savepthfmat = VRalign_INpipeline(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));

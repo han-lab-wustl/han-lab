@@ -31,13 +31,13 @@ src = r'Y:\drd'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 if condition=='drd1':
     mice = ['e255', 'e254']
-    days_s = [[3,4,5,6,7,8,9,10,11,12], [1,2,3]]
+    days_s = [list(np.arange(3,13)), list(np.arange(1,9))]
 elif condition=='drd2':
     mice = ['e256', 'e253']
-    days_s = [[3,4,5,6,7,8,9,10,11,12,13,14,15], [1,2,3,5]]
+    days_s = [list(np.arange(3,16)), list(np.arange(1,10))]
 elif condition=='drd2ko':
-    mice = ['e262']
-    days_s = [[1,2,3,4,5,6,7,8,9]]
+    mice = ['e261','e262']
+    days_s = [[1,2,3,4],[1,2,3,4,5,6,7,8,9]]
     fluor_thres = 600
 
 # days = [3,4,5,6,7,8,9,10,12]

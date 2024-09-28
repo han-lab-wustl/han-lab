@@ -41,9 +41,11 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 src = r'Y:\drd'
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [10,11,12, 13,14,15, 6,7,8]
-mice = ['e255','e255','e255', 'e256','e256','e256', 'e262','e262','e262']
-condition = ['drd1','drd1','drd1', 'drd2','drd2','drd2', 'drd2ko','drd2ko','drd2ko']
+days = [7,8,9, 10,11,12, 13,14,15, 6,7,8]
+mice = ['e254','e254','e254', 'e255','e255','e255', 
+        'e256','e256','e256', 'e262','e262','e262']
+condition = ['drd1','drd1','drd1','drd1','drd1','drd1', 
+            'drd2','drd2','drd2', 'drd2ko','drd2ko','drd2ko']
 range_val, binsize = 5 , 0.2 # seconds
 meanrew_dff_all_days = []
 # Iterate through specified days
