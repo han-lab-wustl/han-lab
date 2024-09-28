@@ -55,19 +55,22 @@ def get_moving_time_v3(velocity, thres, Fs, ftol):
     stop_time_stretch = [stretch for stretch, length in zip(stop_time_stretch, stop_time_length) if length >= Fs]
 
     if len(stop_time_stretch) > 0:
-        for s in range(len(stop_time_stretch)-1):  # Using min to prevent indexing beyond list
-            d = 1
-            while s + d < len(stop_time_stretch):
+        for s in range(len(stop_time_stretch)-1):
+            d = 0
+            while (s + d) < (len(stop_time_stretch) - 1):
                 if not np.isnan(stop_time_stretch[s + d]).any():
-                    while abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) \
-                        <= ftol \
-                        and s + d < len(stop_time_stretch):
+                    while (s + d < len(stop_time_stretch) - 1) and abs(stop_time_stretch[s][-1] - stop_time_stretch[s + d][0]) <= ftol:
                         stop_time_stretch[s] = np.concatenate((stop_time_stretch[s], 
                                     np.arange(stop_time_stretch[s][-1] + 1,
                                     stop_time_stretch[s + d][0]), stop_time_stretch[s + d]))
-                        # stop_time_stretch[s + d] = np.nan
-                        d += 1
-                d += 1
+                        stop_time_stretch[s + d] = [np.nan]
+                    d += 1
+                else:
+                    break
+                
+            # re-check length after modifying the contents
+            while s + d >= len(stop_time_stretch):
+                d -= 1
 
         stop_time_stretch = [stretch for stretch in stop_time_stretch if not np.isnan(stretch).any()]
         stop = np.concatenate(stop_time_stretch)

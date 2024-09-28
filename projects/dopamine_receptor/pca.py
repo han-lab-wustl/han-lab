@@ -116,8 +116,8 @@ for ii,dy in enumerate(days):
 #%%            
 # 2. Standardize the data
 from sklearn.preprocessing import StandardScaler
-
-pcadata = [np.vstack(xx) for xx in meanrew_dff_all_days]
+## removes 0 cell planes
+pcadata = [np.vstack([xxx for xxx in xx if len(xxx)>0]) for xx in meanrew_dff_all_days]
 lblnum = [xx.shape[0] for xx in pcadata]
 
 pcadata = np.vstack(pcadata)
@@ -174,11 +174,11 @@ ax = sns.countplot(data=cluster_df,x='cell_type', hue='Cluster',
 import umap
 
 # Apply UMAP
-umap_model = umap.UMAP(n_components=2, n_neighbors=15, min_dist=0.1)
+umap_model = umap.UMAP(n_components=2, n_neighbors=15, min_dist=0.05)
 umap_result = umap_model.fit_transform(scaled_data)
 
 # Create a DataFrame for the UMAP results
-umap_df = pd.DataFrame(data=umap_result, columns=['Dim1', 'Dim2'])
+umap_df = pd.DataFrame(data=umap_result, columns=['Dim1','Dim2'])
 umap_df['Class'] = label
 #%%
 # Plot the UMAP results
@@ -191,4 +191,4 @@ ax.set_ylabel('Dimension 2')
 ax.legend()
 ax.spines[['top', 'right']].set_visible(False)
 
-plt.savefig(os.path.join(savedst,'umap_drd.svg'))
+plt.savefig(os.path.join(savedst,'umap_drd_with_all_mice.svg'))

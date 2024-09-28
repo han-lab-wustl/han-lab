@@ -20,7 +20,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd2ko'
+condition = 'drd2'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 savepth = os.path.join(savedst, f'{condition}_stops.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -42,7 +42,7 @@ elif condition=='drd1':
     mouse_name = 'e255'
 
 # days = [3,4,5,6,7,9]
-days = [6,7,8,9]
+days = [12,13,14,15]
 # days = [13]
 range_val, binsize = 6 , 0.2 # seconds
 perirew_all_days = []; perinonrew_all_days = []
@@ -73,7 +73,7 @@ for dy in days:
                 velocity = f['forwardvelALL'][0]
                 veldf = pd.DataFrame({'velocity': velocity})
                 velocity = np.hstack(veldf.rolling(5).mean().values)
-                moving_middle,stop = get_moving_time_v3(velocity,5,10,10)
+                moving_middle,stop = get_moving_time_v3(velocity,2,10,10)
                 pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
                 nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
                         post_win_framesALL,velocity, f['rewardsALL'][0])
