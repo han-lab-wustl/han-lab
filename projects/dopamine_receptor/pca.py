@@ -41,11 +41,13 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 src = r'Y:\drd'
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [7,8,9, 10,11,12, 13,14,15, 6,7,8]
+days = [6,7,8, 10,11,12, 7,8,9, 13,14,15, 2,3,4,6,7,8]
 mice = ['e254','e254','e254', 'e255','e255','e255', 
-        'e256','e256','e256', 'e262','e262','e262']
+        'e253','e253','e253','e256','e256','e256', 
+        'e261','e261','e261','e262','e262','e262']
 condition = ['drd1','drd1','drd1','drd1','drd1','drd1', 
-            'drd2','drd2','drd2', 'drd2ko','drd2ko','drd2ko']
+            'drd2','drd2','drd2','drd2','drd2','drd2', 
+            'drd2ko','drd2ko','drd2ko','drd2ko','drd2ko','drd2ko']
 range_val, binsize = 5 , 0.2 # seconds
 meanrew_dff_all_days = []
 # Iterate through specified days
@@ -57,8 +59,10 @@ for ii,dy in enumerate(days):
             if 'plane' in root and file.endswith('roibyclick_F.mat'):
                 f = loadmat(os.path.join(root, file))
                 print(os.path.join(root, file))
-                plane = int(root.split("plane")[1])
-                ops = np.load(os.path.join(root, 'ops.npy'), allow_pickle=True)
+                try:
+                    plane = int(root.split("plane")[1])
+                except:
+                    plane = int(root.split("plane")[1][0])
 
                 # Filename pattern to match
                 target_filename = 'masks.jpg'

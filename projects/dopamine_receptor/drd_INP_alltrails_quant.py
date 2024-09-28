@@ -1,4 +1,5 @@
-"""zahra
+"""
+zahra
 sept 2024
 """
 
@@ -20,7 +21,7 @@ plt.rc('font', size=20)
 from projects.dopamine_receptor.drd import extract_plane_number
 
 # Define save path for PDF
-condition = 'drd1'
+condition = 'drd2'
 
 from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
@@ -132,7 +133,7 @@ for ii,mouse_name in enumerate(mice):
 #%%
 # histogram of post rew activity per plane
 arr = np.concatenate([np.concatenate([np.concatenate(pr) for pr in dy if len(pr)>0]) for dy in postrew_dff_all_mice])
-arr = arr[arr<5] # remove outliers
+# arr = arr[arr<5] # remove outliers
 bins=np.histogram(arr, bins=20)[1] #get the bin edges
 plns = 4
 
@@ -186,5 +187,3 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
                 Early vs. late days')
     fig.tight_layout()
     plt.savefig(os.path.join(savedst, f'{condition}_{mice[dd]}histogram.svg'), bbox_inches='tight')
-
-# %%
