@@ -121,11 +121,11 @@ registers2p
 
 %% section 8 multiple_days_reg_file
 
-startnew = input('are you starting from scratch? (0 - no , 1 - yes):');
+startnew = input('are you starting from scratch? (0 - no , 1 - yes) :');
 
 if startnew == 1
 
-    multiple_days_reg_file_GM
+multiple_days_reg_file_GM
 else
     multiple_days_reg_file_cont
 end

@@ -25,14 +25,14 @@ plt.close('all')
 # save to pdf
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
-    f"halo_opto"))
+    f"halo_opto.pdf"))
 
 src = r"Z:\halo_grabda"
 animals = ['e243']
 # first batch
 # days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
 #         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
-days_all = [[1]]
+days_all = [[2]]
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
 
 range_val = 8; binsize=0.2 #s
@@ -59,7 +59,7 @@ for ii,animal in enumerate(animals):
             keys = params['params'].dtype
             # dff is in row 6 - roibasemean3/average
             # raw in row 7
-            row = 7
+            row = 6
             dff = np.hstack(params['params'][0][0][row][0][0])/np.nanmean(np.hstack(params['params'][0][0][row][0][0]))#/np.hstack(params['params'][0][0][9])
             # row = 8
             # dff = np.hstack(params['params'][0][0][row])/np.nanmean(np.hstack(params['params'][0][0][row]))#/np.hstack(params['params'][0][0][9])
