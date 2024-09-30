@@ -19,7 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd1'
+condition = 'drd2'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -146,7 +146,8 @@ for dy in days:
                     plt.close(fig)
             
                 subpl = int(np.ceil(np.sqrt(clls)))
-                fig, axes = plt.subplots(subpl, subpl, figsize=(30, 15))
+                fig, axes = plt.subplots(subpl, subpl, 
+                        figsize=(17, 9))
                 if clls > 1:
                     axes = axes.flatten()
                 perirewcll = []
@@ -169,8 +170,8 @@ for dy in days:
                     
                     ax.set_title(f'Cell {cll + 1}')
                     ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-                    ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 20))
-                    ax.set_xticklabels(np.arange(-range_val, range_val + 1, 4))
+                    ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 10))
+                    ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
                     ax.spines[['top', 'right']].set_visible(False)
                 #save
                 perirew_all_planes.append(perirewcll)
@@ -178,10 +179,13 @@ for dy in days:
                     for i in range(clls, len(axes)):
                         axes[i].axis('off')
 
-                plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                plt.tight_layout()
                 fig.suptitle(f'Peri-reward \n {mouse_name}, Day={dy}, Plane {plane}')
-                plt.show()
+                # plt.show()
                 pdf.savefig(fig)
+                # plt.savefig(os.path.join(savedst, 
+                #     f'plane{plane}_{mouse_name}_day{dy:03d}.svg'),
+                #         bbox_inches='tight')
                 plt.close(fig)
     postrew_dff_all_days.append(postrew_dff_all_planes)
 

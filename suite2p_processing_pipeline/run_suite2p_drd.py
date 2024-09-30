@@ -80,7 +80,67 @@ def main(**args):
                 os.rename(fl,os.path.join(pth,f'file{order[i]:06d}.tif'))
         print(f"\n ************Fixed reg tif order for dopamine!************")
         save_params(params, imagingflnm)
+        
+        
+    elif args['stepid'] == 2:
+        ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
+        #args should be the info you need to specify the params
+        # for a given experiment, but only params should be used below        
+        
+        print(params)
+        #check to see if imaging files are transferred
+        imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
+                                        params["mouse_name"], params["day"])) if "000" in xx][0]
+        imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], 
+                imagingfl)
+        if not params["cell_detect_only"]: 
+            # if cell detect only not specified, make tifs, else skip
+            if len(imagingfl)!=0:           
+                print(imagingfl)
+                if params["crop_opto"]:
+                    imagingflnm = preprocessing.maketifs(imagingflnm,89,
+                                    512,89,718,nplanes=params["nplanes"])
+                elif params["nplanes"]>1: # removes etl artifact
+                    imagingflnm = preprocessing.maketifs(imagingflnm,110,
+                                    512,89,718,nplanes=params["nplanes"])            
+                else:
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,
+                                    512,89,718,nplanes=params["nplanes"])            
+                print(imagingflnm)
 
+        #do suite2p after tifs are made
+        # set your options for running
+        import suite2p
+        ops = suite2p.default_ops() # populates ops with the default options
+        #edit ops if needed, based on user input
+        ops = preprocessing.fillops_drd(ops, params)
+        # provide an h5 path in 'h5py' or a tiff path in 'data_path'
+        # db overwrites any ops (allows for experiment specific settings)
+        db = {
+            'h5py': [], # a single h5 file path
+            'h5py_key': 'data',
+            'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
+            'data_path': [imagingflnm], # a list of folders with tiffs 
+                                                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
+                                                
+            'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
+            # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
+            }
+
+        # run one experiment
+        print(ops)
+        opsEnd = suite2p.run_s2p(ops=ops, db=db)
+        # fix reg tif order -_- TODO: make into function
+        for npln in range(ops['nplanes']):
+            pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
+            fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
+            order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])
+            for i,fl in enumerate(fls):
+                os.rename(fl,os.path.join(pth,f'file{order[i]:06d}.tif'))
+        print(f"\n ************Fixed reg tif order for dopamine!************")
+        save_params(params, imagingflnm)
+        
+        
     elif args["stepid"] == 3:
         #####################RUN DAY CELL DETECTION IN A LOOP#####################
         

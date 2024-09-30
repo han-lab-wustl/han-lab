@@ -41,13 +41,13 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 src = r'Y:\drd'
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [6,7,8, 10,11,12, 7,8,9, 13,14,15, 2,3,4,6,7,8]
+days = [6,7,8, 10,11,12, 7,8,9, 13,14,15]#, 2,3,4,6,7,8]
 mice = ['e254','e254','e254', 'e255','e255','e255', 
-        'e253','e253','e253','e256','e256','e256', 
-        'e261','e261','e261','e262','e262','e262']
+        'e253','e253','e253','e256','e256','e256']
+        # 'e261','e261','e261','e262','e262','e262']
 condition = ['drd1','drd1','drd1','drd1','drd1','drd1', 
-            'drd2','drd2','drd2','drd2','drd2','drd2', 
-            'drd2ko','drd2ko','drd2ko','drd2ko','drd2ko','drd2ko']
+            'drd2','drd2','drd2','drd2','drd2','drd2'] 
+            # 'drd2ko','drd2ko','drd2ko','drd2ko','drd2ko','drd2ko']
 range_val, binsize = 5 , 0.2 # seconds
 meanrew_dff_all_days = []
 # Iterate through specified days
@@ -132,6 +132,7 @@ pca_result = pca.fit_transform(scaled_data)
 pca_df = pd.DataFrame(data=pca_result, columns=['PC1', 'PC2', 'PC3', 'PC4',
             'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10', 'PC11', 'PC12'])
 pca_df['cell_type'] = label
+
 # 5. Plot the PCA results
 plt.figure(figsize=(10, 7))
 sns.scatterplot(x='PC7', y='PC8', hue='cell_type',data=pca_df,s=200)
@@ -174,16 +175,18 @@ ax = sns.countplot(data=cluster_df,x='cell_type', hue='Cluster',
 import umap
 
 # Apply UMAP
-umap_model = umap.UMAP(n_components=2, n_neighbors=15, min_dist=0.05)
+umap_model = umap.UMAP(n_components=2, n_neighbors=20, 
+        min_dist=0.05)
 umap_result = umap_model.fit_transform(scaled_data)
 
 # Create a DataFrame for the UMAP results
-umap_df = pd.DataFrame(data=umap_result, columns=['Dim1','Dim2'])
+umap_df = pd.DataFrame(data=umap_result)
 umap_df['Class'] = label
+umap_df.columns = np.array(umap_df.columns).astype(str)
 #%%
 # Plot the UMAP results
 fig, ax = plt.subplots(figsize=(6,5))
-sns.scatterplot(x='Dim1', y='Dim2', hue='Class', data=umap_df, 
+sns.scatterplot(x='1', y='2', hue='Class', data=umap_df, 
         palette='colorblind',s=100)
 ax.set_title('UMAP of Peri-reward activity across 3 days')
 ax.set_xlabel('Dimension 1')

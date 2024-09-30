@@ -1,5 +1,6 @@
 
 function make_proc_files_Ints_per_day(pr_dir)
+
 for dy=1:length(pr_dir) % per day
 % zd added
     fclick = dir(fullfile(pr_dir{dy}, '**', '*roibyclick_F.mat'));
