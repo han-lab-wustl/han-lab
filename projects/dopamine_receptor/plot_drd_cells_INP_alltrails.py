@@ -19,7 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
 
 # Define save path for PDF
-condition = 'drd2ko'
+condition = 'drd1'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 savepth = os.path.join(savedst, f'{condition}.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -38,7 +38,7 @@ elif condition=='drd1':
 
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [9]
+days = [11]
 range_val, binsize = 5 , 0.2 # seconds
 postrew_dff_all_days = []
 # Iterate through specified days
@@ -50,7 +50,7 @@ for dy in days:
             if 'plane' in root and file.endswith('roibyclick_F.mat'):                
                 f = loadmat(os.path.join(root, file))
                 plane = int(root.split("plane")[1])
-                if plane==1:
+                if plane==2:
                     
 
                     # Filename pattern to match
@@ -279,7 +279,8 @@ clls = dff_res.shape[0]
 rewallcorr = np.array([[perirew[cll][1][:,tr]-np.nanmean(perirew[cll][0][(bound-binss):bound]) \
     for tr in range(perirew[cll][1].shape[1])] for cll in range(clls)])
 
-clls = [1,2,4,8,9,12,13]
+# clls = [1,2,4,8,9,12,13]
+clls = [5,6,7,8,9,10]
 # clls = np.arange(dff_res.shape[0])
 subpl = int(np.ceil(np.sqrt(len(clls))))
 fig, axes = plt.subplots(subpl, subpl, 

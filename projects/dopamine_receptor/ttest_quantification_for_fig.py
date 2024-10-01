@@ -43,6 +43,7 @@ for ii,mouse_name in enumerate(mice):
     days = days_s[ii]
     postrew_dff_all_days = []
     condition = conditions[ii]
+    if condition=='CRISPR-KO D2': days_to_analyse=4
     for dy in days[-days_to_analyse:]: # only last 2 days for now
         day_dir = os.path.join(src, mouse_name, str(dy))
         postrew_dff_all_planes = []
@@ -99,12 +100,13 @@ for ii,mouse_name in enumerate(mice):
                         postwin = 2 #s
                         postbound = np.ceil(postwin/binsize).astype(int)
                         meanrewall = np.array([perirew[cll][0]-np.nanmean(perirew[cll][0][(bound-binss):bound]) for cll in range(clls)])
-                        if condition=='drd2': #or condition=='drd2ko'
-                            postrew_dff = np.nanmean(meanrewall[:, bound:bound+postbound],axis=1)
+                        # if condition=='D2': #or condition=='drd2ko'
+                        postrew_dff = np.nanmean(meanrewall[:, bound:bound+postbound],axis=1)
                         # # or quantile
-                        else:
-                            postrew_dff = np.nanquantile(meanrewall[:, bound:bound+postbound], 
-                                .75, axis=1)
+                        # else:
+                        #     postrew_dff = np.nanquantile(meanrewall[:, bound:bound+postbound], 
+                        #         .75, axis=1)
+
                         # area under curve
                         # postrew_dff = [np.trapz(xx, dx=5) for xx in meanrewall]
                         postrew_dff_all_planes.append(postrew_dff)
@@ -126,6 +128,7 @@ for ii,mouse_name in enumerate(mice):
 
 # This script handles the specific case where `clls = 1` and ensures proper plotting regardless of the number of cells processed.
 #%%
+# quantification for figure
 def normalize_to_range(values, new_min=-1, new_max=1):
     """
     Normalize an array of values to a specified range [-1, 1].
@@ -140,27 +143,31 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
     for d, pr in enumerate(pr_dy):
         if len(pr)>0:
             allplnpr = np.concatenate(pr)
-            allplnpr = allplnpr[allplnpr<10]
+            # allplnpr = allplnpr[allplnpr<10]
             # average of all cells 
             meansuppression = np.nanmean(normalize_to_range(allplnpr, new_min=-1, new_max=1))*-1#/np.nanmin(allplnpr)
             ms.append(meansuppression)
-condition_df = np.concatenate([[xx]*days_to_analyse for xx in conditions])
+days_to_analyse_all=[5,5,4,4]
+condition_df = np.concatenate([[xx]*days_to_analyse_all[ii] for ii,xx in enumerate(conditions)])
 df = pd.DataFrame(ms, columns = ['mean_dff_postrew'])
 df['condition'] = condition_df
-df['animal'] = np.concatenate([[xx]*days_to_analyse for xx in mice])
-#
+df['animal'] = np.concatenate([[xx]*days_to_analyse_all[ii] for ii,xx in enumerate(mice)])
+
 import seaborn as sns
 dfan = df.groupby(['animal', 'condition']).mean(numeric_only=True)
-dfan.reset_index()
-dfan=dfan.sort_values(by=['condition'])
+# dfan.reset_index()
+cmap = [sns.color_palette('colorblind')[1],sns.color_palette('colorblind')[2]]
+# dfan=dfan.sort_values(by=['condition'])
 fig, ax = plt.subplots(figsize=(2.2,5))
 sns.stripplot(x='condition',y='mean_dff_postrew',data=dfan, s=16,
-            hue='condition', palette='colorblind',ax=ax,alpha=.6)
+            hue='condition', palette=cmap,ax=ax,alpha=.6)
 sns.barplot(x='condition',y='mean_dff_postrew',data=dfan, errorbar='se',
-            hue='condition', palette='colorblind', fill=False,ax=ax,
+            hue='condition', palette=cmap, fill=False,ax=ax,
             linewidth=4, errwidth=4)
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_ylabel('Modulation Index')
+ax.tick_params(axis='x', labelrotation=45)
+
 ax.set_xlabel('')
 # ax.set_xticklabels(['D1', 'D2'])
 
@@ -192,22 +199,22 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
 df = pd.DataFrame(np.concatenate(ms), columns = ['mean_dff_postrew'])
 df['condition'] = np.concatenate(condarr)
 df['animal'] = np.concatenate(anarr)
-#%%
+
 import seaborn as sns
 fig, ax = plt.subplots(figsize=(2.2,5))
-sns.stripplot(x='condition',y='mean_dff_postrew',data=df, s=8,
-            hue='condition', palette='colorblind',ax=ax,alpha=.3)
+sns.stripplot(x='condition',y='mean_dff_postrew',data=df, s=10,
+            hue='condition', palette=cmap,ax=ax,alpha=.4)
 sns.barplot(x='condition',y='mean_dff_postrew',data=df, errorbar='se',
-            hue='condition', palette='colorblind', fill=False,ax=ax,
-            linewidth=3, errwidth=3)
+            hue='condition', palette=cmap, fill=False,ax=ax,
+            linewidth=4, errwidth=4)
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_ylabel('Modulation Index')
 ax.set_xlabel('')
-# ax.set_xticklabels(['D1', 'D2'])
+ax.tick_params(axis='x', labelrotation=45)
 
 x1= df.loc[df.condition=='D2', 'mean_dff_postrew'].values
 x2= df.loc[df.condition=='CRISPR-KO D2', 'mean_dff_postrew'].values
 t,pval=scipy.stats.ranksums(x1,x2)
 
-ax.set_title(f'per cell, 1 day, ranksum pval: {pval:.7f}')
-plt.savefig(os.path.join(savedst, 'per_cell_mod_index.svg'), bbox_inches='tight')
+ax.set_title(f'per cell, 1 day, ranksum pval: {pval:.2e}')
+plt.savefig(os.path.join(savedst, 'ko_per_cell_mod_index.svg'), bbox_inches='tight')

@@ -3,9 +3,8 @@ function loadVideoTiffNoSplitOpto_2channel_woetl(varargin)
 % ZD added 2 channel functionality 
 
 %ZD added for Gerardo's workstation
-javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
-javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
-
+javaaddpath 'C:\Program Files\MATLAB\R2022b\java\mij.jar' %added by TI 07/23/2024
+javaaddpath 'C:\Program Files\MATLAB\R2022b\java\ij.jar'  %added by TI 07/23/2024
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
     dir='uni';
@@ -70,9 +69,8 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     [status, msg, msgID] = mkdir(fullfile(filepath, 'green_opto_corrected_tifs'));
     imageJ_savefilename1=['path=[' imageJ_savefilename1 ']'];
     imageJ_savefilename2=strrep([filepath,'\','red_opto_corrected_tifs','\',currfile(1:end-4),'_red.tif'],'\','\\'); %ImageJ needs double slash
-    [status, msg, msgID] = mkdir(fullfile(filepath, 'red_opto_corrected_tifs'));
     imageJ_savefilename2=['path=[' imageJ_savefilename2 ']'];
-    
+    [status, msg, msgID] = mkdir(fullfile(filepath, 'red_opto_corrected_tifs'));
 %     MIJ.createImage('chone_image', gray2ind(mat2gray(chtemp,[0 32767])), true);
 %     MIJ.createImage('chone_image', gray2ind(mat2gray(chtemp,double(lims)),double(round(ceil(lims(2))/2))), true);
 %     MIJ.createImage('chone_image', uint16(chtemp), true); %creates ImageJ file with 'name', matlab variable name
