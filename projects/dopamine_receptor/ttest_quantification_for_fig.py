@@ -22,16 +22,18 @@ from projects.dopamine_receptor.drd import extract_plane_number
 from scipy.io import loadmat
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 # fluorescence mean threshold
-fluor_thres = 400
+fluor_thres = 100
 # Define source directory and mouse name
 src = r'Y:\drd'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 # drd1
-mice = ['e255', 'e254',
-        'e256', 'e253']
-conditions = ['drd1','drd1','drd2','drd2']
-days_s = [list(np.arange(3,13)), list(np.arange(1,9)),
-        list(np.arange(3,16)), list(np.arange(1,10))]
+mice = ['e256', 'e253', 'e262', 'e261'] #'e255', 'e254',
+        
+conditions = ['D2','D2','CRISPR-KO D2','CRISPR-KO D2']
+# list(np.arange(3,13)), list(np.arange(1,9)),
+        
+days_s = [list(np.arange(3,16)), list(np.arange(1,10)),
+        list(np.arange(3,10)), list(np.arange(1,5))]
 days_to_analyse = 5
 # days = [3,4,5,6,7,8,9,10,12]
 range_val, binsize = 6 , 0.2 # seconds
@@ -138,7 +140,7 @@ for dd, pr_dy in enumerate(postrew_dff_all_mice):
     for d, pr in enumerate(pr_dy):
         if len(pr)>0:
             allplnpr = np.concatenate(pr)
-            allplnpr = allplnpr[allplnpr<5]
+            allplnpr = allplnpr[allplnpr<10]
             # average of all cells 
             meansuppression = np.nanmean(normalize_to_range(allplnpr, new_min=-1, new_max=1))*-1#/np.nanmin(allplnpr)
             ms.append(meansuppression)
@@ -146,49 +148,33 @@ condition_df = np.concatenate([[xx]*days_to_analyse for xx in conditions])
 df = pd.DataFrame(ms, columns = ['mean_dff_postrew'])
 df['condition'] = condition_df
 df['animal'] = np.concatenate([[xx]*days_to_analyse for xx in mice])
-#%%
+#
 import seaborn as sns
-fig, ax = plt.subplots(figsize=(2.2,5))
-sns.stripplot(x='condition',y='mean_dff_postrew',data=df, s=10,
-            hue='condition', palette='colorblind',ax=ax, alpha=0.9)
-sns.barplot(x='condition',y='mean_dff_postrew',data=df, errorbar='se',
-            hue='condition', palette='colorblind', fill=False,ax=ax,
-            linewidth=3, errwidth=3)
-ax.spines[['top', 'right']].set_visible(False)
-ax.set_ylabel('Modulation Index')
-ax.set_xlabel('')
-ax.set_xticklabels(['D1', 'D2'])
-
-x1= df.loc[df.condition=='drd1', 'mean_dff_postrew'].values
-x2= df.loc[df.condition=='drd2', 'mean_dff_postrew'].values
-t,pval=scipy.stats.ranksums(x1,x2)
-
-ax.set_title(f'ranksum pval: {pval:.4f}')
-# plt.savefig(os.path.join(savedst, 'ttest_mod_index.svg'), bbox_inches='tight')
-#%%
 dfan = df.groupby(['animal', 'condition']).mean(numeric_only=True)
 dfan.reset_index()
 dfan=dfan.sort_values(by=['condition'])
-fig, ax = plt.subplots(figsize=(2.5,5))
-sns.stripplot(x='condition',y='mean_dff_postrew',data=dfan, s=12,
-            hue='condition', palette='colorblind',ax=ax)
+fig, ax = plt.subplots(figsize=(2.2,5))
+sns.stripplot(x='condition',y='mean_dff_postrew',data=dfan, s=16,
+            hue='condition', palette='colorblind',ax=ax,alpha=.6)
 sns.barplot(x='condition',y='mean_dff_postrew',data=dfan, errorbar='se',
-            hue='condition', palette='colorblind', fill=False,ax=ax)
+            hue='condition', palette='colorblind', fill=False,ax=ax,
+            linewidth=4, errwidth=4)
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_ylabel('Modulation Index')
 ax.set_xlabel('')
-ax.set_xticklabels(['D1', 'D2'])
+# ax.set_xticklabels(['D1', 'D2'])
 
-x1= dfan.loc[dfan.index.get_level_values('condition')=='drd1', 'mean_dff_postrew'].values
-x2= dfan.loc[dfan.index.get_level_values('condition')=='drd2', 'mean_dff_postrew'].values
+x1= dfan.loc[dfan.index.get_level_values('condition')=='D2', 
+        'mean_dff_postrew'].values
+x2= dfan.loc[dfan.index.get_level_values('condition')=='CRISPR-KO D2',
+        'mean_dff_postrew'].values
 t,pval=scipy.stats.ttest_ind(x1,x2)
 
 ax.set_title(f'ttest ind pval: {pval:.4f}')
+plt.savefig(os.path.join(savedst, 'ko_per_mouse_ttest_mod_index.svg'), bbox_inches='tight')
 
 #%% 
 # quant with cells only
-
-
 # quantification
 ms = []
 condarr = []; anarr=[]
@@ -210,18 +196,18 @@ df['animal'] = np.concatenate(anarr)
 import seaborn as sns
 fig, ax = plt.subplots(figsize=(2.2,5))
 sns.stripplot(x='condition',y='mean_dff_postrew',data=df, s=8,
-            hue='condition', palette='colorblind',ax=ax,alpha=.5)
+            hue='condition', palette='colorblind',ax=ax,alpha=.3)
 sns.barplot(x='condition',y='mean_dff_postrew',data=df, errorbar='se',
             hue='condition', palette='colorblind', fill=False,ax=ax,
             linewidth=3, errwidth=3)
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_ylabel('Modulation Index')
 ax.set_xlabel('')
-ax.set_xticklabels(['D1', 'D2'])
+# ax.set_xticklabels(['D1', 'D2'])
 
-x1= df.loc[df.condition=='drd1', 'mean_dff_postrew'].values
-x2= df.loc[df.condition=='drd2', 'mean_dff_postrew'].values
+x1= df.loc[df.condition=='D2', 'mean_dff_postrew'].values
+x2= df.loc[df.condition=='CRISPR-KO D2', 'mean_dff_postrew'].values
 t,pval=scipy.stats.ranksums(x1,x2)
 
-ax.set_title(f'per cell, 1 day, ranksum pval: {pval:.4f}')
-# plt.savefig(os.path.join(savedst, 'ttest_mod_index.svg'), bbox_inches='tight')
+ax.set_title(f'per cell, 1 day, ranksum pval: {pval:.7f}')
+plt.savefig(os.path.join(savedst, 'per_cell_mod_index.svg'), bbox_inches='tight')

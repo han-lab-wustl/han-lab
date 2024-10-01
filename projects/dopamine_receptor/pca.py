@@ -23,10 +23,11 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab')
 
 # Formatting for figures
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)
+
 
 # Define save path for PDF
 condition = 'drd2'
@@ -41,13 +42,17 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 src = r'Y:\drd'
 # days = [3,4,5,6,7,9]
 # days = [3,4,5,6,7,8,9,10,12]
-days = [6,7,8, 10,11,12, 7,8,9, 13,14,15]#, 2,3,4,6,7,8]
-mice = ['e254','e254','e254', 'e255','e255','e255', 
-        'e253','e253','e253','e256','e256','e256']
+days = [7,8,9, 13,14,15, 2,3,4,6,7,8]#,6,7,8, 10,11,12, 
+mice = ['e253','e253','e253','e256','e256','e256',
+        # 'e254','e254','e254', 'e255','e255','e255', 
+        'e261','e261','e261','e262','e262','e262']
+        # ]
         # 'e261','e261','e261','e262','e262','e262']
-condition = ['drd1','drd1','drd1','drd1','drd1','drd1', 
-            'drd2','drd2','drd2','drd2','drd2','drd2'] 
-            # 'drd2ko','drd2ko','drd2ko','drd2ko','drd2ko','drd2ko']
+condition = ['drd2','drd2','drd2','drd2','drd2','drd2',
+            'drd2ko','drd2ko','drd2ko','drd2ko','drd2ko',
+            'drd2ko']
+            # 'drd1','drd1','drd1','drd1','drd1','drd1', 
+            
 range_val, binsize = 5 , 0.2 # seconds
 meanrew_dff_all_days = []
 # Iterate through specified days
@@ -175,23 +180,23 @@ ax = sns.countplot(data=cluster_df,x='cell_type', hue='Cluster',
 import umap
 
 # Apply UMAP
-umap_model = umap.UMAP(n_components=2, n_neighbors=20, 
+umap_model = umap.UMAP(n_components=4, n_neighbors=20, 
         min_dist=0.05)
 umap_result = umap_model.fit_transform(scaled_data)
-
+#%%
 # Create a DataFrame for the UMAP results
 umap_df = pd.DataFrame(data=umap_result)
 umap_df['Class'] = label
 umap_df.columns = np.array(umap_df.columns).astype(str)
-#%%
+
 # Plot the UMAP results
 fig, ax = plt.subplots(figsize=(6,5))
-sns.scatterplot(x='1', y='2', hue='Class', data=umap_df, 
-        palette='colorblind',s=100)
-ax.set_title('UMAP of Peri-reward activity across 3 days')
+sns.scatterplot(x='0', y='1', hue='Class', data=umap_df, 
+        palette=sns.color_palette('colorblind')[1:],s=100)
+# ax.set_title('UMAP of Peri-reward activity across 3 days')
 ax.set_xlabel('Dimension 1')
 ax.set_ylabel('Dimension 2')
 ax.legend()
 ax.spines[['top', 'right']].set_visible(False)
 
-plt.savefig(os.path.join(savedst,'umap_drd_with_all_mice.svg'))
+plt.savefig(os.path.join(savedst,'umap_drdko_with_all_mice.svg'))
