@@ -28,8 +28,17 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"chr2_opto_peri_analysis.pdf"))
 
 condrewloc = pd.read_csv(r"Z:\condition_df\chr2_grabda.csv", index_col = None)
+# convert rewlcos to float
+# Drop rows with non-numeric values
+condrewloc = condrewloc[pd.to_numeric(condrewloc['RewLoc'], errors='coerce').notnull()]
+condrewloc = condrewloc[pd.to_numeric(condrewloc['PrevRewLoc'], errors='coerce').notnull()]
+# Convert to float
+condrewloc[['RewLoc', 'PrevRewLoc']] = condrewloc[['RewLoc', 'PrevRewLoc']].astype(float)
 src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
+# controls for gerardo
+days_all =[[5,6,9,10,13,14,19,20,23,24,27,28,29,32,33,37,38,39,45,46,47,51],
+    [40,41,45,46,49,50,53,54,69,70,71,74,75,79,80,81,87,88,89]]
 # first batch
 # days_all = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
 #         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]]
@@ -46,8 +55,8 @@ for ii,animal in enumerate(animals):
     days = days_all[ii]    
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
-        newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
-        rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
+        newrewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0])
+        rewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0])
         plndff = []
         optoday = (condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
         optoday = optoday==1
@@ -276,7 +285,7 @@ animal_opto = animal[opto_condition]
 animal_nonopto = animal[~opto_condition]
 day_date_dff_arr_nonopto = day_date_dff_arr[~opto_condition]
 learning_day = np.concatenate([condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'learning_date'].values-1 for ii,an in enumerate(animals)])
-rewzone_learning = np.concatenate([get_rewzones(condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'RewLoc'].values, 1/gainf) for ii,an in enumerate(animals)])
+rewzone_learning = np.concatenate([get_rewzones(condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'RewLoc'].values[0], 1/gainf) for ii,an in enumerate(animals)])
 learning_day_opto = learning_day[opto_condition]
 learning_day_nonopto = learning_day[~opto_condition]
 rewzone_learning_opto = rewzone_learning[opto_condition]

@@ -15,10 +15,10 @@ from projects.DLC_behavior_classification import eye
 # Definitions and setups
 mice = ["e216"]#, "e217", "e218"]
 dys_s = [[37,38,39,40,41]]#, [14, 26, 27], [3 5, 38, 41, 44, 47, 50]]
-dys_s = [[37]]
+dys_s = [[35]]
 opto_ep_s = [[2]]#, [2, 3, 3], [3, 2, 3, 2, 3, 2]]
 cells_to_plot_s = [[466,159,423,200,299]]#, [16,6,9], 
-cells_to_plot_s = [[7]]#, [16,6,9], 
+cells_to_plot_s = [[1]]#, [16,6,9], 
         # [[453,63,26,38], [301, 17, 13, 320], [17, 23, 36, 10], 
         # [6, 114, 11, 24], [49, 47, 6, 37], [434,19,77,5]]]
 src = "X:/vipcre"
@@ -28,7 +28,7 @@ mind = 0
 nbins = 90
 bin_size = 3                
 binsize = 0.1 # s
-range_val = 8
+range_val = 5
 # Processing loop
 for m, mouse_name in enumerate(mice):
         days = dys_s[m]
@@ -128,12 +128,61 @@ for m, mouse_name in enumerate(mice):
                 rewdFF_ctrl = eye.perireward_binned_activity(prevepdff, rewards[rngpreopto], 
                         timedFF[rngpreopto], range_val, binsize)
 
-                dffs_cp_dys.append([meanrewdFF_opto, meanrewdFF_ctrl])
+                dffs_cp_dys.append([[meanrewdFF_opto,rewdFF_opto], [meanrewdFF_ctrl,rewdFF_ctrl]])
                 indtemp += 1
                 dyind += 1
 #%%
+# one cell peri-reward
+plt.rc('font', size=26)          # controls default text sizes
+dffarr = np.array([[xx[0][0],xx[1][0]] for xx in dffs_cp_dys])
+# delete outliers?
+# dffarr = np.delete(dffarr,2,0)
+# dffarr = np.delete(dffarr,5,0)
+dyrng = dffarr.shape[0]
+sq = int(np.ceil(np.sqrt(dyrng)))
+
+# normalize post reward activity
+prewin = 1
+binss = np.ceil(prewin/binsize).astype(int)
+bound = int(range_val/binsize)
+postwin = 2 #s
+postbound = np.ceil(postwin/binsize).astype(int)
+
+fig, ax = plt.subplots(figsize=(6,5))
+
+for ii,dy in enumerate(range(dyrng)):
+        # normalize by pre-window
+        meantc = dffarr[dy,1,:]
+        meantc = np.array(meantc-np.nanmean(meantc[(bound-binss):bound]))
+
+        ax.plot(meantc, color='slategray',linewidth=4)   
+        xmin,xmax = ax.get_xlim()     
+        # all trials 
+        rewdff = dffs_cp_dys[ii][1][1].T
+        # normalize by pre-window
+        rewdff = np.array([rewdff[tr,:]-np.nanmean(rewdff[tr,(bound-binss):bound],axis=0) \
+                for tr in range(rewdff.shape[0])])
+        ax.fill_between(np.arange(0,(range_val*2)/binsize), 
+                meantc-scipy.stats.sem(rewdff,axis=0,nan_policy='omit'),
+                meantc+scipy.stats.sem(rewdff,axis=0,nan_policy='omit'), 
+                color = 'slategray', alpha=0.4)        
+        ax.set_xlabel('Time from reward (s)')
+        ax.set_ylabel('$\Delta$ F/F')
+        ax.axvline(int(range_val/binsize), color='k', linestyle='--',linewidth=4)
+        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+        ax.set_xticklabels(range(-range_val, range_val+1, 1))
+        ax.spines[['top','right']].set_visible(False)
+        ax.set_title(f'Day {dy+1}, e216')
+
+fig.tight_layout()
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024\fig_vip'
+plt.savefig(os.path.join(savedst, 'aligned_vip_cck_1_day.svg'), bbox_inches='tight')
+
+#%%
 # plot tuning curve before and during opto
-dffarr = np.array(dffs_cp_dys)
+#mean only
+plt.rc('font', size=26)          # controls default text sizes
+dffarr = np.array([[xx[0][0],xx[1][0]] for xx in dffs_cp_dys])
 # delete outliers?
 # dffarr = np.delete(dffarr,2,0)
 # dffarr = np.delete(dffarr,5,0)
@@ -143,15 +192,17 @@ fig, axes = plt.subplots(nrows=sq,ncols=sq, figsize=(14,9))
 r=0;c=0
 for ii,dy in enumerate(range(dyrng)):
         ax = axes[r,c]
-        meantc = dffarr[dy,1,:]
+        meantc = dffarr[dy,1,:] # ctrl
         ax.plot(meantc, color='k')   
-        xmin,xmax = ax.get_xlim()     
-        # ax.fill_between(np.arange(0,(range_val*2)/binsize), 
-        #         meantc-scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'),
-        #         meantc+scipy.stats.sem(dffarr[:,0,:],axis=0,nan_policy='omit'), 
-        #         color = 'k', alpha=0.2)        
+        xmin,xmax = ax.get_xlim()    
+        # all trials 
+        rewdff = dffs_cp_dys[ii][1][1].T
+        ax.fill_between(np.arange(0,(range_val*2)/binsize), 
+                meantc-scipy.stats.sem(rewdff,axis=0,nan_policy='omit'),
+                meantc+scipy.stats.sem(rewdff,axis=0,nan_policy='omit'), 
+                color = 'k', alpha=0.2)        
         ax.set_xlabel('Time from reward (s)')
-        ax.set_ylabel('dF/F')
+        ax.set_ylabel('$\Delta$ F/F')
         ax.axvline(int(range_val/binsize), color='slategray', linestyle='--')
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
@@ -160,8 +211,8 @@ for ii,dy in enumerate(range(dyrng)):
         if r<int(np.ceil(np.sqrt(dyrng)))-1: r+=1
         else: c+=1; r=0
 fig.tight_layout()
-savedst = r'C:\Users\Han\Box\Han_lab_dropbox\UndergradRA\Maggie\2p_images\figures_from_zahra'
-plt.savefig(os.path.join(savedst, 'vip_cck_per_day.svg'), bbox_inches='tight')
+# savedst = r'C:\Users\Han\Box\Han_lab_dropbox\UndergradRA\Maggie\2p_images\figures_from_zahra'
+# plt.savefig(os.path.join(savedst, 'vip_cck_per_day.svg'), bbox_inches='tight')
 
 #%%
 # plot overlay of days

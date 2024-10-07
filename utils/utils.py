@@ -75,11 +75,11 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
 def ig_f(dirr, files):
     return [f for f in files if os.path.isfile(os.path.join(dirr, f))]
 
-def copydopaminefldstruct(src, dst, overwrite=False):
+def copydopaminefldstruct(src, dst, days, overwrite=False):
     """useful for sharing dopamine data
     """
     makedir(dst)
-    days = listdir(src)
+    days = [os.path.join(src,str(xx)) for xx in days]
     # move all converted fmats to separate folder
     for day in days:  
         dst_day = os.path.join(dst,os.path.basename(day))

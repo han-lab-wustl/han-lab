@@ -3,7 +3,7 @@ sept 2024
 """
 #%%
 import os, sys, numpy as np, re, pandas as pd, seaborn as sns
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt, scipy
 from scipy.io import loadmat
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab')
 from projects.memory.behavior import get_success_failure_trials, calculate_lick_rate, \
@@ -52,6 +52,7 @@ mice = ['e256', 'e255', 'e253', 'e254', 'e262', 'e261']
 
 matsrc = r'Y:\drd\ko_behavior_analysis'
 mats = [os.path.join(matsrc,xx) for xx in os.listdir(matsrc)]
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
 
 mouse_name_date = [get_name_date(xx) for xx in os.listdir(matsrc)]
 dct = {}
@@ -91,9 +92,12 @@ for i in range(len(mouse_name_date)):
     # rews_centered[min_iind]=1
     # lick rate
         # from vip opto
-    window_size = 5
+    window_size = 10
     # also estimate sampling rate
-    lick_rate = calculate_lick_rate(lick, 
+    # get licks before rew zone
+    lick_outside_rew_mask = np.concatenate([ypos[eps[i]:eps[i+1]]<rewlocs[i]-(rewsize/2) \
+        for i in range(len(eps)-1)])
+    lick_rate = calculate_lick_rate(lick[lick_outside_rew_mask], 
                 window_size, sampling_rate=31.25*1.5)
 
     rates = []; num_trials = []; ls = []
@@ -175,14 +179,80 @@ axes = np.concatenate(axes)
 plt.rc('font', size=20)          # controls default text sizes
 for ii, m in enumerate(metrics):
     ax = axes[ii]
-    sns.lineplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax)
+    sns.lineplot(x='hrz_day', y=m, hue='condition', 
+        data=df,ax=ax)
     # sns.scatterplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax,s=150)
     ax.legend_.remove()  # Remove the legend
     if ii==len(metrics)-1:
         ax.legend(bbox_to_anchor=(1.01, 1.01))
+    ax.set_xlim([1,9])
 
 # Hide any remaining empty axes
 for jj in range(len(metrics), len(axes)):
     fig.delaxes(axes[jj])
 
 fig.tight_layout()
+
+#%%
+# quantification for fig
+sns.set_palette('colorblind')
+cmap = [sns.color_palette('colorblind')[5],sns.color_palette('colorblind')[2]]
+fig,axes = plt.subplots(figsize=(10,10),nrows = 2, ncols=2)
+metrics = ['success_rate', 'lick_rate', 'lick_selectivity']
+axes = np.concatenate(axes)
+
+for ii, m in enumerate(metrics):
+    ax = axes[ii]
+    sns.pointplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax,
+        palette=cmap)
+    # sns.scatterplot(x='hrz_day', y=m, hue='condition', data=df,ax=ax,s=150)
+    ax.legend_.remove()  # Remove the legend
+    if ii==len(metrics)-1:
+        ax.legend()#bbox_to_anchor=(1, 1))
+    ax.set_xlim([0,8])
+
+# Hide any remaining empty axes
+for jj in range(len(metrics), len(axes)):
+    fig.delaxes(axes[jj])
+
+fig.tight_layout()
+plt.savefig(os.path.join(savedst,'ko_behavior.svg'),bbox_inches='tight')
+
+#%%
+# condition = []
+# for ii,xx in enumerate(df.mouse_name.values):
+#     if '26' in df.mouse_name.values[ii]:
+#         cond = 'drd2ko'
+#     elif (df.mouse_name.values[ii]=='e256')|(df.mouse_name.values[ii]=='e253'):
+#         cond = 'drd2'
+#     elif (df.mouse_name.values[ii]=='e255')|(df.mouse_name.values[ii]=='e254'):
+#         cond = 'drd1'
+#     # elif xx=='e256' or xx=='e253':
+#     #     cond = 'drd2'
+#     # else:
+#     #     cond = 'drd1'
+#     condition.append(cond)
+# df['condition'] = condition
+plt.rc('font', size=24)          # controls default text sizes
+
+df = df[df.hrz_day.values<6]
+dfan = df.groupby(['mouse_name', 'condition']).mean(numeric_only=True)
+
+metrics=['success_rate', 'lick_rate']
+for m in metrics:
+    # average across first 5 days
+    sr = dfan.loc[(dfan.index.get_level_values('condition')=='drd1_2'), m].values
+    srko = dfan.loc[(dfan.index.get_level_values('condition')=='drd2ko'), m].values
+    t,pval = scipy.stats.ranksums(sr, srko)
+    # tau, pval = scipy.stats.mannwhitneyu(sr,srko)
+
+    fig,ax = plt.subplots(figsize=(2,4))
+    sns.barplot(x='condition',y=m, data=dfan, hue='condition',
+            palette=cmap,fill=False,linewidth=3.5,errwidth=3.5)
+    sns.stripplot(x='condition',y=m, data=dfan, hue='condition',
+            palette=cmap,s=12,alpha=.7)
+    text_x = ax.get_xlim()[0];text_y = ax.get_ylim()[1]
+    ax.text(text_x, text_y,f'ranskum pval={pval:.9f}', fontsize=9)
+    ax.set_xticklabels(['D1 & D2', 'CRISPR-KO D2'],rotation=45)
+    ax.spines[['top', 'right']].set_visible(False)
+    plt.savefig(os.path.join(savedst, f'{m}_ko_behavior_quant.svg'), bbox_inches='tight')

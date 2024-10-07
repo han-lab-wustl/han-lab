@@ -26,7 +26,7 @@ from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late
 condition = 'drd2ko'
 
 # fluorescence mean threshold
-fluor_thres = 400
+fluor_thres = 100
 # Define source directory and mouse name
 src = r'Y:\drd'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
@@ -38,8 +38,7 @@ elif condition=='drd2':
     days_s = [list(np.arange(3,16)), list(np.arange(1,10))]
 elif condition=='drd2ko':
     mice = ['e261','e262']
-    days_s = [[1,2,3,4],[1,2,3,4,5,6,7,8,9]]
-    fluor_thres = 600
+    days_s = [np.arange(1,7),[1,2,3,4,5,6,7,8,9]]
 days_to_analyse=2
 # days = [3,4,5,6,7,8,9,10,12]
 range_val, binsize = 6 , 0.2 # seconds
@@ -123,7 +122,7 @@ for ii,mouse_name in enumerate(mice):
 condition = 'drd2'
 
 # fluorescence mean threshold
-fluor_thres = 400
+fluor_thres = 100
 # Define source directory and mouse name
 src = r'Y:\drd'
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\drd_grant_2024'
@@ -224,7 +223,7 @@ cols=sns.color_palette("colorblind") # Set the global palette
 arr = np.concatenate([np.concatenate([np.concatenate(pr) for pr in dy if len(pr)>0]) for dy \
     in d1_postrew_dff_all_mice])
 arr = arr[arr<10] # remove outliers
-bins=np.histogram(arr, bins=10)[1] #get the bin edges
+bins=np.histogram(arr, bins=30)[1] #get the bin edges
 plns = 4
 
 # concatenate across mice
