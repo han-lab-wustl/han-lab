@@ -60,7 +60,9 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
         eprng = eprng[ybinned[eprng]>2] # exclude dark time
         rewloc = rewlocs[ep]
         relpos = rad[eprng]        
-        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        success, fail, strials, ftrials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        # make sure mouse did full trial & includes probes
         trials = [xx for xx in np.unique(trialnum[eprng]) if np.sum(trialnum[eprng]==xx)>100]
         trialstate = np.ones(len(trials))*-1
         trialstate[[xx for xx,t in enumerate(trials) if xx in strials]] = 1
@@ -73,9 +75,9 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
         # cells x trial x bin        
-        tcs_per_trial = np.ones((F.shape[1], np.max(trials)+1, bins))*np.nan
-        coms_per_trial = np.ones((F.shape[1], np.max(trials)+1))*np.nan
-        licks_per_trial = np.ones((np.max(trials)+1, bins))*np.nan        
+        tcs_per_trial = np.ones((F.shape[1], len(trials), bins))*np.nan
+        coms_per_trial = np.ones((F.shape[1], len(trials)))*np.nan
+        licks_per_trial = np.ones((len(trials), bins))*np.nan        
         if len(ttr)>lasttr: # only if ep has more than x trials            
             for tt,trial in enumerate(trials): # iterates through the unique trials and not the
                 # trial number itself
@@ -88,12 +90,12 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
                     f = F[mask,celln]
                     tc = get_tuning_curve(relpos, f, bins=bins)  
                     tc[np.isnan(tc)]=0 # set nans to 0
-                    tcs_per_trial[celln, trial,:] = tc
-                com = calc_COM_EH(tcs_per_trial[:, trial,:],bin_size)
-                coms_per_trial[:, trial] = com
+                    tcs_per_trial[celln, tt,:] = tc
+                com = calc_COM_EH(tcs_per_trial[:, tt,:],bin_size)
+                coms_per_trial[:, tt] = com
                 lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
                 lck[np.isnan(lck)]=0
-                licks_per_trial[trial,:] = lck
+                licks_per_trial[tt,:] = lck
         tcs.append(tcs_per_trial)
         coms.append(coms_per_trial)
         licks.append(licks_per_trial)

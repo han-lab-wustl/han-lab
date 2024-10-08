@@ -82,30 +82,13 @@ for ii in range(len(conddf)):
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins        
         
-        if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-        else:# remake tuning curves relative to reward        
-            # takes time
-            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-            Fc3 = fall_fc3['Fc3']
-            dFF = fall_fc3['dFF']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-            # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # skew_mask = skew_filter>2
-            Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-            # 9/19/24
-            # find correct trials within each epoch!!!!
-            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                rewards,forwardvel,rewsize,bin_size)          
+        tcs_correct, coms_correct, tcs_fail, coms_fail, \
+        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         perm = list(combinations(range(len(coms_correct)), 2))     
-        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
