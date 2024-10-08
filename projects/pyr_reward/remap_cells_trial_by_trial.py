@@ -19,10 +19,8 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
-
 # Add custom paths (adjust according to your directory structure)
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab')
-
 # Import custom functions
 from placecell import (
     make_tuning_curves_radians_by_trialtype, 

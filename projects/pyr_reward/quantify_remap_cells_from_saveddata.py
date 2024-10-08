@@ -81,7 +81,15 @@ for ii in range(len(conddf)):
         rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins        
-        
+        # optional: get fc3/dff
+        # fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        # Fc3 = fall_fc3['Fc3']
+        # dFF = fall_fc3['dFF']
+        # Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        # dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        # skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+
         tcs_correct, coms_correct, tcs_fail, coms_fail, \
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
 

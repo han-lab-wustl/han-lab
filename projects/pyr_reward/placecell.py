@@ -59,21 +59,23 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
         eprng = np.arange(eps[ep],eps[ep+1])
         eprng = eprng[ybinned[eprng]>2] # exclude dark time
         rewloc = rewlocs[ep]
-        relpos = rad[eprng]        
+        # excludes probe trials
         success, fail, strials, ftrials, ttr, \
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         # make sure mouse did full trial & includes probes
         trials = [xx for xx in np.unique(trialnum[eprng]) if np.sum(trialnum[eprng]==xx)>100]
         trialstate = np.ones(len(trials))*-1
-        trialstate[[xx for xx,t in enumerate(trials) if xx in strials]] = 1
-        trialstate[[xx for xx,t in enumerate(trials) if xx in ftrials]] = 0
+        # check if original trial num is correct or not
+        trialstate[[xx for xx,t in enumerate(trials) if t in strials]] = 1
+        trialstate[[xx for xx,t in enumerate(trials) if t in ftrials]] = 0
         trialstates.append(trialstate)
         F = Fc3[eprng,:]            
         # moving_middle,stop = get_moving_time_V3(forwardvel[eprng], 5, 5, 10)
         # simpler metric to get moving time
         moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        # overwrite velocity filter
+        moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
         F = F[moving_middle,:]
-        relpos = np.array(relpos)[moving_middle]
         # cells x trial x bin        
         tcs_per_trial = np.ones((F.shape[1], len(trials), bins))*np.nan
         coms_per_trial = np.ones((F.shape[1], len(trials)))*np.nan
