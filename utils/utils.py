@@ -167,6 +167,53 @@ def copyfmats(src, dst, animal, overwrite=False, days=False,
                     print(f"*********Copied week {w} Fall to {dst}*********")
     return 
 
+def copydrdfldstruct(src, dst, overwrite=False):
+    """Useful for sharing interneuron pipeline data."""
+    makedir(dst)
+    days = listdir(src)
+
+    for day in days:  
+        dst_day = os.path.join(dst, os.path.basename(day))
+        imgfl1 = [os.path.join(day, xx) for xx in os.listdir(day) if "suite2p" in xx][0]
+        planes = range(len([xx for xx in os.listdir(imgfl1) if "plane" in xx]))
+
+        for plane in planes:
+            reg_tif_folder = os.path.join(imgfl1, f"plane{plane}", "reg_tif")
+            if os.path.exists(reg_tif_folder):
+                # Find all .mat files ending with 'roibyclick_F' and starting with 'E', and all .jpg files
+                files_to_copy = [
+                    f for f in os.listdir(reg_tif_folder)
+                    if (f.endswith('roibyclick_F.mat') or (f.endswith('.mat') and f.startswith('E'))) or f.endswith('.jpg')
+                ]
+
+                for file in files_to_copy:
+                    source_file = os.path.join(reg_tif_folder, file)
+                    copypth = os.path.join(dst_day, os.path.basename(imgfl1), "suite2p", f"plane{plane}", "reg_tif")
+
+                    if not os.path.exists(copypth):
+                        os.makedirs(copypth)
+
+                    if os.path.exists(os.path.join(copypth, file)) and not overwrite:
+                        print(f"*********File {file} for day {day} already exists in {dst}*********")
+                    else:
+                        shutil.copy(source_file, copypth)
+                        print(f"*********Copied {file} from {day} to {dst_day}*********")
+
+        # Now copy .mat files starting with 'E' from the dst_day folder directly into dst_day
+        e_files_to_copy = [
+            f for f in os.listdir(day)
+            if f.endswith('.mat') and f.startswith('E')
+        ]
+
+        for e_file in e_files_to_copy:
+            source_file = os.path.join(day, e_file)
+
+            if os.path.exists(os.path.join(dst_day, e_file)) and not overwrite:
+                print(f"*********File {e_file} already exists in {dst_day}*********")
+            else:
+                shutil.copy(source_file, dst_day)
+                print(f"*********Copied {e_file} from {dst_day} to {dst_day}*********")
+                
 def deletetifs(src,fls=False,keyword='*.tif'):
     """deletes tifs
     useful after you've checked for motion correction
