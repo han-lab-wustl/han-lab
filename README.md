@@ -35,8 +35,8 @@ make sure the repo is added to your MATLAB path with subfolders!
 
 - make tifs: step 1 of `suite2p_processing_pipeline\run_suite2p_drd.py` OR `han-lab\utils\preprocessing_2p_images\runVideosTiff.m`
 - run suite2p (and set appropriate settings for planes, frame rate, saving tifs, etc.)
-`` conda activate suite2p
-suite2p```
+``` conda activate suite2p
+suite2p ```
 - run InterneuronPipeline: `projects\dopamine_receptor\pipeline`
   - pick day files
   - make .mat of movies
