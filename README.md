@@ -33,7 +33,18 @@ Follow the scripts in `projects/DlC_behavior_formatting/video_formatting` for th
 ### dopamine receptor imaging
 make sure the repo is added to your MATLAB path with subfolders!
 
-- make tifs: step 1 of `suite2p_processing_pipeline\run_suite2p_drd.py` OR `han-lab\utils\preprocessing_2p_images\runVideosTiff.m`
+- make tifs: step 1 of `suite2p_processing_pipeline\run_suite2p_drd.py` OR `han-lab\utils\preprocessing_2p_images\runVideosTiff_EH_new_sbx1.m`
+if using `runVideosTiff`, change the MATLAB path in `loadVideoTiffNoSplit_EH2_new_sbx_uint16.m` to your MATLAB directory:
+e.g. from 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\ij.jar'
+```
+to 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+```
 - run suite2p (and set appropriate settings for planes, frame rate, saving tifs, etc.)
 ```
 conda activate suite2p
