@@ -2,7 +2,7 @@
 oct 2024
 model to predict neural activity
 """
-
+#%%
 import torch, scipy, matplotlib.pyplot as plt, sys
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -74,6 +74,11 @@ train = np.concatenate([np.arange(eps[xx],np.ceil(eps[xx+1]-frame_split)) for xx
 test = np.concatenate([np.arange(np.ceil(eps[xx+1]-frame_split),eps[xx+1]) for xx in range(len(eps)-1)]).astype(int)
 # Train-test split
 
+def create_subsequences(time_series, subsequence_length=20):
+    num_subsequences = len(time_series) - subsequence_length + 1
+    subsequences = [time_series[i:i+subsequence_length] for i in range(num_subsequences)]
+    return np.array(subsequences)
+
 seq_length = 20
 X = create_subsequences(neural_data_scaled, seq_length)
 y = create_subsequences(behavior_data_scaled, seq_length)[:, -1, :]
@@ -89,11 +94,6 @@ X_train_tensor = torch.Tensor(X_train)
 y_train_tensor = torch.Tensor(y_train)
 X_test_tensor = torch.Tensor(X_test)
 y_test_tensor = torch.Tensor(y_test)
-
-def create_subsequences(time_series, subsequence_length=20):
-    num_subsequences = len(time_series) - subsequence_length + 1
-    subsequences = [time_series[i:i+subsequence_length] for i in range(num_subsequences)]
-    return np.array(subsequences)
 
 class TimeSeriesDataset(Dataset):
     def __init__(self, X, y):
@@ -145,7 +145,7 @@ optimizer = torch.optim.Adam(model.parameters(),
         lr=1e-5, weight_decay = 1e-9)
 
 # Training loop
-num_epochs = 20
+num_epochs = 1000
 for epoch in range(num_epochs):
     model.train()
     for X_batch, y_batch in train_loader:
@@ -225,31 +225,40 @@ def predict_lick(input):
     model.eval()
     with torch.no_grad():
         output = model(input)
-        return output
+        return output[:,4]
 
 # Initialize Feature Ablation
 fa = FeatureAblation(predict_lick)
 
 # Evaluate on a subset of the test set for faster computation
-subset_X_test = X_test_tensor[:100]  # Taking a subset of the first 100 samples
+subset_X_test = X_test_tensor[:10000]  # Taking a subset of the first 100 samples
 
 # Compute attributions using Feature Ablation
 attributions = fa.attribute(subset_X_test.cuda(), feature_mask=None)
 attributions = attributions.cpu().detach().numpy()
 
-# Summarize attributions for the specific behavioral variable 'lick'
-lick_attributions = attributions[:, :, 4]  # Assuming lick is the 5th behavioral variable (index 4)
-
 # Summarize by averaging over sequences and samples
-average_lick_attributions = np.mean(np.abs(lick_attributions), axis=(0, 1))
+average_lick_attributions = np.mean(np.abs(attributions), axis=(0, 1))
 
 # Print the average attributions for each neuron
 for i, attribution in enumerate(average_lick_attributions):
     print(f"Neuron {i+1}: {attribution:.4f}")
-
+#%%
+thres=0.002
+average_lick_attributions_mask = average_lick_attributions[average_lick_attributions>thres]
+n = np.where(average_lick_attributions>thres)[0]
 # Plot average attributions
 plt.figure(figsize=(10, 5))
-plt.barh([f'Neuron {i+1}' for i in range(len(average_lick_attributions))], average_lick_attributions)
+plt.barh([f'Neuron {i+1}' for i in n], 
+        average_lick_attributions_mask)
 plt.xlabel('Average Feature Ablation Importance')
 plt.title('Neuron Contribution to Predicting Lick Behavioral Variable')
 plt.show()
+
+#%%
+# test neuron contribution
+rng = np.arange(0,20000)
+for nr in n:
+    plt.figure()
+    plt.plot(neural_data[rng,nr])
+    plt.plot(lick[rng])
