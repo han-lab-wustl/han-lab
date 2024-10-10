@@ -28,6 +28,22 @@ Follow the scripts in `projects/DlC_behavior_formatting/video_formatting` for th
 1. `curate_tif_to_video_conversion.py` --> gets # of files per folder to make sure they are aligned with imaging (manually check and remove duplicates)
 2. `convert_tif_to_avi` --> takes tif folder, makes memory mapped array, and converts to avi
 
+## general lab pipeline 
+
+### dopamine receptor imaging
+make sure the repo is added to your MATLAB path with subfolders!
+
+- make tifs: step 1 of `suite2p_processing_pipeline\run_suite2p_drd.py` OR `han-lab\utils\preprocessing_2p_images\runVideosTiff.m`
+- run suite2p (and set appropriate settings for planes, frame rate, saving tifs, etc.)
+`` conda activate suite2p
+suite2p```
+- run InterneuronPipeline: `projects\dopamine_receptor\pipeline`
+  - pick day files
+  - make .mat of movies
+  - click rois
+- align to behavior
+- do downstream analysis with align `F.mat` file
+
 ## behavior_analysis
 
 General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
