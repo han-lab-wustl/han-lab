@@ -1,6 +1,6 @@
 """zahra
 sept 2024
-halo power tests
+opn3/halo power tests
 """
 #%%
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -9,7 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
-from behavior import get_success_failure_trials, consecutive_stretch
+from behavior import consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -27,12 +27,12 @@ plt.close('all')
 # pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
 #     f"halo_opto.pdf"))
 
-src = r"Z:\halo_grabda"
-animals = ['e241']
-days_all = [[2]]
-
-range_val = 5; binsize=0.2 #s
-planelut  = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
+# src = r"Y:\opto_control_grabda_2m"
+src = r'Z:\opn3_grabda'
+animals = ['e215']
+days_all = [[7]]
+range_val = 10; binsize=0.2 #s
+planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 
 day_date_dff = {}
 for ii,animal in enumerate(animals):
@@ -56,7 +56,7 @@ for ii,animal in enumerate(animals):
             keys = params['params'].dtype
             # dff is in row 6 - roibasemean3/average
             # raw in row 7
-            row = 7
+            row = 6
             dff = np.hstack(params['params'][0][0][row][0][0])/np.nanmean(np.hstack(params['params'][0][0][row][0][0]))#/np.hstack(params['params'][0][0][9])            
             # nan out stims
             # dff[stims[pln::4].astype(bool)] = np.nan
@@ -71,13 +71,20 @@ for ii,animal in enumerate(animals):
             offpln=pln+1 if pln<3 else pln-1
             startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
             min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            # remove rewarded stims
+            cs=params['solenoid2'][0]
+            # cs within 50 frames of start of stim - remove
+            framelim=20
+            unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
             startofstims = np.zeros_like(dff)
-            startofstims[min_iind]=1
+            startofstims[unrewstimidx]=1
+
             fig,ax=plt.subplots()
             ax.plot(dff,label=f'plane: {pln}')
             ax.plot(startofstims)
+            ax.set_ylim([.9,1.1])
             ax.legend()
-
+            # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
                     timedFF, range_val, binsize)
@@ -93,42 +100,67 @@ for ii,animal in enumerate(animals):
             ax.add_patch(
                 patches.Rectangle(
             xy=(range_val/binsize,ymin),  # point of origin.
-            width=2/binsize, height=ymax, linewidth=1, # width is s
+            width=5/binsize, height=ymax, linewidth=1, # width is s
             color='mediumspringgreen', alpha=0.2))
 
             ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
-            ax.set_title(f'Peri-stim, {animal}, 280mA, plane {pln}')
+            ax.set_title(f'Peri-stim, {animal}, day {day}, plane {pln}')
             plndff.append(rewdFF)
+            plt.show()
     
         day_date_dff[str(day)] = plndff
 
 #%%
-# subtract stims from drug condition
-condition = ['no drug', 'drug']
 
-ii=0; pln=0
-fig, ax = plt.subplots()
-for dy,v in day_date_dff.items():
-    rewdFF = day_date_dff[dy][pln] # so only
-    meanrewdFF = np.nanmean(rewdFF,axis=1)
-    meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[15:25]) #pre-window
-    rewdFF_prewin = np.array([xx-np.nanmean(xx[15:25]) for xx in rewdFF.T]).T
-    ax.plot(meanrewdFF, label=condition[ii])   
-    xmin,xmax = ax.get_xlim()     
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-    meanrewdFF-scipy.stats.sem(rewdFF_prewin,axis=1,nan_policy='omit'),
-    meanrewdFF+scipy.stats.sem(rewdFF_prewin,axis=1,nan_policy='omit'),
-    alpha=0.4)
-    ymin=min(meanrewdFF)-.02
-    ymax=max(meanrewdFF)+.02-ymin
+# power tests
+condition = [200,80,280]
+condition_org = [80,200,280,280,280]
+condition_org = [80,200,280,280]
+condition_col = {280:'k', 200:'slategray',80:'darkcyan'}
+stimsec = 5 # stim duration (s)
+ymin=-0.04
+ymax=0.03-(ymin)
+planes=4
+# assumes 4 planes
+fig, axes = plt.subplots(nrows=4, figsize=(4,7), sharex=True)
+for pln in range(planes):
+    ii=0; condition_dff = []
+    idx_to_catch = []; condition = condition_org.copy() # custom condition
+    for dy,v in day_date_dff.items():
+        rewdFF = day_date_dff[dy][pln] # so only
+        if rewdFF.shape[1]>0:            
+            meanrewdFF = np.nanmean(rewdFF,axis=1)
+            meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[20:25]) #pre-window
+            rewdFF_prewin = np.array([xx-np.nanmean(xx[20:25]) for xx in rewdFF.T]).T
+            condition_dff.append([meanrewdFF, rewdFF_prewin])
+        else: idx_to_catch.append(int(dy))
+    # remove 0 trial days from condition vector
+    if len(idx_to_catch)>0: [condition.pop(np.where(np.array(days)==idx)[0][0]) for idx in idx_to_catch]
+    ax = axes[pln]
+    meanrewdFF = np.vstack([x[0] for x in condition_dff])
+    rewdFF = [x[1] for x in condition_dff]
+    # plot per condition
+    for cond in np.unique(condition):
+        meancond = np.nanmean(meanrewdFF[condition==cond],axis=0)
+        ax.plot(meancond, label=cond, color=condition_col[cond])   
+        xmin,xmax = ax.get_xlim() 
+        trialcond = np.concatenate([[condition[ii]]*xx.shape[1] for ii,xx in enumerate(rewdFF)])
+        rewcond = np.hstack(rewdFF).T[trialcond==cond].T
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+        meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+        meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    alpha=0.4,color=condition_col[cond])        
+    # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
     ax.add_patch(
         patches.Rectangle(
     xy=(range_val/binsize,ymin),  # point of origin.
-    width=2/binsize, height=ymax, linewidth=1, # width is s
+    width=stimsec/binsize, height=ymax, linewidth=1, # width is s
     color='mediumspringgreen', alpha=0.2))
     ii+=1
-ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-ax.set_xticklabels(range(-range_val, range_val+1, 1))
-ax.set_title(f'Peri-stim, {animal}, 280mA, plane {pln}')
-ax.legend()
+    ax.set_title(f'\nPlane {planelut[pln]}')
+ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+ax.set_xticklabels(range(-range_val, range_val+1, 2))
+ax.legend(bbox_to_anchor=(1.1, 1.05))
+fig.tight_layout()
+fig.suptitle(f'{animal}, Per day plots')

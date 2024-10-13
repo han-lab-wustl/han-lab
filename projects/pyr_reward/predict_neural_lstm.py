@@ -244,7 +244,7 @@ average_lick_attributions = np.mean(np.abs(attributions), axis=(0, 1))
 for i, attribution in enumerate(average_lick_attributions):
     print(f"Neuron {i+1}: {attribution:.4f}")
 #%%
-thres=0.002
+thres=0.0002
 average_lick_attributions_mask = average_lick_attributions[average_lick_attributions>thres]
 n = np.where(average_lick_attributions>thres)[0]
 # Plot average attributions
@@ -254,6 +254,8 @@ plt.barh([f'Neuron {i+1}' for i in n],
 plt.xlabel('Average Feature Ablation Importance')
 plt.title('Neuron Contribution to Predicting Lick Behavioral Variable')
 plt.show()
+
+# %%
 
 #%%
 # test neuron contribution

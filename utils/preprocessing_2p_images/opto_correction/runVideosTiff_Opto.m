@@ -1,3 +1,4 @@
+
 %runVideos
 %200820 EH. points to "loadVideoTiffNoSplit_EH2_new_sbx" for new sbx form.
 %bi offsets different in new scanbox and sbx files also changed
@@ -15,11 +16,11 @@
 % directories
 
 clear all; close all;
-days=[2]; 
-src = 'Z:\halo_grabda\e241';
+days=[9 10]; 
+src = 'Z:\opn3_grabda\e215';
 % src = 'X:\vipcre\e217';
 lenVid=3000;
-threshold = 0.5; % a tunable parameter to find stims, set at 0.4 for chr2 data 
+threshold = 0.6; % a tunable parameter to find stims, set at 0.4 for chr2 data 
 loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold);
 
 
