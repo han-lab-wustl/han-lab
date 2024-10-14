@@ -269,17 +269,21 @@ cmap = ['darkcyan', 'k']
 g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdf,fill=False,
             errorbar='se',palette=cmap,ax=ax,linewidth=3,err_kws={'linewidth': 3})
 sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdf,s=11,
-        alpha=0.7,palette=cmap,ax=ax)
+        alpha=0.5,palette=cmap,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 
-x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='superficial')), 'mean_dff_during_stim'].values
+x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='superficial')), 
+        'mean_dff_during_stim'].values
 t,pval200_sup=scipy.stats.ttest_1samp(x1,popmean=0)
-x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='superficial')), 'mean_dff_during_stim'].values
+x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='superficial')), 
+            'mean_dff_during_stim'].values
 t,pval280_sup=scipy.stats.ttest_1samp(x1,popmean=0)
-x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='deep')), 'mean_dff_during_stim'].values
+x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='deep')), 
+        'mean_dff_during_stim'].values
 t,pval200_deep=scipy.stats.ttest_1samp(x1,popmean=0)
-x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='deep')), 'mean_dff_during_stim'].values
+x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='deep')), 
+        'mean_dff_during_stim'].values
 t,pval280_deep=scipy.stats.ttest_1samp(x1,popmean=0)
 
 pval200=[pval200_sup, pval200_deep]
