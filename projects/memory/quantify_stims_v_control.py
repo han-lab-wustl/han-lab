@@ -113,13 +113,14 @@ for ii,animal in enumerate(animals):
 
 #%%
 
-# power tests
+# power tests quantification
 condition_org = [[conddf.loc[((conddf.animal==an) & (conddf.artifact!=True) & \
     (conddf.day==dy)), 'optopower'].values.astype(int)[0] for dy in \
         conddf.loc[((conddf.animal==an) & (conddf.artifact!=True)), 
     'day'].values.astype(int)] for an in animals]
 condition_org=list(np.concatenate(condition_org)[:-3])
-condition_col = {280:'k', 200:'slategray',80:'darkcyan'}
+condition_col = {280:'k', 200:'darkcyan',80:'slategray'}
+# settings
 stimsec = 5 # stim duration (s)
 ymin=-0.04
 ymax=0.03
@@ -143,7 +144,7 @@ for pln in range(planes):
     ctrl_mean_trace_per_pln.append(meanrewdFF)
 
 # assumes 4 planes
-fig, axes = plt.subplots(nrows=4, figsize=(2.9,7), sharex=True)
+fig, axes = plt.subplots(nrows=4, figsize=(4,6), sharex=True)
 for pln in range(planes):
     ii=0; condition_dff = []
     idx_to_catch = []
@@ -167,10 +168,11 @@ for pln in range(planes):
     # plot per condition
     for cond in np.array([200,280]):
         meancond = np.nanmean(meanrewdFF[condition==cond],axis=0)-ctrl_mean_trace_per_pln[pln]
-        ax.plot(meancond, label=cond, color=condition_col[cond])   
-        xmin,xmax = ax.get_xlim() 
         trialcond = np.concatenate([[condition[ii]]*xx.shape[1] for ii,xx in enumerate(rewdFF)])
+        rewcond = np.hstack(rewdFF).T[trialcond==cond].T
         rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewcond.T]).T
+        ax.plot(meancond, label=f'{cond}_trials{rewcond.shape[1]}', color=condition_col[cond])   
+        xmin,xmax = ax.get_xlim()         
         ax.fill_between(range(0,int(range_val/binsize)*2), 
         meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
         meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
@@ -184,13 +186,111 @@ for pln in range(planes):
     ii+=1
     ax.set_title(f'\nPlane {planelut[pln]}')
     ax.set_ylim([ymin,ymax])
+    ax.legend(bbox_to_anchor=(1.1, 1.05))
 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
 ax.set_xticklabels(range(-range_val, range_val+1, 2))
-ax.legend(bbox_to_anchor=(1.1, 1.05))
-fig.suptitle(f'All animals (n={len(animals)}), per condition \n\
+fig.suptitle(f'All animals (n=3), per condition \n\
     Subtracted from GRABDA 2m (200mA)')
 fig.tight_layout()
+#%%
+# test
+plndff =[]
+for pln in range(planes):
+    ii=0; condition_dff = []
+    idx_to_catch = []
+    condition = condition_org.copy() # custom condition
+    for dy,v in day_date_dff.items():
+        if 'e219' not in dy:
+            rewdFF = day_date_dff[dy][pln] # so only
+            if rewdFF.shape[1]>0:            
+                meanrewdFF = np.nanmean(rewdFF,axis=1)
+                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[15:22]) #pre-window
+                rewdFF_prewin = np.array([xx-np.nanmean(xx[15:22]) for xx in rewdFF.T]).T
+                condition_dff.append([meanrewdFF, rewdFF_prewin])
+            else: idx_to_catch.append(ii)
+            ii+=1    
+    condition = [xx for ii,xx in enumerate(condition) if ii not in idx_to_catch]
 
-# %%
+    meanrewdFF = np.vstack([x[0] for x in condition_dff])
+    rewdFF = [x[1] for x in condition_dff]
+    # plot per condition
+    save = []
+    for cond in np.array([200,280]):
+        meancond = np.nanmean(meanrewdFF[condition==cond],axis=0)-ctrl_mean_trace_per_pln[pln]
+        trialcond = np.concatenate([[condition[ii]]*xx.shape[1] for ii,xx in enumerate(rewdFF)])
+        rewcond = np.hstack(rewdFF).T[trialcond==cond].T
+        rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewcond.T]).T
+        t,pval = scipy.stats.ttest_1samp(np.nanmean(rewcond[50:75],axis=0),popmean=0)
+        print(f'Plane {pln}, condition {cond}mA, P-value={pval:.5f}')
+        save.append((np.nanmean(rewcond[50:75],axis=0),cond,pval))
+    plndff.append(save)
+#%%
+plt.rc('font', size=25)
+dfs = []
+conds = [200,280]
+for pln in range(planes):
+    df = pd.DataFrame()
+    df['mean_dff_during_stim'] = np.concatenate([xx[0] for xx in plndff[pln]])
+    pval=[xx[2] for xx in plndff[pln]]
+    df['pval']=np.concatenate([[pval[ii]]*len(xx[0]) for ii,xx in enumerate(plndff[pln])])
+    df['condition'] = np.concatenate([[conds[ii]]*len(xx[0]) for ii,xx in enumerate(plndff[pln])])
+    df['plane'] = np.concatenate([[planelut[pln]]*len(df)])
+    df['plane_subgroup'] = np.concatenate([['superficial' if pln<3 else 'deep']*len(df)])
+    dfs.append(df)
+bigdf = pd.concat(dfs)
 
-# %%
+import seaborn as sns
+
+fig,ax = plt.subplots(figsize=(6,5))
+cmap = ['darkcyan', 'k']
+g=sns.barplot(x='plane',y='mean_dff_during_stim',hue='condition',data=bigdf,fill=False,
+            errorbar='se',palette=cmap,ax=ax,linewidth=3,err_kws={'linewidth': 3})
+sns.stripplot(x='plane',y='mean_dff_during_stim',hue='condition',data=bigdf,s=11,
+        alpha=0.7,palette=cmap,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+
+pval200 = bigdf.loc[bigdf.condition==200,'pval'].unique()
+pval280 = bigdf.loc[bigdf.condition==280,'pval'].unique()
+y=0.060
+fs=14
+for i in range(len(pval200)):
+    ax.text(i, y, f'200mA, \np={pval200[i]:.4f}', ha='center', fontsize=fs)
+y=0.075
+for i in range(len(pval280)):
+    ax.text(i, y, f'280mA, \np={pval280[i]:.6f}', ha='center', fontsize=fs)
+    
+ax.set_title('Per trial quantification n=3 animals',pad=90)
+#%%
+# by plane subgroup
+
+fig,ax = plt.subplots(figsize=(3,5))
+cmap = ['darkcyan', 'k']
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdf,fill=False,
+            errorbar='se',palette=cmap,ax=ax,linewidth=3,err_kws={'linewidth': 3})
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdf,s=11,
+        alpha=0.7,palette=cmap,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+
+x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='superficial')), 'mean_dff_during_stim'].values
+t,pval200_sup=scipy.stats.ttest_1samp(x1,popmean=0)
+x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='superficial')), 'mean_dff_during_stim'].values
+t,pval280_sup=scipy.stats.ttest_1samp(x1,popmean=0)
+x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='deep')), 'mean_dff_during_stim'].values
+t,pval200_deep=scipy.stats.ttest_1samp(x1,popmean=0)
+x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='deep')), 'mean_dff_during_stim'].values
+t,pval280_deep=scipy.stats.ttest_1samp(x1,popmean=0)
+
+pval200=[pval200_sup, pval200_deep]
+pval280=[pval280_sup, pval280_deep]
+y=0.060
+fs=14
+for i in range(len(pval200)):
+    ax.text(i, y, f'200mA, \np={pval200[i]:.4f}', ha='center', fontsize=fs)
+y=0.075
+for i in range(len(pval280)):
+    ax.text(i, y, f'280mA, \np={pval280[i]:.6f}', ha='center', fontsize=fs)
+    
+ax.set_title('Per trial quantification n=3 animals',pad=90)
+# fig.tight_layout()
