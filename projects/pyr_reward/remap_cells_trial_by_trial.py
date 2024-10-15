@@ -153,6 +153,6 @@ for ii in range(len(conddf)):
             fig.suptitle(f'{animal},day {day},remap cell # {orggc}')
             fig.tight_layout()
             pdf.savefig(fig)
-            plt.show(fig)
+            plt.close(fig)
 
 pdf.close()

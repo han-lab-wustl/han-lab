@@ -45,6 +45,7 @@ for day=days
         else
             currfile=strcat(stripped_filename,'_',num2str(ii),'.mat');
         end
+        
         chtemp=sbxread(stripped_filename,((ii-1)*lenVid),min(lenVid,(numframes-((ii-1)*lenVid))));
         chtemp_original=double(squeeze(chtemp));
         choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
@@ -88,7 +89,4 @@ for day=days
 
 end
 MIJ.exit;
-
-%
-% clear chone;
 

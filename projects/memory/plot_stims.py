@@ -28,10 +28,11 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 # src = r"Y:\opto_control_grabda_2m"
-src = r'Z:\opn3_grabda'
-animals = ['e215']
-days_all = [[7]]
-range_val = 10; binsize=0.2 #s
+src = r'Y:\halo_grabda'
+animals = ['e241','e243']
+days_all = [[3],[4]]
+range_val = 5; binsize=0.2 #s
+dur=2 # s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 
 day_date_dff = {}
@@ -78,17 +79,29 @@ for ii,animal in enumerate(animals):
             unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
             startofstims = np.zeros_like(dff)
             startofstims[unrewstimidx]=1
+            # get on plane stim for red laser
+            offpln=pln
+            ss = consecutive_stretch(np.where(stims[offpln::4])[0])
+            min_iind = [min(xx) for xx in ss if len(xx)>0]
+            # remove rewarded stims
+            cs=params['solenoid2'][0]
+            # cs within 50 frames of start of stim - remove
+            framelim=20
+            unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
+            startofstims[unrewstimidx]=1
 
-            fig,ax=plt.subplots()
+
+            fig,axes=plt.subplots(nrows=2)
+            ax=axes[0]
             ax.plot(dff,label=f'plane: {pln}')
             ax.plot(startofstims)
             ax.set_ylim([.9,1.1])
-            ax.legend()
+            ax.set_title(f'Stim events, {animal}, day {day}, plane {pln}')
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
                     timedFF, range_val, binsize)
-            fig, ax = plt.subplots()
+            ax=axes[1]
             ax.plot(meanrewdFF, color = 'k')   
             xmin,xmax = ax.get_xlim()     
             ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -100,14 +113,15 @@ for ii,animal in enumerate(animals):
             ax.add_patch(
                 patches.Rectangle(
             xy=(range_val/binsize,ymin),  # point of origin.
-            width=5/binsize, height=ymax, linewidth=1, # width is s
+            width=dur/binsize, height=ymax, linewidth=1, # width is s
             color='mediumspringgreen', alpha=0.2))
 
             ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
-            ax.set_title(f'Peri-stim, {animal}, day {day}, plane {pln}')
+            ax.set_title(f'Peri-stim')
             plndff.append(rewdFF)
-            plt.show()
+            fig.tight_layout()
+            plt.show()            
     
         day_date_dff[str(day)] = plndff
 

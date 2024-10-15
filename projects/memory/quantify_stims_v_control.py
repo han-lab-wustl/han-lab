@@ -67,7 +67,7 @@ for ii,animal in enumerate(animals):
             
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(3).mean().values)
-            # get off plane stim
+            # get off plane stim 
             offpln=pln+1 if pln<3 else pln-1
             startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
             min_iind = [min(xx) for xx in startofstims if len(xx)>0]
