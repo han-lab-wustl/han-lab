@@ -30,6 +30,34 @@ Follow the scripts in `projects/DlC_behavior_formatting/video_formatting` for th
 
 ## general lab pipeline 
 
+### dopamine release imaging
+
+make sure the repo is added to your MATLAB path with subfolders!
+
+- make tifs: `han-lab\utils\preprocessing_2p_images\runVideosTiff_EH_new_sbx1.m` OR `han-lab\utils\preprocessing_2p_images\opto_correction\runVideosTiff_Opto.m`
+if using `runVideosTiff`, change the MATLAB path in `loadVideoTiffNoSplit...` to your MATLAB directory:
+e.g. from 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\ij.jar'
+```
+to 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+```
+- run suite2p (and set appropriate settings for planes, frame rate, saving tifs, etc.)
+```
+conda activate suite2p
+suite2p
+```
+- run dopamineROI pipeline: `"han-lab\dopaminepipeline\preprocessing\batch_make_roi_and_dff_dopamine_multiplane.m`
+  - pick day files
+  - draw ROIs or recall from a previous day's ROIs
+  - calculate $\Delta$ F/F
+- align to behavior
+- do downstream analysis with align `params.mat` file in each plane
+
 ### dopamine receptor imaging
 make sure the repo is added to your MATLAB path with subfolders!
 
@@ -87,7 +115,7 @@ Filters pyramidal cells and plots tuning curves, calculates cosine similarity, a
 
 ## suite2p_processing_pipeline
 
-Zahra's wrappers around suite2p to make tifs, run motion corr, get ROIs, and make concatenated weekly videos
+Zahra's wrappers around suite2p to make tifs, run motion corr, get ROIs
 
 ## place_cell_pipeline
 
@@ -121,38 +149,6 @@ Munni's original code that aligns behavioral events to dFF. Modifications for la
 `pre_post_diff_anat_darkreward_single_rew.m`
 
 Plots a heatmap of CS-triggered averages across days in the Pavlovian task.
-
-### projects > dopamine > axonal-GCamp
-
-How to run preprocessing and motion correction on axonal-GCamp images from two-photon
-
-NOTE: **most of Zahra's run scripts take command line arguments**
-
-Relies on some dependencies in Python as well as a downloaded version of [Suite2p](https://github.com/MouseLand/suite2p) in your environment
-```
-pip install tifffile matplotlib numpy pandas
-```
-
-`run_axonal_dopamine_motion_reg.py`
-
-On the command line (on Windows, Anaconda Powershell Prompt), navigate to the `axonal-GCamp_dopamine` folder
-
-Type `python run_axonal_dopamine_motion_reg.py -h` for description of input arguments
-
-To make folder structure:
-```
-python .\run_axonal_dopamine_motion_reg.py 0 e194 X:\dopamine_imaging\ --day 6
-```
-
-0 = step (making folder structure)
-
-e194 = mouse name
-
-X:\dopamine_imaging = drive containing mouse folder and imaging day subfolders within it
-
-6 = day (optional argument); this is what the folder will be named
-
-I suggest having a lookup table of day folder to experiment, imaging notes, camera acquisition etc. in a separate spreadsheet
 
 ## utils
 
