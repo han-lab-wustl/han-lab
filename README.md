@@ -31,7 +31,6 @@ Follow the scripts in `projects/DlC_behavior_formatting/video_formatting` for th
 ## general lab pipeline 
 
 ### dopamine release imaging
-
 make sure the repo is added to your MATLAB path with subfolders!
 
 - make tifs: `han-lab\utils\preprocessing_2p_images\runVideosTiff_EH_new_sbx1.m` OR `han-lab\utils\preprocessing_2p_images\opto_correction\runVideosTiff_Opto.m`

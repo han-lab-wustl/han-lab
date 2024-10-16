@@ -21,6 +21,7 @@ from dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
+
 plt.close('all')
 # save to pdf
 # dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
@@ -30,9 +31,9 @@ plt.close('all')
 # src = r"Y:\opto_control_grabda_2m"
 src = r'Y:\halo_grabda'
 animals = ['e241']
-days_all = [[3]]
-range_val = 5; binsize=0.2 #s
-dur=2 # s stim duration
+days_all = [[5]]
+range_val = 8; binsize=0.2 #s
+dur=2.2 # s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 
 day_date_dff = {}
@@ -70,43 +71,54 @@ for ii,animal in enumerate(animals):
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(3).mean().values)
             # get off plane stim
-            offpln=pln+1 if pln<3 else pln-1
-            startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
-            min_iind = [min(xx) for xx in startofstims if len(xx)>0]
-            # remove rewarded stims
-            cs=params['solenoid2'][0]
-            # cs within 50 frames of start of stim - remove
-            framelim=20
-            unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
-            startofstims = np.zeros_like(dff)
-            startofstims[unrewstimidx]=1
-            # get on plane stim for red laser
-            offpln=pln
-            ss = consecutive_stretch(np.where(stims[offpln::4])[0])
-            min_iind = [min(xx) for xx in ss if len(xx)>0]
-            # remove rewarded stims
-            cs=params['solenoid2'][0]
-            # cs within 50 frames of start of stim - remove
-            framelim=20
-            unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
-            startofstims[unrewstimidx]=1
-            
+            # offpln=pln+1 if pln<3 else pln-1
+            # startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
+            # min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            # # remove rewarded stims
+            # cs=params['solenoid2'][0]
+            # # cs within 50 frames of start of stim - remove
+            # framelim=20
+            # unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
+            # startofstims = np.zeros_like(dff)
+            # startofstims[unrewstimidx]=1
+            # # get on plane stim for red laser
+            # offpln=pln
+            # ss = consecutive_stretch(np.where(stims[offpln::4])[0])
+            # min_iind = [min(xx) for xx in ss if len(xx)>0]
+            # # remove rewarded stims
+            # cs=params['solenoid2'][0]
+            # # cs within 50 frames of start of stim - remove
+            # framelim=20
+            # unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
+            # startofstims[unrewstimidx]=1
+            startofstims=params['optoEvent'][0]
             ax=axes[0,pln]
-            ax.plot(dff,label=f'plane: {pln}')
-            ax.plot(startofstims)
-            ax.set_ylim([.9,1.1])
+            ax.plot(dff-1,label=f'plane: {pln}')
+            ax.plot(startofstims-1)
+            ax.set_ylim([-.1,.1])
             ax.set_title(f'Stim events, {animal}, day {day}, {planelut[pln]}')
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
                     timedFF, range_val, binsize)
+            prewin = 4
+            binss = np.ceil(prewin/binsize).astype(int)
+            bound = int(range_val/binsize)
+            #normalize
+            meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[(bound-binss):bound])
+            rewdFF = np.array([rewdFF[:,tr]-np.nanmean(meanrewdFF[(bound-binss):bound]) \
+                for tr in range(rewdFF.shape[1])]).T
+
             ax=axes[1,pln]
             ax.plot(meanrewdFF, color = 'k')   
             xmin,xmax = ax.get_xlim()     
             ax.fill_between(range(0,int(range_val/binsize)*2), 
             meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
-            meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+            meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),            
             color='k',alpha=0.4)
+            ax.set_ylim([-0.03,0.03])
+            ax.axhline(0, color='k', linestyle='--')
+            ax.axhline(-.01, color='k', linestyle='--')
             ymin=min(meanrewdFF)-.02
             ymax=max(meanrewdFF)+.02-ymin
             ax.add_patch(

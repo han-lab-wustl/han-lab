@@ -1,4 +1,4 @@
- %Zahra
+%Zahra
 %run VR align
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
@@ -14,6 +14,17 @@ for day=days
     savepthfmat = VRalign_dopamine_w_opto_events(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
+%%
+% example pick files
+% for ziyi
+[filename,path]=uigetfile('*.mat','pick your behavior file');
+vrfl = fullfile(path, filename);
+[Ffile,Ffilepath]=uigetfile('*.mat','pick the day you want to run (under which you should have params.mat files');
+fmatfl = fullfile(Ffilepath, Ffile);
+fmatfl = dir(fmatfl, '**\params.mat'); % length is number of plns
+savepthfmat = VRalign_dopamine_w_opto_events(vrfl,fmatfl, length(fmatfl));
+disp(savepthfmat)
+
 %%
 % 2 planes
 % has to have combined cells
