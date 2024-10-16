@@ -83,6 +83,7 @@ def main(**args):
         
         
     elif args['stepid'] == 2:
+        
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
         #args should be the info you need to specify the params
         # for a given experiment, but only params should be used below        

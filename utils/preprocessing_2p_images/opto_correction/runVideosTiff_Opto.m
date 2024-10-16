@@ -15,11 +15,11 @@
 % directories
 
 clear all; close all;
-days=[3]; 
+days=[4]; 
 src = 'Y:\halo_grabda\e241';
 % src = 'X:\vipcre\e217';
 lenVid=3000;
-threshold = 0.05; % a tunable parameter to find stims, set at 0.4 for chr2 data 
+threshold = 0.055; % a tunable parameter to find stims, set at 0.4 for chr2 data 
 loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold);
 
 

@@ -45,7 +45,7 @@ goal_cell_iind = []
 goal_cell_prop = []
 num_epochs = []
 #%%
-for ii in range(len(conddf)):
+for ii in range(247,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]==-1):
@@ -87,13 +87,20 @@ for ii in range(len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        if 'bordercells' in fall.keys():
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        else:
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
+        if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys() and animal!='e145':
             tcs_correct, coms_correct, tcs_fail, coms_fail, com_goal, \
                 goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+        elif animal=='e145': # something weird about e145 saved df
+            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size)
         else:# remake tuning curves relative to reward        
             # takes time
             tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,

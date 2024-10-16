@@ -115,6 +115,11 @@ usolenoid2 = zeros(size(urewards));
 usolenoid2(urewards==0.5) = 1;
 urewards(urewards==0.5) = 0;
 
+% Binarize VR.optoEventIdx
+VR.optoEvent = zeros(size(VR.time));
+VR.optoEvent(VR.optoEventIdx) = 1;
+optoEventBinned = VR.optoEvent(scanstart:scanstop);
+
 %%%%% CS without reward (US)
 sol1=VR.reward(scanstart:scanstop);
 sol1(find(sol1==1))=0;
@@ -268,8 +273,9 @@ load(fullFfile);
 % end
 %Per imaging frame (all planes) Binning
 urew_solenoidALL=[];
- clear ybinnedALL rewardsALL forwardvelALL licksALL changeRewLocALL trialnumALL timedFF lickVoltageALL urew_solenoidALL solenoid2ALL...
-     rew_us_solenoidALL 
+optoEventALL = [];
+clear ybinnedALL rewardsALL forwardvelALL licksALL changeRewLocALL trialnumALL timedFF lickVoltageALL urew_solenoidALL solenoid2ALL rew_us_solenoidALL optoEventALL;
+
 for newindx = 1:length(utimedFF)
     if newindx == 1
         after = mean([utimedFF(newindx) utimedFF(newindx+1)]);
@@ -283,6 +289,7 @@ for newindx = 1:length(utimedFF)
         changeRewLocALL(newindx) = uchangeRewLoc(newindx);
         licksALL(newindx) = sum(ulicks(find(uVRtimebinned<=after)))>0;
         lickVoltageALL(newindx) = mean(ulickVoltage(find(uVRtimebinned<=after)));
+        optoEventALL(newindx) = sum(optoEventBinned(find(uVRtimebinned <= after))) > 0;
     elseif newindx == length(utimedFF)
         before = mean([utimedFF(newindx) utimedFF(newindx-1)]);
         rewardsALL(newindx) = sum(urewards(find(uVRtimebinned>before)));
@@ -295,6 +302,7 @@ for newindx = 1:length(utimedFF)
         changeRewLocALL(newindx) = sum(uchangeRewLoc(find(uVRtimebinned>before)));
         licksALL(newindx) = sum(ulicks(find(uVRtimebinned>before)))>0;
         lickVoltageALL(newindx) = mean(ulickVoltage(find(uVRtimebinned>before)));
+        optoEventALL(newindx) = sum(optoEventBinned(find(uVRtimebinned > before))) > 0;
     else
         before = mean([utimedFF(newindx) utimedFF(newindx-1)]);
         after = mean([utimedFF(newindx) utimedFF(newindx+1)]);
@@ -309,6 +317,7 @@ for newindx = 1:length(utimedFF)
             changeRewLocALL(newindx) = 0;
             trialnumALL(newindx) = utrialnum(1);
             lickVoltageALL(newindx) = ulickVoltage(newindx);
+            optoEventALL(newindx) = optoEventBinned(1);
         elseif isempty(find(uVRtimebinned>before & uVRtimebinned<=after)) && after > check_imaging_start_before
             rewardsALL(newindx) = rewardsALL(newindx-1);
             solenoid2ALL(newindx) = solenoid2ALL(newindx-1);
@@ -320,7 +329,7 @@ for newindx = 1:length(utimedFF)
             changeRewLocALL(newindx) = 0;
             trialnumALL(newindx) = trialnumALL(newindx-1);
             lickVoltageALL(newindx) = lickVoltageALL(newindx-1);
-            
+            optoEventALL(newindx) = optoEventALL(newindx - 1);
         else
             rewardsALL(newindx) = sum(urewards(find(uVRtimebinned>before & uVRtimebinned<=after)));
             solenoid2ALL(newindx) = sum(usolenoid2(find(uVRtimebinned>before & uVRtimebinned<=after)));
@@ -329,6 +338,8 @@ for newindx = 1:length(utimedFF)
             
             licksALL(newindx) = sum(ulicks(find(uVRtimebinned>before & uVRtimebinned<=after)))>0;
             lickVoltageALL(newindx) = mean(ulickVoltage(find(uVRtimebinned>before & uVRtimebinned<=after)));
+            optoEventALL(newindx) = sum(optoEventBinned(find(uVRtimebinned > before & uVRtimebinned <= after))) > 0;
+            
             if min(diff(uybinned(find(uVRtimebinned>before & uVRtimebinned<=after)))) < -50
                 dummymin =  min(uybinned(find(uVRtimebinned>before & uVRtimebinned<=after)));
                 dummymax = max(uybinned(find(uVRtimebinned>before & uVRtimebinned<=after)));
@@ -362,8 +373,8 @@ end
 
 for n = 1:numfiles
     fullFfile = fullfile(Ffilepath{n},Ffile{n});
-    save(fullFfile,'ybinnedALL','rewardsALL','forwardvelALL','licksALL','changeRewLocALL','trialnumALL', ...
-        'utimedFF','lickVoltageALL','solenoid2ALL','urew_solenoidALL','rew_us_solenoidALL','-append');
+    save(fullFfile, 'ybinnedALL', 'rewardsALL', 'forwardvelALL', 'licksALL', 'changeRewLocALL', 'trialnumALL', ...
+        'utimedFF', 'lickVoltageALL', 'solenoid2ALL', 'urew_solenoidALL', 'rew_us_solenoidALL', 'optoEventALL', '-append');
     load(fullFfile);
     
     clear ybinned rewards forwardvel licks changeRewLoc trialnum timedFF lickVoltage urew_solenoid solenoid2  rew_us_solenoid 
@@ -383,6 +394,7 @@ for n = 1:numfiles
             changeRewLoc(newindx) = uchangeRewLoc(newindx);
             licks(newindx) = sum(ulicks(find(uVRtimebinned<=after)))>0;
             lickVoltage(newindx) = mean(ulickVoltage(find(uVRtimebinned<=after)));
+            optoEvent(newindx) = sum(optoEventBinned(find(uVRtimebinned <= after))) > 0;
         elseif newindx == length(timedFF)
             before = mean([timedFF(newindx) timedFF(newindx-1)]);
             rewards(newindx) = sum(urewards(find(uVRtimebinned>before)));
@@ -391,7 +403,8 @@ for n = 1:numfiles
             rew_us_solenoid(newindx) = sum(rew_us_sol(find(uVRtimebinned>before)));
             forwardvel(newindx) = mean(uforwardvel(find(uVRtimebinned>before)));
             ybinned(newindx)= mean(uybinned(find(uVRtimebinned>before)));
-            
+            optoEvent(newindx) = sum(optoEventBinned(find(uVRtimebinned > before))) > 0;
+
             if ~isempty(max(utrialnum(find(uVRtimebinned>before))))
                 trialnum(newindx) =max(utrialnum(find(uVRtimebinned>before)));
             else
@@ -415,6 +428,7 @@ for n = 1:numfiles
                 changeRewLoc(newindx) = 0;
                 trialnum(newindx) = utrialnum(1);
                 lickVoltage(newindx) = ulickVoltage(newindx);
+                optoEvent(newindx) = optoEventBinned(1);
             elseif isempty(find(uVRtimebinned>before & uVRtimebinned<=after)) && after > check_imaging_start_before
                 rewards(newindx) = rewards(newindx-1);
                 solenoid2(newindx) = solenoid2(newindx-1);
@@ -426,7 +440,7 @@ for n = 1:numfiles
                 changeRewLoc(newindx) = 0;
                 trialnum(newindx) = trialnum(newindx-1);
                 lickVoltage(newindx) = ulickVoltage(newindx-1);
-                
+                optoEvent(newindx) = optoEvent(newindx - 1);
             else
                 rewards(newindx) = sum(urewards(find(uVRtimebinned>before & uVRtimebinned<=after)));
                 solenoid2(newindx) = sum(usolenoid2(find(uVRtimebinned>before & uVRtimebinned<=after)));
@@ -434,6 +448,7 @@ for n = 1:numfiles
                 rew_us_solenoid(newindx) = sum(rew_us_sol(find(uVRtimebinned>before & uVRtimebinned<=after)));
                 
                 licks(newindx) = sum(ulicks(find(uVRtimebinned>before & uVRtimebinned<=after)))>0;
+                optoEvent(newindx) = sum(optoEventBinned(find(uVRtimebinned>before & uVRtimebinned<=after)))>0;% optoEvent(newindx - 1);
                 lickVoltage(newindx) = mean(ulickVoltage(find(uVRtimebinned>before & uVRtimebinned<=after)));
                 if min(diff(uybinned(find(uVRtimebinned>before & uVRtimebinned<=after)))) < -50
                     dummymin =  min(uybinned(find(uVRtimebinned>before & uVRtimebinned<=after)));
@@ -478,8 +493,11 @@ for n = 1:numfiles
     
     fullFfile = fullfile(Ffilepath{n},Ffile{n});
     pause(1);
-    save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','lickVoltage','solenoid2','urew_solenoid','rew_us_solenoid','VR','-append');
-    save(fullFfile,'ybinnedALL','rewardsALL','forwardvelALL','licksALL','changeRewLocALL','trialnumALL','utimedFF','lickVoltageALL','solenoid2ALL','urew_solenoidALL','rew_us_solenoidALL','-append');
+    save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF', ...
+        'lickVoltage','solenoid2','urew_solenoid','rew_us_solenoid','VR','optoEvent','-append');
+    save(fullFfile,'ybinnedALL','rewardsALL','forwardvelALL','licksALL','changeRewLocALL', ...
+        'trialnumALL','utimedFF','lickVoltageALL','solenoid2ALL','urew_solenoidALL', ...
+        'rew_us_solenoidALL','optoEventALL','-append');
 %     if addabf
 %         save(fullFfile,'abfdata','-append');
 %     end

@@ -29,8 +29,8 @@ plt.close('all')
 
 # src = r"Y:\opto_control_grabda_2m"
 src = r'Y:\halo_grabda'
-animals = ['e241','e243']
-days_all = [[3],[4]]
+animals = ['e241']
+days_all = [[3]]
 range_val = 5; binsize=0.2 #s
 dur=2 # s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
@@ -46,6 +46,7 @@ for ii,animal in enumerate(animals):
         stims = scipy.io.loadmat(stimspth)
         stims = np.hstack(stims['stims']) # nan out stims
         plndff = []
+        fig,axes=plt.subplots(nrows=2, ncols=4, figsize=(12,5))
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             params = scipy.io.loadmat(path)
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             
@@ -89,19 +90,17 @@ for ii,animal in enumerate(animals):
             framelim=20
             unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
             startofstims[unrewstimidx]=1
-
-
-            fig,axes=plt.subplots(nrows=2)
-            ax=axes[0]
+            
+            ax=axes[0,pln]
             ax.plot(dff,label=f'plane: {pln}')
             ax.plot(startofstims)
             ax.set_ylim([.9,1.1])
-            ax.set_title(f'Stim events, {animal}, day {day}, plane {pln}')
+            ax.set_title(f'Stim events, {animal}, day {day}, {planelut[pln]}')
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
                     timedFF, range_val, binsize)
-            ax=axes[1]
+            ax=axes[1,pln]
             ax.plot(meanrewdFF, color = 'k')   
             xmin,xmax = ax.get_xlim()     
             ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -121,7 +120,7 @@ for ii,animal in enumerate(animals):
             ax.set_title(f'Peri-stim')
             plndff.append(rewdFF)
             fig.tight_layout()
-            plt.show()            
+            # plt.show()            
     
         day_date_dff[str(day)] = plndff
 

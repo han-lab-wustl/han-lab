@@ -87,8 +87,13 @@ for ii in range(len(conddf)):
             fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
             Fc3 = fall_fc3['Fc3']
             dFF = fall_fc3['dFF']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            if 'bordercells' in fall.keys():
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+                dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            else:
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+                dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+            
             skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
             # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
             # skew_mask = skew_filter>2

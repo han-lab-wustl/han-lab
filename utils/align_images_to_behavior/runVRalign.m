@@ -4,14 +4,14 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e215";
-days = [6,7];
+days = [7];
 src = 'Z:\opn3_grabda';
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "E*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
-    savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    savepthfmat = VRalign_dopamine_w_opto_events(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
 end
 %%
