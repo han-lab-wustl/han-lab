@@ -26,7 +26,7 @@
 % 
 pr_dir=uipickfiles;
 % 
-%%
+
 for dy=1:length(pr_dir) % per day
     close all
     regtifs = dir(fullfile(pr_dir{dy}, '**', 'plane*'));
@@ -53,7 +53,7 @@ for dy=1:length(pr_dir) % per day
     end
 end
 %% 
-%pr_dir=uipickfiles;
+pr_dir=uipickfiles;
 for dy=1:length(pr_dir) % per day
     % align images to behavior
 

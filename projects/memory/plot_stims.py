@@ -30,10 +30,10 @@ plt.close('all')
 
 # src = r"Y:\opto_control_grabda_2m"
 src = r'Y:\halo_grabda'
-animals = ['e241']
+animals = ['e243']
 days_all = [[5]]
-range_val = 8; binsize=0.2 #s
-dur=2.2 # s stim duration
+range_val = 5; binsize=0.2 #s
+dur=1.6# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 
 day_date_dff = {}

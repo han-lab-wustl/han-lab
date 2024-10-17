@@ -175,6 +175,125 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
     return tcs_correct, coms_correct, tcs_fail, coms_fail
 
 
+
+def make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    
+    """
+    Description: This function creates tuning curves for neuronal activity aligned to reward locations and categorizes them by trial type (correct or fail). The tuning curves are generated for each epoch, and the data is filtered based on velocity if the option is enabled.
+    Parameters:
+    eps (numpy.ndarray): Array of epoch (trial segment) start indices.
+    rewlocs (numpy.ndarray): Array of reward locations for each epoch.
+    ybinned (numpy.ndarray): Array of position data (binned).
+    rad (numpy.ndarray): Array of radian positions.
+    Fc3 (numpy.ndarray): Fluorescence data of cells. The shape should be (time, cells).
+    trialnum (numpy.ndarray): Array with trial numbers.
+    rewards (numpy.ndarray): Array indicating whether a reward was received at each time point.
+    forwardvel (numpy.ndarray): Array of forward velocity values at each time point.
+    rewsize (float): Size of the reward zone.
+    bin_size (float): Size of the bin for the tuning curve.
+    lasttr (int, optional): The number of last correct trials considered for analysis (default is 8).
+    bins (int, optional): The number of bins for the tuning curve (default is 90).
+    velocity_filter (bool, optional): Whether to apply a velocity filter to include only times when velocity > 5 cm/s (default is False).
+    Returns:
+    tcs_correct (numpy.ndarray): Tuning curves for correct trials. Shape is (epochs, cells, bins).
+    coms_correct (numpy.ndarray): Center of mass (COM) for correct trials. Shape is (epochs, cells).
+    tcs_fail (numpy.ndarray): Tuning curves for failed trials. Shape is (epochs, cells, bins).
+    coms_fail (numpy.ndarray): Center of mass (COM) for failed trials. Shape is (epochs, cells).
+    """ 
+    rates = []; 
+    # initialize
+    tcs_probe = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    coms_probe = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan    
+    # remake tuning curves relative to reward        
+    # start with epoch 2
+    for ep in range(1,len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = ybinned[eprng]        
+        success, fail, strials, ftrials, ttr, \
+            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+        F_all = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F_all = F_all[moving_middle,:]
+        relpos_all = np.array(relpos)[moving_middle]
+        # check if epoch has probes
+        if sum(trialnum<3)>0: 
+            mask = [True if xx==0 else False for xx in trialnum[eprng][moving_middle]] # probe 1 ONLY
+            F = F_all[mask,:]
+            relpos = relpos_all[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,bin_size)
+            tcs_probe[ep, :,:] = tc
+            coms_probe[ep, :] = com
+
+    return tcs_probe, coms_probe
+
+
+def make_tuning_curves_radians_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    
+    """
+    Description: This function creates tuning curves for neuronal activity aligned to reward locations and categorizes them by trial type (correct or fail). The tuning curves are generated for each epoch, and the data is filtered based on velocity if the option is enabled.
+    Parameters:
+    eps (numpy.ndarray): Array of epoch (trial segment) start indices.
+    rewlocs (numpy.ndarray): Array of reward locations for each epoch.
+    ybinned (numpy.ndarray): Array of position data (binned).
+    rad (numpy.ndarray): Array of radian positions.
+    Fc3 (numpy.ndarray): Fluorescence data of cells. The shape should be (time, cells).
+    trialnum (numpy.ndarray): Array with trial numbers.
+    rewards (numpy.ndarray): Array indicating whether a reward was received at each time point.
+    forwardvel (numpy.ndarray): Array of forward velocity values at each time point.
+    rewsize (float): Size of the reward zone.
+    bin_size (float): Size of the bin for the tuning curve.
+    lasttr (int, optional): The number of last correct trials considered for analysis (default is 8).
+    bins (int, optional): The number of bins for the tuning curve (default is 90).
+    velocity_filter (bool, optional): Whether to apply a velocity filter to include only times when velocity > 5 cm/s (default is False).
+    Returns:
+    tcs_correct (numpy.ndarray): Tuning curves for correct trials. Shape is (epochs, cells, bins).
+    coms_correct (numpy.ndarray): Center of mass (COM) for correct trials. Shape is (epochs, cells).
+    tcs_fail (numpy.ndarray): Tuning curves for failed trials. Shape is (epochs, cells, bins).
+    coms_fail (numpy.ndarray): Center of mass (COM) for failed trials. Shape is (epochs, cells).
+    """ 
+    rates = []; 
+    # initialize
+    tcs_probe = np.ones((len(eps)-2, Fc3.shape[1], bins))*np.nan
+    coms_probe = np.ones((len(eps)-2, Fc3.shape[1]))*np.nan    
+    # remake tuning curves relative to reward        
+    # start with epoch 2
+    for ep in range(1,len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = rad[eprng]        
+        success, fail, strials, ftrials, ttr, \
+            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+        F_all = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F_all = F_all[moving_middle,:]
+        relpos_all = np.array(relpos)[moving_middle]
+        # check if epoch has probes
+        if sum(trialnum<3)>0: 
+            mask = [True if xx==0 else False for xx in trialnum[eprng][moving_middle]] # probe 1 ONLY
+            F = F_all[mask,:]
+            relpos = relpos_all[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,bin_size)
+            tcs_probe[ep, :,:] = tc
+            coms_probe[ep, :] = com
+
+    return tcs_probe, coms_probe
+
+
 def make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,
             velocity_filter=False):

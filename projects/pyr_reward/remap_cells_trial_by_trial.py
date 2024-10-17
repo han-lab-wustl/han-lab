@@ -14,7 +14,7 @@ from collections import Counter
 import matplotlib.backends.backend_pdf as pdf_backend
 from scipy import stats
 plt.close('all')
-# Configure matplotlib to use the Arial font and set tick sizes
+# Configure matplotlib to use the Arial font and s et tick sizes
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
@@ -45,7 +45,7 @@ goal_cell_iind = []
 goal_cell_prop = []
 num_epochs = []
 #%%
-for ii in range(247,len(conddf)):
+for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]==-1):

@@ -24,7 +24,19 @@ fmatfl = fullfile(Ffilepath, Ffile);
 fmatfl = dir(fmatfl, '**\params.mat'); % length is number of plns
 savepthfmat = VRalign_dopamine_w_opto_events(vrfl,fmatfl, length(fmatfl));
 disp(savepthfmat)
+%%
+clear all;
+mouse_name = "e241";
+days = [4];
+src = 'Y:\halo_grabda';
 
+for day=days
+    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior\vr\*.mat"));
+%     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
+    savepthfmat = VRalign_dopamine_w_opto_events(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+    disp(savepthfmat)
+end
 %%
 % 2 planes
 % has to have combined cells
