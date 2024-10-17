@@ -16,7 +16,8 @@ mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_by_trialtype, intersect_arrays, make_tuning_curves_probes
+from placecell import make_tuning_curves_by_trialtype, make_tuning_curves_trial_by_trial, \
+    intersect_arrays, make_tuning_curves_probes
 from rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
@@ -29,15 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 # radian_alignment_saved = {} # overwrite
-goal_cell_iind = []
-goal_cell_prop = []
-goal_cell_null = []
-dist_to_rew = [] # per epoch
-num_epochs = []
-pvals = []
-rates_all = []
-total_cells = []
-epoch_perm = []
+evolution_com_rewrel = []
 radian_alignment = {}
 cm_window = 10
 # cm_window = [10,20,30,40,50,60,70,80] # cm
@@ -53,7 +46,7 @@ for ii in range(len(conddf)):
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+            'stat', 'licks'])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         try:
@@ -61,6 +54,8 @@ for ii in range(len(conddf)):
         except:
                 rewsize = 10
         ybinned = fall['ybinned'][0]/scalingf
+        lick = fall['licks']
+        lick = np.squeeze(lick)
         track_length=180/scalingf    
         forwardvel = fall['forwardvel'][0]    
         changeRewLoc = np.hstack(fall['changeRewLoc'])
@@ -81,9 +76,17 @@ for ii in range(len(conddf)):
         rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length/bins 
-        # import saved
-        tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+        # import
+        tcs_correct, coms_correct, tcs_fail, coms_fail, com_goal, \
+                goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+        goal_window = 10*(2*np.pi/track_length) # cm converted to rad
+        # change to relative value 
+        coms_rewrel = np.array([com-np.pi for com in coms_correct])
+        perm = list(combinations(range(len(coms_correct)), 2))     
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        # get goal cells across all epochs        
+        goal_cells = intersect_arrays(*com_goal)
 
         # probes
         # takes time
@@ -96,42 +99,24 @@ for ii in range(len(conddf)):
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         # 9/19/24
         # find correct trials within each epoch!!!!
-        tcs_probe, coms_probe=make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        F_rewrel = Fc3[:, goal_cells]
+        tcs_probe, coms_probe=make_tuning_curves_probes(eps,rewlocs,ybinned,rad,F_rewrel,trialnum,
             rewards,forwardvel,rewsize,bin_size,probe=[0])
-        tcs_probe_other, coms_probe_other=make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        tcs_probe_other, coms_probe_other=make_tuning_curves_probes(eps,rewlocs,ybinned,rad,F_rewrel,trialnum,
             rewards,forwardvel,rewsize,bin_size,probe=[1,2])  
-
-        # remake tcs without circular alignment
-        tcs_correct, coms_correct, tcs_fail, coms_fail= make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size)
-        # get goal cells across all epochs        
-        goal_cells = intersect_arrays(*com_goal)
-        colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod']
-        # probes
-        for gc in goal_cells:
-            fig, ax = plt.subplots()
-            for ep in range(1,len(coms_correct)):
-                ax.plot(tcs_correct[ep-1,gc,:], label=f'rewloc {rewlocs[ep-1]}', color=colors[ep-1])
-                ax.plot(tcs_probe[ep,gc,:], label=f'rewloc {rewlocs[ep-1]}', color=colors[ep-1],
-                        linestyle='--')
-                ax.plot(tcs_probe_other[ep,gc,:], label=f'rewloc {rewlocs[ep-1]}', color=colors[ep-1],
-                        linestyle='dotted')
-
-                ax.axvline(rewlocs[ep-1]/bin_size, color=colors[ep-1])
-                ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-                # not radian
-                tick=10
-                ax.set_xticks(np.arange(0,bins+1,10))
-                ax.set_xticklabels(np.arange(0,track_length+1,(track_length/bins)*tick))
-                ax.set_xlabel('Position (cm)')
-                ax.set_ylabel('Fc3')
-                ax.set_title(f'{animal}, day {day}, cell {gc}')
-            ax.legend()
-            # plt.show(fig)
-            pdf.savefig(fig)
-            plt.close(fig)
-            
-pdf.close()
+        trialstates, licks_trial_by_trial, tcs_trial_by_trial,\
+        coms_trial_by_trial = make_tuning_curves_trial_by_trial(eps,rewlocs,
+            lick,ybinned,rad,F_rewrel,trialnum,
+            rewards,forwardvel,rewsize,bin_size)        # remake tcs without circular alignment
+        
+        coms_probe_rewrel = [com-rewlocs[ep] for ep,com in enumerate(coms_probe)]
+        coms_probe_other_rewrel = [com-rewlocs[ep] for ep,com in enumerate(coms_probe_other)]
+        coms_per_correcttr = [[com[cl][trialstates[ep]==1]-rewlocs[ep] for cl in range(com.shape[0])] for ep,
+                        com in enumerate(coms_trial_by_trial)]
+        # learning trials --> end probe 1 --> end probe 2,3
+        # animal, trial type, epoch, cell
+        evolution_com_rewrel.append([coms_per_correcttr,coms_probe_rewrel,coms_probe_other_rewrel])
+        
 
 # save pickle of dcts
 # with open(saveddataset, "wb") as fp:   #Pickling

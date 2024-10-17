@@ -105,6 +105,60 @@ def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,t
     return trialstates, licks, tcs, coms
 
 
+def make_tuning_curves_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
+    trialstates = []; licks = []; tcs = []; coms = []    
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        # excludes probe trials
+        success, fail, strials, ftrials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        # make sure mouse did full trial & includes probes
+        trials = [xx for xx in np.unique(trialnum[eprng]) if np.sum(trialnum[eprng]==xx)>100]
+        trialstate = np.ones(len(trials))*-1
+        # check if original trial num is correct or not
+        trialstate[[xx for xx,t in enumerate(trials) if t in strials]] = 1
+        trialstate[[xx for xx,t in enumerate(trials) if t in ftrials]] = 0
+        trialstates.append(trialstate)
+        F = Fc3[eprng,:]            
+        # moving_middle,stop = get_moving_time_V3(forwardvel[eprng], 5, 5, 10)
+        # simpler metric to get moving time
+        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        # overwrite velocity filter
+        moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F = F[moving_middle,:]
+        # cells x trial x bin        
+        tcs_per_trial = np.ones((F.shape[1], len(trials), bins))*np.nan
+        coms_per_trial = np.ones((F.shape[1], len(trials)))*np.nan
+        licks_per_trial = np.ones((len(trials), bins))*np.nan        
+        if len(ttr)>lasttr: # only if ep has more than x trials            
+            for tt,trial in enumerate(trials): # iterates through the unique trials and not the
+                # trial number itself
+                # need to account for 0-2 probes in the beginning
+                # that makes the starting trialnum 1 or 2 or 3
+                mask = trialnum[eprng][moving_middle]==trial
+                relpos = ybinned[eprng][moving_middle][mask]                
+                licks_ep = lick[eprng][moving_middle][mask]                
+                for celln in range(F.shape[1]):
+                    f = F[mask,celln]
+                    tc = get_tuning_curve(relpos, f, bins=bins)  
+                    tc[np.isnan(tc)]=0 # set nans to 0
+                    tcs_per_trial[celln, tt,:] = tc
+                com = calc_COM_EH(tcs_per_trial[:, tt,:],bin_size)
+                coms_per_trial[:, tt] = com
+                lck = get_tuning_curve(relpos, licks_ep, bins=bins) 
+                lck[np.isnan(lck)]=0
+                licks_per_trial[tt,:] = lck
+        tcs.append(tcs_per_trial)
+        coms.append(coms_per_trial)
+        licks.append(licks_per_trial)
+
+    return trialstates, licks, tcs, coms
+
+
 def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    
     """
@@ -177,7 +231,7 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
 
 
 def make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    
+            rewards,forwardvel,rewsize,bin_size,bins=90,velocity_filter=False,probe=[0]):    
     """
     Description: This function creates tuning curves for neuronal activity aligned to reward locations and categorizes them by trial type (correct or fail). The tuning curves are generated for each epoch, and the data is filtered based on velocity if the option is enabled.
     Parameters:
@@ -224,7 +278,7 @@ def make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         relpos_all = np.array(relpos)[moving_middle]
         # check if epoch has probes
         if sum(trialnum<3)>0: 
-            mask = [True if xx==0 else False for xx in trialnum[eprng][moving_middle]] # probe 1 ONLY
+            mask = [True if xx in probe else False for xx in trialnum[eprng][moving_middle]] # probe 1 ONLY
             F = F_all[mask,:]
             relpos = relpos_all[mask]                
             tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
@@ -370,32 +424,6 @@ def make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,
     tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)      
     
     return tcs_correct, coms_correct
-
-def make_tuning_curves_relative_to_reward(eps,rewlocs,ybinned,track_length,Fc3,trialnum,
-            rewards,forwardvel,rewsize,lasttr=5,bins=100):
-    ypos_rel = []; tcs_early = []; tcs_late = []; coms = []    
-    # remake tuning curves relative to reward        
-    for ep in range(len(eps)-1):
-        eprng = np.arange(eps[ep],eps[ep+1])
-        rewloc = rewlocs[ep]
-        relpos = [(xx-rewloc)/rewloc if xx<(rewloc-rewsize) else (xx-rewloc)/(track_length-rewloc) for xx in ybinned[eprng]]            
-        ypos_rel.append(relpos)
-        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-        F = Fc3[eprng,:]            
-        # simpler metric to get moving time
-        moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
-        F = F[moving_middle,:]
-        relpos = np.array(relpos)[moving_middle]
-        if len(ttr)>5:
-            mask = trialnum[eprng][moving_middle]>ttr[-lasttr]
-            F = F[mask,:]
-            relpos = relpos[mask]                
-            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
-            com = calc_COM_EH(tc,track_length/bins)
-            tcs_late.append(tc)
-            coms.append(com)
-
-    return ypos_rel, tcs_late, coms
 
 def get_place_field_widths(tuning_curves, threshold=0.5):
     """
@@ -913,20 +941,6 @@ def find_differentially_inactivated_cells(tuning_curve1, tuning_curve2, threshol
     differentially_inactivated_cells = np.where(activity_diff > threshold)[0]
     
     return differentially_inactivated_cells
-
-        
-def calculate_difference(tuning_curve1, tuning_curve2):
-    """
-    Calculate the difference between two normalized tuning curves.
-    
-    Parameters:
-    tuning_curve1, tuning_curve2 (numpy.ndarray): The two tuning curves.
-    
-    Returns:
-    numpy.ndarray: The difference between the tuning curves.
-    """
-    diff = tuning_curve1 - tuning_curve2
-    return diff
 
 def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     track_length = 270
