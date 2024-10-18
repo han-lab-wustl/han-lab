@@ -1,11 +1,5 @@
-function loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold)
-%called by "runVideosTiff_EH_new_sbx_uint16"
-%version that doesn't divide by 2 for non-suite2p analysis
-% modified from moi's version.
-% 200329. EH.
-% 200501 EH. changed java path for this computer
-% also change to imagej save file name.
-% Uses sbxread to load chunks of .sbx files, limiting RAM requirements
+function loadVideoTiffNoSplit_Opto(src, days, lenVid, artifact_type,bandlimit)
+%called by "runVideosTiff"
 % for some reason, suite2p turns everything into unsigned 16bit with max
 % intensity value of 32767 (after motion correction). think this will actually clip high end of
 % values. moi's code scaled all based on max/min of entire movie. current
@@ -51,27 +45,35 @@ for day=days
         choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
         %         chtemp=chtemp(:,90:730,:);
 
-        chtemp=chtemp_original(150:end,125:718,:)-choptotemp(150:end,125:718,:); % zd added option to crop etl
+        chtemp=chtemp_original(110:end,125:718,:)-choptotemp(110:end,125:718,:); % zd added option to crop etl
         % used to be: (:,90:718,:)
-        % matlab order: x,y,z
+        % matlab order: y,x,z
         % chtemp original is with etl/opto artifact intact used to find
         % opto artifact
 
         chtemp=(((double(chtemp))/2)-1); %make max of movie 32767 (assuming it was 65535 before)
         chtemp=uint16(chtemp);
         % update stims
-        temp =  squeeze(nanmean(squeeze(nanmean(chtemp_original(1:20,:,:)))));
+        % bandlimit=14;
+        temp =  squeeze(mean(chtemp_original(1:bandlimit,125:718,:),[1,2],'omitnan'));
+        stdev = std(chtemp_original(bandlimit:end,125:718,:),0,[1,2,3],'omitnan');
+        filter = int16(stdev)*2; % 2 * std dev if blue laser of green signal
+        
         tempstims = zeros(length(temp),1);
-        for p = 1:size(info.etl_table,1)
+        for p = 1:size(info.etl_table,1) % split into planes
             currx = p:size(info.etl_table,1):length(temp);
-            temp2 = (abs(temp(currx)/nanmean(temp(currx))-1));
-            s = find(temp2>threshold);
+            temp2 = temp(currx);
+            if artifact_type==-1
+                s = find(temp2<(mean(temp2,'omitnan')-filter)); %if signal less than 2 std dev of mean
+            else
+                s = find(temp2>(mean(temp2,'omitnan')+filter)); % if signal greater than std dev
+            end
             if ~isempty(s)
                 tempstims(currx(s)) = 1;
             end
         end
-        if ii == 1
-            tempstims(1:10) = 0;
+        if ii == 1 % if first image, remove stim if in first 10 frames
+            tempstims(1:10) = 0; %?
         end
         stims = [stims; tempstims];
 

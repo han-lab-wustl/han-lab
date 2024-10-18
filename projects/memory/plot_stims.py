@@ -28,14 +28,13 @@ plt.close('all')
 # pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
 #     f"halo_opto.pdf"))
 
-# src = r"Y:\opto_control_grabda_2m"
 src = r'Y:\halo_grabda'
 animals = ['e243']
-days_all = [[5]]
-range_val = 5; binsize=0.2 #s
-dur=1.6# s stim duration
+days_all = [[7]]
+range_val = 8; binsize=0.2 #s
+dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-
+prewin = .5 # for which to normalize
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -59,7 +58,7 @@ for ii,animal in enumerate(animals):
             keys = params['params'].dtype
             # dff is in row 6 - roibasemean3/average
             # raw in row 7
-            row = 6
+            row =  6
             dff = np.hstack(params['params'][0][0][row][0][0])/np.nanmean(np.hstack(params['params'][0][0][row][0][0]))#/np.hstack(params['params'][0][0][9])            
             # nan out stims
             # dff[stims[pln::4].astype(bool)] = np.nan
@@ -101,7 +100,7 @@ for ii,animal in enumerate(animals):
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
                     timedFF, range_val, binsize)
-            prewin = 4
+            
             binss = np.ceil(prewin/binsize).astype(int)
             bound = int(range_val/binsize)
             #normalize

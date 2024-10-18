@@ -35,7 +35,7 @@ close all
 
 for dy=1:length(pr_dir)
     src = pr_dir{dy};
-    daypth = dir(fullfile(src, "**\E*.mat"));
+    daypth = dir(fullfile(src, "**\behavior\vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, '**\params.mat')); 
     savepthfmat = VRalign_dopamine_w_opto_events(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));

@@ -128,7 +128,12 @@ def fillops(ops, params):
     ops["save_mat"]=params["save_mat"]
     ops["threshold_scaling"]=1 #TODO: make modular
     ops["max_iterations"]=30
-
+    # added temp
+    ops["keep_movie_raw"]=1 #TODO: make modular
+    ops["two_step_registration"]=1
+    ops["nimg_init"]=500
+    ops["1Preg"]=1
+    
     return ops
 
 def fillops_drd(ops, params):
