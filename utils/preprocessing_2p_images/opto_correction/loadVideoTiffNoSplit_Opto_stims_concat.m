@@ -1,4 +1,4 @@
-function loadVideoTiffNoSplit_Opto_stims_concat(src, days, lenVid)
+function loadVideoTiffNoSplit_Opto_stims_concat(src, days, lenVid,artifact_type,bandlimit)
 %called by "runVideosTiff_EH_new_sbx_uint16"
 %version that doesn't divide by 2 for non-suite2p analysis
 % modified from moi's version.
@@ -38,6 +38,7 @@ for day=days
     % lims=double(lims); %lims = [min max] pixel values of chone
     stims = [];
     temps = [];
+    stddevs=[];
     for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
         % ii=1;
         if ii>9
@@ -55,7 +56,9 @@ for day=days
         % matlab order: x,y,z
         % chtemp original is with etl/opto artifact intact used to find
         % opto artifact
-        temps =  [temps squeeze(nanmean(squeeze(nanmean(chtemp_original(1:20,:,:)))))];
+        temps =  [temps squeeze(mean(chtemp_original(1:bandlimit,125:718,:),[1,2],'omitnan'))];
+        stdev = std(chtemp_original(bandlimit:end,125:718,:),0,[1,2,3],'omitnan');
+        stddevs = [stddevs stdev];
         chtemp=(((double(chtemp))/2)-1); %make max of movie 32767 (assuming it was 65535 before)
         chtemp=uint16(chtemp);
         imageJ_savefilename=strrep([currfile(1:end-4),'.tif'],'\','\\'); %ImageJ needs double slash
@@ -68,20 +71,26 @@ for day=days
         MIJ.run('Close All');
     end
 
-    tempstims = zeros(length(temps),1);
-    for p = 1:size(info.etl_table,1)
-        currx = p:size(info.etl_table,1):length(temps);
-        temp2 = (abs(temps(currx)/nanmean(temps(currx))-1));
-        s = find(temp2>0.5);
+    % set stddev filter
+    filter = int16(stddevs)*2; % 2 * std dev if blue laser of green signal
+    tempstims = zeros(length(temp),1);
+    for p = 1:size(info.etl_table,1) % split into planes
+        currx = p:size(info.etl_table,1):length(temp);
+        temp2 = temp(currx);
+        if artifact_type==-1
+            s = find(temp2<(mean(temp2,'omitnan')-filter)); %if signal less than 2 std dev of mean
+        else
+            s = find(temp2>(mean(temp2,'omitnan')+filter)); % if signal greater than std dev
+        end
         if ~isempty(s)
             tempstims(currx(s)) = 1;
         end
     end
-    if ii == 1
-        tempstims(1:10) = 0;
+    if ii == 1 % if first image, remove stim if in first 10 frames
+        tempstims(1:10) = 0; %?
     end
-
     stims = [stims; tempstims];
+
     save([stripped_filename '.mat'],'stims','-append')
 
 end

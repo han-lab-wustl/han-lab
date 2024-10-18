@@ -64,7 +64,7 @@ for day=days
             currx = p:size(info.etl_table,1):length(temp);
             temp2 = temp(currx);
             if artifact_type==-1
-                s = find(temp2<(mean(temp2,'omitnan')-filter)); %if signal less than 2 std dev of mean
+                s = find(temp2<(mean(temp2,'omitnan')-filter/2)); %if signal less than 2 std dev of mean
             else
                 s = find(temp2>(mean(temp2,'omitnan')+filter)); % if signal greater than std dev
             end

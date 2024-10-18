@@ -13,7 +13,7 @@ lenVid=3000;
 % threshold = 0.07; % a tunable parameter to find stims, set at 0.4 for chr2 data 
 artifact_type=-1; %negative -1 if red laser opto to detect pmt block; if blue laser opto, keep 1
 bandlimit=14; % top y dim of image to detect artifact
-loadVideoTiffNoSplit_Opto(src, days, lenVid, artifact_type, bandlimit);
+loadVideoTiffNoSplit_Opto_stims_concat(src, days, lenVid, artifact_type, bandlimit);
 
 
 

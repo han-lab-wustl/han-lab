@@ -29,7 +29,7 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e243']
+animals = ['e241']
 days_all = [[7]]
 range_val = 8; binsize=0.2 #s
 dur=3# s stim duration
@@ -46,7 +46,10 @@ for ii,animal in enumerate(animals):
         stims = scipy.io.loadmat(stimspth)
         stims = np.hstack(stims['stims']) # nan out stims
         plndff = []
-        fig,axes=plt.subplots(nrows=2, ncols=4, figsize=(12,5))
+        fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
+        gs1 = gridspec.GridSpec(4, 4)
+        gs1.update(wspace=0.025, hspace=0.05) # set the spacing between axes. 
+
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             params = scipy.io.loadmat(path)
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             
@@ -60,6 +63,11 @@ for ii,animal in enumerate(animals):
             # raw in row 7
             row =  6
             dff = np.hstack(params['params'][0][0][row][0][0])/np.nanmean(np.hstack(params['params'][0][0][row][0][0]))#/np.hstack(params['params'][0][0][9])            
+            # plot mean img
+            ax=axes[0,pln]
+            ax.imshow(params['params'][0][0][0],cmap='Greys_r')
+            ax.axis('off')
+            ax.set_title(f'{animal}, day {day}, {planelut[pln]}')
             # nan out stims
             # dff[stims[pln::4].astype(bool)] = np.nan
             # # fig, ax = plt.subplots()
@@ -68,7 +76,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(3).mean().values)
+            dff = np.hstack(dffdf.rolling(5).mean().values)
             # get off plane stim
             # offpln=pln+1 if pln<3 else pln-1
             # startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
@@ -91,11 +99,11 @@ for ii,animal in enumerate(animals):
             # unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
             # startofstims[unrewstimidx]=1
             startofstims=params['optoEvent'][0]
-            ax=axes[0,pln]
+            ax=axes[1,pln]
             ax.plot(dff-1,label=f'plane: {pln}')
             ax.plot(startofstims-1)
             ax.set_ylim([-.1,.1])
-            ax.set_title(f'Stim events, {animal}, day {day}, {planelut[pln]}')
+            ax.set_title(f'Stim events')
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
@@ -108,7 +116,7 @@ for ii,animal in enumerate(animals):
             rewdFF = np.array([rewdFF[:,tr]-np.nanmean(meanrewdFF[(bound-binss):bound]) \
                 for tr in range(rewdFF.shape[1])]).T
 
-            ax=axes[1,pln]
+            ax=axes[2,pln]
             ax.plot(meanrewdFF, color = 'k')   
             xmin,xmax = ax.get_xlim()     
             ax.fill_between(range(0,int(range_val/binsize)*2), 
