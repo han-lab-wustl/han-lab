@@ -32,7 +32,7 @@ for day=days
     % lims=double(lims); %lims = [min max] pixel values of chone
     stims = [];
     temps = [];
-    for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
+    f or ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
         % ii=1;
         if ii>9
             currfile=strcat(stripped_filename,'_x',num2str(ii),'.mat');
