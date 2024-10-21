@@ -75,7 +75,8 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
 def ig_f(dirr, files):
     return [f for f in files if os.path.isfile(os.path.join(dirr, f))]
 
-def copydopaminefldstruct(src, dst, days, overwrite=False,fldstruct=None):
+def copydopaminefldstruct(src, dst, days, overwrite=False,
+                fldstruct=None):
     """useful for sharing dopamine data
     e.g. dst = r'\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\e231_hrz'
     src = r'Z:\chr2_grabda\e231'

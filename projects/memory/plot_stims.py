@@ -29,8 +29,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e242']
-days_all = [[2]]
+animals = ['e243']
+days_all = [[10]]
 
 range_val = 5; binsize=0.2 #s
 dur=3# s stim duration
@@ -43,9 +43,9 @@ for ii,animal in enumerate(animals):
         
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # for each plane
-        stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
-        stims = scipy.io.loadmat(stimspth)
-        stims = np.hstack(stims['stims']) # nan out stims
+        # stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
+        # stims = scipy.io.loadmat(stimspth)
+        # stims = np.hstack(stims['stims']) # nan out stims
         plndff = []
         fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
 
