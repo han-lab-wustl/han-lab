@@ -75,8 +75,12 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
 def ig_f(dirr, files):
     return [f for f in files if os.path.isfile(os.path.join(dirr, f))]
 
-def copydopaminefldstruct(src, dst, days, overwrite=False):
+def copydopaminefldstruct(src, dst, days, overwrite=False,fldstruct=None):
     """useful for sharing dopamine data
+    e.g. dst = r'\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\e231_hrz'
+    src = r'Z:\chr2_grabda\e231'
+    days = ['cf1','cf2','cf3','cf4','cf5','cf6','cf7','cf8','cf9']
+    fldstruct = if you use the scanbox fld as your day fld, arg = '000'
     """
     makedir(dst)
     days = [os.path.join(src,str(xx)) for xx in days]
@@ -85,7 +89,10 @@ def copydopaminefldstruct(src, dst, days, overwrite=False):
         dst_day = os.path.join(dst,os.path.basename(day))
         if not os.path.exists(dst_day): shutil.copytree(day, dst_day, ignore=ig_f)
         # for zahra, add the scanbox fld
-        imgfl1 = [os.path.join(day, xx) for xx in os.listdir(day) if "000" in xx][0]
+        if fldstruct=='000':
+            imgfl1=day
+        else:
+            imgfl1 = [os.path.join(day, xx) for xx in os.listdir(day) if "000" in xx][0]
         imgfl = [os.path.join(imgfl1, xx) for xx in os.listdir(imgfl1) if "suite2p" in xx][0]
         planes = range(len([xx for xx in listdir(imgfl) if "plane" in xx]))
         # imgfl = pth

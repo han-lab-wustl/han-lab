@@ -32,14 +32,14 @@ for day=days
     % lims=double(lims); %lims = [min max] pixel values of chone
     stims = [];
     temps = [];
-    f or ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
+    for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
         % ii=1;
         if ii>9
             currfile=strcat(stripped_filename,'_x',num2str(ii),'.mat');
         else
             currfile=strcat(stripped_filename,'_',num2str(ii),'.mat');
         end
-        
+
         chtemp=sbxread(stripped_filename,((ii-1)*lenVid),min(lenVid,(numframes-((ii-1)*lenVid))));
         chtemp_original=double(squeeze(chtemp));
         choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
@@ -58,13 +58,13 @@ for day=days
         temp =  squeeze(mean(chtemp_original(1:bandlimit,125:718,:),[1,2],'omitnan'));
         stdev = std(chtemp_original(bandlimit:end,125:718,:),0,[1,2,3],'omitnan');
         filter = int16(stdev)*2; % 2 * std dev if blue laser of green signal
-        
+
         tempstims = zeros(length(temp),1);
         for p = 1:size(info.etl_table,1) % split into planes
             currx = p:size(info.etl_table,1):length(temp);
             temp2 = temp(currx);
             if artifact_type==-1
-                s = find(temp2<(mean(temp2,'omitnan')-filter/2)); %if signal less than 2 std dev of mean
+                s = find(temp2<(mean(temp2,'omitnan')-filter)); %if signal less than 2 std dev of mean
             else
                 s = find(temp2>(mean(temp2,'omitnan')+filter)); % if signal greater than std dev
             end
@@ -87,8 +87,9 @@ for day=days
         MIJ.run('Close All');
     end
 
-    save([stripped_filename '.mat'],'stims','-append')
-
+    save([stripped_filename '.mat'],'stims','-append')    
 end
 MIJ.exit;
+end
+
 

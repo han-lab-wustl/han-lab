@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from dopamine import get_rewzones
+from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
@@ -29,13 +30,14 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e242']
-days_all = [[2]]
-
+animals = ['e243']
+days_all = [[9]]
 range_val = 5; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
+planes=4
+
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -43,14 +45,13 @@ for ii,animal in enumerate(animals):
         
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # for each plane
-        stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
-        stims = scipy.io.loadmat(stimspth)
-        stims = np.hstack(stims['stims']) # nan out stims
         plndff = []
         fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
 
-        for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
+        for path in list(Path(os.path.join(src, animal, str(day))).rglob('params.mat')):
+            print(path)
             params = scipy.io.loadmat(path)
+
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             
             timedFF = np.hstack(params['timedFF'])
             planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
@@ -76,36 +77,26 @@ for ii,animal in enumerate(animals):
             
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(5).mean().values)
-            # get off plane stim
-            # offpln=pln+1 if pln<3 else pln-1
-            # startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
-            # min_iind = [min(xx) for xx in startofstims if len(xx)>0]
-            # # remove rewarded stims
-            # cs=params['solenoid2'][0]
-            # # cs within 50 frames of start of stim - remove
-            # framelim=20
-            # unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
-            # startofstims = np.zeros_like(dff)
-            # startofstims[unrewstimidx]=1
-            # # get on plane stim for red laser
-            # offpln=pln
-            # ss = consecutive_stretch(np.where(stims[offpln::4])[0])
-            # min_iind = [min(xx) for xx in ss if len(xx)>0]
-            # # remove rewarded stims
-            # cs=params['solenoid2'][0]
-            # # cs within 50 frames of start of stim - remove
-            # framelim=20
-            # unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
-            # startofstims[unrewstimidx]=1
-            startofstims=params['optoEvent'][0]
+            # find stops
+            velocity = params['forwardvelALL'][0]
+            veldf = pd.DataFrame({'velocity': velocity})
+            velocity = np.hstack(veldf.rolling(5).mean().values)
+            moving_middle,stop = get_moving_time_v3(velocity,5,10,10)
+            pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
+            nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
+                    post_win_framesALL,velocity, params['rewardsALL'][0])
+            nonrew_per_plane = np.zeros_like(params['changeRewLoc'][0])
+            nonrew = np.floor(nonrew/planes)
+            nonrew_per_plane[nonrew.astype(int)] = 1
+
             ax=axes[1,pln]
             ax.plot(dff-1,label=f'plane: {pln}')
-            ax.plot(startofstims-1)
+            ax.plot(nonrew_per_plane-1)
             ax.set_ylim([-.1,.1])
-            ax.set_title(f'Stim events')
+            ax.set_title(f'Stop events')
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
-                rewdFF= eye.perireward_binned_activity(dff, startofstims, 
+                rewdFF= eye.perireward_binned_activity(dff, nonrew_per_plane, 
                     timedFF, range_val, binsize)
             
             binss = np.ceil(prewin/binsize).astype(int)
@@ -122,20 +113,16 @@ for ii,animal in enumerate(animals):
             meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
             meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),            
             color='k',alpha=0.4)
-            ax.set_ylim([-0.02,0.02])
+            # ax.set_ylim([-0.02,0.02])
             ax.axhline(0, color='k', linestyle='--')
             ax.axhline(-.01, color='k', linestyle='--')
+            ax.axvline(int(range_val/binsize), color='k', linestyle='--')
             ymin=min(meanrewdFF)-.02
             ymax=max(meanrewdFF)+.02-ymin
-            ax.add_patch(
-                patches.Rectangle(
-            xy=(range_val/binsize,ymin),  # point of origin.
-            width=dur/binsize, height=ymax, linewidth=1, # width is s
-            color='mediumspringgreen', alpha=0.2))
 
             ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
-            ax.set_title(f'Peri-stim')
+            ax.set_title(f'Peri-stop')
             plndff.append(rewdFF)
             fig.tight_layout()
             # plt.show()            
@@ -145,15 +132,16 @@ for ii,animal in enumerate(animals):
 #%%
 
 # power tests
-
-condition_org = [25]
-condition_col = {25:'k', 200:'slategray',80:'darkcyan'}
-stimsec = 3 # stim duration (s)
-ymin=-0.02
-ymax=0.02-(ymin)
+condition = [200,80,280]
+condition_org = [80,200,280,280,280]
+condition_org = [80,200,280,280]
+condition_col = {280:'k', 200:'slategray',80:'darkcyan'}
+stimsec = 5 # stim duration (s)
+ymin=-0.04
+ymax=0.03-(ymin)
 planes=4
 # assumes 4 planes
-fig, axes = plt.subplots(nrows=4, figsize=(3,7), sharex=True)
+fig, axes = plt.subplots(nrows=4, figsize=(4,7), sharex=True)
 for pln in range(planes):
     ii=0; condition_dff = []
     idx_to_catch = []; condition = condition_org.copy() # custom condition
