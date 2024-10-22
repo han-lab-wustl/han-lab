@@ -2,9 +2,23 @@ import SimpleITK as sitk, os
 import numpy as np
 import ffmpeg
 
-import ffmpeg
+import ffmpeg,re
 import numpy as np
 import os
+
+# Function to extract the integer after '241018_E246_v2'
+def extract_integer_from_basename(path,basename):
+    # Extract basename part from the path
+    filename = path.split("\\")[-1]
+    
+    # Search for the integer after the given basename pattern
+    regex = rf'{re.escape(basename)}-(\d+)'
+    match = re.search(regex, filename)
+    if match:
+        return int(match.group(1))
+    else:
+        return float('inf')  # Return infinity if no match found to push such files to the end
+
 
 def vidwrite(fn, images, framerate=31.25*2, vcodec='libx264'):
     if not isinstance(images, np.ndarray):
