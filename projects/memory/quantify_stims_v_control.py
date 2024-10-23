@@ -30,13 +30,14 @@ plt.close('all')
 src = r'Z:\opn3_grabda'
 range_val = 10; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-conddf = pd.read_excel(r'Z:\opn3_grabda\opn3_key.xlsx',sheet_name='opn3')
+conddf = pd.read_excel(r'Z:\opn3_grabda\opn3_key_zd_updated.xlsx',sheet_name='opn3')
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
+animals=['e222']
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = conddf.loc[((conddf.animal==animal) & (conddf.artifact!=True)), 'day'].values.astype(int)    
-    if animal=='e219': src = r'Y:\opto_control_grabda_2m'
+    if ((animal=='e219') or (animal=='e221') or (animal=='e222')): src = r'Y:\opto_control_grabda_2m'
     else: src = r'Z:\opn3_grabda'
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
@@ -66,7 +67,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(3).mean().values)
+            dff = np.hstack(dffdf.rolling(5).mean().values)
             # get off plane stim 
             offpln=pln+1 if pln<3 else pln-1
             startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
@@ -132,7 +133,7 @@ for pln in range(planes):
     ii=0; condition_dff = []
     idx_to_catch = []
     for dy,v in day_date_dff.items():
-        if 'e219' in dy:
+        if (('e219' in dy) or ('e221' in dy) or ('e222' in dy)):
             rewdFF = day_date_dff[dy][pln] # so only
             if rewdFF.shape[1]>0:            
                 meanrewdFF = np.nanmean(rewdFF,axis=1)

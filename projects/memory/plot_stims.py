@@ -29,10 +29,10 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e243']
-days_all = [[10]]
+animals = ['e246']
+days_all = [[4]]
 
-range_val = 5; binsize=0.2 #s
+range_val = 8; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize

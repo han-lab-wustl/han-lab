@@ -31,7 +31,7 @@ plt.close('all')
 
 src = r'Y:\halo_grabda'
 animals = ['e243']
-days_all = [[9]]
+days_all = [[10]]
 range_val = 5; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
@@ -81,7 +81,7 @@ for ii,animal in enumerate(animals):
             velocity = params['forwardvelALL'][0]
             veldf = pd.DataFrame({'velocity': velocity})
             velocity = np.hstack(veldf.rolling(5).mean().values)
-            moving_middle,stop = get_moving_time_v3(velocity,5,10,10)
+            moving_middle,stop = get_moving_time_v3(velocity,5,30,10)
             pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
             nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
                     post_win_framesALL,velocity, params['rewardsALL'][0])

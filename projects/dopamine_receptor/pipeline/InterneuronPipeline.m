@@ -53,7 +53,7 @@ for dy=1:length(pr_dir) % per day
     end
 end
 %% 
-pr_dir=uipickfiles;
+% pr_dir=uipickfiles;
 for dy=1:length(pr_dir) % per day
     % align images to behavior
 
@@ -97,15 +97,15 @@ end
 %% section 8 multiple_days_reg_file
 
 % zd - iterates through all days and planes you pick
-pr_dir=uipickfiles;
-template_day = 1;
-multiple_days_reg_file_GM(pr_dir,template_day)
-%% section 9 main_getall_days_registered
-close all
 % pr_dir=uipickfiles;
-days_involved = 'd12d13d14d15'; % change to fit your days tracked
-template_day = 1;
-get_all_cells_registered(pr_dir, days_involved,template_day)
+% template_day = 1;
+% multiple_days_reg_file_GM(pr_dir,template_day)
+% %% section 9 main_getall_days_registered
+% close all
+% % pr_dir=uipickfiles;
+% days_involved = 'd12d13d14d15'; % change to fit your days tracked
+% template_day = 1;
+% get_all_cells_registered(pr_dir, days_involved,template_day)
 
 %% vralign
 

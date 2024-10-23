@@ -28,7 +28,7 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-range_val = 10; binsize=0.2 #s
+range_val = 8; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_excel(r'Y:\halo_grabda\halo_key.xlsx',sheet_name='halo')
 animals = np.unique(conddf.animal.values.astype(str))
@@ -36,7 +36,7 @@ animals = np.array([an for an in animals if 'nan' not in an])
 # animals = ['e241', 'e242', 'e243']
 day_date_dff = {}
 for ii,animal in enumerate(animals):
-    days = conddf.loc[(conddf.animal==animal), 'day'].values.astype(int)    
+    days = conddf.loc[((conddf.animal==animal) & (conddf.drug=='drug')), 'day'].values.astype(int)    
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # for each plane
@@ -145,7 +145,7 @@ for pln in range(planes):
                 meanrewdFF = np.nanmean(rewdFF,axis=1)
                 meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
                 rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
-                condition_dff.append([meanrewdFF, rewdFF_prewin])
+                condition_dff.append([meanrewdFF, rewdFF_prewin, dy[:4]])
             else: idx_to_catch.append(ii)
             ii+=1
 
@@ -180,7 +180,7 @@ for pln in range(planes):
     # ax.legend(bbox_to_anchor=(1.1, 1.05))
 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
 ax.set_xticklabels(range(-range_val, range_val+1, 2))
-fig.suptitle(f'All animals (n=2), per condition \n\
+fig.suptitle(f'All animals (n=3), per condition \n\
     Subtracted from matched controls (n=3)')
 
 fig.tight_layout()
@@ -197,12 +197,13 @@ for pln in range(planes):
                 meanrewdFF = np.nanmean(rewdFF,axis=1)
                 meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
                 rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
-                condition_dff.append([meanrewdFF, rewdFF_prewin])
+                condition_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]]) # save an per trial
             else: idx_to_catch.append(ii)
             ii+=1    
 
     meanrewdFF = np.vstack([x[0] for x in condition_dff])
     rewdFF = np.hstack([x[1] for x in condition_dff])
+    animals = np.hstack([x[2] for x in condition_dff])
     # p-val per plane
     meancond = np.nanmean(meanrewdFF,axis=0)-ctrl_mean_trace_per_pln[pln]
     rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewdFF.T]).T
@@ -210,7 +211,7 @@ for pln in range(planes):
                             axis=0)
     t,pval = scipy.stats.ttest_1samp(meantest,popmean=0)
     print(f'Plane {pln}, P-value={pval:.5f}')
-    save=(meantest,pval)
+    save=(meantest,pval,animals)
     plndff.append(save)
 #%%
 plt.rc('font', size=25)
@@ -221,7 +222,14 @@ for pln in range(planes):
     pval=plndff[pln][1]
     df['pval']=[pval]*len(plndff[pln][0])
     df['plane'] =[planelut[pln]]*len(df)
-    df['plane_subgroup'] = np.concatenate([['superficial' if (pln<3 and pln!=0) else 'deep']*len(df)])
+    df['animal'] = plndff[pln][2]    
+    if (pln<3):
+        plnsg = 'superficial'
+    elif (pln==3):
+        plnsg = 'deep'
+    else:
+        plnsg=np.nan
+    df['plane_subgroup'] = np.concatenate([[plnsg]*len(df)])
     dfs.append(df)
 bigdf = pd.concat(dfs)
 
@@ -244,7 +252,39 @@ for k,v in planelut.items():
     ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs)
     i+=1
     
-ax.set_title('Per trial quantification n=2 animals',pad=60)
+ax.set_title('Per trial quantification n=3 animals',pad=60)
+
+#%%
+# per animal 
+
+bigdfan = bigdf.groupby(['animal', 'plane']).mean(numeric_only=True)
+# # # Specify the desired order
+# desired_order = ['SLM', 'SR', 'SP', 'SO']
+
+# # Convert the 'City' column to a categorical type with the specified order
+# bigdfan['plane'] = pd.Categorical(bigdfan['plane'], categories=desired_order, ordered=True)
+
+# # Sort the DataFrame by the 'City' column
+# bigdfan.sort_values('plane')
+
+fig,ax = plt.subplots(figsize=(3.5,5))
+g=sns.barplot(x='plane',y='mean_dff_during_stim',hue='plane',data=bigdfan,fill=False,
+            errorbar='se',ax=ax,linewidth=3,err_kws={'linewidth': 3})
+sns.stripplot(x='plane',y='mean_dff_during_stim',hue='plane',data=bigdfan,s=15,
+            alpha=0.8,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+# ax.legend(bbox_to_anchor=(1.01, 1.05))
+
+y=0.001
+fs=14
+i=0
+for k,v in planelut.items():
+    values = bigdfan.loc[bigdfan.index.get_level_values('plane')==planelut[k], 'mean_dff_during_stim'].values
+    t,pval = scipy.stats.ttest_1samp(values,popmean=0)
+    ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs, rotation=45)
+    i+=1
+    
+ax.set_title('n=3 animals',pad=60)
 #%%
 # by plane subgroup
 
@@ -275,5 +315,30 @@ xs = [x2,x1]
 for i in range(2):    
     ax.text(i, y, f'p={pval[i]:.7f}\n n={xs[i].shape[0]} trials', ha='center', fontsize=fs)
     
-ax.set_title('Per trial quantification, 2 animals',pad=60)
-# fig.tight_layout()
+ax.set_title('Per trial quantification, 3 animals',pad=60)
+#%%
+
+# per animal 
+
+bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
+bigdfan = bigdfan.sort_values('plane_subgroup')
+
+fig,ax = plt.subplots(figsize=(2,5))
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,
+            errorbar='se',ax=ax,linewidth=3,err_kws={'linewidth': 3})
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,s=15,
+            alpha=0.8,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_xlabel('')
+
+y=0.004
+fs=14
+i=0
+for layer in ['deep', 'superficial']:
+    values = bigdfan.loc[bigdfan.index.get_level_values('plane_subgroup')==layer, 'mean_dff_during_stim'].values
+    t,pval = scipy.stats.ttest_1samp(values,popmean=0)
+    ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs, rotation=45)
+    i+=1
+    
+ax.set_title('n=3 animals',pad=60)

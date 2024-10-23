@@ -212,7 +212,7 @@ def copydrdfldstruct(src, dst, days, overwrite=False):
                 # Find all .mat files ending with 'roibyclick_F' and starting with 'E', and all .jpg files
                 files_to_copy=[
                     f for f in os.listdir(reg_tif_folder)
-                    if (f.endswith('roibyclick_F.mat') or (f.endswith('.mat') and f.startswith('E'))) or f.endswith('.jpg')
+                    if (f.endswith('roibyclick_F.mat') or f.endswith('.mat') or f.startswith('E')) or f.endswith('.jpg')
                 ]
 
                 for file in files_to_copy:
