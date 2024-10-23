@@ -34,9 +34,10 @@ conddf = pd.read_excel(r'Y:\halo_grabda\halo_key.xlsx',sheet_name='halo')
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 # animals = ['e241', 'e242', 'e243']
+
 day_date_dff = {}
 for ii,animal in enumerate(animals):
-    days = conddf.loc[((conddf.animal==animal) & (conddf.drug=='drug')), 'day'].values.astype(int)    
+    days = conddf.loc[((conddf.animal==animal)), 'day'].values.astype(int)    
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # for each plane
@@ -55,15 +56,9 @@ for ii,animal in enumerate(animals):
             # raw in row 7
             row = 6
             dff = np.hstack(params['params'][0][0][row][0][0])/np.nanmedian(np.hstack(params['params'][0][0][row][0][0]))#/np.hstack(params['params'][0][0][9])            
-            # nan out stims
-            # dff[stims[pln::4].astype(bool)] = np.nan
-            # # fig, ax = plt.subplots()
-            # if pln>1:
-            #     plt.plot(dff[:], label=f'plane {pln}')
-            # plt.legend()
-            
+
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(5).mean().values)
+            dff = np.hstack(dffdf.rolling(8).mean().values)
             startofstims=params['optoEvent'][0]
 
             # plot mean img
@@ -100,17 +95,19 @@ for ii,animal in enumerate(animals):
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
             ax.set_title(f'Peri-stim, {animal}, day {day}, plane {pln}')
             plndff.append(rewdFF)
-    
-        day_date_dff[f'{animal}_{day}'] = plndff
+        condition = conddf.loc[((conddf.animal==animal) & (conddf.day==day)), 'drug'].values[0]    
+
+        day_date_dff[f'{animal}_{day}_{condition}'] = plndff
 
 #%%
 
 # quantification
+# get control traces
 plt.rc('font', size=8)
 # settings
 stimsec = 3 # stim duration (s)
-ymin=-0.01
-ymax=0.01
+ymin=-0.012
+ymax=0.012
 height=ymax-(ymin)
 planes=4
 norm_window = 3 #s
@@ -131,11 +128,15 @@ for pln in range(planes):
             else: idx_to_catch.append(ii)
     meanrewdFF = np.nanmean(np.vstack([x[0] for x in condition_dff]),axis=0) # mean across days
     ctrl_mean_trace_per_pln.append(meanrewdFF)
+#%%
+plt.rc('font', size=11)
 
 # assumes 4 planes
-fig, axes = plt.subplots(nrows=4, figsize=(3,6), sharex=True)
+fig, axes = plt.subplots(nrows=4, ncols=2,figsize=(6,9), sharex=True)
 for pln in range(planes):
-    ii=0; condition_dff = []
+    ii=0; 
+    saline_dff = []
+    drug_dff = []
     idx_to_catch = []
     
     for dy,v in day_date_dff.items():
@@ -145,22 +146,38 @@ for pln in range(planes):
                 meanrewdFF = np.nanmean(rewdFF,axis=1)
                 meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
                 rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
-                condition_dff.append([meanrewdFF, rewdFF_prewin, dy[:4]])
+                if 'drug' in dy:
+                    drug_dff.append([meanrewdFF, rewdFF_prewin, dy[:4]])
+                else:
+                    saline_dff.append([meanrewdFF, rewdFF_prewin, dy[:4]])
             else: idx_to_catch.append(ii)
             ii+=1
 
-    ax = axes[pln]
-    meanrewdFF = np.vstack([x[0] for x in condition_dff])
-    rewdFF = np.hstack([x[1] for x in condition_dff])
+    ax = axes[pln,0]
+    meanrewdFF_s = np.vstack([x[0] for x in saline_dff])
+    rewdFF_s = np.hstack([x[1] for x in saline_dff])
+    meanrewdFF_d = np.vstack([x[0] for x in drug_dff])
+    rewdFF_d = np.hstack([x[1] for x in drug_dff])
+
     # plot
-    meancond = np.nanmean(meanrewdFF,axis=0)-ctrl_mean_trace_per_pln[pln]
-    rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewdFF.T]).T
-    ax.plot(meancond,linewidth=1.5)   
+    meancond = np.nanmean(meanrewdFF_s,axis=0)-ctrl_mean_trace_per_pln[pln]
+    rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewdFF_s.T]).T
+    ax.plot(meancond,linewidth=1.5,color='k',label='none')   
     xmin,xmax = ax.get_xlim()         
     ax.fill_between(range(0,int(range_val/binsize)*2), 
     meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
     meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    alpha=0.6)        
+    alpha=0.5,color='k')  
+    # also plot drug
+    meancond = np.nanmean(meanrewdFF_d,axis=0)-ctrl_mean_trace_per_pln[pln]
+    rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewdFF_d.T]).T
+    ax.plot(meancond,linewidth=1.5,color='royalblue',label='drug')   
+    xmin,xmax = ax.get_xlim()         
+    ax.fill_between(range(0,int(range_val/binsize)*2), 
+    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    alpha=0.5,color='royalblue')        
+      
     # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
     ax.add_patch(
         patches.Rectangle(
@@ -177,11 +194,70 @@ for pln in range(planes):
     ii+=1
     ax.set_title(f'\nPlane {planelut[pln]}')
     ax.set_ylim([ymin,ymax])
-    # ax.legend(bbox_to_anchor=(1.1, 1.05))
+    if pln==3: ax.legend()
+
+# subtract from drug
+# assumes 4 planes
+for pln in range(planes):
+    ii=0; 
+    saline_dff = []
+    drug_dff = []
+    idx_to_catch = []
+    
+    for dy,v in day_date_dff.items():
+        if conddf.loc[conddf.animal==dy[:4],'condition'].values[0]!='control':
+            rewdFF = day_date_dff[dy][pln] # so only
+            if rewdFF.shape[1]>0:            
+                meanrewdFF = np.nanmean(rewdFF,axis=1)
+                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
+                rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
+                if 'drug' in dy:
+                    drug_dff.append([meanrewdFF, rewdFF_prewin, dy[:4]])
+                else:
+                    saline_dff.append([meanrewdFF, rewdFF_prewin, dy[:4]])
+            else: idx_to_catch.append(ii)
+            ii+=1
+
+    ax = axes[pln,1]
+    meanrewdFF_s = np.vstack([x[0] for x in saline_dff])
+    rewdFF_s = np.hstack([x[1] for x in saline_dff])
+    meanrewdFF_d = np.vstack([x[0] for x in drug_dff])
+    rewdFF_d = np.hstack([x[1] for x in drug_dff])
+
+    # plot
+    meancond_s = np.nanmean(meanrewdFF_s,axis=0)-ctrl_mean_trace_per_pln[pln]
+    meancond_d = np.nanmean(meanrewdFF_d,axis=0)-ctrl_mean_trace_per_pln[pln]
+    meancond = meancond_s-meancond_d
+    rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewdFF_s.T]).T
+    rewcond = np.array([xx for xx in rewdFF_s.T]).T
+    rewcond = np.array([xx-meancond_d for xx in rewcond.T]).T
+
+    ax.plot(meancond,linewidth=1.5,color='indigo',label='control-drug')   
+    xmin,xmax = ax.get_xlim()         
+    ax.fill_between(range(0,int(range_val/binsize)*2), 
+    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    alpha=0.4,color='indigo')  
+    # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
+    ax.add_patch(
+        patches.Rectangle(
+    xy=(range_val/binsize,ymin),  # point of origin.
+    width=stimsec/binsize, height=height, linewidth=1, # width is s
+    color='mediumspringgreen', alpha=0.3))
+    # plot taper
+    ax.add_patch(
+        patches.Rectangle(
+    xy=((range_val/binsize)+stimsec/binsize,ymin),  # point of origin.
+    width=1.5/binsize, height=height, linewidth=1, # width is s
+    color='mediumspringgreen', alpha=0.13))
+    ax.axhline(0,color='k',linestyle='--')
+    ii+=1
+    ax.set_title(f'\nPlane {planelut[pln]}')
+    ax.set_ylim([ymin,ymax])
+    if pln==3: ax.legend()
 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
 ax.set_xticklabels(range(-range_val, range_val+1, 2))
-fig.suptitle(f'All animals (n=3), per condition \n\
-    Subtracted from matched controls (n=3)')
+fig.suptitle(f'Control vs. drug \ Halo-Halo+D1 anatagonist')
 
 fig.tight_layout()
 #%%

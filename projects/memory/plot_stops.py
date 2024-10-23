@@ -30,8 +30,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e243']
-days_all = [[10]]
+animals = ['e244']
+days_all = [[1]]
 range_val = 5; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}

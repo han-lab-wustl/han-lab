@@ -36,9 +36,9 @@ condrewloc = condrewloc[pd.to_numeric(condrewloc['prevrewloc'], errors='coerce')
 condrewloc[['rewloc', 'prevrewloc']] = condrewloc[['rewloc', 'prevrewloc']].astype(float)
 condrewloc[['Day']] = condrewloc[['Day']].astype(int)
 src = r"Y:\drd"
-animals = ['e256']
+animals = ['e262']
 # controls for gerardo
-days_all =[[20]]
+days_all =[[15]]
 
 range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
