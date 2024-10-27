@@ -20,7 +20,6 @@ import matplotlib.patches as patches
 from dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
-#%%
 
 plt.close('all')
 # save to pdf
@@ -29,8 +28,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e246']
-days_all = [[4]]
+animals = ['e241']
+days_all = [[12]]
 
 range_val = 8; binsize=0.2 #s
 dur=3# s stim duration

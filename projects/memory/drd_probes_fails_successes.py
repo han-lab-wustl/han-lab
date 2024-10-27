@@ -36,9 +36,9 @@ condrewloc = condrewloc[pd.to_numeric(condrewloc['prevrewloc'], errors='coerce')
 condrewloc[['rewloc', 'prevrewloc']] = condrewloc[['rewloc', 'prevrewloc']].astype(float)
 condrewloc[['Day']] = condrewloc[['Day']].astype(int)
 src = r"Y:\drd"
-animals = ['e262']
+animals = ['e256']
 # controls for gerardo
-days_all =[[15]]
+days_all =[[20]]
 
 range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -115,7 +115,7 @@ for ii,animal in enumerate(animals):
                 # Find the rows that contain NaNs
                 # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
                 # Select rows that do not contain any NaNs
-                fig, axes = plt.subplots(nrows=3,ncols=2,sharex=True)#,gridspec_kw={'width_ratios':[4,1]})
+                fig, axes = plt.subplots(nrows=4,ncols=2,sharex=True)#,gridspec_kw={'width_ratios':[4,1]})
                 ax = axes[0,0]
                 ax.imshow(rewdFF.T)
                 ax.axvline(int(range_val/binsize), color='w',linestyle='--')
@@ -148,7 +148,7 @@ for ii,animal in enumerate(animals):
                 success, fail, str_trials, ftr_trials, ttr, \
                 total_trials = get_success_failure_trials(trialnum, rewards)
             
-                # nonopto  
+                # fails only  
                 failtr_bool = np.array([(xx in ftr_trials) and 
                         (xx not in catchtrialsnum) for xx in trialnum])        
                 failed_trialnum = trialnum[failtr_bool]
@@ -177,6 +177,38 @@ for ii,animal in enumerate(animals):
                 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
                 ax.set_xticklabels(range(-range_val, range_val+1, 1))
                 
+                            
+                # catch trials only  
+                failtr_bool = np.array([(xx in catchtrialsnum) for xx in trialnum])        
+                failed_trialnum = trialnum[failtr_bool]
+                rews_centered = np.zeros_like(failed_trialnum)
+                rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1
+                rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+                min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+                rews_centered = np.zeros_like(failed_trialnum)
+                rews_centered[min_iind]=1
+                normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
+                    rewdFF_nonopto = eye.perireward_binned_activity(dfcll[failtr_bool],
+                    rews_centered, timedFF[failtr_bool], range_val, binsize)
+                # plot
+                ax = axes[2,0]
+                ax.imshow(rewdFF_nonopto.T)
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.axvline(int(range_val/binsize), color='w',linestyle='--')
+                ax.set_title('Catch Trials (0=rewloc)')
+                ax = axes[2,1]
+                ax.plot(meanrewdFF_nonopto, color = 'k')   
+                ax.axvline(int(range_val/binsize), color='k',linestyle='--')
+                xmin,xmax = ax.get_xlim()     
+                ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        meanrewdFF_nonopto-scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'),
+                        meanrewdFF_nonopto+scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'), 
+                        alpha=0.5, color='k')
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+
+                
                 # all subsequent rews
                 normmeanrewdFF, meanrewdFF, normrewdFF, \
                     rewdFF = eye.perireward_binned_activity(dfcll, rewards, timedFF, 
@@ -184,24 +216,23 @@ for ii,animal in enumerate(animals):
                 # Find the rows that contain NaNs
                 # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
                 # Select rows that do not contain any NaNs
-                ax = axes[2,0]
+                ax = axes[3,0]
                 ax.imshow(rewdFF.T)
                 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
                 ax.set_xticklabels(range(-range_val, range_val+1, 1))
                 ax.set_title('Successful Trials (0=CS)')                
                 ax.axvline(int(range_val/binsize), color='w',linestyle='--')
-                ax = axes[2,1]
+                ax = axes[3,1]
                 ax.plot(meanrewdFF, color = 'k')   
                 xmin,xmax = ax.get_xlim()     
                 ax.fill_between(range(0,int(range_val/binsize)*2), 
                         meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
                         meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5, color='k')        
-                fig2.suptitle(f'Mean of Trials, Animal {animal}, Day {day}, Cell # {cll}')        
+                fig.suptitle(f'Mean of Trials, Animal {animal}, Day {day}, Cell # {cll}')        
                 ax.axvline(int(range_val/binsize), color='k',linestyle='--')
                 pdf.savefig(fig)
-                pdf.savefig(fig2)
+                # pdf.savefig(fig2)
                 fig.tight_layout()
-                fig2.tight_layout()
             
             # plt.close('all')
             plndff.append([meanrewdFF])

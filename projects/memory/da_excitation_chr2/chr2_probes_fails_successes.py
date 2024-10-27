@@ -9,7 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
-from behavior import get_success_failure_trials, consecutive_stretch
+from projects.memory.behavior import get_success_failure_trials, consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
-from dopamine import get_rewzones
+from projects.memory.dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
@@ -46,7 +46,7 @@ days_all = [[28,29,30,31,32,33,34,35,36],
     [70,71,72,73,74,75,76,77,78]]
 # days_all = [[40,41,42,43,44,45,46,47,48,49,51,52,53],[82,83,84,85,86,87,88,89,90,91,93,94,95]]
 numtrialsstim=10
-range_val = 8; binsize=0.2
+range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 opto_cond = 'Opto' # experiment condition
 # optodays = [18, 19, 22, 23, 24]
@@ -275,7 +275,7 @@ plt.rc('font', size=20)          # controls default text sizes
 # 1 - set conditions
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
-            opto_cond].values for ii,animal in enumerate(animals)])
+            opto_cond].values.astype(float) for ii,animal in enumerate(animals)])
 animal = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (condrewloc.Animal==animal)), 
             'Animal'].values for ii,animal in enumerate(animals)])
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
@@ -285,11 +285,11 @@ animal_opto = animal[opto_condition]
 animal_nonopto = animal[~opto_condition]
 day_date_dff_arr_nonopto = day_date_dff_arr[~opto_condition]
 learning_day = np.concatenate([condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'learning_date'].values-1 for ii,an in enumerate(animals)])
-rewzone_learning = np.concatenate([get_rewzones(condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'RewLoc'].values[0], 1/gainf) for ii,an in enumerate(animals)])
+# rewzone_learning = np.concatenate([get_rewzones(condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'RewLoc'].values[0], 1/gainf) for ii,an in enumerate(animals)])
 learning_day_opto = learning_day[opto_condition]
 learning_day_nonopto = learning_day[~opto_condition]
-rewzone_learning_opto = rewzone_learning[opto_condition]
-rewzone_learning_nonopto = rewzone_learning[~opto_condition]
+# rewzone_learning_opto = rewzone_learning[opto_condition]
+# rewzone_learning_nonopto = rewzone_learning[~opto_condition]
 height = 1.035 # ylim
 #%%
 # 2 -quantify so transients
@@ -383,9 +383,58 @@ for ld in range(2): # per learning day
 
 fig.suptitle('Basal dendrite layer (stratum oriens)')
 fig.tight_layout()
+# plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
+
+#%%
+# combine days
+# transient trace of so
+height=1.028
+fig, ax = plt.subplots(figsize=(7,5))
+pln=3
+
+trialtype = 1 # even
+ax.plot(np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0), 
+        color='mediumturquoise',label='LED on')
+ax.fill_between(range(0,int(range_val/binsize)*2), 
+            np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
+            np.nanmean(day_date_dff_arr_opto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
+            alpha=0.5, color='mediumturquoise')
+ax.add_patch(
+patches.Rectangle(
+    xy=(range_val/binsize,0),  # point of origin.
+    width=2/binsize, height=height, linewidth=1, # width is s
+    color='mediumspringgreen', alpha=0.15))
+ax.set_ylim(.97, height) 
+ax.set_xlabel('Time from Conditioned Stimulus (s)')
+trialtype = 0 # odd
+ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+        color='k', label='LED off')
+ax.fill_between(range(0,int(range_val/binsize)*2), 
+            np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
+            np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
+            alpha=0.3, color='k')
+# trialtype = 1 # even
+# ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
+#         color='peru', label='even, 0mA')
+# ax.fill_between(range(0,int(range_val/binsize)*2), 
+#             np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
+#             np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
+#             alpha=0.5, color='peru')
+
+if ld==1: ax.legend(bbox_to_anchor=(1.1, 1.05))
+# else: ax.get_legend().set_visible(False)
+ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,5))
+ax.set_xticklabels(np.arange(-range_val, range_val+1, 1))
+ax.set_ylim(.972, height)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+fig.suptitle('Basal dendrite layer (stratum oriens)')
+fig.tight_layout()
 plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
 
 #%%
+# all planes
 fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
                         figsize=(12,10))
 for pln in range(4):

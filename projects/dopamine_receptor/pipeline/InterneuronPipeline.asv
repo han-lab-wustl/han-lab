@@ -24,13 +24,7 @@
 %run this section to create a mat file of containing all of the registered
 %tiffs put together
 % 
-pr_dir={};
-days = [17];
-src ='Y:\drd';
-animal='e262';
-for i=1:length(days)
-    pr_dir{i} = fullfile(src, animal, string(days(i)));
-end
+pr_dir={'Y:\drd'
 % 
 
 for dy=1:length(pr_dir) % per day

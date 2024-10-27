@@ -30,14 +30,14 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e244']
-days_all = [[1]]
-range_val = 5; binsize=0.2 #s
+animals = ['e243']
+days_all = [[4]]
+range_val = 8; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
 planes=4
-
+frames_stopped = 31 # number of frames (in the full frame rate) when animal is stopped
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -46,13 +46,12 @@ for ii,animal in enumerate(animals):
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # for each plane
         plndff = []
-        fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
+        fig,axes=plt.subplots(nrows=4, ncols=4, figsize=(12,6))
 
         for path in list(Path(os.path.join(src, animal, str(day))).rglob('params.mat')):
             print(path)
             params = scipy.io.loadmat(path)
 
-            VR = params['VR'][0][0]; gainf = VR[14][0][0]             
             timedFF = np.hstack(params['timedFF'])
             planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
             pln = int(planenum[-1])
@@ -81,7 +80,7 @@ for ii,animal in enumerate(animals):
             velocity = params['forwardvelALL'][0]
             veldf = pd.DataFrame({'velocity': velocity})
             velocity = np.hstack(veldf.rolling(5).mean().values)
-            moving_middle,stop = get_moving_time_v3(velocity,5,30,10)
+            moving_middle,stop = get_moving_time_v3(velocity,5,frames_stopped,10)
             pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
             nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
                     post_win_framesALL,velocity, params['rewardsALL'][0])
@@ -94,7 +93,7 @@ for ii,animal in enumerate(animals):
             ax.plot(nonrew_per_plane-1)
             ax.set_ylim([-.1,.1])
             ax.set_title(f'Stop events')
-            # peri stim binned activity
+            # peri stop binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, nonrew_per_plane, 
                     timedFF, range_val, binsize)
@@ -122,7 +121,31 @@ for ii,animal in enumerate(animals):
 
             ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
+            ax.set_title(f'Peri-stop (DA)')
+            ax.set_ylabel('$\Delta$ F/F')
+            
+            # peri stop velocity
+            normmeanrewdFF, meanv, normrewdFF, \
+                rewv = eye.perireward_binned_activity(params['forwardvel'][0], nonrew_per_plane, 
+                    timedFF, range_val, binsize)
+                
+            ax=axes[3,pln]
+            ax.plot(meanv, color = 'slategray')   
+            xmin,xmax = ax.get_xlim()     
+            ax.fill_between(range(0,int(range_val/binsize)*2), 
+            meanv-scipy.stats.sem(rewv,axis=1,nan_policy='omit'),
+            meanv+scipy.stats.sem(rewv,axis=1,nan_policy='omit'),            
+            color='slategray',alpha=0.4)
+                        
+            ax.axvline(int(range_val/binsize), color='k', linestyle='--')
+            ymin=min(meanv)-.02
+            ymax=max(meanv)+.02-ymin
+
+            ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+            ax.set_xticklabels(range(-range_val, range_val+1, 1))
             ax.set_title(f'Peri-stop')
+            ax.set_ylabel('velocity, cm/s')
+
             plndff.append(rewdFF)
             fig.tight_layout()
             # plt.show()            

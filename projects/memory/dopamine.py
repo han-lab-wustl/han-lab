@@ -1,8 +1,10 @@
 """functions for dopamine 1 rewloc analysis
 july 2024
 """
-import os, scipy, numpy as np, pandas as pd
-from behavior import consecutive_stretch
+import os, scipy, numpy as np, pandas as pd, sys
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+
+from projects.memory.behavior import consecutive_stretch
 
 def extract_vars(path, stims, rewloc, newrewloc, planes=4):
     planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}

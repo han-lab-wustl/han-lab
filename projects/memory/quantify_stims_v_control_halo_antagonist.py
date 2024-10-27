@@ -232,7 +232,7 @@ for pln in range(planes):
     rewcond = np.array([xx for xx in rewdFF_s.T]).T
     rewcond = np.array([xx-meancond_d for xx in rewcond.T]).T
 
-    ax.plot(meancond,linewidth=1.5,color='indigo',label='control-drug')   
+    ax.plot(meancond,linewidth=1.5,color='indigo',label='none-drug')   
     xmin,xmax = ax.get_xlim()         
     ax.fill_between(range(0,int(range_val/binsize)*2), 
     meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
@@ -313,10 +313,11 @@ import seaborn as sns
 
 fig,ax = plt.subplots(figsize=(6,5))
 cmap = ['darkcyan', 'k']
-g=sns.barplot(x='plane',y='mean_dff_during_stim',hue='plane',data=bigdf,fill=False,
-            errorbar='se',ax=ax,linewidth=3,err_kws={'linewidth': 3})
+g=sns.boxplot(x='plane',y='mean_dff_during_stim',hue='plane',data=bigdf,fill=False,
+            ax=ax,linewidth=3)
 sns.stripplot(x='plane',y='mean_dff_during_stim',hue='plane',data=bigdf,s=11,
-        alpha=0.7,ax=ax)
+        alpha=0.3,ax=ax)
+ax.axhline(0, color='k', linestyle='--')
 ax.spines[['top','right']].set_visible(False)
 # ax.legend(bbox_to_anchor=(1.01, 1.05))
 
@@ -408,7 +409,7 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 ax.set_xlabel('')
 
-y=0.004
+y=0.0001
 fs=14
 i=0
 for layer in ['deep', 'superficial']:
