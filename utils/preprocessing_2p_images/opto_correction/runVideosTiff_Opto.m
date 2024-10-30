@@ -7,7 +7,7 @@
 % triggered optogenetics
 
 clear all; close all;
-days=[10]; 
+days=[12]; 
 src = 'Z:\chr2_grabda\opto_power_tests\e232';
 % src = 'X:\vipcre\e217';
 lenVid=3000;

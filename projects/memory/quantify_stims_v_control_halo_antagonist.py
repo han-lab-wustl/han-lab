@@ -634,7 +634,8 @@ bigdf = bigdf.reset_index()
 import seaborn as sns
 
 fig,ax = plt.subplots(figsize=(3,5))
-cmap = ['mediumvioletred', 'slategray']
+# pink and grey
+cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
 g=sns.boxplot(x='condition',y='mean_dff_during_stim',hue='plane_subgroup',
         data=bigdf,fill=False,palette=cmap,
             linewidth=3)
@@ -670,8 +671,8 @@ bigdfan = bigdf.groupby(['animal', 'condition','plane_subgroup']).mean(numeric_o
 
 # # Sort the DataFrame by the 'City' column
 # bigdfan.sort_values('plane')
-cmap = ['mediumvioletred', 'slategray']
-
+# pink and grey
+cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
 fig,ax = plt.subplots(figsize=(3.5,5))
 g=sns.barplot(x='condition',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,
         errorbar='se',ax=ax,linewidth=4,err_kws={'linewidth': 4},
@@ -706,12 +707,12 @@ ax.set_title('n=3 animals',pad=100)
 
 # Step 1: Calculate the means and standard deviations
 mean1 = np.mean(halo_d)
-mean2 = np.mean(halo_c)
+mean2 = np.mean(halo_s)
 std1 = np.std(halo_d, ddof=1)
-std2 = np.std(halo_c, ddof=1)
+std2 = np.std(halo_s, ddof=1)
 
 # Step 2: Calculate pooled standard deviation
-n1, n2 = len(halo_d), len(halo_c)
+n1, n2 = len(halo_d), len(halo_s)
 pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
 
 # Step 3: Calculate Cohen's d
