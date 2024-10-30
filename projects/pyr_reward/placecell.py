@@ -811,26 +811,30 @@ def get_rewzones(rewlocs, gainf):
             
     return rewzonenum
 
-def consecutive_stretch_time(x, tol=2):
-    """note that the tol is based on approx how long
-    it takes the mouse to return to rew loc
-    on a 2.7m track
-    i.e. the mouse cannot return to rew loc at 1.2s
 
+import numpy as np
+
+def consecutive_stretch_time(x, tol=2):
+    """Identify stretches of consecutive timestamps that are within a given tolerance.
+
+    The function calculates differences between consecutive elements in the input array `x` 
+    and identifies stretches of timestamps where the difference does not exceed the specified tolerance `tol`.
+    
     Args:
-        x (_type_): _description_
-        tol (int, optional): _description_. Defaults to 2.
+        x (array-like): An array of timestamp values.
+        tol (int, optional): The maximum allowed difference between consecutive timestamps to be considered part of the same stretch. Defaults to 2.
 
     Returns:
-        _type_: _description_
+        list: A list of lists or single elements where each sublist or element represents a stretch of consecutive timestamps within the given tolerance.
     """
-    # Calculate differences
+    # Calculate differences between consecutive elements
     z = np.diff(x)
-    # Find break points based on the tolerance
+    # Find break points where the difference exceeds the tolerance
     break_point = np.where(z > tol)[0]
 
+    # If there are no break points, return the entire array as a single stretch
     if len(break_point) == 0:
-        return [x.tolist()]  # If there are no break points, return the entire array as a single stretch
+        return [x.tolist()] 
 
     result = []
 
@@ -843,7 +847,7 @@ def consecutive_stretch_time(x, tol=2):
 
     # Add the middle stretches
     for i in range(1, len(break_point)):
-        stretch = x[break_point[i - 1] + 1:break_point[i] + 1]
+        stretch = x[break_point[i - 1] + 1: break_point[i] + 1]
         if len(stretch) == 1:
             result.append(stretch[0])
         else:
@@ -857,6 +861,7 @@ def consecutive_stretch_time(x, tol=2):
         result.append(last_stretch.tolist())
 
     return result
+
 
 def consecutive_stretch(x):
     z = np.diff(x)

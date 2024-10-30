@@ -6,6 +6,8 @@ opn3/halo power tests
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
+from scipy.ndimage import label
+
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
@@ -28,13 +30,14 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Z:\chr2_grabda\opto_power_tests'
-range_val = 5; binsize=0.2 #s
+range_val = 2; binsize=0.2 #s
 stimsec=1 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_csv(r'Z:\chr2_grabda\opto_power_tests\chr2_opto_power_key.csv')
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
-show_figs=True
+show_figs=False
+rolling_win=3
 # animals=['e222']
 day_date_dff = {}
 for ii,animal in enumerate(animals):
@@ -67,18 +70,30 @@ for ii,animal in enumerate(animals):
             #     plt.plot(dff[:], label=f'plane {pln}')
             # plt.legend()
             
+            # Assuming stims, utimedFF, and solenoid2ALL are defined numpy arrays
+            utimedFF = params['utimedFF'][0]
+            # Step 1: Label the regions in stims greater than 0.5
+            abfstims, num_features = label(stims > 0.5)
+            # Step 2: Loop through each feature
+            for dw in range(1, num_features):
+                index_next = np.where(abfstims == (dw + 1))[0]
+                index_current = np.where(abfstims == dw)[0]
+                
+                if len(index_next) > 0 and len(index_current) > 0:
+                    time_diff = utimedFF[index_next[0]] - utimedFF[index_current[-1]]
+                    
+                    if time_diff < 0.5:
+                        abfstims[index_current[0]: index_next[0]] = dw + 1
+            # Step 3: Filter with abfstims > 0.5
+            abfstims = abfstims > 0.5
+            # Step 4: Find consecutive stretches
+            abfrect = consecutive_stretch(np.where(abfstims)[0])
+            min_iind = [int(np.floor(min(xx)/4))-2 for xx in abfrect]
+            if pln==3: min_iind = [int(np.floor(min(xx)/4))-2 for xx in abfrect]
+
+            
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(3).mean().values)
-            # get off plane stim 
-            offpln=pln+1 if pln<3 else pln-1
-            startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
-            # might need to offset
-            min_iind = [min(xx) for xx in startofstims if len(xx)>0]
-            if len(min_iind)==0: 
-                if pln==2: offpln=0
-                startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
-                # might need to offset
-                min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            dff = np.hstack(dffdf.rolling(rolling_win).mean().values)
             startofstims = np.zeros_like(dff)
             startofstims[min_iind]=1
 
@@ -129,6 +144,10 @@ sup_rewdff_saline = []
 sup_rewdff_drug = []
 planes=4
 norm_window=2 #s
+ymin=-0.055
+ymax=0.055
+height=ymax-ymin
+
 # chr2
 for pln in range(planes):
     ii=0; 
@@ -172,9 +191,6 @@ deep_rewdff_saline=np.hstack([xx[0] for xx in deep_rewdff_saline])
 an_deep_rewdff_drug=np.hstack([xx[1] for xx in deep_rewdff_drug])
 deep_rewdff_drug=np.hstack([xx[0] for xx in deep_rewdff_drug])
 
-ymin=-0.02
-ymax=0.02
-height=ymax-ymin
 # plot
 drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
@@ -206,7 +222,7 @@ for i in range(len(saline)):
     # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
     ax.add_patch(
         patches.Rectangle(
-    xy=(range_val/binsize-1.7,ymin),  # point of origin.
+    xy=(range_val/binsize,ymin),  # point of origin.
     width=stimsec/binsize, height=height, linewidth=1, # width is s
     color='mediumspringgreen', alpha=0.2))
 
@@ -245,7 +261,7 @@ for i in range(len(saline)):
     alpha=0.5,color='k')  
     ax.add_patch(
         patches.Rectangle(
-    xy=(range_val/binsize-1.7,ymin),  # point of origin.
+    xy=(range_val/binsize,ymin),  # point of origin.
     width=stimsec/binsize, height=height, linewidth=1, # width is s
     color='mediumspringgreen', alpha=0.2))
     ax.axhline(0,color='k',linestyle='--')
@@ -270,6 +286,7 @@ andrug = [an_deep_rewdff_drug, an_sup_rewdff_drug]
 ansaline = [an_deep_rewdff_saline, an_sup_rewdff_saline]
 
 save = []
+stimsec=1.5
 for i in range(2): # deep vs. sup
     rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
     stimdff_h = np.nanmean(rewcond_h[int(range_val/binsize):int(range_val/binsize)+int(stimsec/binsize)],
@@ -312,35 +329,27 @@ g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
 sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
         data=bigdf,s=11,palette=cmap,
         alpha=0.2,ax=ax,dodge=True)
-ax.axhline(0, color='k', linestyle='--')
+ax.axhline(0, color='k', linestyle='--',linewidth=3)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=10)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 
-y=0.02
+y=0.03
 fs=12
 i=0
 for i in range(len(lbls)):
     pval = bigdf.loc[bigdf.plane_subgroup==lbls[i], 'pval'].values[0]
-    ax.text(i, y, f'p={pval:.7f}', ha='center', fontsize=fs, rotation=45)
+    ax.text(i, y, f'p={pval:.5e}', ha='center', fontsize=fs, rotation=45)
     i+=1
 
-ax.text(i, y, f'deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
+ax.text(i, y, f'deep vs. super\np={pval_deep_vs_sup:.5e}', ha='center', 
         fontsize=fs, rotation=45)
-ax.set_title('n=trials, 3 animals',pad=100,fontsize=14)
+ax.set_title('n=trials, 2 animals',pad=10,fontsize=14)
 
 #%%
 # per animal 
 
 bigdfan = bigdf.groupby(['animal','plane_subgroup']).mean(numeric_only=True)
-# # # Specify the desired order
-# desired_order = ['SLM', 'SR', 'SP', 'SO']
-
-# # Convert the 'City' column to a categorical type with the specified order
-# bigdfan['plane'] = pd.Categorical(bigdfan['plane'], categories=desired_order, ordered=True)
-
-# # Sort the DataFrame by the 'City' column
-# bigdfan.sort_values('plane')
 # pink and grey
 cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
 fig,ax = plt.subplots(figsize=(2,5))
@@ -352,6 +361,7 @@ sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',d
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=12)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.axhline(0, color='k', linestyle='--',linewidth=3)
 
 y=0.007
 fs=14
