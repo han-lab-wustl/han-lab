@@ -28,8 +28,8 @@ animals = ['e256', 'e262']
 
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify
-days_all = [[20,21,22,23],
-        [14,15,16,17]]
+days_all = [[20,21,22,23,24],
+        [14,15,16,17,18]]
 
 # days to quantify for stim @ reward memory analysis
 # days_all = [[28,29,31,33,34,35,36],
@@ -51,7 +51,7 @@ for ii,animal in enumerate(animals):
             (condrewloc.Animal==animal)), 'prevrewloc'].values[0])
         
                 # for each plane
-        path=list(Path(os.path.join(src, animal, str(day))).rglob('*roibyclick_F.mat'))[0]
+        path=list(Path(os.path.join(src, animal, str(day), 'behavior', 'vr')).rglob('*.mat'))[0]
         params = scipy.io.loadmat(path)
         print(path)
         VR = params['VR'][0][0]

@@ -28,8 +28,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e241']
-days_all = [[12]]
+animals = ['e243']
+days_all = [[10]]
 
 range_val = 8; binsize=0.2 #s
 dur=3# s stim duration
@@ -74,7 +74,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(5).mean().values)
+            dff = np.hstack(dffdf.rolling(3).mean().values)
             # get off plane stim
             # offpln=pln+1 if pln<3 else pln-1
             # startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])

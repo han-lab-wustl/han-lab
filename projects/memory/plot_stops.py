@@ -29,15 +29,15 @@ plt.close('all')
 # pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
 #     f"halo_opto.pdf"))
 
-src = r'Y:\halo_grabda'
-animals = ['e243']
-days_all = [[4]]
+src = r'Z:\chr2_grabda'
+animals = ['e232']
+days_all = [[42]]
 range_val = 8; binsize=0.2 #s
-dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
 planes=4
 frames_stopped = 31 # number of frames (in the full frame rate) when animal is stopped
+velocity_thres = 5 # cm/s, velocity below which considered stop
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -80,7 +80,8 @@ for ii,animal in enumerate(animals):
             velocity = params['forwardvelALL'][0]
             veldf = pd.DataFrame({'velocity': velocity})
             velocity = np.hstack(veldf.rolling(5).mean().values)
-            moving_middle,stop = get_moving_time_v3(velocity,5,frames_stopped,10)
+            moving_middle,stop = get_moving_time_v3(velocity,velocity_thres,
+                                    frames_stopped,10)
             pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
             nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
                     post_win_framesALL,velocity, params['rewardsALL'][0])
@@ -151,57 +152,4 @@ for ii,animal in enumerate(animals):
             # plt.show()            
     
         day_date_dff[str(day)] = plndff
-
 #%%
-
-# power tests
-condition = [200,80,280]
-condition_org = [80,200,280,280,280]
-condition_org = [80,200,280,280]
-condition_col = {280:'k', 200:'slategray',80:'darkcyan'}
-stimsec = 5 # stim duration (s)
-ymin=-0.04
-ymax=0.03-(ymin)
-planes=4
-# assumes 4 planes
-fig, axes = plt.subplots(nrows=4, figsize=(4,7), sharex=True)
-for pln in range(planes):
-    ii=0; condition_dff = []
-    idx_to_catch = []; condition = condition_org.copy() # custom condition
-    for dy,v in day_date_dff.items():
-        rewdFF = day_date_dff[dy][pln] # so only
-        if rewdFF.shape[1]>0:            
-            meanrewdFF = np.nanmean(rewdFF,axis=1)
-            meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[20:25]) #pre-window
-            rewdFF_prewin = np.array([xx-np.nanmean(xx[20:25]) for xx in rewdFF.T]).T
-            condition_dff.append([meanrewdFF, rewdFF_prewin])
-        else: idx_to_catch.append(int(dy))
-    # remove 0 trial days from condition vector
-    if len(idx_to_catch)>0: [condition.pop(np.where(np.array(days)==idx)[0][0]) for idx in idx_to_catch]
-    ax = axes[pln]
-    meanrewdFF = np.vstack([x[0] for x in condition_dff])
-    rewdFF = [x[1] for x in condition_dff]
-    # plot per condition
-    for cond in np.unique(condition):
-        meancond = np.nanmean(meanrewdFF[condition==cond],axis=0)
-        ax.plot(meancond, label=cond, color=condition_col[cond])   
-        xmin,xmax = ax.get_xlim() 
-        trialcond = np.concatenate([[condition[ii]]*xx.shape[1] for ii,xx in enumerate(rewdFF)])
-        rewcond = np.hstack(rewdFF).T[trialcond==cond].T
-        ax.fill_between(range(0,int(range_val/binsize)*2), 
-        meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-        meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    alpha=0.4,color=condition_col[cond])        
-    # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
-    ax.add_patch(
-        patches.Rectangle(
-    xy=(range_val/binsize,ymin),  # point of origin.
-    width=stimsec/binsize, height=ymax, linewidth=1, # width is s
-    color='mediumspringgreen', alpha=0.2))
-    ii+=1
-    ax.set_title(f'\nPlane {planelut[pln]}')
-ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-ax.set_xticklabels(range(-range_val, range_val+1, 2))
-ax.legend(bbox_to_anchor=(1.1, 1.05))
-fig.tight_layout()
-fig.suptitle(f'{animal}, Per day plots')

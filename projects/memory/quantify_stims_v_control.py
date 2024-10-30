@@ -28,12 +28,13 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Z:\opn3_grabda'
-range_val = 10; binsize=0.2 #s
+range_val = 15; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_excel(r'Z:\opn3_grabda\opn3_key_zd_updated.xlsx',sheet_name='opn3')
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
-animals=['e222']
+show_figs=False
+# animals=['e222']
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = conddf.loc[((conddf.animal==animal) & (conddf.artifact!=True)), 'day'].values.astype(int)    
@@ -67,7 +68,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(5).mean().values)
+            dff = np.hstack(dffdf.rolling(10).mean().values)
             # get off plane stim 
             offpln=pln+1 if pln<3 else pln-1
             startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
@@ -108,25 +109,29 @@ for ii,animal in enumerate(animals):
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
             ax.set_title(f'Peri-stim, {animal}, day {day}, plane {pln}')
             plndff.append(rewdFF)
-            plt.show()
+            if show_figs==True:
+                plt.show()
+            else:
+                plt.close('all')
     
         day_date_dff[f'{animal}_{day}'] = plndff
 
 #%%
 
 # power tests quantification
-condition_org = [[conddf.loc[((conddf.animal==an) & (conddf.artifact!=True) & \
-    (conddf.day==dy)), 'optopower'].values.astype(int)[0] for dy in \
-        conddf.loc[((conddf.animal==an) & (conddf.artifact!=True)), 
-    'day'].values.astype(int)] for an in animals]
-condition_org=list(np.concatenate(condition_org)[:-3])
-condition_col = {280:'k', 200:'darkcyan',80:'slategray'}
+# condition_org = [[conddf.loc[((conddf.animal==an) & (conddf.artifact!=True) & \
+#     (conddf.day==dy)), 'optopower'].values.astype(int)[0] for dy in \
+#         conddf.loc[((conddf.animal==an) & (conddf.artifact!=True)), 
+#     'day'].values.astype(int)] for an in animals]
+# condition_org=list(np.concatenate(condition_org)[:-3])
+# condition_col = {280:'k', 200:'darkcyan',80:'slategray'}
 # settings
-stimsec = 5 # stim duration (s)
 ymin=-0.04
 ymax=0.03
 height=ymax-(ymin)
 planes=4
+stimsec=5.5
+norm_window=.5
 # subtract ctrl
 ctrl_mean_trace_per_pln=[] # 200 ma
 for pln in range(planes):
@@ -137,165 +142,193 @@ for pln in range(planes):
             rewdFF = day_date_dff[dy][pln] # so only
             if rewdFF.shape[1]>0:            
                 meanrewdFF = np.nanmean(rewdFF,axis=1)
-                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[15:22]) #pre-window
-                rewdFF_prewin = np.array([xx-np.nanmean(xx[15:22]) for xx in rewdFF.T]).T
+                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
+                rewdFF_prewin = np.array([xx-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
                 condition_dff.append([meanrewdFF, rewdFF_prewin])
             else: idx_to_catch.append(ii)
     meanrewdFF = np.nanmean(np.vstack([x[0] for x in condition_dff]),axis=0)
     ctrl_mean_trace_per_pln.append(meanrewdFF)
+    
 
+# plot deep vs. superficial
+# plot control vs. drug
+plt.rc('font', size=11)
 # assumes 4 planes
-fig, axes = plt.subplots(nrows=4, figsize=(4,6), sharex=True)
+deep_rewdff = []
+sup_rewdff = []
+norm_window=2 #s
 for pln in range(planes):
-    ii=0; condition_dff = []
+    ii=0; 
+    cond_dff = []    
     idx_to_catch = []
-    condition = condition_org.copy() # custom condition
+    
     for dy,v in day_date_dff.items():
-        if 'e219' not in dy:
+        if conddf.loc[conddf.animal==dy[:4],'optocond'].values[0]!='control':
             rewdFF = day_date_dff[dy][pln] # so only
             if rewdFF.shape[1]>0:            
                 meanrewdFF = np.nanmean(rewdFF,axis=1)
-                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[15:22]) #pre-window
-                rewdFF_prewin = np.array([xx-np.nanmean(xx[15:22]) for xx in rewdFF.T]).T
-                condition_dff.append([meanrewdFF, rewdFF_prewin])
+                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
+                rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
+                cond_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
             else: idx_to_catch.append(ii)
             ii+=1
-    print(len(condition))
-    condition = [xx for ii,xx in enumerate(condition) if ii not in idx_to_catch]
 
-    ax = axes[pln]
-    meanrewdFF = np.vstack([x[0] for x in condition_dff])
-    rewdFF = [x[1] for x in condition_dff]
-    # plot per condition
-    for cond in np.array([200,280]):
-        meancond = np.nanmean(meanrewdFF[condition==cond],axis=0)-ctrl_mean_trace_per_pln[pln]
-        trialcond = np.concatenate([[condition[ii]]*xx.shape[1] for ii,xx in enumerate(rewdFF)])
-        rewcond = np.hstack(rewdFF).T[trialcond==cond].T
-        rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewcond.T]).T
-        ax.plot(meancond, label=f'{cond}_trials{rewcond.shape[1]}', color=condition_col[cond])   
-        xmin,xmax = ax.get_xlim()         
-        ax.fill_between(range(0,int(range_val/binsize)*2), 
-        meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-        meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    alpha=0.4,color=condition_col[cond])        
+    meanrewdFF_s = np.vstack([x[0] for x in cond_dff])
+    rewdFF_s = np.hstack([x[1] for x in cond_dff])
+    if pln==3:
+        deep_rewdff.append([rewdFF_s,np.hstack([x[2] for x in cond_dff])])
+    else:
+        sup_rewdff.append([rewdFF_s,np.hstack([x[2] for x in cond_dff])])
+
+# get animals
+# add all layers together
+an_sup_rewdff=np.hstack([xx[1] for xx in sup_rewdff])
+sup_rewdff=np.hstack([xx[0] for xx in sup_rewdff])
+
+an_deep_rewdff=np.hstack([xx[1] for xx in deep_rewdff])
+deep_rewdff=np.hstack([xx[0] for xx in deep_rewdff])
+
+ymin=-0.03
+ymax=0.03
+stimsec=5.5
+# plot
+saline = [deep_rewdff, sup_rewdff]
+lbls = ['Deep (SO)', 'Superficial (SP, SR, SLM)']
+fig, axes = plt.subplots(nrows=2, ncols=1,figsize=(3.5,5), sharex=True)
+for i in range(len(saline)):
+    # plot
+    ax=axes[i]
+    # subtract controls
+    meancond = np.nanmean(saline[i],axis=1)-ctrl_mean_trace_per_pln[i]
+    rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in saline[i].T]).T
+    ax.plot(meancond,linewidth=1.5,color='k',label='Saline')   
+    xmin,xmax = ax.get_xlim()         
+    ax.fill_between(range(0,int(range_val/binsize)*2), 
+    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    alpha=0.5,color='k')  
+ 
+    ax.axhline(0,color='k',linestyle='--')
+    ax.spines[['top','right']].set_visible(False)
+
     # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
     ax.add_patch(
         patches.Rectangle(
     xy=(range_val/binsize,ymin),  # point of origin.
     width=stimsec/binsize, height=height, linewidth=1, # width is s
     color='mediumspringgreen', alpha=0.2))
-    ii+=1
-    ax.set_title(f'\nPlane {planelut[pln]}')
-    ax.set_ylim([ymin,ymax])
-    ax.legend(bbox_to_anchor=(1.1, 1.05))
-ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-ax.set_xticklabels(range(-range_val, range_val+1, 2))
-fig.suptitle(f'All animals (n=3), per condition \n\
-    Subtracted from GRABDA 2m (200mA)')
-fig.tight_layout()
-#%%
-# test
-plndff =[]
-for pln in range(planes):
-    ii=0; condition_dff = []
-    idx_to_catch = []
-    condition = condition_org.copy() # custom condition
-    for dy,v in day_date_dff.items():
-        if 'e219' not in dy:
-            rewdFF = day_date_dff[dy][pln] # so only
-            if rewdFF.shape[1]>0:            
-                meanrewdFF = np.nanmean(rewdFF,axis=1)
-                meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[15:22]) #pre-window
-                rewdFF_prewin = np.array([xx-np.nanmean(xx[15:22]) for xx in rewdFF.T]).T
-                condition_dff.append([meanrewdFF, rewdFF_prewin])
-            else: idx_to_catch.append(ii)
-            ii+=1    
-    condition = [xx for ii,xx in enumerate(condition) if ii not in idx_to_catch]
 
-    meanrewdFF = np.vstack([x[0] for x in condition_dff])
-    rewdFF = [x[1] for x in condition_dff]
-    # plot per condition
-    save = []
-    for cond in np.array([200,280]):
-        meancond = np.nanmean(meanrewdFF[condition==cond],axis=0)-ctrl_mean_trace_per_pln[pln]
-        trialcond = np.concatenate([[condition[ii]]*xx.shape[1] for ii,xx in enumerate(rewdFF)])
-        rewcond = np.hstack(rewdFF).T[trialcond==cond].T
-        rewcond = np.array([xx-ctrl_mean_trace_per_pln[pln] for xx in rewcond.T]).T
-        t,pval = scipy.stats.ttest_1samp(np.nanmean(rewcond[50:75],axis=0),popmean=0)
-        print(f'Plane {pln}, condition {cond}mA, P-value={pval:.5f}')
-        save.append((np.nanmean(rewcond[50:75],axis=0),cond,pval))
-    plndff.append(save)
+    ii+=1
+    if i==0:
+        ax.set_title(f'eOPN3-Control \n {lbls[i]}')
+    else:
+        ax.set_title(f'{lbls[i]}')
+    ax.set_ylim([ymin,ymax])
+    # if i==0: ax.legend()
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+    ax.set_xticklabels(range(-range_val, range_val+1, 2))
+    if i==1: ax.set_xlabel('Time from LED onset (s)')
+
+fig.tight_layout()
+# %%
+# ttest
+an = [an_deep_rewdff, an_sup_rewdff]
+
+save = []
+for i in range(2): # deep vs. sup
+    rewcond_h = saline[i]    
+    stimdff_h = np.nanmean(rewcond_h[int(range_val/binsize):int(range_val/binsize)+int(stimsec/binsize)],
+                axis=0)    
+    t,pval = scipy.stats.ttest_1samp(stimdff_h, popmean=0)
+    save.append([stimdff_h, pval, an[i]])    
+# superficial vs. deep
+deep_rewcond_h = saline[0]
+sup_rewcond_h = saline[1]
+deep_stimdff_h = np.nanmean(deep_rewcond_h[int(range_val/binsize):int(range_val/binsize)+int(stimsec/binsize)],
+                axis=0)
+sup_stimdff_h = np.nanmean(sup_rewcond_h[int(range_val/binsize):int(range_val/binsize)+int(stimsec/binsize)],
+                axis=0)
+t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h, sup_stimdff_h)
+
 #%%
 plt.rc('font', size=25)
+lbls = ['Deep', 'Superficial']
 dfs = []
-conds = [200,280]
-for pln in range(planes):
+for pln in range(2):
     df = pd.DataFrame()
-    df['mean_dff_during_stim'] = np.concatenate([xx[0] for xx in plndff[pln]])
-    pval=[xx[2] for xx in plndff[pln]]
-    df['pval']=np.concatenate([[pval[ii]]*len(xx[0]) for ii,xx in enumerate(plndff[pln])])
-    df['condition'] = np.concatenate([[conds[ii]]*len(xx[0]) for ii,xx in enumerate(plndff[pln])])
-    df['plane'] = np.concatenate([[planelut[pln]]*len(df)])
-    df['plane_subgroup'] = np.concatenate([['superficial' if pln<3 else 'deep']*len(df)])
+    df['mean_dff_during_stim'] = save[pln][0]
+    pval=save[pln][1]
+    df['pval']=[pval]*len(df)
+    df['plane_subgroup'] =lbls[pln]
+    df['animal'] =  save[pln][2]
+    # df['plane_subgroup'] = np.concatenate([[plnsg]*len(df)])
     dfs.append(df)
 bigdf = pd.concat(dfs)
-
+bigdf = bigdf.reset_index()
 import seaborn as sns
 
-fig,ax = plt.subplots(figsize=(6,5))
-cmap = ['darkcyan', 'k']
-g=sns.barplot(x='plane',y='mean_dff_during_stim',hue='condition',data=bigdf,fill=False,
-            errorbar='se',palette=cmap,ax=ax,linewidth=3,err_kws={'linewidth': 3})
-sns.stripplot(x='plane',y='mean_dff_during_stim',hue='condition',data=bigdf,s=11,
-        alpha=0.7,palette=cmap,ax=ax)
+fig,ax = plt.subplots(figsize=(2,5))
+cmap = ['mediumvioletred', 'slategray']
+g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
+        data=bigdf,fill=False,palette=cmap,
+            linewidth=3)
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
+        data=bigdf,s=13,palette=cmap,
+        alpha=0.2,ax=g,dodge=True)
+ax.axhline(0, color='k', linestyle='--')
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=10)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 
-pval200 = bigdf.loc[bigdf.condition==200,'pval'].unique()
-pval280 = bigdf.loc[bigdf.condition==280,'pval'].unique()
-y=0.060
-fs=14
-for i in range(len(pval200)):
-    ax.text(i, y, f'200mA, \np={pval200[i]:.4f}', ha='center', fontsize=fs)
-y=0.075
-for i in range(len(pval280)):
-    ax.text(i, y, f'280mA, \np={pval280[i]:.6f}', ha='center', fontsize=fs)
-    
-ax.set_title('Per trial quantification n=3 animals',pad=90)
+y=0.04
+fs=12
+i=0
+for i in range(len(lbls)):
+    pval = bigdf.loc[bigdf.plane_subgroup==lbls[i], 'pval'].values[0]
+    ax.text(i, y, f'p={pval:.3e}', ha='center', fontsize=fs, rotation=45)
+    i+=1
+
+ax.text(i, y, f' deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
+        fontsize=fs, rotation=45)
+ax.set_title('n=trials, 3 animals',pad=100,fontsize=14)
+
 #%%
-# by plane subgroup
+# per animal 
 
-fig,ax = plt.subplots(figsize=(3,5))
-cmap = ['darkcyan', 'k']
-g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdf,fill=False,
-            errorbar='se',palette=cmap,ax=ax,linewidth=3,err_kws={'linewidth': 3})
-sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdf,s=11,
-        alpha=0.5,palette=cmap,ax=ax)
+bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
+# # # Specify the desired order
+# desired_order = ['SLM', 'SR', 'SP', 'SO']
+
+# # Convert the 'City' column to a categorical type with the specified order
+# bigdfan['plane'] = pd.Categorical(bigdfan['plane'], categories=desired_order, ordered=True)
+
+# # Sort the DataFrame by the 'City' column
+# bigdfan.sort_values('plane')
+cmap = ['mediumvioletred', 'slategray']
+
+fig,ax = plt.subplots(figsize=(2,5))
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,
+        errorbar='se',ax=ax,linewidth=4,err_kws={'linewidth': 4},
+        palette=cmap)
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,
+        s=17,alpha=0.6,ax=ax,palette=cmap,dodge=True)
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=12)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 
-x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='superficial')), 
-        'mean_dff_during_stim'].values
-t,pval200_sup=scipy.stats.ttest_1samp(x1,popmean=0)
-x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='superficial')), 
-            'mean_dff_during_stim'].values
-t,pval280_sup=scipy.stats.ttest_1samp(x1,popmean=0)
-x1=bigdf.loc[((bigdf.condition==200) & (bigdf.plane_subgroup=='deep')), 
-        'mean_dff_during_stim'].values
-t,pval200_deep=scipy.stats.ttest_1samp(x1,popmean=0)
-x1=bigdf.loc[((bigdf.condition==280) & (bigdf.plane_subgroup=='deep')), 
-        'mean_dff_during_stim'].values
-t,pval280_deep=scipy.stats.ttest_1samp(x1,popmean=0)
-
-pval200=[pval200_sup, pval200_deep]
-pval280=[pval280_sup, pval280_deep]
-y=0.060
+y=0.0035
 fs=14
-for i in range(len(pval200)):
-    ax.text(i, y, f'200mA, \np={pval200[i]:.4f}', ha='center', fontsize=fs)
-y=0.075
-for i in range(len(pval280)):
-    ax.text(i, y, f'280mA, \np={pval280[i]:.6f}', ha='center', fontsize=fs)
-    
-ax.set_title('Per trial quantification n=3 animals',pad=90)
-# fig.tight_layout()
+i=0
+for i in range(len(lbls)):
+    halo = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[i])), 'mean_dff_during_stim'].values
+    t,pval = scipy.stats.ttest_1samp(halo, popmean=0)
+    ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs, rotation=45)
+    i+=1
+
+halo_d = bigdfan.loc[(bigdfan.index.get_level_values('plane_subgroup')==lbls[0]), 'mean_dff_during_stim'].values
+halo_s = bigdfan.loc[(bigdfan.index.get_level_values('plane_subgroup')==lbls[1]), 'mean_dff_during_stim'].values
+t,pval = scipy.stats.ttest_rel(halo_d, halo_s)
+ax.text(i, y, f'deep vs. super \n p={pval:.4f}', ha='center',
+    fontsize=fs, rotation=45)
+
+ax.set_title('n=3 animals',pad=100,fontsize=14)
