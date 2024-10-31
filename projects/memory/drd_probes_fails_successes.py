@@ -38,11 +38,12 @@ condrewloc[['Day']] = condrewloc[['Day']].astype(int)
 src = r"Y:\drd"
 animals = ['e256']
 # controls for gerardo
-days_all =[[20]]
+days_all =[[24]]
 
 range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 #%%
+plt.close('all')
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -68,12 +69,13 @@ for ii,animal in enumerate(animals):
                 ybinned = np.hstack(params['ybinned'])[:-1]/gainf
                 licks = np.hstack(params['licks'])[:-1]
                 timedFF = np.hstack(params['timedFF'])[:-1]
+                forwardvel = np.hstack(params['forwardvel'])[:-1]
             else:
                 rewards = np.hstack(params['solenoid2'])
                 trialnum = np.hstack(params['trialnum'])
                 ybinned = np.hstack(params['ybinned'])/gainf
                 licks = np.hstack(params['licks'])
-                timedFF = np.hstack(params['timedFF'])
+                forwardvel = np.hstack(params['forwardvel'])
             # # mask out dark time
             # dff = dff[ybinned>3]
             # rewards = rewards[ybinned>3]
@@ -94,10 +96,9 @@ for ii,animal in enumerate(animals):
                 ax.set_title(f'Animal {animal}, Day {day}')
                 fig.tight_layout()
                 pdf.savefig(fig)
-            # per cell 
-            meancll = []; alltrialscll = []
-            for cll, dfcll in enumerate(dff.T):
-                # plot pre-first reward dop activity    
+                ###################### also get velocity ######################
+                # initial probes
+                
                 firstrew = np.where(rewards==1)[0][0]
                 rews_centered = np.zeros_like(ybinned[:firstrew])
                 rews_centered[(ybinned[:firstrew] >= rewloc-3) & (ybinned[:firstrew] <= rewloc+3)]=1
@@ -105,7 +106,133 @@ for ii,animal in enumerate(animals):
                 min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
                 rews_centered = np.zeros_like(ybinned[:firstrew])
                 rews_centered[min_iind]=1
+            
+                normmeanrewdFF, meanrewdFF, normrewdFF, \
+                    rewdFF = eye.perireward_binned_activity(forwardvel[:firstrew], 
+                            rews_centered, timedFF[:firstrew], range_val, binsize)
+
+                fig, axes = plt.subplots(nrows=4,ncols=2,sharex=True)#,gridspec_kw={'width_ratios':[4,1]})
+                ax = axes[0,0]
+                ax.imshow(rewdFF.T, cmap="Greys_r")
+                ax.axvline(int(range_val/binsize), color='w',linestyle='--')
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.set_title('Velocity, Probe Trials (0=prev. rewloc)')
+                # fig2, axes2 = plt.subplots(nrows=3,ncols=1,sharex=True)#,gridspec_kw={'width_ratios':[4,1]})
+                ax = axes[0,1]
+                ax.plot(meanrewdFF,color='gray')   
+                xmin,xmax = ax.get_xlim()     
+                ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+                        meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), 
+                        alpha=0.5,color='gray')                
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.set_title('Mean +/- SEM of trials')
+                ax.axvline(int(range_val/binsize), color='k',linestyle='--')
+                # # center by old rew zone
+                # rews_centered = np.zeros_like(ybinned)
+                # rews_centered[(ybinned > rewloc-2) & (ybinned < rewloc+2)]=1
+                # rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+                # min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+                # rews_centered = np.zeros_like(ybinned)
+                # rews_centered[min_iind]=1
+            
+                #TODO: peri reward catch trials
+                # failed trials
+                trialnumvr = VR[8][0]
+                catchtrialsnum = trialnumvr[VR[16][0].astype(bool)]
+                success, fail, str_trials, ftr_trials, ttr, \
+                total_trials = get_success_failure_trials(trialnum, rewards)
+            
+                # fails only  
+                failtr_bool = np.array([(xx in ftr_trials) and 
+                        (xx not in catchtrialsnum) for xx in trialnum])        
+                failed_trialnum = trialnum[failtr_bool]
+                rews_centered = np.zeros_like(failed_trialnum)
+                rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1
+                rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+                min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+                rews_centered = np.zeros_like(failed_trialnum)
+                rews_centered[min_iind]=1
+                normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
+                    rewdFF_nonopto = eye.perireward_binned_activity(forwardvel[failtr_bool],
+                    rews_centered, timedFF[failtr_bool], range_val, binsize)
+                # plot
+                ax = axes[1,0]
+                ax.imshow(rewdFF_nonopto.T, cmap="Greys_r")
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.set_title('Failed Trials (0=rewloc)')
+                ax = axes[1,1]
+                ax.plot(meanrewdFF_nonopto,color='gray')   
+                xmin,xmax = ax.get_xlim()     
+                ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        meanrewdFF_nonopto-scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'),
+                        meanrewdFF_nonopto+scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'), 
+                        alpha=0.5,color='gray')
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.axvline(int(range_val/binsize), color='k',linestyle='--')
+                # catch trials only  
+                failtr_bool = np.array([(xx in catchtrialsnum) for xx in trialnum])        
+                failed_trialnum = trialnum[failtr_bool]
+                rews_centered = np.zeros_like(failed_trialnum)
+                rews_centered[(ybinned[failtr_bool] >= newrewloc-5) & (ybinned[failtr_bool] <= newrewloc+5)]=1
+                rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+                min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+                rews_centered = np.zeros_like(failed_trialnum)
+                rews_centered[min_iind]=1
+                normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
+                    rewdFF_nonopto = eye.perireward_binned_activity(forwardvel[failtr_bool],
+                    rews_centered, timedFF[failtr_bool], range_val, binsize)
+                # plot
+                ax = axes[2,0]
+                ax.imshow(rewdFF_nonopto.T, cmap="Greys_r")
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.axvline(int(range_val/binsize), color='w',linestyle='--')
+                ax.set_title('Catch Trials (0=rewloc)')
+                ax = axes[2,1]
+                ax.plot(meanrewdFF_nonopto,color='gray')   
+                ax.axvline(int(range_val/binsize), color='k',linestyle='--')
+                xmin,xmax = ax.get_xlim()     
+                ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        meanrewdFF_nonopto-scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'),
+                        meanrewdFF_nonopto+scipy.stats.sem(rewdFF_nonopto,axis=1,nan_policy='omit'), 
+                        alpha=0.5,color='gray')
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
                 
+                # all subsequent rews
+                normmeanrewdFF, meanrewdFF, normrewdFF, \
+                    rewdFF = eye.perireward_binned_activity(forwardvel, rewards, timedFF, 
+                                            range_val, binsize)
+                # Find the rows that contain NaNs
+                # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
+                # Select rows that do not contain any NaNs
+                ax = axes[3,0]
+                ax.imshow(rewdFF.T, cmap="Greys_r")
+                ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+                ax.set_xticklabels(range(-range_val, range_val+1, 1))
+                ax.set_title('Successful Trials (0=CS)')                
+                ax.axvline(int(range_val/binsize), color='w',linestyle='--')
+                ax = axes[3,1]
+                ax.plot(meanrewdFF,color='gray')   
+                xmin,xmax = ax.get_xlim()     
+                ax.fill_between(range(0,int(range_val/binsize)*2), 
+                        meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
+                        meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), 
+                        alpha=0.5, color='gray')        
+                fig.suptitle(f'Velocity, Animal {animal}, Day {day}')        
+                ax.axvline(int(range_val/binsize),color='gray',linestyle='--')
+                fig.tight_layout()
+                pdf.savefig(fig)
+
+            ############################# dff per cell #############################
+            meancll = []; alltrialscll = []
+            for cll, dfcll in enumerate(dff.T):
+                # plot pre-first reward dop activity    
                 normmeanrewdFF, meanrewdFF, normrewdFF, \
                     rewdFF = eye.perireward_binned_activity(dfcll[:firstrew], 
                             rews_centered, timedFF[:firstrew], range_val, binsize)
@@ -121,7 +248,7 @@ for ii,animal in enumerate(animals):
                 ax.axvline(int(range_val/binsize), color='w',linestyle='--')
                 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
                 ax.set_xticklabels(range(-range_val, range_val+1, 1))
-                ax.set_title('Probe Trials (0=prev. rewloc)')
+                ax.set_title('$\Delta$ F/F, Probe Trials (0=prev. rewloc)')
                 # fig2, axes2 = plt.subplots(nrows=3,ncols=1,sharex=True)#,gridspec_kw={'width_ratios':[4,1]})
                 ax = axes[0,1]
                 ax.plot(meanrewdFF)   
@@ -176,7 +303,7 @@ for ii,animal in enumerate(animals):
                         alpha=0.5, color='k')
                 ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
                 ax.set_xticklabels(range(-range_val, range_val+1, 1))
-                
+                ax.axvline(int(range_val/binsize), color='k',linestyle='--')
                             
                 # catch trials only  
                 failtr_bool = np.array([(xx in catchtrialsnum) for xx in trialnum])        
@@ -230,6 +357,7 @@ for ii,animal in enumerate(animals):
                         meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5, color='k')        
                 fig.suptitle(f'Mean of Trials, Animal {animal}, Day {day}, Cell # {cll}')        
                 ax.axvline(int(range_val/binsize), color='k',linestyle='--')
+                
                 pdf.savefig(fig)
                 # pdf.savefig(fig2)
                 fig.tight_layout()
@@ -237,4 +365,5 @@ for ii,animal in enumerate(animals):
             # plt.close('all')
             plndff.append([meanrewdFF])
         day_date_dff[str(day)] = plndff
+pdf.close()
 #%%
