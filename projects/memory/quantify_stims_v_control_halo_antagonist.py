@@ -27,7 +27,7 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-range_val = 10; binsize=0.2 #s
+range_val = 15; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_excel(r'Y:\halo_grabda\halo_key.xlsx',sheet_name='halo') # day vs. condition LUT
 animals = np.unique(conddf.animal.values.astype(str))
@@ -492,7 +492,7 @@ fig.tight_layout()
 # plot control-drug
 ymin=-0.01
 ymax=0.01
-
+plt.rc('font', size=12) 
 # plot
 drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
@@ -500,16 +500,16 @@ drug_c = [deep_rewdff_drug_c, sup_rewdff_drug_c]
 saline_c = [deep_rewdff_saline_c, sup_rewdff_saline_c]
 lbls = ['Deep (SO)', 'Superficial (SP, SR, SLM)']
 fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(8,6), sharex=True)
+# halo
 for i in range(len(saline)):
-
     # plot
     ax=axes[i,0]
     
     drugtrace = np.nanmean(drug[i],axis=1)
     drugtrace_padded = np.zeros_like(drugtrace)
     drugtrace_padded[int(range_val/binsize):int((stimsec+1.5)/binsize+range_val/binsize)]  = drugtrace[int(range_val/binsize):int((stimsec+1.5)/binsize+range_val/binsize)] 
-    meancond = np.nanmean(saline[i],axis=1)-drugtrace_padded# do not subtract-ctrl_mean_trace_per_pln[pln]
-    rewcond = np.array([xx-drugtrace_padded for xx in saline[i].T]).T #-ctrl_mean_trace_per_pln[pln]
+    meancond = np.nanmean(saline[i],axis=1)-drugtrace# do not subtract-ctrl_mean_trace_per_pln[pln]
+    rewcond = np.array([xx-drugtrace for xx in saline[i].T]).T #-ctrl_mean_trace_per_pln[pln]
     ax.plot(meancond,linewidth=1.5,color='k',label='Saline-SCH23390')   
     xmin,xmax = ax.get_xlim()         
     ax.fill_between(range(0,int(range_val/binsize)*2), 

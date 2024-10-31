@@ -9,7 +9,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib
-from behavior import consecutive_stretch, get_behavior_tuning_curve, get_success_failure_trials, get_lick_selectivity, \
+from projects.memory.behavior import consecutive_stretch, get_behavior_tuning_curve, get_success_failure_trials, get_lick_selectivity, \
     get_lick_selectivity_post_reward, calculate_lick_rate
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -201,8 +201,8 @@ df['animal'] = list(itertools.chain(*[[xx]*len(days_all[ii]) for ii,xx in enumer
 lds = [[condrewloc.loc[((condrewloc.Day==dy)&(condrewloc.Animal==animals[ii])), 'learning_date'].values[0] for dy in dys] 
     for ii,dys in enumerate(days_all)]
 df['learning_day'] = list(itertools.chain(*lds))
-df['opto_day_before'] = [xx if xx==True else False for xx in list(itertools.chain(*optodays_before_per_an))]
-df['opto'] = [xx if xx==True else False for xx in list(itertools.chain(*optodays_per_an))]
+df['opto_day_before'] = [True if xx=='True' else False for xx in list(itertools.chain(*optodays_before_per_an))]
+df['opto'] = [True if xx=='1' else False for xx in list(itertools.chain(*optodays_per_an))]
 df['lick_selectivity_near_rewardloc_mean'] = [np.nanmean(xx[0]) for xx in near_reward_per_day]
 df['velocity_near_rewardloc_mean'] = [np.nanmean(xx[1]) for xx in near_reward_per_day]
 df['com_lick_probe'] = [xx[2] for xx in near_reward_per_day]
@@ -280,8 +280,7 @@ ax.spines[['top','right']].set_visible(False)
 # ax = sns.stripplot(x='opto_day_before', y='com_lick_probe', hue='opto_day_before', data=df,
 #                 palette={False: "slategray", True: "mediumturquoise"},
 #                 s=8)
-dfagg = df#.groupby(['animal', 'opto']).mean(numeric_only = True)
-# # odd trials (led on vs. off days)
+dfagg=df# # odd trials (led on vs. off days)
 # plt.figure(figsize=(3,6))
 # ax = sns.barplot(x='opto', y='vel_failed_odd', hue='opto', data=dfagg, fill=False,
 #                 errorbar='se',
@@ -432,6 +431,25 @@ ax.set_title(f'persession pval = {pvals1:.4f}\n\
     peranimal paired pval = {pvals2:.4f}')
 ax.set_ylabel('Lick rate, recall probes (licks/s)')
 plt.savefig(os.path.join(dst, 'memory_lick_rate.svg'), bbox_inches='tight')
+#%%
+plt.figure(figsize=(2.2,5))
+sns.barplot(x='opto', y='success_rate', hue='opto', data=dfagg, 
+                fill=False,
+                errorbar='se',
+                palette={False: "slategray", True: "mediumturquoise"})
+ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=12, alpha=0.4)
+dfagg = df.groupby(['animal', 'opto']).mean(numeric_only = True)
+ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=dfagg,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=15)
+ax.get_legend().set_visible(False)
+ax.get_legend().set_visible(False)
+ax.spines[['top','right']].set_visible(False)
+plt.savefig(os.path.join(dst, 'performance_success_rate.svg'), bbox_inches='tight')
+
+
 #%%
 
 # velocity

@@ -28,8 +28,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-animals = ['e243']
-days_all = [[10]]
+animals = ['e241']
+days_all = [[9]]
 
 range_val = 8; binsize=0.2 #s
 dur=3# s stim duration

@@ -1,6 +1,6 @@
 """zahra's dopamine hrz analysis
-feb 2024
-for chr2 experiments
+oct 2024
+for drd consolidation experiments
 """
 #%%
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd

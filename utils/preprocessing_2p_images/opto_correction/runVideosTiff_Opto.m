@@ -7,8 +7,8 @@
 % triggered optogenetics
 
 clear all; close all;
-days=[12]; 
-src = 'Z:\chr2_grabda\opto_power_tests\e232';
+days=['\Day_01_2nd session']; 
+src = "\\storage1.ris.wustl.edu\ebhan\Active\Tarikul\E219_opto\Long opto control";
 % src = 'X:\vipcre\e217';
 lenVid=3000;
 threshold = 0.4; % a tunable parameter to find stims, set at 0.4 for chr2 data 
