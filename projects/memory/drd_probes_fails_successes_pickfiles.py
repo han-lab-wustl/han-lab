@@ -31,7 +31,7 @@ def input_with_default(prompt, default):
 
 # save to pdf
 # Prompt user for inputs
-dst = input_with_default("Please enter the destination directory path", r"C:\Users\Han\Desktop")
+dst = input_with_default("Please enter the pdf destination directory path", r"C:\Users\Han\Desktop")
 csvpth = input_with_default("Please enter the path to the CSV file", r"Z:\condition_df\drd.csv")
 
 # Processed inputs
