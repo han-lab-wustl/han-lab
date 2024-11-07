@@ -9,7 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
-from behavior import consecutive_stretch
+from projects.memory.behavior import consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
-from dopamine import get_rewzones
+from projects.memory.dopamine import get_rewzones
 # plt.rc('font', size=12)          # controls default text sizes
 
 plt.close('all')
@@ -27,14 +27,14 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'Y:\halo_grabda'
-range_val = 9; binsize=0.2 #s
+range_val = 10; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_excel(r'Y:\halo_grabda\halo_key.xlsx',sheet_name='halo') # day vs. condition LUT
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
-rolling_win = 8
+rolling_win = 10
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = conddf.loc[((conddf.animal==animal)), 'day'].values.astype(int)    
@@ -320,7 +320,6 @@ fig.tight_layout()
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
 plt.savefig(os.path.join(savedst, 'per_trial_halo_trace.svg'))
 
-
 #%%
 # collect values for ttest
 # get subtraction
@@ -375,14 +374,15 @@ g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
 ax.axhline(0, color='k', linestyle='--',linewidth=3)
 ax.spines[['top','right']].set_visible(False)
 # ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=10)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_xticklabels(ax.get_xticklabels(), rotation =45, ha='right')
 ax.set_ylabel('Mean $\Delta F/F$ during stim.')
 y=0.03
 fs=12
 i=0
 for i in range(len(lbls)):
     pval = bigdf.loc[bigdf.plane_subgroup==lbls[i], 'pval'].values[0]
-    ax.text(i, y, f'p={pval:.7f}', ha='center', fontsize=fs, rotation=45)
+    trials = bigdf[bigdf.plane_subgroup==lbls[i]]
+    ax.text(i, y, f'p={pval:.7f}, \n{len(trials)} trials', ha='center', fontsize=fs, rotation=45)
     i+=1
 
 ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 

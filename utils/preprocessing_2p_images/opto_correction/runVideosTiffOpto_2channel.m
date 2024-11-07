@@ -7,6 +7,7 @@
 % loadVideoTiffNoSplit_EH2.
 % calls "loadVideoTiffNoSplit_EH2". see that file for changes
 % changes loading, processing, and saving of tif files for suite2p
+% zahra added tunable threshold on 11/4/24 for opto stim detection
 
 %Allows you to select multiple sbx files, separates out and stabilizes each
 %plane, currently using the HMM method from SIMA
@@ -26,13 +27,12 @@ for f=1:num_files
     cd (paths{f}); %set path
 end
 % Fs=31;
+threshold=0.052;
 %Send sbx files to be split into a mat file for each plane
 for f=1:num_files
-%     loadVideoTiff(paths{f},files{f},num_planes(f),Fs);
-    loadVideoTiffNoSplitOpto_2channel_woetl(paths{f},files{f},scan_type{f});
+    loadVideoTiffNoSplitOpto_2channel_woetl(paths{f},files{f},scan_type{f}, ...
+        threshold);
 end
-% loadVideo('F:\MA Data\Videos\111215\','1112_MA_000_002',4);
-% loadVideo(path, filename, num_planes);
 
 %% sima HMM stabilization
 % for i=1:num_files

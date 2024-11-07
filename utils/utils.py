@@ -382,6 +382,6 @@ if __name__ == "__main__":
     usb = r"G:\2023-2024_ZD_VR"
     drives = [r'Y:\halo_grabda', r'Y:\halo_grabda',r'Y:\halo_grabda',
             r'Y:\drd', r'Y:\drd']
-    animals = ['e243', 'e242','e241', 'e256', 'e262']
+    animals = ['e243', 'e242', 'e241', 'e256', 'e262']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

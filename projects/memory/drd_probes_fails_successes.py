@@ -38,7 +38,7 @@ condrewloc[['Day']] = condrewloc[['Day']].astype(int)
 src = r"Y:\drd"
 animals = ['e256']
 # controls for gerardo
-days_all =[[24]]
+days_all =[[25]]
 
 range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -63,7 +63,7 @@ for ii,animal in enumerate(animals):
             dff = params['dFF']
             dff = np.array([np.hstack(pd.DataFrame(dffcll).rolling(3).mean().values) for dffcll in dff.T]).T
             rewards = np.hstack(params['solenoid2'])
-            if dff.shape[0]<rewards.shape[0]:
+            if dff.shape[0]<rewards.shape[0]: # correct for 1 extra plane
                 rewards = np.hstack(params['solenoid2'])[:-1]
                 trialnum = np.hstack(params['trialnum'])[:-1]
                 ybinned = np.hstack(params['ybinned'])[:-1]/gainf
@@ -75,6 +75,7 @@ for ii,animal in enumerate(animals):
                 trialnum = np.hstack(params['trialnum'])
                 ybinned = np.hstack(params['ybinned'])/gainf
                 licks = np.hstack(params['licks'])
+                timedFF = np.hstack(params['timedFF'])
                 forwardvel = np.hstack(params['forwardvel'])
             # # mask out dark time
             # dff = dff[ybinned>3]
@@ -231,11 +232,19 @@ for ii,animal in enumerate(animals):
 
             ############################# dff per cell #############################
             meancll = []; alltrialscll = []
+            firstrew = np.where(rewards==1)[0][0]
+            rews_centered = np.zeros_like(ybinned[:firstrew])
+            rews_centered[(ybinned[:firstrew] >= rewloc-3) & (ybinned[:firstrew] <= rewloc+3)]=1
+            rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+            min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+            rews_centered_init = np.zeros_like(ybinned[:firstrew])
+            rews_centered_init[min_iind]=1
+
             for cll, dfcll in enumerate(dff.T):
                 # plot pre-first reward dop activity    
                 normmeanrewdFF, meanrewdFF, normrewdFF, \
                     rewdFF = eye.perireward_binned_activity(dfcll[:firstrew], 
-                            rews_centered, timedFF[:firstrew], range_val, binsize)
+                            rews_centered_init, timedFF[:firstrew], range_val, binsize)
                 meancll.append(meanrewdFF)
                 alltrialscll.append(rewdFF)
                 # peri reward initial probes        

@@ -2,9 +2,10 @@ function loadVideoTiffNoSplitOpto_2channel_woetl(varargin)
 % ZD changed cropping parameters and some variables to crop out the etl
 % ZD added 2 channel functionality 
 
-%ZD added for Gerardo's workstation
-javaaddpath 'C:\Program Files\MATLAB\R2022b\java\mij.jar' %added by TI 07/23/2024
-javaaddpath 'C:\Program Files\MATLAB\R2022b\java\ij.jar'  %added by TI 07/23/2024
+% %ZD changed for her workstation
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
     dir='uni';
@@ -16,6 +17,7 @@ else
     filepath=varargin{1};
     filename=varargin{2};
     dir=varargin{3};
+    threshold=varargin{4};
 end
 % win=60*Fs;
 
@@ -65,18 +67,18 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     chtempg=uint16(chtempg);
     chtempr=(((double(chtempr))/2)-1); %make max of movie 32767 (assuming it was 65535 before)
     chtempr=uint16(chtempr);
-    imageJ_savefilename1=strrep([filepath,'\','green_opto_corrected_tifs','\',currfile(1:end-4),'_green.tif'],'\','\\'); %ImageJ needs double slash
-    [status, msg, msgID] = mkdir(fullfile(filepath, 'green_opto_corrected_tifs'));
-    imageJ_savefilename1=['path=[' imageJ_savefilename1 ']'];
+    % imageJ_savefilename1=strrep([filepath,'\','green_opto_corrected_tifs','\',currfile(1:end-4),'_green.tif'],'\','\\'); %ImageJ needs double slash
+    % [status, msg, msgID] = mkdir(fullfile(filepath, 'green_opto_corrected_tifs'));
+    % imageJ_savefilename1=['path=[' imageJ_savefilename1 ']'];
     imageJ_savefilename2=strrep([filepath,'\','red_opto_corrected_tifs','\',currfile(1:end-4),'_red.tif'],'\','\\'); %ImageJ needs double slash
     imageJ_savefilename2=['path=[' imageJ_savefilename2 ']'];
     [status, msg, msgID] = mkdir(fullfile(filepath, 'red_opto_corrected_tifs'));
 %     MIJ.createImage('chone_image', gray2ind(mat2gray(chtemp,[0 32767])), true);
 %     MIJ.createImage('chone_image', gray2ind(mat2gray(chtemp,double(lims)),double(round(ceil(lims(2))/2))), true);
 %     MIJ.createImage('chone_image', uint16(chtemp), true); %creates ImageJ file with 'name', matlab variable name
-    MIJ.createImage('chone_image1',uint16(squeeze(chtempg)),true)  
-    MIJ.run('Save', imageJ_savefilename1);   %saves with defined filename
-    MIJ.run('Close All');
+    % MIJ.createImage('chone_image1',uint16(squeeze(chtempg)),true)  
+    % MIJ.run('Save', imageJ_savefilename1);   %saves with defined filename
+    % MIJ.run('Close All');
     MIJ.createImage('chone_image2',uint16(squeeze(chtempr)),true)
     MIJ.run('Save', imageJ_savefilename2);   %saves with defined filename
     MIJ.run('Close All');
@@ -86,7 +88,7 @@ tempstims = zeros(length(tempsg),1);
 for p = 1:size(info.etl_table,1)
     currx = p:size(info.etl_table,1):length(tempsg);
     temp2 = (abs(tempsg(currx)/nanmean(tempsg(currx))-1));
-    s = find(temp2>0.5);
+    s = find(temp2>threshold);
     if ~isempty(s)
         tempstims(currx(s)) = 1;
     end

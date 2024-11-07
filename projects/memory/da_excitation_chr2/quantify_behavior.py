@@ -114,21 +114,33 @@ for ii,animal in enumerate(animals):
         #     plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
 
         
-        # example plot during learning
+        # # example plot during learning
+        # eps = np.where(changerewloc)[0]
         # rew = (rewards==1).astype(int)
-        # mask = np.array([True if xx>15 and xx<28 else False for xx in trialnum])
+        # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
+        # mask = np.zeros_like(trialnum).astype(bool)
+        # mask[eps[0]+8500:eps[1]+2700]=True
         # import matplotlib.patches as patches
-        # fig, ax = plt.subplots()
-        # ax.plot(ypos[mask])
-        # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k')
-        # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan')
+        # fig, ax = plt.subplots(figsize=(9,5))
+        # ax.plot(ypos[mask],zorder=1)
+        # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',
+        #         zorder=2)
+        # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
+        #     zorder=2)
+        # # ax.add_patch(
+        # # patches.Rectangle(
+        # #     xy=(0,newrewloc-10),  # point of origin.
+        # #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
+        # #     color='slategray', alpha=0.3))
         # ax.add_patch(
         # patches.Rectangle(
-        #     xy=(0,newrewloc-10),  # point of origin.
+        #     xy=(0,changerewloc[eps][0]/gainf-10),  # point of origin.
         #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
         #     color='slategray', alpha=0.3))
+
         # ax.set_ylim([0,270])
         # ax.spines[['top','right']].set_visible(False)
+        # plt.savefig(os.path.join(dst, f'hrz_eg_behavior.svg'),bbox_inches='tight')
         # ax.set_title(f'{day}')
         # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
 
@@ -201,7 +213,7 @@ df['animal'] = list(itertools.chain(*[[xx]*len(days_all[ii]) for ii,xx in enumer
 lds = [[condrewloc.loc[((condrewloc.Day==dy)&(condrewloc.Animal==animals[ii])), 'learning_date'].values[0] for dy in dys] 
     for ii,dys in enumerate(days_all)]
 df['learning_day'] = list(itertools.chain(*lds))
-df['opto_day_before'] = [True if xx=='True' else False for xx in list(itertools.chain(*optodays_before_per_an))]
+df['opto_day_before'] = [True if xx=='TRUE' else False for xx in list(itertools.chain(*optodays_before_per_an))]
 df['opto'] = [True if xx=='1' else False for xx in list(itertools.chain(*optodays_per_an))]
 df['lick_selectivity_near_rewardloc_mean'] = [np.nanmean(xx[0]) for xx in near_reward_per_day]
 df['velocity_near_rewardloc_mean'] = [np.nanmean(xx[1]) for xx in near_reward_per_day]
@@ -222,7 +234,7 @@ df['lickrate_probes'] = [np.nanmean(xx[12]) for xx in near_reward_per_day]
 # df['lick_prob_near_rewardloc_mean'] = [np.quantile(xx[0], .9) for xx in near_reward_per_day]
 # df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
-df = df[df.learning_day==2]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+# df = df[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 
 dfagg = df
 # drop 1st row
@@ -237,9 +249,21 @@ ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
                 s=12)
 ax.get_legend().set_visible(False)
 
+df_mem = df[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+# performance on memory days
+plt.figure(figsize=(3,6))
+ax = sns.barplot(x='opto_day_before', y='success_rate', hue='opto_day_before', data=df_mem, fill=False,
+                errorbar='se',
+                palette={False: "slategray", True: "mediumturquoise"})
+ax = sns.stripplot(x='opto_day_before', y='success_rate', hue='opto_day_before', data=df_mem,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=12)
+ax.get_legend().set_visible(False)
+
 # lick rate
 plt.figure(figsize=(3,6))
-ax = sns.barplot(x='opto_day_before', y='lickrate_probes', hue='opto_day_before', data=df, fill=False,
+ax = sns.barplot(x='opto_day_before', y='lickrate_probes', hue='opto_day_before', data=df, 
+                fill=False,
                 errorbar='se',
                 palette={False: "slategray", True: "mediumturquoise"})
 ax = sns.stripplot(x='opto_day_before', y='lickrate_probes', hue='opto_day_before', data=df,
@@ -432,23 +456,78 @@ ax.set_title(f'persession pval = {pvals1:.4f}\n\
 ax.set_ylabel('Lick rate, recall probes (licks/s)')
 plt.savefig(os.path.join(dst, 'memory_lick_rate.svg'), bbox_inches='tight')
 #%%
+# success rate
+dfld = df[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 plt.figure(figsize=(2.2,5))
-sns.barplot(x='opto', y='success_rate', hue='opto', data=dfagg, 
+sns.barplot(x='opto', y='success_rate', hue='opto', data=dfld, 
                 fill=False,
                 errorbar='se',
                 palette={False: "slategray", True: "mediumturquoise"})
-ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=df,
+ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=dfld,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=12, alpha=0.4)
-dfagg = df.groupby(['animal', 'opto']).mean(numeric_only = True)
+dfagg = dfld.groupby(['animal', 'opto']).mean(numeric_only = True)
 ax = sns.stripplot(x='opto', y='success_rate', hue='opto', data=dfagg,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=15)
-ax.get_legend().set_visible(False)
+ans = dfagg.index.get_level_values('animal').unique().values
+ax.set_ylabel('Performance')
+ax.set_xticklabels(['LED off', 'LED on'])
+
+# for i in range(len(ans)):
+#     ax = sns.lineplot(x='opto', y='success_rate', 
+#     data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
+#     errorbar=None, color='dimgray', linewidth=2)
+
+x1 = dfagg.loc[dfagg.index.get_level_values('opto')==True, 'success_rate'].values
+x2 = dfagg.loc[dfagg.index.get_level_values('opto')==False, 'success_rate'].values
+t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+x1 = df_mem.loc[df_mem.opto_day_before==True, 'success_rate'].values
+x2 = df_mem.loc[df_mem.opto_day_before==False, 'success_rate'].values
+t,pvals1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+ax.set_title(f'persession pval = {pvals1:.4f}\n\
+    peranimal paired pval = {pvals2:.4f}',fontsize=12)
+
 ax.get_legend().set_visible(False)
 ax.spines[['top','right']].set_visible(False)
 plt.savefig(os.path.join(dst, 'performance_success_rate.svg'), bbox_inches='tight')
+#%%
+plt.rc('font', size=22)          # controls default text sizes
+# success rate after opto
+# only can do after day 1?
+df_mem = df[df.learning_day==2]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+# performance on memory days
+plt.figure(figsize=(2.2,5))
+ax = sns.barplot(x='opto_day_before', y='success_rate', hue='opto_day_before', data=df_mem, fill=False,
+                errorbar='se',
+                palette={False: "slategray", True: "mediumturquoise"})
+ax = sns.stripplot(x='opto_day_before', y='success_rate', hue='opto_day_before', data=df_mem,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=12,alpha=0.4)
+dfagg = df_mem.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+ax = sns.stripplot(x='opto_day_before', y='success_rate', hue='opto_day_before', data=dfagg,
+                palette={False: "slategray", True: "mediumturquoise"},
+                s=15)
 
+ans = dfagg.index.get_level_values('animal').unique().values
+for i in range(len(ans)):
+    ax = sns.lineplot(x='opto_day_before', y='success_rate', 
+    data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
+
+x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'success_rate'].values
+x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'success_rate'].values
+t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+x1 = df_mem.loc[df_mem.opto_day_before==True, 'success_rate'].values
+x2 = df_mem.loc[df_mem.opto_day_before==False, 'success_rate'].values
+t,pvals1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+ax.set_title(f'persession pval = {pvals1:.4f}\n\
+    peranimal paired pval = {pvals2:.4f}',fontsize=12)
+
+ax.get_legend().set_visible(False)
+ax.spines[['top','right']].set_visible(False)
+ax.get_legend().set_visible(False)
+plt.savefig(os.path.join(dst, 'online_performance_next_day.svg'), bbox_inches='tight')
 
 #%%
 
