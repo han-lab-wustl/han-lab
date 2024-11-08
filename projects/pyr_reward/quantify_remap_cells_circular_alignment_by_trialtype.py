@@ -24,11 +24,12 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_20240919.p"
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_20241108.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
+#%%
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -39,9 +40,8 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_window = 10
+cm_window = 20
 # cm_window = [10,20,30,40,50,60,70,80] # cm
-#%%
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
@@ -81,25 +81,41 @@ for ii in range(len(conddf)):
         rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins        
-        
+        # get average success rate
+        rates = []
+        for ep in range(len(eps)-1):
+                eprng = range(eps[ep],eps[ep+1])
+                success, fail, str_trials, ftr_trials, ttr, \
+                total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+                rates.append(success/total_trials)
+        rates_all.append(np.nanmean(np.array(rates)))
+        # added to get anatomical info
+        # takes time
+        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        # skew_mask = skew_filter>2
+        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
             tcs_correct, coms_correct, tcs_fail, coms_fail, \
             com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
-            # takes time
-            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-            Fc3 = fall_fc3['Fc3']
-            dFF = fall_fc3['dFF']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-            # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # skew_mask = skew_filter>2
-            Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
             # 9/19/24
             # find correct trials within each epoch!!!!
             tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
+        fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
+        ops = fall_stat['ops']
+        stat = fall_stat['stat']
+        meanimg=np.squeeze(ops)[()]['meanImg']
+        s2p_iind = np.arange(stat.shape[1])
+        s2p_iind_filter = s2p_iind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        s2p_iind_filter = s2p_iind_filter[skew>2]
+        
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -109,12 +125,31 @@ for ii in range(len(conddf)):
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)
+        s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+        # Create a colormap
+        cmap = plt.cm.Greens  # Choose your preferred colormap
+        cmap.set_under('white', alpha=0)  # Set 0 values to transparent white
+        # get x y coords!!
+        fig,ax = plt.subplots()
+        meanimgm = np.zeros_like(meanimg)        
+        stat = np.squeeze(stat)        
+        for gc in s2p_iind_goal_cells:
+            ypix=stat[gc][0][0][0]    
+            xpix=stat[gc][0][0][1]                
+            meanimgm[ypix,xpix]=1
+        #     meanimgm = np.ma.masked_where(meanimgm==0, meanimgm)
+            ax.imshow(meanimg, cmap='Greys_r')
+            ax.imshow(meanimgm, alpha=0.5,cmap=cmap)
+            ax.axis('off')
+            pdf.savefig(fig)
+            plt.close(fig)
+            
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
         epoch_perm.append(perm)
         goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p]);num_epochs.append(len(coms_correct))
-        colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod']
+        colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
         for gc in goal_cells:
             fig, ax = plt.subplots()
             for ep in range(len(coms_correct)):
@@ -125,13 +160,13 @@ for ii in range(len(conddf)):
                 ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
                 ax.set_xticks(np.arange(0,bins+1,10))
                 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),3))
-                ax.set_xlabel('Radian position (centered at start of rew loc)')
+                ax.set_xlabel('Radian position (centered at start rew loc)')
                 ax.set_ylabel('Fc3')
             ax.legend()
             pdf.savefig(fig)
             plt.close(fig)
         # get shuffled iterationsollllllpoik
-        num_iterations = 5000; shuffled_dist = np.zeros((num_iterations))
+        num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
         # max of 5 epochs = 10 perms
         goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
         for i in range(num_iterations):
@@ -166,10 +201,9 @@ for ii in range(len(conddf)):
                         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 pdf.close()
-
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -277,8 +311,8 @@ ax.legend().set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Reward cell proportion')
 eps = [2,3,4]
-y = 0.16
-pshift = 0.02
+y = 0.25
+pshift = 0.03
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -328,6 +362,26 @@ plt.savefig(os.path.join(savedst, 'rec_cell_rew_prop_per_an.svg'),
 #%%
 df['success_rate'] = rates_all
 
+# all animals
+fig,ax = plt.subplots(figsize=(7,5))
+sns.scatterplot(x='success_rate', y='goal_cell_prop',hue='animals',
+        data=df,
+        s=150, ax=ax)
+sns.regplot(x='success_rate', y='goal_cell_prop',
+        data=df,
+        ax=ax, scatter=False, color='k'
+)
+r, p = scipy.stats.pearsonr(df['success_rate'], 
+        df['goal_cell_prop'])
+ax = plt.gca()
+ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
+        transform=ax.transAxes)
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.set_xlabel('Success rate')
+ax.set_ylabel('Reward cell proportion')
+#%%
 an_nms = df.animals.unique()
 rows = int(np.ceil(np.sqrt(len(an_nms))))
 cols = int(np.ceil(np.sqrt(len(an_nms))))
@@ -344,8 +398,7 @@ for an in an_nms:
     rr+=1
     if rr>=rows: rr=0; cc+=1    
 fig.tight_layout()
-
-# #%%
+#%%
 # # #examples
 fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
 Fc3 = fall_fc3['Fc3']

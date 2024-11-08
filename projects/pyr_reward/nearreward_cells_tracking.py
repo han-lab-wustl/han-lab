@@ -20,7 +20,7 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians, intersect_arrays
+from placecell import intersect_arrays
 from rewardcell import get_days_from_cellreg_log_file, find_log_file
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df

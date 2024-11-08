@@ -27,7 +27,7 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"drd_peri_analysis.pdf"))
 
-condrewloc = pd.read_csv(r"Z:\condition_df\drd.csv", index_col = None)
+condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - dopamine_receptor (1).csv", index_col = None)
 # convert rewlcos to float
 # Drop rows with non-numeric values
 condrewloc = condrewloc[pd.to_numeric(condrewloc['rewloc'], errors='coerce').notnull()]
@@ -38,12 +38,12 @@ condrewloc[['Day']] = condrewloc[['Day']].astype(int)
 src = r"Y:\drd"
 animals = ['e256']
 # controls for gerardo
-days_all =[[25]]
+days_all =[[27]]
 
 range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 #%%
-plt.close('all')
+
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
