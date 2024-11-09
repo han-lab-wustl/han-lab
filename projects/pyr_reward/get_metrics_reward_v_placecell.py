@@ -16,20 +16,20 @@ mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_radian_position
+from placecell import make_tuning_curves,make_tuning_curves_radians_by_trialtype, intersect_arrays
+from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'reward_relative_correcttr_skewfilt.pdf')
+savepth = os.path.join(savedst, 'reward_and_pcs_with_masks.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_20241108.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -40,9 +40,12 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
+av_pairwise_dist = []
+pcs_per_2ep=[]
 cm_window = 20
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
+
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
@@ -52,8 +55,9 @@ for ii in range(len(conddf)):
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 
+            'rewards', 'iscell', 'bordercells',
+            'putative_pcs','stat'])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         try:
@@ -115,7 +119,6 @@ for ii in range(len(conddf)):
         s2p_iind = np.arange(stat.shape[1])
         s2p_iind_filter = s2p_iind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         s2p_iind_filter = s2p_iind_filter[skew>2]
-        
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -126,20 +129,66 @@ for ii in range(len(conddf)):
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)   
-        if len(coms_correct)>3:
-                perm3 = list(combinations(range(len(coms_correct)), 3))     
-                goal_cells_
-     
         s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+        # get per comparison
+        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
+        goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
+        epoch_perm.append(perm)
+        goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p]);num_epochs.append(len(coms_correct))
+
+        #if pc in one epoch
+        pcs = np.vstack(np.array(fall['putative_pcs'][0]))
+        pc_bool = np.sum(pcs,axis=0)>=1      
+        Fc3 = fall_fc3['Fc3']
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
+        if Fc3.shape[1]==0: # remove skew filter if v few or noisy cells
+            Fc3 = fall_fc3['Fc3']
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            Fc3 = Fc3[:,(pc_bool)] 
+            s2p_iind_filter = s2p_iind[((fall['iscell'][:,0]).astype(bool) \
+                & (~fall['bordercells'][0].astype(bool)))]
+        bin_size=3 # cm
+        # get abs dist tuning 
+        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+            Fc3,trialnum,rewards,forwardvel,
+            rewsize,bin_size)
+
+        # get cells that maintain their coms across at least 2 epochs
+        place_window = 15 # cm converted to rad                
+        perm = list(combinations(range(len(coms_correct_abs)), 2))     
+        com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
+        compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+        # get place cells that are place-like for at least two epochs
+        pcall = np.concatenate(compc)
+        goal_cells_that_are_pc = [xx for xx in goal_cells if xx in pcall]
+        # exclude those that are goal cells so not counted twice
+        pcall = np.array([xx for xx in pcall if xx not in goal_cells_that_are_pc])
+        # get % per comparison
+        pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
+        pcs_per_2ep.append(pcs_p_per_comparison)
+        s2p_iind_pc = s2p_iind_filter[pcall]
+        s2p_iind_goal_cells_that_are_pc = s2p_iind_filter[goal_cells_that_are_pc]
         # Create a colormap
-        cmap = plt.cm.viridis_r  # Choose your preferred colormap
+        cmap = ['k','yellow']  # Choose your preferred colormap
+        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", cmap)
         cmap.set_under('none')
-        # cmap.set_under('white', alpha=0)  # Set 0 values to transparent white
+        cmap2 = ['k','cyan']  # Choose your preferred colormap
+        cmap2 = matplotlib.colors.LinearSegmentedColormap.from_list("", cmap2)
+        cmap2.set_under('none')
         # get x y coords!!
         fig,ax = plt.subplots()
         stat = np.squeeze(stat)        
         ax.imshow(meanimg, cmap='Greys_r')
-        centers = []
+        centerspc = []; centersgc = []        
+        for gc in s2p_iind_pc:
+                ypix=stat[gc][0][0][0][0]    
+                xpix=stat[gc][0][0][1][0]     
+                coords = np.column_stack((xpix, ypix))  
+                mask,cmask,center=create_mask_from_coordinates(coords, 
+                        meanimg.shape)                         
+                ax.imshow(cmask,cmap=cmap2,vmin=1)
+                centerspc.append(center)          
         for gc in s2p_iind_goal_cells:
                 ypix=stat[gc][0][0][0][0]    
                 xpix=stat[gc][0][0][1][0]     
@@ -147,39 +196,73 @@ for ii in range(len(conddf)):
                 mask,cmask,center=create_mask_from_coordinates(coords, 
                         meanimg.shape)                         
                 ax.imshow(cmask,cmap=cmap,vmin=1)
-                ax.axis('off')
-                centers.append(center)        
+                centersgc.append(center)   
+        ax.axis('off')
+        fig.suptitle(f'animal: {animal}, day: {day}')
         pdf.savefig(fig)
         plt.close(fig)
-        points = np.array(centers)
+        points = np.array(centersgc)
         dist = pairwise_distances(points)
         # Exclude self-pairs (distances to the same point)
         # We do this by flattening the distance matrix and excluding zero distances
         non_self_distances = dist[np.triu_indices_from(dist, k=1)]
         # Compute the average distance
-        average_distance = np.mean(non_self_distances)
-
-        # get per comparison
-        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
-        goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
-        epoch_perm.append(perm)
-        goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p]);num_epochs.append(len(coms_correct))
+        average_distance_gc = np.mean(non_self_distances)
+        points = np.array(centerspc)
+        # pcs
+        dist = pairwise_distances(points)        
+        non_self_distances = dist[np.triu_indices_from(dist, k=1)]
+        average_distance_pc = np.mean(non_self_distances)
+        av_pairwise_dist.append([average_distance_gc,average_distance_pc])
         colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
-        for gc in goal_cells:
-            fig, ax = plt.subplots()
-            for ep in range(len(coms_correct)):
-                ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                if len(tcs_fail)>0:
-                        ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                ax.axvline((bins/2), color='k')
-                ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-                ax.set_xticks(np.arange(0,bins+1,20))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
-                ax.set_xlabel('Radian position (centered start rew loc)')
-                ax.set_ylabel('Fc3')
+        if len(goal_cells)>0:
+            rows = int(np.ceil(np.sqrt(len(goal_cells))))
+            cols = int(np.ceil(len(goal_cells) / rows))
+            fig, axes = plt.subplots(rows, cols, figsize=(15, 15),sharex=True)
+            if len(goal_cells) > 1:
+                axes = axes.flatten()
+            else:
+                axes = [axes]
+            for i,gc in enumerate(goal_cells):            
+                for ep in range(len(coms_correct)):
+                    ax = axes[i]
+                    ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                    if len(tcs_fail)>0:
+                            ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
+                    ax.axvline((bins/2), color='k')
+                    ax.set_title(f'cell # {gc}')
+                    ax.spines[['top','right']].set_visible(False)
+            ax.set_xticks(np.arange(0,bins+1,20))
+            ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+            ax.set_xlabel('Radian position (centered start rew loc)')
+            ax.set_ylabel('Fc3')
             ax.legend()
+            fig.tight_layout()
             pdf.savefig(fig)
             plt.close(fig)
+        # place cells
+        rows = int(np.ceil(np.sqrt(len(pcall))))
+        cols = int(np.ceil(len(pcall) / rows))
+        fig, axes = plt.subplots(rows, cols, figsize=(30, 30),sharex=True)
+        if len(pcall) > 1:
+            axes = axes.flatten()
+        else:
+            axes = [axes]
+        for i,gc in enumerate(pcall):            
+            for ep in range(len(coms_correct_abs)):
+                ax = axes[i]
+                ax.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                ax.set_title(f'place cell # {gc}')
+                ax.spines[['top','right']].set_visible(False)
+        ax.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,10))
+        ax.set_xticklabels(np.arange(0,track_length+bin_size*10,bin_size*10).astype(int))
+        ax.set_xlabel('Absolute position (cm)')
+        ax.set_ylabel('Fc3')
+        ax.legend()
+        fig.tight_layout()
+        pdf.savefig(fig)
+        plt.close(fig)
+
         # get shuffled iteration
         num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
         # max of 5 epochs = 10 perms
@@ -217,8 +300,8 @@ for ii in range(len(conddf)):
 
 pdf.close()
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-    pickle.dump(radian_alignment, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#     pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -346,73 +429,39 @@ for ii,ep in enumerate(eps):
 # plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
 #         bbox_inches='tight')
 #%%
+# pairwise distances goal vs. place
+df = pd.DataFrame()
 
-df['recorded_neurons_per_session'] = total_cells
-df_plt_ = df[(df.opto==False)&(df.p_value<0.05)]
-df_plt_= df_plt_[(df_plt_.animals!='e200')&(df_plt_.animals!='e189')]
-df_plt_ = df_plt_.groupby(['animals']).mean(numeric_only=True)
-
-fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
-        data=df_plt_,
-        s=150, ax=ax)
-sns.regplot(x='recorded_neurons_per_session', y='goal_cell_prop',
-        data=df_plt_,
-        ax=ax, scatter=False, color='k'
-)
-r, p = scipy.stats.pearsonr(df_plt_['recorded_neurons_per_session'], 
-        df_plt_['goal_cell_prop'])
-ax = plt.gca()
-ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
-        transform=ax.transAxes)
-
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-ax.set_xlabel('Av. # of neurons per session')
-ax.set_ylabel('Reward cell proportion')
-
-plt.savefig(os.path.join(savedst, 'rec_cell_rew_prop_per_an.svg'), 
-        bbox_inches='tight')
-
+df['mean_pairwise_distance (px)'] = np.concatenate(av_pairwise_dist)
+# df['cell_type'] = 
 #%%
-df['success_rate'] = rates_all
+# df['recorded_neurons_per_session'] = total_cells
+# df_plt_ = df[(df.opto==False)&(df.p_value<0.05)]
+# df_plt_= df_plt_[(df_plt_.animals!='e200')&(df_plt_.animals!='e189')]
+# df_plt_ = df_plt_.groupby(['animals']).mean(numeric_only=True)
 
-# all animals
-fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='success_rate', y='goal_cell_prop',hue='animals',
-        data=df,
-        s=150, ax=ax)
-sns.regplot(x='success_rate', y='goal_cell_prop',
-        data=df,
-        ax=ax, scatter=False, color='k'
-)
-r, p = scipy.stats.pearsonr(df['success_rate'], 
-        df['goal_cell_prop'])
-ax = plt.gca()
-ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
-        transform=ax.transAxes)
+# fig,ax = plt.subplots(figsize=(7,5))
+# sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
+#         data=df_plt_,
+#         s=150, ax=ax)
+# sns.regplot(x='recorded_neurons_per_session', y='goal_cell_prop',
+#         data=df_plt_,
+#         ax=ax, scatter=False, color='k'
+# )
+# r, p = scipy.stats.pearsonr(df_plt_['recorded_neurons_per_session'], 
+#         df_plt_['goal_cell_prop'])
+# ax = plt.gca()
+# ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
+#         transform=ax.transAxes)
 
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-ax.set_xlabel('Success rate')
-ax.set_ylabel('Reward cell proportion')
-#%%
-an_nms = df.animals.unique()
-rows = int(np.ceil(np.sqrt(len(an_nms))))
-cols = int(np.ceil(np.sqrt(len(an_nms))))
-fig,axes = plt.subplots(nrows=rows, ncols=cols,
-            figsize=(10,10))
-rr=0;cc=0
-for an in an_nms:        
-    ax = axes[rr,cc]
-    sns.scatterplot(x='success_rate', y='goal_cell_prop',
-            data=df[(df.animals==an)&(df.opto==False)&(df.p_value<0.05)],
-            s=200, ax=ax)
-    ax.spines[['top','right']].set_visible(False)
-    ax.set_title(an)
-    rr+=1
-    if rr>=rows: rr=0; cc+=1    
-fig.tight_layout()
+# ax.spines[['top','right']].set_visible(False)
+# ax.legend(bbox_to_anchor=(1.01, 1.05))
+# ax.set_xlabel('Av. # of neurons per session')
+# ax.set_ylabel('Reward cell proportion')
+
+# plt.savefig(os.path.join(savedst, 'rec_cell_rew_prop_per_an.svg'), 
+#         bbox_inches='tight')
+
 #%%
 # # #examples
 fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])

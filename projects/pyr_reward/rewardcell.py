@@ -16,6 +16,7 @@ correct trials
 import numpy as np, random, re, os, scipy, pandas as pd, sys, cv2
 import matplotlib.pyplot as plt
 from itertools import combinations, chain
+from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -634,6 +635,7 @@ def create_mask_from_coordinates(coordinates, image_shape):
     """
 
     mask = np.zeros(image_shape, dtype=np.uint8)
+    height,width=image_shape
 
     # Create a polygon from the coordinates
     polygon = np.array(coordinates, dtype=np.int32)
@@ -641,5 +643,32 @@ def create_mask_from_coordinates(coordinates, image_shape):
 
     # Fill the polygon with 1s
     cv2.fillPoly(mask, [polygon], 1)
+    # Find contours of the filled mask
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    return mask
+    # Create an empty mask to draw the contours
+    contour_mask = np.zeros((height, width), dtype=np.uint8)
+
+    # Draw the detected contours on the mask
+    cv2.drawContours(contour_mask, contours, -1, (255, 255, 255), 1)
+    # Calculate the moments of the contours to find the center
+    M = cv2.moments(contour_mask)
+    if M["m00"] != 0:
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+    else:
+        cX, cY = 0, 0
+
+    return mask,contour_mask,(cX,cY)
+# Function to compute pairwise distances
+def pairwise_distances(points):
+    n = len(points)
+    distances = np.zeros((n, n))
+    
+    for i in range(n):
+        for j in range(i+1, n):
+            dist = distance.euclidean(points[i], points[j])
+            distances[i, j] = dist
+            distances[j, i] = dist
+    
+    return distances
