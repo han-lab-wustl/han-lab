@@ -128,8 +128,27 @@ for ii in range(len(conddf)):
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
-        goal_cells = intersect_arrays(*com_goal)   
+        goal_cells = intersect_arrays(*com_goal) 
         s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+        # across at least 2 epochs
+        goal_cells_per2ep = np.unique(np.concatenate(com_goal))
+        # find those that stop being goal cells
+        dropped_cells = np.array([xx for xx in goal_cells_per2ep \
+            if xx not in goal_cells])
+        # did a check to see if max com misses any of them, they dont seem v compelling
+        bin_size=track_length_rad/bins            
+        max_com = [np.arange(0,track_length_rad,bin_size)[np.argmax(tcs_correct[i,dropped_cells,:],
+                        axis=1)] for i in range(len(coms_correct))]
+        # redo with max com
+        # change to relative value 
+        coms_rewrel = np.array([com-np.pi for com in max_com])
+        perm = list(combinations(range(len(coms_correct)), 2))     
+        # if 4 ep
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+
+
+        s2p_iind_goal_cells_2ep = s2p_iind_filter[goal_cells_per2ep]
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
@@ -155,15 +174,12 @@ for ii in range(len(conddf)):
             rewsize,bin_size)
 
         # get cells that maintain their coms across at least 2 epochs
-        place_window = 15 # cm converted to rad                
+        place_window = 10 # cm converted to rad                
         perm = list(combinations(range(len(coms_correct_abs)), 2))     
         com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
         # get place cells that are place-like for at least two epochs
         pcall = np.concatenate(compc)
-        goal_cells_that_are_pc = [xx for xx in goal_cells if xx in pcall]
-        # exclude those that are goal cells so not counted twice
-        pcall = np.array([xx for xx in pcall if xx not in goal_cells_that_are_pc])
         # get % per comparison
         pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
         pcs_per_2ep.append(pcs_p_per_comparison)
@@ -240,6 +256,32 @@ for ii in range(len(conddf)):
             fig.tight_layout()
             pdf.savefig(fig)
             plt.close(fig)
+        # goal cells that are goal cells for 2 ep but otherwise not?
+        # colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+        # rows = int(np.ceil(np.sqrt(len(goal_cells_per2ep))))
+        # cols = int(np.ceil(len(goal_cells_per2ep) / rows))
+        # fig, axes = plt.subplots(rows, cols, figsize=(50,50),sharex=True)
+        # if len(goal_cells_per2ep) > 1:
+        #     axes = axes.flatten()
+        # else:
+        #     axes = [axes]
+        # for i,gc in enumerate(goal_cells_per2ep):            
+        #     for ep in range(len(coms_correct)):
+        #         ax = axes[i]
+        #         ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+        #         ax.axvline((bins/2), color='k')
+        #         ax.set_title(f'cell # {gc}')
+        #         ax.spines[['top','right']].set_visible(False)
+        # ax.set_xticks(np.arange(0,bins+1,20))
+        # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+        # ax.set_xlabel('Radian position (centered start rew loc)')
+        # ax.set_ylabel('Fc3')
+        # ax.legend()
+        # fig.suptitle('Goal cells in at least 2 ep')
+        # fig.tight_layout()
+        # pdf.savefig(fig)
+        # plt.close(fig)
+
         # place cells
         rows = int(np.ceil(np.sqrt(len(pcall))))
         cols = int(np.ceil(len(pcall) / rows))
@@ -263,40 +305,9 @@ for ii in range(len(conddf)):
         pdf.savefig(fig)
         plt.close(fig)
 
-        # get shuffled iteration
-        num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
-        # max of 5 epochs = 10 perms
-        goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
-        for i in range(num_iterations):
-            # shuffle locations
-            rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-            shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
-            [random.shuffle(shuf) for shuf in shufs]
-            # first com is as ep 1, others are shuffled cell identities
-            com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
-            com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-            # OR shuffle cell identities
-            # relative to reward
-            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-            perm = list(combinations(range(len(coms_correct)), 2))     
-            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-            # get goal cells across all epochs
-            com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-            goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_shuf]
-            goal_cells_shuf = intersect_arrays(*com_goal_shuf); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
-            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
-            goal_cell_shuf_ps.append(goal_cell_shuf_p)
-            goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
-        # save median of goal cell shuffle
-        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
-        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
-        goal_cell_null.append([goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av])
-        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        pvals.append(p_value); 
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
         total_cells.append(len(coms_correct[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+        # radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
+        #                 com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 pdf.close()
 # save pickle of dcts
@@ -432,8 +443,20 @@ for ii,ep in enumerate(eps):
 # pairwise distances goal vs. place
 df = pd.DataFrame()
 
-df['mean_pairwise_distance (px)'] = np.concatenate(av_pairwise_dist)
-# df['cell_type'] = 
+df['mean_pairwise_distance_px'] = np.concatenate(av_pairwise_dist)
+df['cell_type'] = np.concatenate(np.column_stack(np.array([['goal_cell']*int(len(df)/2),['place_cell']*int(len(df)/2)])))
+fig,ax = plt.subplots(figsize=(3,5))
+# av across mice
+sns.stripplot(x='cell_type', y='mean_pairwise_distance_px',
+        data=df,
+        s=8,alpha=0.5)
+
+sns.barplot(x='cell_type', y='mean_pairwise_distance_px',
+        data=df, fill=False,ax=ax, errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+
+# %%
+
 #%%
 # df['recorded_neurons_per_session'] = total_cells
 # df_plt_ = df[(df.opto==False)&(df.p_value<0.05)]
