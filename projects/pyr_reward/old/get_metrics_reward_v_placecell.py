@@ -78,8 +78,6 @@ for ii in range(len(conddf)):
                 rewards=rewards[:-1]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        tcs_early = []; tcs_late = []        
-        ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
         lasttr=8 # last trials
         bins=90
         rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
@@ -130,15 +128,132 @@ for ii in range(len(conddf)):
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal) 
         s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
-        # across at least 2 epochs
-        goal_cells_per2ep = np.unique(np.concatenate(com_goal))
         # find those that stop being goal cells
-        dropped_cells = np.array([xx for xx in goal_cells_per2ep \
-            if xx not in goal_cells])
+        dropped_cells = [[xx for xx in comg \
+            if xx not in goal_cells] for comg in com_goal]
+        # proportion of drop per epoch 
+        # dropped_cells_p = [len(xx)/len(com_goal[ii]) for ii,xx in enumerate(dropped_cells)]
+        # lets say this is around 80%
+        # what do they do in the other epochs?
+        # tuning
+        com_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[0]]
+        com_1ep_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[0]]
+        com_2ep_droppped_cells = [coms_correct[1,xx] for xx in dropped_cells[0]]
+        plt.figure()
+        plt.scatter(com_1ep_droppped_cells,com_2ep_droppped_cells, label = 'Comparison Epoch',color='k')
+        plt.scatter(com_1ep_droppped_cells,com_droppped_cells, label='Ref. Epoch 0')
+        plt.scatter(com_2ep_droppped_cells,com_droppped_cells,label='Ref. Epoch 1')
+        plt.title('ep0vs1, ep2')
+        plt.xlabel('Ref Epoch')
+        plt.ylabel('Dropped Epoch')
+        plt.legend()
+        com_droppped_cells = [coms_correct[1,xx] for xx in dropped_cells[1]]
+        com_1ep_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[1]]
+        com_2ep_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[1]]
+        plt.figure()
+        plt.scatter(com_1ep_droppped_cells,com_2ep_droppped_cells, label = 'Comparison Epoch',color='k')
+        plt.scatter(com_1ep_droppped_cells,com_droppped_cells, label='Ref. Epoch 0')
+        plt.scatter(com_2ep_droppped_cells,com_droppped_cells,label='Ref. Epoch 2')
+        plt.title('ep0vs2, ep1')
+        plt.xlabel('Ref Epoch')
+        plt.ylabel('Dropped Epoch')
+        plt.legend()
+        com_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[2]]
+        com_1ep_droppped_cells = [coms_correct[1,xx] for xx in dropped_cells[2]]
+        com_2ep_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[2]]
+        plt.figure(); plt.scatter(com_1ep_droppped_cells,com_2ep_droppped_cells, label = 'Comparison Epoch',color='k')
+        plt.scatter(com_1ep_droppped_cells,com_droppped_cells, label='Ref. Epoch 1')
+        plt.scatter(com_2ep_droppped_cells,com_droppped_cells,label='Ref. Epoch 2')
+        plt.title('ep1vs2, ep0')
+        plt.xlabel('Ref Epoch')
+        plt.ylabel('Dropped Epoch')
+        plt.legend()
+
+        # v. activity
+        tcs_droppped_cells = [tcs_correct[2,xx] for xx in dropped_cells[0]]
+        tcs_1ep_droppped_cells = [tcs_correct[0,xx] for xx in dropped_cells[0]]
+        tcs_2ep_droppped_cells = [tcs_correct[1,xx] for xx in dropped_cells[0]]
+                
+        # for ii in range(len(dropped_cells[0])):
+        #     plt.figure()
+        #     plt.plot(tcs_1ep_droppped_cells[ii],color='k')
+        #     plt.plot(tcs_2ep_droppped_cells[ii],color='slategray')
+        #     plt.plot(tcs_droppped_cells[ii],color='darkcyan')
+            # plt.legend()
+        fc3_droppped_cells = [np.nanmean(tcs_correct[2,xx]) for xx in dropped_cells[0]]
+        fc3_1ep_droppped_cells = [np.nanmean(tcs_correct[0,xx]) for xx in dropped_cells[0]]
+        fc3_2ep_droppped_cells = [np.nanmean(tcs_correct[1,xx]) for xx in dropped_cells[0]]
+        df=pd.DataFrame()
+        df['activity'] = np.concatenate([fc3_droppped_cells,fc3_1ep_droppped_cells,fc3_2ep_droppped_cells])
+        df['cellid'] = np.concatenate([np.arange(len(dropped_cells[0]))]*3)
+        df['epoch'] = np.concatenate([['dropped_ep']*len(fc3_droppped_cells),
+                                ['comp_ep_1']*len(fc3_1ep_droppped_cells),
+                                ['comp_ep_2']*len(fc3_2ep_droppped_cells)])
+        g=sns.barplot(x='epoch', y='activity',hue='epoch',data=df,fill=False,errorbar='se')
+        sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
+        for ii in range(len(dropped_cells[0])):
+            df_cll = df[df.cellid==ii]
+            sns.lineplot(x='epoch', y='activity',data=df_cll,errorbar=None,
+                color='dimgrey',alpha=0.5)
+        g.set_ylim(0,.2)
+        # g.set_yscale("log",base=2)
+
+        
+        com_droppped_cells = [coms_correct[1,xx] for xx in dropped_cells[1]]
+        com_1ep_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[1]]
+        com_2ep_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[1]]        
+        plt.scatter(com_1ep_droppped_cells,com_2ep_droppped_cells, label = 'goal_cells_within_ep',color='k')
+        plt.scatter(com_1ep_droppped_cells,com_droppped_cells, label='goal_cells_outside_ep2v1')
+        plt.scatter(com_2ep_droppped_cells,com_droppped_cells,label='goal_cells_outside_ep3v1')
+        fc3_droppped_cells = [np.nanmean(tcs_correct[1,xx]) for xx in dropped_cells[0]]
+        fc3_1ep_droppped_cells = [np.nanmean(tcs_correct[0,xx]) for xx in dropped_cells[0]]
+        fc3_2ep_droppped_cells = [np.nanmean(tcs_correct[2,xx]) for xx in dropped_cells[0]]
+        df=pd.DataFrame()
+        df['activity'] = np.concatenate([fc3_droppped_cells,fc3_1ep_droppped_cells,fc3_2ep_droppped_cells])
+        df['cellid'] = np.concatenate([np.arange(len(dropped_cells[0]))]*3)
+        df['epoch'] = np.concatenate([['dropped_ep']*len(fc3_droppped_cells),
+                                ['comp_ep_1']*len(fc3_1ep_droppped_cells),
+                                ['comp_ep_2']*len(fc3_2ep_droppped_cells)])
+        g=sns.barplot(x='epoch', y='activity',hue='epoch',data=df,fill=False,errorbar='se')
+        sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
+        for ii in range(len(dropped_cells[0])):
+            df_cll = df[df.cellid==ii]
+            sns.lineplot(x='epoch', y='activity',data=df_cll,errorbar=None,
+                color='dimgrey',alpha=0.5)
+        # plt.legend()
+
+        com_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[2]]
+        com_1ep_droppped_cells = [coms_correct[1,xx] for xx in dropped_cells[2]]
+        com_2ep_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[2]]        
+        plt.scatter(com_1ep_droppped_cells,com_2ep_droppped_cells, label = 'goal_cells_within_ep',color='k')
+        plt.scatter(com_1ep_droppped_cells,com_droppped_cells, label='goal_cells_outside_ep2v1')
+        plt.scatter(com_2ep_droppped_cells,com_droppped_cells,label='goal_cells_outside_ep3v1')
+        plt.xlabel('Epoch 1')
+        plt.ylabel('Epoch 2')
+        fc3_droppped_cells = [np.nanmean(tcs_correct[0,xx]) for xx in dropped_cells[0]]
+        fc3_1ep_droppped_cells = [np.nanmean(tcs_correct[1,xx]) for xx in dropped_cells[0]]
+        fc3_2ep_droppped_cells = [np.nanmean(tcs_correct[2,xx]) for xx in dropped_cells[0]]
+        df=pd.DataFrame()
+        df['activity'] = np.concatenate([fc3_droppped_cells,fc3_1ep_droppped_cells,fc3_2ep_droppped_cells])
+        df['cellid'] = np.concatenate([np.arange(len(dropped_cells[0]))]*3)
+        df['epoch'] = np.concatenate([['dropped_ep']*len(fc3_droppped_cells),
+                                ['comp_ep_1']*len(fc3_1ep_droppped_cells),
+                                ['comp_ep_2']*len(fc3_2ep_droppped_cells)])
+        g=sns.barplot(x='epoch', y='activity',hue='epoch',data=df,fill=False,errorbar='se')
+        sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
+        for ii in range(len(dropped_cells[0])):
+            df_cll = df[df.cellid==ii]
+            sns.lineplot(x='epoch', y='activity',data=df_cll,errorbar=None,
+                color='dimgrey',alpha=0.5)
+        g.set_ylim(0,.1)
+        # plt.legend()
+        # plt.legend()
+
         # did a check to see if max com misses any of them, they dont seem v compelling
-        bin_size=track_length_rad/bins            
-        max_com = [np.arange(0,track_length_rad,bin_size)[np.argmax(tcs_correct[i,dropped_cells,:],
-                        axis=1)] for i in range(len(coms_correct))]
+        # bin_size=track_length_rad/bins            
+        # max_com = [np.arange(0,track_length_rad,bin_size)[np.argmax(tcs_correct[i,dropped_cells,:],
+        #                 axis=1)] for i in range(len(coms_correct))]
+        
         # redo with max com
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in max_com])
@@ -146,8 +261,6 @@ for ii in range(len(conddf)):
         # if 4 ep
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-
-
         s2p_iind_goal_cells_2ep = s2p_iind_filter[goal_cells_per2ep]
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
