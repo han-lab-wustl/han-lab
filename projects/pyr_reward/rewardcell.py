@@ -14,7 +14,7 @@ correct trials
 #%%
 
 import numpy as np, random, re, os, scipy, pandas as pd, sys, cv2
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt, matplotlib
 from itertools import combinations, chain
 from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
@@ -88,10 +88,13 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
     com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=goal_window) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>=0))] for com in com_goal]
+            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>0))] for com in com_goal]
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal)
+    # also, have to be active in all epochs
+    goal_cells = [xx for xx in goal_cells if sum(np.nanmax(tcs_correct[:,xx,:],axis=1)>.05)==len(coms_correct)]
+    
     s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
     # get per comparison
     goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
@@ -100,19 +103,62 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     goal_cell_prop=[goal_cells_p_per_comparison,goal_cell_p]
     num_epochs=len(coms_correct)
     # get x y coords!!
-    fig,ax = plt.subplots()
     meanimgm = np.zeros_like(meanimg)        
     stat = np.squeeze(stat)        
-    for gc in s2p_iind_goal_cells:
-        ypix=stat[gc][0][0][0]    
-        xpix=stat[gc][0][0][1]                
-        meanimgm[ypix,xpix]=1
-    #     meanimgm = np.ma.masked_where(meanimgm==0, meanimgm)
-        ax.imshow(meanimg, cmap='Greys_r')
-        ax.imshow(meanimgm, alpha=0.5,cmap='Greens')
-        ax.axis('off')
+    fig,ax = plt.subplots()
+    ax.imshow(meanimg, cmap='Greys_r')
+    centersgc = []        
+    cmap = ['k','yellow']  # Choose your preferred colormap
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", cmap)
+    cmap.set_under('none')
+    for ii,gc in enumerate(s2p_iind_goal_cells):
+            ypix=stat[gc][0][0][0][0]    
+            xpix=stat[gc][0][0][1][0]     
+            coords = np.column_stack((xpix, ypix))  
+            mask,cmask,center=create_mask_from_coordinates(coords, 
+                    meanimg.shape)                         
+            ax.imshow(cmask,cmap=cmap,vmin=1)
+            # plot cell id
+            ax.text(center[0]+5,center[1]+5,goal_cells[ii],color='w') 
+            centersgc.append(center)   
+            
+    points = np.array(centersgc)
+    dist = pairwise_distances(points)
+    # Exclude self-pairs (distances to the same point)
+    # We do this by flattening the distance matrix and excluding zero distances
+    non_self_distances = dist[np.triu_indices_from(dist, k=1)]
+    # Compute the average distance
+    pdist = non_self_distances
+
+    ax.axis('off')
+    fig.suptitle(f'animal: {animal}, day: {day}')
+    pdf.savefig(fig)
+    plt.close(fig)
+    colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+    if len(goal_cells)>0:
+        rows = int(np.ceil(np.sqrt(len(goal_cells))))
+        cols = int(np.ceil(len(goal_cells) / rows))
+        fig, axes = plt.subplots(rows, cols, sharex=True)
+        if len(goal_cells) > 1:
+            axes = axes.flatten()
+        else:
+            axes = [axes]
+        for i,gc in enumerate(goal_cells):            
+            for ep in range(len(coms_correct)):
+                ax = axes[i]
+                ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                ax.axvline((bins/2), color='k')
+                ax.set_title(f'cell # {gc}')
+                ax.spines[['top','right']].set_visible(False)
+        ax.set_xticks(np.arange(0,bins+1,20))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+        ax.set_xlabel('Radian position (centered start rew loc)')
+        ax.set_ylabel('Fc3')
+        ax.legend()
+        fig.tight_layout()
         pdf.savefig(fig)
         plt.close(fig)
+
     # get shuffled iterations
     shuffled_dist = np.zeros((num_iterations))
     # max of 5 epochs = 10 perms
@@ -150,7 +196,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
     total_cells=len(coms_correct[0])
     radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                    com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+                    com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av,pdist]
     return radian_alignment,rate,p_value,total_cells,goal_cell_iind,perm,goal_cell_prop,num_epochs,goal_cell_null
 
 def acc_corr_cells(forwardvel, timedFF, pln, dFF, eps):

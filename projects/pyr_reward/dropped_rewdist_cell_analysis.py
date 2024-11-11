@@ -19,6 +19,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from placecell import make_tuning_curves,make_tuning_curves_radians_by_trialtype, intersect_arrays
 from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances
 from projects.opto.behavior.behavior import get_success_failure_trials
+from projects.memory.dopamine import get_rewzones
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -137,6 +138,7 @@ for ii in range(len(conddf)):
             # lets say this is around 80%
             # what do they do in the other epochs?
             # tuning
+            rz = get_rewzones(rewlocs,gainf=1/scalingf)
             dfs=[]
             com_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[0]]
             com_1ep_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[0]]
@@ -185,9 +187,13 @@ for ii in range(len(conddf)):
             df['com'] = np.concatenate([com_droppped_cells,com_1ep_droppped_cells,
                             com_2ep_droppped_cells])
             df['cellid'] = np.concatenate([dropped_cells[0]]*3)
-            df['epoch'] = np.concatenate([['dropped_ep_ep2']*len(fc3_droppped_cells),
+            df['epoch'] = np.concatenate([['dropped_ep_ep2_0v1']*len(fc3_droppped_cells),
                                     ['comp_ep0']*len(fc3_1ep_droppped_cells),
                                     ['comp_ep1']*len(fc3_2ep_droppped_cells)])
+            # add rewzone
+            df['rewzone'] = np.concatenate([[rz[2]]*len(fc3_droppped_cells),
+                        [rz[0]]*len(fc3_1ep_droppped_cells),
+                        [rz[1]]*len(fc3_2ep_droppped_cells)])
             dfs.append(df)# g=sns.barplot(x='epoch', y='activity',hue='epoch',data=df,fill=False,errorbar='se')
             # sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
             # for ii in range(len(dropped_cells[0])):
@@ -212,9 +218,14 @@ for ii in range(len(conddf)):
             df['com'] = np.concatenate([com_droppped_cells,com_1ep_droppped_cells,
                             com_2ep_droppped_cells])            
             df['cellid'] = np.concatenate([dropped_cells[1]]*3)
-            df['epoch'] = np.concatenate([['dropped_ep1']*len(fc3_droppped_cells),
+            df['epoch'] = np.concatenate([['dropped_ep1_0v2']*len(fc3_droppped_cells),
                                     ['comp_ep0']*len(fc3_1ep_droppped_cells),
                                     ['comp_ep2']*len(fc3_2ep_droppped_cells)])
+            # add rewzone
+            df['rewzone'] = np.concatenate([[rz[1]]*len(fc3_droppped_cells),
+                        [rz[0]]*len(fc3_1ep_droppped_cells),
+                        [rz[2]]*len(fc3_2ep_droppped_cells)])
+
             dfs.append(df)
             com_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[2]]
             com_1ep_droppped_cells = [coms_correct[1,xx] for xx in dropped_cells[2]]
@@ -227,11 +238,18 @@ for ii in range(len(conddf)):
             df['com'] = np.concatenate([com_droppped_cells,com_1ep_droppped_cells,
                             com_2ep_droppped_cells])            
             df['cellid'] = np.concatenate([dropped_cells[2]]*3)
-            df['epoch'] = np.concatenate([['dropped_ep0']*len(fc3_droppped_cells),
+            df['epoch'] = np.concatenate([['dropped_ep0_1v2']*len(fc3_droppped_cells),
                                     ['comp_ep1']*len(fc3_1ep_droppped_cells),
                                     ['comp_ep2']*len(fc3_2ep_droppped_cells)])
+            # add rewzone
+            df['rewzone'] = np.concatenate([[rz[0]]*len(fc3_droppped_cells),
+                        [rz[1]]*len(fc3_1ep_droppped_cells),
+                        [rz[2]]*len(fc3_2ep_droppped_cells)])
+
             dfs.append(df)
             bigdf = pd.concat(dfs)
+            bigdf['animal'] = [animal]*len(bigdf)
+            bigdf['day'] = [day]*len(bigdf)
             celldf.append(bigdf)
         # plt.legend()
         # plt.legend()
@@ -398,3 +416,54 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 # fig.tight_layout()
 # %%
+plt.rc('font', size=30) 
+# cell df dropped vs. goal cell epochs
+df = pd.concat(celldf)
+# df = df[df.animal=='e201']
+df = df.reset_index()
+fig,ax = plt.subplots(figsize=(20,10))
+orderlst=['dropped_ep_ep2_0v1','dropped_ep1_0v2',
+       'dropped_ep0_1v2','comp_ep0','comp_ep1','comp_ep2']
+g=sns.barplot(x='epoch', y='activity',hue='animal',
+        data=df,fill=False,errorbar='se',order=orderlst)
+# sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
+
+for ii in range(len(dropped_cells[0])):
+    df_cll = df[df.cellid==ii]
+    sns.lineplot(x='epoch', y='activity',
+        data=df_cll,errorbar=None,
+        color='dimgrey',alpha=0.5)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+g.set_yscale("log")
+ax.legend(bbox_to_anchor=(1.1, 1.05))
+
+#%%
+# tuning properties of dropped cells
+
+plt.rc('font', size=30) 
+# cell df dropped vs. goal cell epochs
+df = pd.concat(celldf)
+df = df.reset_index()
+an='e190'
+dfan = df[df.animal==an]
+
+fig,ax = plt.subplots(figsize=(20,10))
+orderlst=['dropped_ep_ep2_0v1','dropped_ep1_0v2',
+       'dropped_ep0_1v2','comp_ep0','comp_ep1','comp_ep2']
+g=sns.stripplot(x='epoch', y='com',hue='day',
+        data=dfan,order=orderlst)
+# sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
+
+# for an in df.animal.unique():
+for dy in dfan.day.unique():
+    dfandy = dfan[dfan.day==dy]
+    for ii in dfandy.cellid.unique():
+        df_cll = dfandy[dfandy.cellid==ii]
+        sns.lineplot(x='epoch', y='com',
+            data=df_cll,errorbar=None,
+            color='dimgrey',alpha=0.5)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    # g.set_yscale("log")
+    ax.legend(bbox_to_anchor=(1.1, 1.05))
+ax.axhline(np.pi, linestyle='--',color='k')
+fig.suptitle(f'animal: {an}')

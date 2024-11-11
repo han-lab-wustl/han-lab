@@ -25,11 +25,12 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'near_rew.pdf')
 #%%
+goal_window_cm=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto.p"
+saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iinds = []
 goal_cell_props = []
 goal_cell_nulls = []
@@ -41,7 +42,6 @@ epoch_perm = []
 radian_alignment = {}
 lasttr=8 # last trials
 bins=90
-goal_window_cm=20 # to search for rew cells
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -64,8 +64,16 @@ for ii in range(len(conddf)):
 pdf.close()
 
 # save pickle of dcts
-with open(saveto, "wb") as fp:   #Pickling
-    pickle.dump(radian_alignment, fp)
+# with open(saveto, "wb") as fp:   #Pickling
+#     pickle.dump(radian_alignment, fp)
+#%%
+# test
+# tc=radian_alignment['e186_006_index159'][0]
+# for gc in goal_cell_iind:
+#     plt.figure()
+#     for ep in range(len(tc)):
+#         plt.plot(tc[ep,gc,:])
+    
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -156,7 +164,7 @@ df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(2.2,5))
+fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
         data=df_plt2,
@@ -169,10 +177,10 @@ ax = sns.lineplot(data=df_plt2, # correct shift
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
-
+ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.05
-pshift=.01
+y = 0.09
+pshift=.02
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -186,32 +194,7 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+pshift, f'p={pval:.3g}',rotation=45)
-
-plt.savefig(os.path.join(savedst, 'nearrew_cell_prop_per_an.svg'), 
-        bbox_inches='tight')
-#%%
-
-df['recorded_neurons_per_session'] = total_cells
-df_plt_ = df[(df.opto==False)&(df.p_value<0.05)]
-df_plt_= df_plt_[(df_plt_.animals!='e200')&(df_plt_.animals!='e189')]
-df_plt_ = df_plt_.groupby(['animals']).mean(numeric_only=True)
-
-fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
-        data=df_plt_,
-        s=150, ax=ax)
-sns.regplot(x='recorded_neurons_per_session', y='goal_cell_prop',
-        data=df_plt_,
-        ax=ax, scatter=False, color='k'
-)
-r, p = scipy.stats.pearsonr(df_plt_['recorded_neurons_per_session'], 
-        df_plt_['goal_cell_prop'])
-ax = plt.gca()
-ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
-        transform=ax.transAxes)
-
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-plt.savefig(os.path.join(savedst, 'rec_cell_nearrew_prop_per_an.svg'), 
+        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45)
+ax.set_title('Post-reward cells',pad=100)
+plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
