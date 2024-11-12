@@ -65,7 +65,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
     if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
         tcs_correct, coms_correct, tcs_fail, coms_fail, \
-        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av,pdist = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # find correct trials within each epoch!!!!

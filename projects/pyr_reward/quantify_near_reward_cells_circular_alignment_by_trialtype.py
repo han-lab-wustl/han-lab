@@ -25,12 +25,12 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'near_rew.pdf')
 #%%
-goal_window_cm=20 # to search for rew cells
+goal_window_cm=50 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
-with open(saveddataset, "rb") as fp: #unpickle
-    radian_alignment_saved = pickle.load(fp)
-# radian_alignment_saved = {} # overwrite
+# with open(saveddataset, "rb") as fp: #unpickle
+#     radian_alignment_saved = pickle.load(fp)
+radian_alignment_saved = {} # overwrite
 goal_cell_iinds = []
 goal_cell_props = []
 goal_cell_nulls = []
@@ -52,8 +52,7 @@ for ii in range(len(conddf)):
         if animal=='e145': pln=2
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         radian_alignment,rate,p_value,total_cells,\
-        goal_cell_iind,perm,goal_cell_prop,num_epoch,\
-                goal_cell_null=extract_data_nearrew(ii,
+        goal_cell_iind,perm,goal_cell_prop,num_epoch,goal_cell_null=extract_data_nearrew(ii,
                 params_pth,animal, day,
                 bins,radian_alignment,radian_alignment_saved,goal_window_cm,pdf)
         # save
@@ -64,8 +63,8 @@ for ii in range(len(conddf)):
 pdf.close()
 
 # save pickle of dcts
-# with open(saveto, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp)
+with open(saveto, "wb") as fp:   #Pickling
+    pickle.dump(radian_alignment, fp)
 #%%
 # test
 # tc=radian_alignment['e186_006_index159'][0]

@@ -13,7 +13,7 @@ import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
-# plt.rc('font', size=16)          # controls default text sizes
+# plt.rc('font', size=8)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves,make_tuning_curves_radians_by_trialtype, intersect_arrays
@@ -50,7 +50,7 @@ celldf = []
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]==-1):
+    if (animal!='e217') & (conddf.optoep.values[ii]<1):
         if animal=='e145': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -173,11 +173,6 @@ for ii in range(len(conddf)):
         # plt.ylabel('Dropped Epoch')
         # plt.legend()
 
-        # for ii in range(len(dropped_cells[0])):
-        #     plt.figure()
-        #     plt.plot(tcs_1ep_droppped_cells[ii],color='k')
-        #     plt.plot(tcs_2ep_droppped_cells[ii],color='slategray')
-        #     plt.plot(tcs_droppped_cells[ii],color='darkcyan')
             # plt.legend()
             fc3_droppped_cells = [np.nanmean(tcs_correct[2,xx]) for xx in dropped_cells[0]]
             fc3_1ep_droppped_cells = [np.nanmean(tcs_correct[0,xx]) for xx in dropped_cells[0]]
