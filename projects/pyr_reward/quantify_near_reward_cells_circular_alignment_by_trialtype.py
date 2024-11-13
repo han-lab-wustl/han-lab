@@ -25,7 +25,7 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'near_rew.pdf')
 #%%
-goal_window_cm=50 # to search for rew cells
+goal_window_cm=40 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 # with open(saveddataset, "rb") as fp: #unpickle
@@ -47,7 +47,7 @@ saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_n
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if animal!='e217' and conddf.optoep.values[ii]==-1:
+    if animal!='e217' and conddf.optoep.values[ii]<1:
         pln=0
         if animal=='e145': pln=2
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -67,18 +67,119 @@ with open(saveto, "wb") as fp:   #Pickling
     pickle.dump(radian_alignment, fp)
 #%%
 # test
-# tc=radian_alignment['e186_006_index159'][0]
+# from projects.pyr_reward.rewardcell import perireward_binned_activity
+
+# tc=radian_alignment['e218_020_index003'][0]
 # for gc in goal_cell_iind:
 #     plt.figure()
 #     for ep in range(len(tc)):
 #         plt.plot(tc[ep,gc,:])
-    
+# fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+# 'pyr_tc_s2p_cellind', 'timedFF','ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+#         'stat'])
+# fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+# Fc3 = fall_fc3['Fc3']
+# dFF = fall_fc3['dFF']
+# Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+# dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+# skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+# # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+# # skew_mask = skew_filter>2
+# Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+# scalingf=2/3
+# ybinned = fall['ybinned'][0]/scalingf
+# track_length=180/scalingf    
+# forwardvel = fall['forwardvel'][0]    
+# changeRewLoc = np.hstack(fall['changeRewLoc'])
+# trialnum=fall['trialnum'][0]
+# rewards = fall['rewards'][0]
+# if animal=='e145':
+#         ybinned=ybinned[:-1]
+#         forwardvel=forwardvel[:-1]
+#         changeRewLoc=changeRewLoc[:-1]
+#         trialnum=trialnum[:-1]
+#         rewards=rewards[:-1]        # set vars
+# eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+
+# velocity = fall['forwardvel'][0]
+# veldf = pd.DataFrame({'velocity': velocity})
+
+# velocity = np.hstack(veldf.rolling(5).mean().values)
+# # velocity - ndarray: velocity of the animal
+# # thres - float: Threshold speed in cm/s
+# # Fs - int: Number of frames minimum to be considered stopped
+# # ftol - int: Frame tolerance for merging stop periods
+# moving_middle,stop = get_moving_time_v3(velocity,2,30,10)
+# pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
+# nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
+#         post_win_framesALL,velocity, fall['rewards'][0])
+# nonrew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+# nonrew_per_plane[nonrew.astype(int)] = 1
+# rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+# rew_per_plane[rew.astype(int)] = 1
+
+# _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,goal_cell_iind[3]], nonrew_per_plane, 
+#         fall['timedFF'][0], fall['trialnum'][0], 10, .4)
+# _, meanvelnonrew, __, velnonrew = perireward_binned_activity(velocity, nonrew_per_plane, 
+#         fall['timedFF'][0], fall['trialnum'][0], 10, .4)
+
+# _, meanrstops, __, rewrstops = perireward_binned_activity(Fc3[:,goal_cell_iind[3]], rew_per_plane, 
+# fall['timedFF'][0], fall['trialnum'][0], 10, .4)
+# _, meanvelrew, __, velrew = perireward_binned_activity(velocity, rew_per_plane, 
+#         fall['timedFF'][0], fall['trialnum'][0], 10, .4)
+#%%
+range_val, binsize = 10, .4
+fig, axes = plt.subplots(nrows = 2)
+ax=axes[0]
+ax.plot(meanrstops,color='darkgoldenrod', label='rewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanrstops - scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
+meanrstops + scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
+alpha=0.5, color='darkgoldenrod'
+)             
+ax.plot(meannstops,color='slategray', label='unrewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meannstops - scipy.stats.sem(rewnstops, axis=1, nan_policy='omit'),
+meannstops + scipy.stats.sem(rewnstops, axis=1, nan_policy='omit'),
+alpha=0.5, color='slategray'
+)                    
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 5))
+ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_xlabel('Time from stop (s)')
+ax.legend()
+ax.set_ylabel('$\Delta$ F/F')
+ax=axes[1]
+ax.plot(meanvelrew,color='navy', label='rewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanvelrew - scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
+meanvelrew + scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
+alpha=0.5, color='navy'
+)             
+ax.plot(meanvelnonrew,color='k', label='unrewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanvelnonrew - scipy.stats.sem(velnonrew, axis=1, nan_policy='omit'),
+meanvelnonrew + scipy.stats.sem(velnonrew, axis=1, nan_policy='omit'),
+alpha=0.5, color='k'
+)                    
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 5))
+ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_xlabel('Time from stop (s)')
+ax.legend()
+ax.set_ylabel('Velocity (cm/s)')
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep==-1) & (df.index.isin(inds))]
+df = df[((df.animals!='e217')) & (df.optoep<1)]
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = [xx[1] for xx in goal_cell_props]
 df['opto'] = df.optoep.values>1
@@ -178,8 +279,8 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.09
-pshift=.02
+y = 0.2
+pshift=.03
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']

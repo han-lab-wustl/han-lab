@@ -9,7 +9,7 @@ import os, sys, shutil, tifffile, ast, time, re
 import argparse   
 import pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
-sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
+# sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir 
 from utils import preprocessing
 
@@ -55,6 +55,8 @@ def main(**args):
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
         ops["roidetect"]=0      
+        # no non-rigid
+        ops["nonrigid"]=False     
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -114,7 +116,12 @@ def main(**args):
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
             ops = preprocessing.fillops(ops, params)
-            ops["roidetect"]=0      
+            ops["roidetect"]=0 
+            # temp
+            ops['nonrigid']=False
+            ops["keep_movie_raw"]=1 #TODO: make modular
+            ops["two_step_registration"]=1
+
             # test for e216
             # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
@@ -221,7 +228,7 @@ if __name__ == "__main__":
                         help="Move data.bin from fast disk")
     parser.add_argument("--save_mat", default=True,
                         help="Save Fall.mat (needed for cell tracking)")    
-    parser.add_argument("--crop_opto", default=False,
+    parser.add_argument("--crop_opto", default=True,
                         help="Crop top band of opto to not mess up cell detection")    
     parser.add_argument("--cell_detect_only", default=False,
                         help="Skip making tifs and reg, only run cell detect")    

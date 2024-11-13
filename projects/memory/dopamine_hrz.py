@@ -4,7 +4,6 @@ march 2024
 #%%
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib
@@ -14,23 +13,18 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
+from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 
 plt.rcParams["font.family"] = "Arial"
 
 #%%
 plt.close('all')
 # save to pdf
-src = r"Z:\chr2_grabda\e231"
-# src = r'\\storage1.ris.wustl.edu\ebhan\Active\calvin\E231'
-# src = r"\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\HRZ\E168HRZparams"
+src = r"Y:\halo_grabda\e243"
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = []
-# days = ['Day_1','Day_2', 'Day_3', 'Day_4', 'Day_5', 'Day_6',
-#         'Day_7', 'Day_8'] 
-# days = [30,31,32,33,34,35,36,37,38,39]
-days = ['cf10']
-range_val = 5; binsize=0.2
+days = [18]
+range_val = 4 ; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 day_date_dff = {}
@@ -53,23 +47,19 @@ for day in days:
         
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
-        dff = np.hstack(dffdf.rolling(3).mean().values)
+        dff = np.hstack(dffdf.rolling(5).mean().values)
         rewards = np.hstack(params['solenoid2'])
+        velocity = np.hstack(params['forwardvel'])
+        veldf = pd.DataFrame({'velocity': velocity})
+        velocity = np.hstack(veldf.rolling(5).mean().values)
         trialnum = np.hstack(params['trialnum'])
         ybinned = np.hstack(params['ybinned'])/(2/3)
         licks = np.hstack(params['licks'])
         # plot pre-first reward dop activity  
         timedFF = np.hstack(params['timedFF'])
-        # mask out dark time
-        dff = dff[ybinned>3]
-        rewards = rewards[ybinned>3]
-        trialnum = trialnum[ybinned>3]
-        licks = licks[ybinned>3]
-        timedFF = timedFF[ybinned>3]
-        ybinned = ybinned[ybinned>3]
         # plot behavior
         if pln==0:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots()            
             ax.plot(ybinned)
             ax.scatter(np.where(rewards>0)[0], ybinned[np.where(rewards>0)[0]], color = 'cyan', s=12)
             ax.scatter(np.where(licks>0)[0], ybinned[np.where(licks>0)[0]], color = 'k', marker = '.', s=2)
@@ -80,23 +70,38 @@ for day in days:
 
         #TODO: peri reward fails 
         #TODO: peri reward catch trials
-        
-        mask = (np.ones_like(trialnum)*True).astype(bool)
-        # all subsequent rews
+        # all subsequent rews   
+        # only ep3?
+        changeRewLoc = np.hstack(params['changeRewLoc'])     
+        scalingf=2/3
+        eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+        mask = np.arange(eps[len(eps)-2],eps[len(eps)-1])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
-            rewdFF = eye.perireward_binned_activity(dff[mask], rewards[mask], timedFF[mask], 
+            rewdFF = perireward_binned_activity(dff[mask], rewards[mask], 
+                                    timedFF[mask], trialnum[mask],
                                     range_val, binsize)
+        _, meanvel, __, \
+            vel = perireward_binned_activity(velocity[mask], rewards[mask], 
+                                    timedFF[mask], trialnum[mask],
+                                    range_val, binsize)
+
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
         # Select rows that do not contain any NaNs
         clean_arr = rewdFF.T#[~rows_with_nans]    
-        fig, axes = plt.subplots(2,1)
-        ax = axes[0]
+        fig, axes = plt.subplots(nrows=4,ncols=1,figsize=(3,5))
+        ax=axes[0]
+        ax.imshow(params['params'][0][0][0],cmap="Greys_r")
+        # ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
+        ax.axis('off')
+        ax = axes[1]
         ax.imshow(clean_arr)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
-        ax.set_title('Successful Trials (Centered by CS)')
-        ax = axes[1]
+        ax.set_title('Correct Trials')
+        ax.axvline(int(range_val/binsize),linestyle='--',color='w')
+        ax.set_ylabel('Trial #')
+        ax = axes[2]
         ax.plot(meanrewdFF)   
         xmin,xmax = ax.get_xlim()     
         ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -104,12 +109,23 @@ for day in days:
                 meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
-        fig.suptitle(f'Peri CS/Rew Loc, Day {day}, {layer}')
-        
-        pdf.savefig(fig)
-
+        ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+        ax.spines[['top','right']].set_visible(False)        
+        ax = axes[3]
+        ax.plot(meanvel,color='k')   
+        xmin,xmax = ax.get_xlim()     
+        ax.fill_between(range(0,int(range_val/binsize)*2), 
+                meanvel-scipy.stats.sem(vel,axis=1,nan_policy='omit'),
+                meanvel+scipy.stats.sem(vel,axis=1,nan_policy='omit'), alpha=0.3,color='k')
+        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+        ax.set_xticklabels(range(-range_val, range_val+1, 1))
+        ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+        ax.spines[['top','right']].set_visible(False)
+        ax.set_ylabel('Velocity (cm/s)')
+        ax.set_xlabel('Time from CS (s)')
+        fig.suptitle(f'Peri CS, Day {day}, {layer}')        
         fig.tight_layout()
-
+        pdf.savefig(fig)        
         plndff.append(meanrewdFF)
     day_date_dff[str(day)] = plndff
 pdf.close()
@@ -117,27 +133,28 @@ pdf.close()
 #%%
 
 pln_mean = np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()])
-fig, axes = plt.subplots(nrows = 4, sharex=True,
-                        figsize=(6,10))
-ymin, ymax = .98, 1.03
+fig, axes = plt.subplots(nrows = 4, sharex=True,sharey=True,
+                        figsize=(2.5,5))
+ymin, ymax = .99, 1.01
 for pln in range(4):    
-        ax = axes[pln]
-        ax.plot(np.nanmean(pln_mean[:,pln,:], axis=0), 
-                color='slategray')
-        ax.fill_between(range(0,int(range_val/binsize)*2), 
-                    np.nanmean(pln_mean[:,pln,:],axis=0)-scipy.stats.sem(pln_mean[:,pln,:],
-                                    axis=0,nan_policy='omit'),
-                    np.nanmean(pln_mean[:,pln,:],axis=0)+scipy.stats.sem(pln_mean[:,pln,:],
-                                    axis=0,nan_policy='omit'), 
-                    alpha=0.5, color='slategray')
-        ax.set_ylim(ymin, ymax)
-        if pln==3: ax.set_xlabel('Time from CS (s)')
-        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-        ax.set_xticklabels(range(-range_val, range_val+1, 1))
-        ax.set_title(f'Plane {planelut[pln]}')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+    ax = axes[pln]
+    ax.plot(np.nanmean(pln_mean[:,pln,:], axis=0), 
+            color='slategray')
+    ax.fill_between(range(0,int(range_val/binsize)*2), 
+                np.nanmean(pln_mean[:,pln,:],axis=0)-scipy.stats.sem(pln_mean[:,pln,:],
+                                axis=0,nan_policy='omit'),
+                np.nanmean(pln_mean[:,pln,:],axis=0)+scipy.stats.sem(pln_mean[:,pln,:],
+                                axis=0,nan_policy='omit'), 
+                alpha=0.5, color='slategray')
+    ax.set_ylim(ymin, ymax)
+    if pln==3: ax.set_xlabel('Time from CS (s)')
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+    ax.set_xticklabels(range(-range_val, range_val+1, 1))
+    ax.set_title(f'Plane {planelut[pln]}')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
-fig.suptitle('ChR2 per day per + mouse averages')
+fig.suptitle('per day per + mouse averages')
+fig.tight_layout()
 pdf.savefig(fig)
 pdf.close()

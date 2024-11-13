@@ -39,6 +39,7 @@ num_epochs = []
 rates_all = []
 total_cells = []
 epoch_perm = []
+rz_perm = []
 radian_alignment = {}
 av_pairwise_dist = []
 pcs_per_2ep=[]
@@ -139,6 +140,9 @@ for ii in range(len(conddf)):
             # what do they do in the other epochs?
             # tuning
             rz = get_rewzones(rewlocs,gainf=1/scalingf)
+            rzperm = [(int(rz[jj[0]]),int(rz[jj[1]])) for jj in perm]
+            # get rewzones and transitions
+            rz_perm.append([rz,rzperm])
             dfs=[]
             com_droppped_cells = [coms_correct[2,xx] for xx in dropped_cells[0]]
             com_1ep_droppped_cells = [coms_correct[0,xx] for xx in dropped_cells[0]]
@@ -439,7 +443,7 @@ plt.rc('font', size=30)
 # cell df dropped vs. goal cell epochs
 df = pd.concat(celldf)
 df = df.reset_index()
-an='e190'
+an='e218'
 dfan = df[df.animal==an]
 
 fig,ax = plt.subplots(figsize=(20,10))
@@ -457,8 +461,17 @@ for dy in dfan.day.unique():
         sns.lineplot(x='epoch', y='com',
             data=df_cll,errorbar=None,
             color='dimgrey',alpha=0.5)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
-    # g.set_yscale("log")
-    ax.legend(bbox_to_anchor=(1.1, 1.05))
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+# g.set_yscale("log")
+ax.legend(bbox_to_anchor=(1.1, 1.05))
 ax.axhline(np.pi, linestyle='--',color='k')
 fig.suptitle(f'animal: {an}')
+
+#%%
+# test how far away from reward cell epochs are dropped cells
+
+dfan=dfan[dfan.day==20]
+
+for cellid in dfan.cellid.unique():
+    dfcll = dfan[dfan.cellid==cellid]
+    sns.barplot
