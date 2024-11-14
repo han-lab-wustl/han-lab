@@ -445,11 +445,12 @@ df = pd.concat(celldf)
 df = df.reset_index()
 an='e218'
 dfan = df[df.animal==an]
-
+# per animal/per day
+dfan = dfan[dfan.day==20]
 fig,ax = plt.subplots(figsize=(20,10))
 orderlst=['dropped_ep_ep2_0v1','dropped_ep1_0v2',
        'dropped_ep0_1v2','comp_ep0','comp_ep1','comp_ep2']
-g=sns.stripplot(x='epoch', y='com',hue='day',
+g=sns.stripplot(x='epoch', y='com',color='k',s=15,alpha=.4,
         data=dfan,order=orderlst)
 # sns.stripplot(x='epoch', y='activity',hue='epoch',data=df,s=8)
 

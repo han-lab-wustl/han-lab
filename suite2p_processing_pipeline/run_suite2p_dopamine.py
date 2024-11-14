@@ -119,9 +119,6 @@ def main(**args):
             ops["roidetect"]=0 
             # temp
             ops['nonrigid']=False
-            ops["keep_movie_raw"]=1 #TODO: make modular
-            ops["two_step_registration"]=1
-
             # test for e216
             # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
@@ -228,7 +225,7 @@ if __name__ == "__main__":
                         help="Move data.bin from fast disk")
     parser.add_argument("--save_mat", default=True,
                         help="Save Fall.mat (needed for cell tracking)")    
-    parser.add_argument("--crop_opto", default=True,
+    parser.add_argument("--crop_opto", default=False,
                         help="Crop top band of opto to not mess up cell detection")    
     parser.add_argument("--cell_detect_only", default=False,
                         help="Skip making tifs and reg, only run cell detect")    

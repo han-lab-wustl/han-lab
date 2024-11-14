@@ -164,6 +164,116 @@ def get_stops(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
     
     return nonrew_stop_success_tmpts, rew_stop_success_tmpts
 
+def get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
+              forwardvelALL, reward_binned, lick_binned, max_reward_stop=31.25*5):
+    """from gerardo
+
+    Args:
+        moving_middle (_type_): _description_
+        stop (_type_): _description_
+        pre_win_framesALL (_type_): _description_
+        post_win_framesALL (_type_): _description_
+        forwardvelALL (_type_): _description_
+        reward_binned (_type_): _description_
+        lick_binned (_type_): binary variable indicating licks (1 if lick occurred, 0 otherwise)
+        max_reward_stop (_type_, optional): number of seconds after reward for a stop
+        to be considered a reward related stop * frame rate.
+
+    Returns:
+        tuple: (non_reward_non_lick_stops, non_reward_lick_stops, reward_non_lick_stops, reward_lick_stops)
+    """
+    mov_success_tmpts = moving_middle[np.where(np.diff(moving_middle) > 1)[0] + 1]
+
+    idx_rm = (mov_success_tmpts - pre_win_framesALL) <= 0
+    rm_idx = np.where(idx_rm)[0]
+    mov_success_tmpts = np.delete(mov_success_tmpts, rm_idx)
+
+    if len(mov_success_tmpts) > 0:
+        mov_success_tmpts = np.delete(mov_success_tmpts, -1)  # Remove the last element
+
+    idx_rm = (mov_success_tmpts + post_win_framesALL) > len(forwardvelALL) - 10
+    rm_idx = np.where(idx_rm)[0]
+    mov_success_tmpts = np.delete(mov_success_tmpts, rm_idx)
+
+    stop_success_tmpts = moving_middle[np.where(np.diff(moving_middle) > 1)[0]] + 1
+
+    idx_rm = (stop_success_tmpts - pre_win_framesALL) < 0
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+
+    if len(stop_success_tmpts) > 0:
+        stop_success_tmpts = np.delete(stop_success_tmpts, -1)  # Remove the last element
+
+    idx_rm = (stop_success_tmpts + post_win_framesALL) > len(forwardvelALL) - 10
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+
+    rew_idx = np.where(reward_binned)[0]
+
+    rew_stop_success_tmpts = []
+    for r in rew_idx:  # iterate through all rewards
+        if r in stop:
+            last_stop_before_rew = stop_success_tmpts[np.where(stop_success_tmpts < r)[0]]
+            if len(last_stop_before_rew) > 0:
+                rew_stop_success_tmpts.append(last_stop_before_rew[-1])
+            else:
+                rew_stop_success_tmpts.append(np.nan)
+        else:
+            closest_future_stop = stop_success_tmpts[np.where((stop_success_tmpts - r >= 0) &
+                                                              (stop_success_tmpts - r < max_reward_stop))[0]]
+            if len(closest_future_stop) > 0:
+                rew_stop_success_tmpts.append(closest_future_stop[0])
+            else:
+                rew_stop_success_tmpts.append(np.nan)
+
+    rew_stop_success_tmpts = np.array(rew_stop_success_tmpts)
+    didntstoprew = np.isnan(rew_stop_success_tmpts)
+    rew_stop_success_tmpts = rew_stop_success_tmpts[~didntstoprew]
+    rew_stop_success_tmpts = np.unique(rew_stop_success_tmpts)
+    nonrew_stop_success_tmpts = np.setxor1d(rew_stop_success_tmpts, stop_success_tmpts)
+
+    idx_rm = (stop_success_tmpts - pre_win_framesALL) <= 0
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+
+    if len(stop_success_tmpts) > 0:
+        stop_success_tmpts = np.delete(stop_success_tmpts, -1)  # Remove the last element
+
+    idx_rm = (stop_success_tmpts + post_win_framesALL) > len(forwardvelALL) - 10
+    rm_idx = np.where(idx_rm)[0]
+    stop_success_tmpts = np.delete(stop_success_tmpts, rm_idx)
+    
+    # Determine stops with and without licks
+    lick_idx = np.where(lick_binned)[0]
+    
+    # Function to check for licks in a given range around stops
+    def no_licks_in_range(stop_frame, range_size):
+        check_range = np.arange(stop_frame - range_size, stop_frame + range_size + 1)
+        return np.all(np.isin(check_range, lick_idx, invert=True))
+
+    stop_with_lick = []
+    stop_without_lick = []
+    range_size = 5
+
+    for stop in stop_success_tmpts:
+        if no_licks_in_range(stop, range_size):
+            stop_without_lick.append(stop)
+        else:
+            stop_with_lick.append(stop)
+
+    stop_without_lick = np.array(stop_without_lick)
+    stop_with_lick = np.array(stop_with_lick)
+
+    # Split reward stops into those with and without licks
+    rew_stop_with_lick = np.intersect1d(rew_stop_success_tmpts, stop_with_lick)
+    rew_stop_without_lick = np.intersect1d(rew_stop_success_tmpts, stop_without_lick)
+
+    # Split non-reward stops into those with and without licks
+    nonrew_stop_with_lick = np.intersect1d(nonrew_stop_success_tmpts, stop_with_lick)
+    nonrew_stop_without_lick = np.intersect1d(nonrew_stop_success_tmpts, stop_without_lick)
+    
+    return nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick
+
 def extract_plane_number(path):
     # Search for 'plane' followed by a number
     match = re.search(r'plane(\d+)', path)

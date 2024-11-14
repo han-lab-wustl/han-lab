@@ -28,9 +28,9 @@ savepth = os.path.join(savedst, 'near_rew.pdf')
 goal_window_cm=40 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
-# with open(saveddataset, "rb") as fp: #unpickle
-#     radian_alignment_saved = pickle.load(fp)
-radian_alignment_saved = {} # overwrite
+with open(saveddataset, "rb") as fp: #unpickle
+    radian_alignment_saved = pickle.load(fp)
+# radian_alignment_saved = {} # overwrite
 goal_cell_iinds = []
 goal_cell_props = []
 goal_cell_nulls = []
@@ -47,7 +47,7 @@ saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_n
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if animal!='e217' and conddf.optoep.values[ii]<1:
+    if animal!='e217' and conddf.optoep.values[ii]<2:
         pln=0
         if animal=='e145': pln=2
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -298,3 +298,81 @@ for ii,ep in enumerate(eps):
 ax.set_title('Post-reward cells',pad=100)
 plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
+#%%
+# per session
+df_plt2 = pd.concat([df_perms,df])
+# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2[(df_plt2.num_epochs<5) & (df_plt2.num_epochs>2)]
+# df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+# number of epochs vs. reward cell prop incl combinations    
+fig,ax = plt.subplots(figsize=(6,5))
+# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop',hue='animals',s=10,alpha=0.4,
+        data=df_plt2,dodge=True)
+sns.barplot(x='num_epochs', y='goal_cell_prop',hue='animals',
+        data=df_plt2,
+        fill=False,ax=ax, errorbar='se')
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.1))
+ax.set_ylabel('Post reward cell proportion')
+ax.set_title('Post-reward cells')
+plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_session.svg'), 
+        bbox_inches='tight')
+#%%
+df['success_rate'] = rates_all
+dffil = df[df.goal_cell_prop>0]
+dffil=dffil[dffil.success_rate>.6]
+# all animals
+fig,ax = plt.subplots(figsize=(7,5))
+sns.scatterplot(x='success_rate', y='goal_cell_prop',hue='animals',
+        data=dffil,
+        s=100, ax=ax)
+sns.regplot(x='success_rate', y='goal_cell_prop',
+        data=dffil,
+        ax=ax, scatter=False, color='k'
+)
+r, p = scipy.stats.pearsonr(dffil['success_rate'], 
+        dffil['goal_cell_prop'])
+ax = plt.gca()
+ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
+        transform=ax.transAxes)
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.set_xlabel('Success rate')
+ax.set_ylabel('Post-reward cell proportion')
+plt.savefig(os.path.join(savedst, 'postrew_v_correctrate.svg'), 
+        bbox_inches='tight')
+#%%
+
+an_nms = dffil[dffil.animals!='e189'].animals.unique()
+num_plots = len(an_nms)
+rows = int(np.ceil(np.sqrt(num_plots)))
+cols = int(np.ceil(num_plots / rows))
+
+fig, axes = plt.subplots(nrows=rows, ncols=cols, figsize=(10, 10))
+axes = axes.flatten()  # Flatten the axes array for easier plotting
+
+for i, an in enumerate(an_nms):
+        ax = axes[i]
+        sns.scatterplot(x='success_rate', y='goal_cell_prop', data=dffil[(dffil.animals == an)], s=100, ax=ax)
+        sns.regplot(x='success_rate', y='goal_cell_prop', data=dffil[(dffil.animals == an)], ax=ax, scatter=False, color='k')
+        ax.spines[['top','right']].set_visible(False)
+        ax.set_title(an)
+        try:
+                r, p = scipy.stats.pearsonr(dffil[(dffil.animals == an)]['success_rate'], 
+                dffil[(dffil.animals == an)]['goal_cell_prop'])
+                ax.text(.2, .5, 'r={:.2f}, p={:.2g}'.format(r, p),
+                        transform=ax.transAxes)
+        except Exception as e:
+                print(e)
+
+# Hide any remaining unused subplots
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+
+fig.tight_layout()
+plt.show()
+
+#%%

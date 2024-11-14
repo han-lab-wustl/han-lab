@@ -14,17 +14,18 @@ mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
-
 plt.rcParams["font.family"] = "Arial"
 
 #%%
 plt.close('all')
 # save to pdf
-src = r"Y:\halo_grabda\e243"
+animal = 'e242'
+src = r"Y:\halo_grabda"
+src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [18]
-range_val = 4 ; binsize=0.2
+days = [12]
+range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 day_date_dff = {}
@@ -47,7 +48,7 @@ for day in days:
         
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
-        dff = np.hstack(dffdf.rolling(5).mean().values)
+        dff = np.hstack(dffdf.rolling(3).mean().values)
         rewards = np.hstack(params['solenoid2'])
         velocity = np.hstack(params['forwardvel'])
         veldf = pd.DataFrame({'velocity': velocity})
@@ -75,7 +76,7 @@ for day in days:
         changeRewLoc = np.hstack(params['changeRewLoc'])     
         scalingf=2/3
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        mask = np.arange(eps[len(eps)-2],eps[len(eps)-1])
+        mask = np.arange(0,eps[len(eps)-1])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = perireward_binned_activity(dff[mask], rewards[mask], 
                                     timedFF[mask], trialnum[mask],
@@ -123,7 +124,7 @@ for day in days:
         ax.spines[['top','right']].set_visible(False)
         ax.set_ylabel('Velocity (cm/s)')
         ax.set_xlabel('Time from CS (s)')
-        fig.suptitle(f'Peri CS, Day {day}, {layer}')        
+        fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
         fig.tight_layout()
         pdf.savefig(fig)        
         plndff.append(meanrewdFF)

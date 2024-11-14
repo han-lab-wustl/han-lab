@@ -22,14 +22,14 @@ plt.rc('font', size=16)          # controls default text sizes
 
 plt.close('all')
 # save to pdf
-condrewloc = pd.read_csv(r"Z:\condition_df\drd.csv", index_col = None)
+condrewloc = pd.read_csv(r'C:\Users\Han\Downloads\data_organization - dopamine_receptor (1).csv', index_col = None)
 src = r"Y:\drd"
 animals = ['e256', 'e262']
 
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify
-days_all = [[20,21,22,23,25,26,27],
-        [14,15,16,17,18,19,20,21]]
+days_all = [[20,21,22,23,25,26,27,28,29,30],
+        [14,15,16,17,18,19,20,21,22,23,24]]
 
 near_reward_per_day = []
 performance_opto = []
