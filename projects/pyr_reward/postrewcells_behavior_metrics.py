@@ -19,61 +19,48 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,extract_data_nearrew
+from rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'near_rew.pdf')
 #%%
 goal_window_cm=40 # to search for rew cells
-pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
-# with open(saveddataset, "rb") as fp: #unpickle
-#     radian_alignment_saved = pickle.load(fp)
-radian_alignment_saved = {} # overwrite
-goal_cell_iinds = []
-goal_cell_props = []
-goal_cell_nulls = []
-num_epochs = []
-pvals = []
-rates_all = []
-total_cells_all = []
-epoch_perm = []
-radian_alignment = {}
-lasttr=8 # last trials
-bins=90
-saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
-# iterate through all animals
-ii=1
-day = conddf.days.values[ii]
-animal = conddf.animals.values[ii]
-if animal!='e217' and conddf.optoep.values[ii]<1:
-    pln=0
-    if animal=='e145': pln=2
-    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-    radian_alignment,rate,p_value,total_cells,\
-    goal_cell_iind,perm,goal_cell_prop,num_epoch,goal_cell_null=extract_data_nearrew(ii,
-            params_pth,animal, day,
-            bins,radian_alignment,radian_alignment_saved,goal_window_cm,pdf)
-    # save
-    rates_all.append(rate); pvals.append(p_value); total_cells_all.append(total_cells)
-    epoch_perm.append(perm); goal_cell_iinds.append(goal_cell_iind); 
-    goal_cell_props.append(goal_cell_prop); num_epochs.append(num_epoch)
-    goal_cell_nulls.append(goal_cell_null)
-pdf.close()
-
-# save pickle of dcts
-# with open(saveto, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp)
+with open(saveddataset, "rb") as fp: #unpickle
+    radian_alignment_saved = pickle.load(fp)
 #%%
 # test
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
+iind='e186_021_index014'
+radian_alignment=radian_alignment_saved
+tcs_correct, coms_correct, tcs_fail, coms_fail,\
+        com_goal, goal_cell_shuf_ps_per_comp_av,\
+                goal_cell_shuf_ps_av,pdist=radian_alignment[iind]
+track_length=270
+goal_window = goal_window_cm*(2*np.pi/track_length) 
+# change to relative value 
+coms_rewrel = np.array([com-np.pi for com in coms_correct])
+# only get cells near reward        
+perm = list(combinations(range(len(coms_correct)), 2))     
+com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])                
+# tuning curves that are close to each other across epochs
+com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+# in addition, com near but after goal
+com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+        xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+        xx], axis=0)>0))] for com in com_goal if len(com)>0]
+# get goal cells across all epochs        
+goal_cells = intersect_arrays(*com_goal)
 
-tc=radian_alignment['e218_021_index007'][0]
+#%%
+goal_cell_iind = goal_cells
+tc = tcs_correct
 for gc in goal_cell_iind:
     plt.figure()
     for ep in range(len(tc)):
-        plt.plot(tc[ep,gc,:])
+        plt.plot(tcs_correct[ep,gc,:])
+animal,day,pln = iind[:4], int(iind[5:8]),0
+params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"        
 fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'licks',
 'pyr_tc_s2p_cellind', 'timedFF','ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
         'stat'])
@@ -86,6 +73,7 @@ skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
 # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
 # skew_mask = skew_filter>2
 Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+dFF = dFF[:, skew>2]
 scalingf=2/3
 ybinned = fall['ybinned'][0]/scalingf
 track_length=180/scalingf    
@@ -124,9 +112,9 @@ nonrew_stop_with_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
 rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
-range_val,binsize=10, .2
 #%%
-for gc in goal_cell_iind:
+range_val,binsize=10, .1
+for gc in goal_cell_iind[:5]:
     # TODO: make condensed
     _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
@@ -156,7 +144,7 @@ for gc in goal_cell_iind:
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 
 
-    fig, axes = plt.subplots(nrows=4,sharex=True,figsize=(3,6))
+    fig, axes = plt.subplots(nrows=4,sharex=True,figsize=(5,8))
     ax=axes[0]
     ax.plot(meanrstops,color='darkgoldenrod', label='rewarded stops')
     ax.fill_between(
@@ -179,7 +167,8 @@ for gc in goal_cell_iind:
     meannlstops + scipy.stats.sem(rewnlstops, axis=1, nan_policy='omit'),
     alpha=0.5, color='yellowgreen'
     )                 
-    ax.legend()
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.legend(bbox_to_anchor=(1.01, 1.01))
     ax.set_ylabel('$\Delta$ F/F')
     ax=axes[1]
     ax.plot(meanvelrew,color='navy', label='rewarded stops')
@@ -208,7 +197,7 @@ for gc in goal_cell_iind:
     ax.set_ylabel('Velocity (cm/s)')
     ax=axes[2]
     # meanlickrew, __, lickrew
-    ax.plot(meanlickrew,color='navy', label='rewarded stops')
+    ax.plot(meanlickrew,alpha=0.5,color='navy', label='rewarded stops')
     ax.fill_between(
     range(0, int(range_val / binsize) * 2),
     meanlickrew - scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
@@ -216,7 +205,7 @@ for gc in goal_cell_iind:
     alpha=0.5, color='navy'
     )             
     # meanlicknonrewwl, __, licknonrewwl
-    ax.plot(meanlicknonrewwl,color='teal', label='unrewarded stops w licks')
+    ax.plot(meanlicknonrewwl,alpha=0.5,color='teal', label='unrewarded stops w licks')
     ax.fill_between(
     range(0, int(range_val / binsize) * 2),
     meanlicknonrewwl - scipy.stats.sem(licknonrewwl, axis=1, nan_policy='omit'),
@@ -224,7 +213,7 @@ for gc in goal_cell_iind:
     alpha=0.5, color='teal'
     )                 
     # meanlicknonrew, __, licknonrew   
-    ax.plot(meanlicknonrew,color='k', label='unrewarded stops w/o licks')
+    ax.plot(meanlicknonrew,alpha=0.5,color='k', label='unrewarded stops w/o licks')
     ax.fill_between(
     range(0, int(range_val / binsize) * 2),
     meanlicknonrew - scipy.stats.sem(licknonrew, axis=1, nan_policy='omit'),
@@ -232,10 +221,8 @@ for gc in goal_cell_iind:
     alpha=0.5, color='k'
     )                    
     ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.legend()
+    ax.spines[['top', 'right']].set_visible(False)    
     ax.set_ylabel('Licks')
-    
     ax=axes[3]
     # meanlickrew, __, lickrew
     ax.plot(meanrewrewstops,color='navy', label='rewarded stops')
@@ -262,10 +249,10 @@ for gc in goal_cell_iind:
     alpha=0.5, color='k'
     )                    
     ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1, 10))
+    ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1,20))
     ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xlabel('Time from stop (s)')
     ax.set_ylabel('Rewards binned')
-    
+    ax.legend(bbox_to_anchor=(1.01, 1.01))
     fig.suptitle(f'cell # {gc}')

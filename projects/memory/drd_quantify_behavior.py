@@ -24,7 +24,7 @@ plt.close('all')
 # save to pdf
 condrewloc = pd.read_csv(r'C:\Users\Han\Downloads\data_organization - dopamine_receptor (1).csv', index_col = None)
 src = r"Y:\drd"
-animals = ['e256', 'e262']
+animals = ['e256','e262','e254','e261']
 
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify

@@ -88,14 +88,14 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
     com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>0))] for com in com_goal]
+        xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+        xx], axis=0)>0))] for com in com_goal if len(com)>0]
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal)
-    # also, have to be active in all epochs
-    goal_cells = [xx for xx in goal_cells if sum(np.nanmax(tcs_correct[:,xx,:],axis=1)>.05)==len(coms_correct)]
-    
-    s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+    if len(goal_cells)>0:
+        s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+    else: 
+        s2p_iind_goal_cells=[]
     # get per comparison
     goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
     goal_cell_iind=goal_cells
@@ -121,7 +121,10 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
             # plot cell id
             ax.text(center[0]+5,center[1]+5,goal_cells[ii],color='w') 
             centersgc.append(center)   
-            
+    ax.axis('off')
+    fig.suptitle(f'animal: {animal}, day: {day}')
+    pdf.savefig(fig)
+    plt.close(fig)
     points = np.array(centersgc)
     dist = pairwise_distances(points)
     # Exclude self-pairs (distances to the same point)
@@ -129,11 +132,6 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     non_self_distances = dist[np.triu_indices_from(dist, k=1)]
     # Compute the average distance
     pdist = non_self_distances
-
-    ax.axis('off')
-    fig.suptitle(f'animal: {animal}, day: {day}')
-    pdf.savefig(fig)
-    plt.close(fig)
     colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
     if len(goal_cells)>0:
         rows = int(np.ceil(np.sqrt(len(goal_cells))))
@@ -179,12 +177,15 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         # (com near goal)
-        com_goal =  [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=goal_window) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>=0))] for com in com_goal]
-
+        com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>0))] for com in com_goal if len(com)>0]
         goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
-        goal_cells_shuf = intersect_arrays(*com_goal); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
+        if len(com_goal)>0:
+            goal_cells_shuf = intersect_arrays(*com_goal)
+        else:
+            goal_cells_shuf=[]
+        shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
         goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
         goal_cell_shuf_ps.append(goal_cell_shuf_p)
         goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
