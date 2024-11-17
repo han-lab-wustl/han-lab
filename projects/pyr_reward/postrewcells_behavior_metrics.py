@@ -31,7 +31,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # test
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
-iind='e186_021_index014'
+iind='e218_032_index011'
 radian_alignment=radian_alignment_saved
 tcs_correct, coms_correct, tcs_fail, coms_fail,\
         com_goal, goal_cell_shuf_ps_per_comp_av,\

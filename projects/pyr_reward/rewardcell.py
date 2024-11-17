@@ -22,8 +22,8 @@ from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_ra
 from projects.opto.behavior.behavior import get_success_failure_trials
 
 def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
-                radian_alignment_saved,goal_window_cm,pdf,
-        num_iterations = 1000):
+    radian_alignment_saved,goal_window_cm,pdf,
+    num_iterations=1000):
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
         'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
@@ -112,15 +112,15 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", cmap)
     cmap.set_under('none')
     for ii,gc in enumerate(s2p_iind_goal_cells):
-            ypix=stat[gc][0][0][0][0]    
-            xpix=stat[gc][0][0][1][0]     
-            coords = np.column_stack((xpix, ypix))  
-            mask,cmask,center=create_mask_from_coordinates(coords, 
-                    meanimg.shape)                         
-            ax.imshow(cmask,cmap=cmap,vmin=1)
-            # plot cell id
-            ax.text(center[0]+5,center[1]+5,goal_cells[ii],color='w') 
-            centersgc.append(center)   
+        ypix=stat[gc][0][0][0][0]    
+        xpix=stat[gc][0][0][1][0]     
+        coords = np.column_stack((xpix, ypix))  
+        mask,cmask,center=create_mask_from_coordinates(coords, 
+                meanimg.shape)                         
+        ax.imshow(cmask,cmap=cmap,vmin=1)
+        # plot cell id
+        ax.text(center[0]+5,center[1]+5,goal_cells[ii],color='w') 
+        centersgc.append(center)   
     ax.axis('off')
     fig.suptitle(f'animal: {animal}, day: {day}')
     pdf.savefig(fig)

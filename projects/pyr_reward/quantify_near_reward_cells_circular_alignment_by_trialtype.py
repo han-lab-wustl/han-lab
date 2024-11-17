@@ -46,7 +46,7 @@ saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_n
 #%%
 # iterate through all animals
 for ii in range(len(conddf)):
-    day = conddf.days.values[ii]
+    day = conddf.days.values[ii] 
     animal = conddf.animals.values[ii]
     if animal!='e217' and conddf.optoep.values[ii]<2:
         pln=0
@@ -83,7 +83,7 @@ fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
+sessions_sig = sum(df.loc[df.opto==False ,'p_value'].values<0.05)/len(df.loc[df.opto==False])
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
@@ -115,37 +115,39 @@ for ep in eps:
     
 # include all comparisons 
 df_perms = pd.DataFrame()
-df_perms['epoch_comparison'] = [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
+# epcomp= [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
 goal_cell_perm = [xx[0] for xx in goal_cell_props]
 goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_nulls]
+# df_perms['epoch_comparison']=
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+# df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perms = df_perms[df_perms.animals!='e189']
-df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
+# skipped fro now because it wasn't working
+# df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
 
-fig,ax = plt.subplots(figsize=(7,5))
-sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
-        hue='animals',data=df_permsav,
-        s=8,ax=ax)
-sns.barplot(x='epoch_comparison', y='goal_cell_prop',
-        data=df_permsav,
-        fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.lineplot(data=df_permsav, # correct shift
-        x='epoch_comparison', y='goal_cell_prop_shuffle',
-        color='grey', label='shuffle')
+# fig,ax = plt.subplots(figsize=(7,5))
+# sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
+#         hue='animals',data=df_permsav,
+#         s=8,ax=ax)
+# sns.barplot(x='epoch_comparison', y='goal_cell_prop',
+#         data=df_permsav,
+#         fill=False,ax=ax, color='k', errorbar='se')
+# ax = sns.lineplot(data=df_permsav, # correct shift
+#         x='epoch_comparison', y='goal_cell_prop_shuffle',
+#         color='grey', label='shuffle')
 
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-#%%
-eps = df_permsav.index.get_level_values("epoch_comparison").unique()
-for ep in eps:
-    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop'].values
-    shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
-    t,pval = scipy.stats.ranksums(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
+# ax.spines[['top','right']].set_visible(False)
+# ax.legend(bbox_to_anchor=(1.01, 1.05))
+# #%%
+# eps = df_permsav.index.get_level_values("epoch_comparison").unique()
+# for ep in eps:
+#     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+#     rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop'].values
+#     shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
+#     t,pval = scipy.stats.ranksums(rewprop, shufprop)
+#     print(f'{ep} epochs, pval: {pval}')
 
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
@@ -171,13 +173,13 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.2
+y = 0.25
 pshift=.03
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
+        t,pval = scipy.stats.ttest_rel(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
@@ -194,7 +196,7 @@ plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'),
 # per session
 df_plt2 = pd.concat([df_perms,df])
 # df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
-df_plt2 = df_plt2[(df_plt2.num_epochs<5) & (df_plt2.num_epochs>2)]
+df_plt2 = df_plt2[(df_plt2.num_epochs<5) & (df_plt2.num_epochs>1)]
 # df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
 fig,ax = plt.subplots(figsize=(6,5))

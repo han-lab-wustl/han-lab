@@ -24,8 +24,8 @@ src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [13]
-range_val = 8; binsize=0.2
+days = [15]
+range_val = 5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 day_date_dff = {}
@@ -54,7 +54,7 @@ for day in days:
         
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
-        dff = np.hstack(dffdf.rolling(5).mean().values)
+        dff = np.hstack(dffdf.rolling(3).mean().values)
         rewards = np.hstack(params['solenoid2'])
         velocity = np.hstack(params['forwardvel'])
         veldf = pd.DataFrame({'velocity': velocity})
@@ -165,23 +165,23 @@ for day in days:
         fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
         fig.tight_layout()
         pdf.savefig(fig)        
-        plndff.append(meanrewdFF)
+        plndff.append(clean_arr)
     day_date_dff[str(day)] = plndff
 pdf.close()
 
 #%%
-pln_mean = np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()])
+pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
 fig, axes = plt.subplots(nrows = 4, sharex=True,sharey=True,
-                        figsize=(3,5))
-ymin, ymax = .99, 1.01
+                        figsize=(3,6))
+ymin, ymax = .98, 1.01
 for pln in range(4):    
     ax = axes[pln]
-    ax.plot(np.nanmean(pln_mean[:,pln,:], axis=0), 
+    ax.plot(np.nanmean(pln_mean[pln,:,:], axis=0), 
             color='slategray')
     ax.fill_between(range(0,int(range_val/binsize)*2), 
-                np.nanmean(pln_mean[:,pln,:],axis=0)-scipy.stats.sem(pln_mean[:,pln,:],
+                np.nanmean(pln_mean[pln,:,:],axis=0)-scipy.stats.sem(pln_mean[pln,:,:],
                                 axis=0,nan_policy='omit'),
-                np.nanmean(pln_mean[:,pln,:],axis=0)+scipy.stats.sem(pln_mean[:,pln,:],
+                np.nanmean(pln_mean[pln,:,:],axis=0)+scipy.stats.sem(pln_mean[pln,:,:],
                                 axis=0,nan_policy='omit'), 
                 alpha=0.5, color='slategray')
     ax.set_ylim(ymin, ymax)
