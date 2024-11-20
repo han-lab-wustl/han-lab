@@ -146,10 +146,12 @@ for k,v in radian_alignment_saved.items():
 #%%
 #plot all cells
 df=pd.concat(dfs)
+df = df.reset_index()
 # df=df[df.animal=='e201']
 # df=dfs[5]
 fig,ax=plt.subplots(figsize=(2.5,5))
 # sns.stripplot(x='behavior',y='latency (s)',data=df,color='k',s=8,alpha=0.3)
-sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
+sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers=False,whis=0)
+# sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
 
