@@ -17,13 +17,14 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch
+from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
+    make_velocity_tuning_curves
 from projects.opto.behavior.behavior import get_success_failure_trials
 from rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity,\
     calculate_pre_latencies,calculate_post_latencies,compare_latencies
 from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
-
+from projects.memory.behavior import get_behavior_tuning_curve
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -69,6 +70,13 @@ for k,v in radian_alignment_saved.items():
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
     Fc3 = fall_fc3['Fc3']
     dFF = fall_fc3['dFF']
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+        rewsize = 10
+
     Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
@@ -115,43 +123,54 @@ for k,v in radian_alignment_saved.items():
     movement_starts=mov_success_tmpts.astype(int)
     rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
     rew_per_plane[rew_stop_with_lick.astype(int)] = 1
-    
-    gc_latencies_rew=[]; gc_latencies_mov=[]
+    move_start = np.zeros_like(fall['changeRewLoc'][0])
+    move_start[movement_starts.astype(int)] = 1
+    range_val=10;binsize=0.2
+    gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
+    # get latencies based on average of trials
     for gc in goal_cell_iind:
-        fd = pd.DataFrame({'f': Fc3[:,gc]})
-        # smooth and set threshold so not detecting random spikes
-        f = np.hstack(fd.rolling(70).mean().values)
-        transients = consecutive_stretch(np.where(f>0.05)[0])
-        transients = np.array([min(xx) for xx in transients])
-        # plt.figure() test
-        # for t in transients:
-        #     plt.figure()
-        #     plt.plot(Fc3[t-100:t+100,gc])
-        # latency from start of transient to movement
-        latencies_to_movement, latencies_to_rewards=compare_latencies(transients,
-                movement_starts,(rewards==0.5).astype(int),timedFF)
-        gc_latencies_rew.append(latencies_to_rewards)
-        gc_latencies_mov.append(latencies_to_movement)
+        _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
+        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+        _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+                fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+        _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+
+        _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
+            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+        if np.nanmax(meanrew)>.5:
+            iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
+            transient_after_rew=iind[iind>int(range_val/binsize)][0]
+            gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
+            iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
+            transient_before_move=iind[iind>int(range_val/binsize-2/binsize)][0]
+            gc_latencies_mov.append((transient_before_move-int(range_val/binsize))*binsize)
+            cellid.append(gc)
+
         # fig,ax=plt.subplots()
         # ax.scatter(range(len(latencies_to_movement)),latencies_to_movement,color='k')
         # ax2 = ax.twinx()
         # ax2.scatter(range(len(latencies_to_rewards)),latencies_to_rewards,color='orchid')
     # concat by cell
     df=pd.DataFrame()
-    df['latency (s)']=np.concatenate([np.concatenate(gc_latencies_rew),np.concatenate(gc_latencies_mov)])/31.25
-    df['behavior']=np.concatenate([['CS']*len(np.concatenate(gc_latencies_rew)),['Movement Start']*len(np.concatenate(gc_latencies_mov))])
+    df['latency (s)']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
+    df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
+                    ['Movement Start']*len(gc_latencies_mov)])
     df['animal']=[animal]*len(df)
     df['day']=[day]*len(df)
+    df['cellid']=np.concatenate([cellid]*2)
+
     dfs.append(df)
 #%%
 #plot all cells
 df=pd.concat(dfs)
 df = df.reset_index()
 # df=df[df.animal=='e201']
-# df=dfs[5]
+df=dfs[0]
 fig,ax=plt.subplots(figsize=(2.5,5))
-# sns.stripplot(x='behavior',y='latency (s)',data=df,color='k',s=8,alpha=0.3)
+sns.stripplot(x='behavior',y='latency (s)',data=df,color='k',s=8,alpha=0.3)
 sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers=False,whis=0)
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
+
 

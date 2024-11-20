@@ -158,6 +158,72 @@ def make_tuning_curves_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,trialnum,
 
     return trialstates, licks, tcs, coms
 
+def make_velocity_tuning_curves(eps, rewlocs, ybinned, rad, forwardvel, trialnum,
+                                rewards, rewsize, bin_size, lasttr=8, bins=90):
+    """
+    Description: This function creates tuning curves for velocity aligned to reward locations and categorizes them by trial type (correct or fail). The tuning curves are generated for each epoch, and the data is filtered based on the provided velocity threshold.
+    Parameters:
+    eps (numpy.ndarray): Array of epoch (trial segment) start indices.
+    rewlocs (numpy.ndarray): Array of reward locations for each epoch.
+    ybinned (numpy.ndarray): Array of position data (binned).
+    rad (numpy.ndarray): Array of radian positions.
+    forwardvel (numpy.ndarray): Array of forward velocity values at each time point.
+    trialnum (numpy.ndarray): Array with trial numbers.
+    rewards (numpy.ndarray): Array indicating whether a reward was received at each time point.
+    velocity (float): Velocity threshold to filter data (e.g., 5 for 5 cm/s).
+    rewsize (float): Size of the reward zone.
+    bin_size (float): Size of the bin for the tuning curve.
+    lasttr (int, optional): The number of last correct trials considered for analysis (default is 8).
+    bins (int, optional): The number of bins for the tuning curve (default is 90).
+    
+    Returns:
+    tcs_correct (numpy.ndarray): Tuning curves for correct trials. Shape is (epochs, bins).
+    coms_correct (numpy.ndarray): Center of mass (COM) for correct trials. Shape is (epochs).
+    tcs_fail (numpy.ndarray): Tuning curves for failed trials. Shape is (epochs, bins).
+    coms_fail (numpy.ndarray): Center of mass (COM) for failed trials. Shape is (epochs).
+    """ 
+    rates = []; 
+    # initialize
+    tcs_fail = np.ones((len(eps)-1, bins))*np.nan
+    tcs_correct = np.ones((len(eps)-1, bins))*np.nan
+    coms_correct = np.ones(len(eps)-1)*np.nan
+    coms_fail = np.ones(len(eps)-1)*np.nan
+    
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep], eps[ep+1])
+        eprng = eprng[ybinned[eprng] > 2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = rad[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success / total_trials)
+        vel_all = forwardvel[eprng]            
+        # filter data based on the velocity threshold
+        moving_middle = np.ones_like(vel_all).astype(bool) # velocity > provided threshold
+        relpos_all = relpos[moving_middle]
+        vel_all = vel_all[moving_middle]
+        
+        if len(ttr) > lasttr: # only if ep has more than `lasttr` trials
+            # analyze last `lasttr` correct trials
+            if len(strials) > 0:
+                mask = [True if xx in strials[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+                selected_vel = vel_all[mask]
+                relpos = relpos_all[mask]
+                tc = get_tuning_curve(relpos, selected_vel, bins=bins)
+                com = calc_COM_EH(tc, bin_size)
+                tcs_correct[ep, :] = tc
+                coms_correct[ep] = com
+            
+            # failed trials
+            if len(ftrials) > 0:
+                mask = [True if xx in ftrials else False for xx in trialnum[eprng][moving_middle]]
+                selected_vel = vel_all[mask]
+                relpos = relpos_all[mask]
+                tc = get_tuning_curve(relpos, selected_vel, bins=bins)
+                com = calc_COM_EH(tc, bin_size)
+                tcs_fail[ep, :] = tc
+                coms_fail[ep] = com
+    
+    return tcs_correct, coms_correct, tcs_fail, coms_fail
 
 def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    
@@ -227,8 +293,6 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
                 coms_fail[ep, :] = com
     
     return tcs_correct, coms_correct, tcs_fail, coms_fail
-
-
 
 def make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,bins=90,velocity_filter=False,probe=[0]):    

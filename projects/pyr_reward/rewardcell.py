@@ -705,37 +705,3 @@ def pairwise_distances(points):
             distances[j, i] = dist
     
     return distances
-
-def calculate_pre_latencies(events, transients, time):
-    """Calculates latencies of events relative to the nearest preceding transient."""
-    latencies = []
-    for event in events:
-        preceding_transients = [time[transient] for transient in transients if time[transient] < time[event]]
-        if preceding_transients:
-            latency = max(preceding_transients)-time[event]
-            latencies.append(latency)
-        else:
-            latencies.append(np.nan)
-    return latencies
-
-def calculate_post_latencies(events, transients, time):
-    """Calculates latencies of events relative to the nearest preceding transient."""
-    latencies = []
-    for event in events:
-        preceding_transients = [time[transient] for transient in transients if time[transient] > time[event]]
-        if preceding_transients:
-            latency = min(preceding_transients)-time[event]
-            latencies.append(latency)
-        else:
-            latencies.append(np.nan)
-    return latencies
-
-def compare_latencies(transient_indices,movement_initiations,reward,time):
-    # Detect reward times
-    reward_times = consecutive_stretch(np.where(reward)[0])
-    reward_times = np.array([min(xx) for xx in reward_times])
-    # Calculate latencies to movement initiations
-    latencies_to_movement = calculate_pre_latencies(movement_initiations,transient_indices, time)
-    # Calculate latencies to rewards
-    latencies_to_rewards = calculate_post_latencies(reward_times,transient_indices,time)
-    return latencies_to_movement, latencies_to_rewards

@@ -24,8 +24,8 @@ src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [17]
-range_val = 12; binsize=0.2
+days = [12,13,14,15,16,17]
+range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs
@@ -173,21 +173,19 @@ pdf.close()
 #%%
 # heatmap across days
 pln_mean = np.squeeze(np.array([[np.nanmean(v[i],axis=0) for i in range(4)] for k,v in day_date_dff.items()]))
-fig, axes = plt.subplots(nrows=4,figsize=(4,7),sharey=True,sharex=True)
-axs_flat = axes.ravel()
+
 for pln in range(4): 
-    ax=axs_flat[pln]
-    cax=ax.imshow(pln_mean[pln])    
-    if pln==3: 
-        ax.set_xlabel('Time from CS (s)')
-        ax.set_ylabel('HRZ day')
+    fig, ax = plt.subplots()
+    cax=ax.imshow(pln_mean[:,pln,:])    
+    ax.set_xlabel('Time from CS (s)')
+    ax.set_ylabel('HRZ day')
     ax.axvline(int(range_val/binsize),linestyle='--',color='w')
     ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
     ax.set_xticklabels(range(-range_val, range_val+1, 1))
-    ax.set_yticks(range(0,pln_mean[pln].shape[0],2))
+    ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
     ax.set_title(f'Plane {planelut[pln]}')
     fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-fig.tight_layout()
+    fig.tight_layout()
 
 #%%
 # pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
