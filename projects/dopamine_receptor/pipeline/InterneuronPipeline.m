@@ -25,9 +25,9 @@
 %tiffs put together
 % 
 pr_dir={};
-days = [28,29,30];
+days = [28];
 src ='Y:\drd';
-animal='e256';
+animal='e262';
 for i=1:length(days)
     pr_dir{i} = fullfile(src, animal, string(days(i)));
 end

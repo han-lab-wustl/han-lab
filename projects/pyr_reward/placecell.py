@@ -864,21 +864,28 @@ def consecutive_stretch_time(x, tol=2):
 
 
 def consecutive_stretch(x):
-    z = np.diff(x)
-    break_points = np.where(z != 1)[0]
+    import numpy as np
     
+    x = np.array(x)
+    z = np.diff(x)
+
+    break_points = np.where(z != 1)[0]
+
     if len(break_points) == 0:
-        return [x]
+        return [x.tolist()]
     
     y = []
-    y.append(x[:break_points[0] + 1])
-    
-    for i in range(1, len(break_points)):
-        y.append(x[break_points[i-1] + 1 : break_points[i] + 1])
-    
-    y.append(x[break_points[-1] + 1 :])
+
+    if len(break_points) > 0:
+        y.append(x[:break_points[0] + 1].tolist())
+        
+        for i in range(1, len(break_points)):
+            y.append(x[break_points[i-1] + 1 : break_points[i] + 1].tolist())
+        
+        y.append(x[break_points[-1] + 1:].tolist())
     
     return y
+
 
 def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold, binsize):
     """

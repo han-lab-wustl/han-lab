@@ -99,7 +99,7 @@ velocity = np.hstack(veldf.rolling(5).mean().values)
 # thres - float: Threshold speed in cm/s
 # Fs - int: Number of frames minimum to be considered stopped
 # ftol - int: Frame tolerance for merging stop periods
-moving_middle,stop = get_moving_time_v3(velocity,2,40,10)
+moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
 pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
 nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick,=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
         velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
@@ -114,7 +114,7 @@ rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 #%%
 range_val,binsize=10, .1
-for gc in goal_cell_iind[:5]:
+for gc in goal_cell_iind[:2]:
     # TODO: make condensed
     _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)

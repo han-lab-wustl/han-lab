@@ -15,7 +15,7 @@ for pth in pths:
 #%%
 import os, re, numpy as np
 
-pths = [r'Y:\halo_grabda\e243\21\241115_ZD_000_002\suite2p\plane3\reg_tif']
+pths = [r'Y:\halo_grabda\e243\23\241118_ZD_000_002\suite2p\plane3\reg_tif']
 for pth in pths:
     fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
     order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])

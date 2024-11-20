@@ -272,7 +272,8 @@ def get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
     nonrew_stop_with_lick = np.intersect1d(nonrew_stop_success_tmpts, stop_with_lick)
     nonrew_stop_without_lick = np.intersect1d(nonrew_stop_success_tmpts, stop_without_lick)
     
-    return nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick
+    return nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick,\
+        mov_success_tmpts
 
 def extract_plane_number(path):
     # Search for 'plane' followed by a number

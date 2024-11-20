@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt, matplotlib
 from itertools import combinations, chain
 from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype
+from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
+    consecutive_stretch
 from projects.opto.behavior.behavior import get_success_failure_trials
 
 def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
@@ -258,23 +259,8 @@ def phase_shifted_correlation(acceleration, neural_activity, max_shift):
         correlations[i] = correlation
     return correlations
     
-    
-def consecutive_stretch(x):
-    z = np.diff(x)
-    break_point = np.where(z != 1)[0]
-
-    if len(break_point) == 0:
-        return [x]
-
-    y = [x[:break_point[0]]]
-    for i in range(1, len(break_point)):
-        y.append(x[break_point[i - 1] + 1:break_point[i]])
-    y.append(x[break_point[-1] + 1:])
-    
-    return y 
-
 def perireward_binned_activity_early_late(dFF, rewards, timedFF, trialnum, range_val, binsize,
-                                          early_trial=2, late_trial=5):
+                    early_trial=2, late_trial=5):
     """Adapts code to align dFF or pose data to rewards within a certain window on a per-trial basis,
     only considering trials with trialnum > 3. Calculates activity for the first 5 and last 5 trials separately.
 
@@ -719,3 +705,37 @@ def pairwise_distances(points):
             distances[j, i] = dist
     
     return distances
+
+def calculate_pre_latencies(events, transients, time):
+    """Calculates latencies of events relative to the nearest preceding transient."""
+    latencies = []
+    for event in events:
+        preceding_transients = [time[transient] for transient in transients if time[transient] < time[event]]
+        if preceding_transients:
+            latency = max(preceding_transients)-time[event]
+            latencies.append(latency)
+        else:
+            latencies.append(np.nan)
+    return latencies
+
+def calculate_post_latencies(events, transients, time):
+    """Calculates latencies of events relative to the nearest preceding transient."""
+    latencies = []
+    for event in events:
+        preceding_transients = [time[transient] for transient in transients if time[transient] > time[event]]
+        if preceding_transients:
+            latency = min(preceding_transients)-time[event]
+            latencies.append(latency)
+        else:
+            latencies.append(np.nan)
+    return latencies
+
+def compare_latencies(transient_indices,movement_initiations,reward,time):
+    # Detect reward times
+    reward_times = consecutive_stretch(np.where(reward)[0])
+    reward_times = np.array([min(xx) for xx in reward_times])
+    # Calculate latencies to movement initiations
+    latencies_to_movement = calculate_pre_latencies(movement_initiations,transient_indices, time)
+    # Calculate latencies to rewards
+    latencies_to_rewards = calculate_post_latencies(reward_times,transient_indices,time)
+    return latencies_to_movement, latencies_to_rewards

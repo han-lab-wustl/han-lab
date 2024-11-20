@@ -24,10 +24,11 @@ src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [15]
-range_val = 5; binsize=0.2
+days = [17]
+range_val = 12; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
+# figs = True # print out per day figs
 day_date_dff = {}
 for day in days: 
     plndff = []
@@ -54,7 +55,7 @@ for day in days:
         
         # plt.close(fig)
         dffdf = pd.DataFrame({'dff': dff})
-        dff = np.hstack(dffdf.rolling(3).mean().values)
+        dff = np.hstack(dffdf.rolling(5).mean().values)
         rewards = np.hstack(params['solenoid2'])
         velocity = np.hstack(params['forwardvel'])
         veldf = pd.DataFrame({'velocity': velocity})
@@ -101,7 +102,7 @@ for day in days:
         scalingf=2/3
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))        
         mask = np.arange(0,eps[len(eps)-1])
-        # mask = np.arange(0,eps[1])
+        # mask = np.arange(0,eps[2])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = perireward_binned_activity(dff[mask], rewards[mask], 
                                     timedFF[mask], trialnum[mask],
@@ -170,7 +171,26 @@ for day in days:
 pdf.close()
 
 #%%
-pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
+# heatmap across days
+pln_mean = np.squeeze(np.array([[np.nanmean(v[i],axis=0) for i in range(4)] for k,v in day_date_dff.items()]))
+fig, axes = plt.subplots(nrows=4,figsize=(4,7),sharey=True,sharex=True)
+axs_flat = axes.ravel()
+for pln in range(4): 
+    ax=axs_flat[pln]
+    cax=ax.imshow(pln_mean[pln])    
+    if pln==3: 
+        ax.set_xlabel('Time from CS (s)')
+        ax.set_ylabel('HRZ day')
+    ax.axvline(int(range_val/binsize),linestyle='--',color='w')
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+    ax.set_xticklabels(range(-range_val, range_val+1, 1))
+    ax.set_yticks(range(0,pln_mean[pln].shape[0],2))
+    ax.set_title(f'Plane {planelut[pln]}')
+    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+fig.tight_layout()
+
+#%%
+# pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
 fig, axes = plt.subplots(nrows = 4, sharex=True,sharey=True,
                         figsize=(3,6))
 ymin, ymax = .98, 1.01
