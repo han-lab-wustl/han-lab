@@ -129,21 +129,28 @@ for k,v in radian_alignment_saved.items():
     gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
     # get latencies based on average of trials
     for gc in goal_cell_iind:
-        _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
-                fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-
+        # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+        #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+        # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+        #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
         _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        if np.nanmax(meanrew)>.5:
+        if np.nanmax(meanrew)>1: # only get highly active cells?
+            _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
+            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
             iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
-            transient_after_rew=iind[iind>int(range_val/binsize)][0]
+            transient_after_rew=iind[iind>int(range_val/binsize)]
+            if len(transient_after_rew)>0:
+                transient_after_rew=transient_after_rew[0]
+            else:
+                transient_after_rew=np.nan
             gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
             iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
-            transient_before_move=iind[iind>int(range_val/binsize-2/binsize)][0]
+            transient_before_move=iind[iind>int(range_val/binsize-5/binsize)]
+            if len(transient_before_move)>0:
+                transient_before_move=transient_before_move[0]
+            else:
+                transient_before_move=np.nan
             gc_latencies_mov.append((transient_before_move-int(range_val/binsize))*binsize)
             cellid.append(gc)
 
@@ -166,11 +173,18 @@ for k,v in radian_alignment_saved.items():
 df=pd.concat(dfs)
 df = df.reset_index()
 # df=df[df.animal=='e201']
-df=dfs[0]
-fig,ax=plt.subplots(figsize=(2.5,5))
-sns.stripplot(x='behavior',y='latency (s)',data=df,color='k',s=8,alpha=0.3)
-sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers=False,whis=0)
+# df=dfs[0]
+fig,ax=plt.subplots(figsize=(8,5))
+sns.stripplot(x='behavior',y='latency (s)',data=df,hue='animal',s=8,alpha=0.3,dodge=True)
+sns.boxplot(x='behavior',y='latency (s)',data=df,hue='animal',fill=False,showfliers=False,whis=0)
+ax.axhline(0,color='k',linestyle='--')
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
+#%%
 
-
+fig,ax=plt.subplots(figsize=(2.2,5))
+sns.stripplot(x='behavior',y='latency (s)',data=df,s=8,alpha=0.3,dodge=True)
+sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers=False,whis=0)
+ax.axhline(0,color='k',linestyle='--')
+# sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
+ax.spines[['top','right']].set_visible(False)

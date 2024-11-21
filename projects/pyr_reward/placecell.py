@@ -186,8 +186,6 @@ def make_velocity_tuning_curves(eps, rewlocs, ybinned, rad, forwardvel, trialnum
     # initialize
     tcs_fail = np.ones((len(eps)-1, bins))*np.nan
     tcs_correct = np.ones((len(eps)-1, bins))*np.nan
-    coms_correct = np.ones(len(eps)-1)*np.nan
-    coms_fail = np.ones(len(eps)-1)*np.nan
     
     for ep in range(len(eps)-1):
         eprng = np.arange(eps[ep], eps[ep+1])
@@ -209,9 +207,7 @@ def make_velocity_tuning_curves(eps, rewlocs, ybinned, rad, forwardvel, trialnum
                 selected_vel = vel_all[mask]
                 relpos = relpos_all[mask]
                 tc = get_tuning_curve(relpos, selected_vel, bins=bins)
-                com = calc_COM_EH(tc, bin_size)
                 tcs_correct[ep, :] = tc
-                coms_correct[ep] = com
             
             # failed trials
             if len(ftrials) > 0:
@@ -219,11 +215,9 @@ def make_velocity_tuning_curves(eps, rewlocs, ybinned, rad, forwardvel, trialnum
                 selected_vel = vel_all[mask]
                 relpos = relpos_all[mask]
                 tc = get_tuning_curve(relpos, selected_vel, bins=bins)
-                com = calc_COM_EH(tc, bin_size)
                 tcs_fail[ep, :] = tc
-                coms_fail[ep] = com
     
-    return tcs_correct, coms_correct, tcs_fail, coms_fail
+    return tcs_correct, tcs_fail
 
 def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    

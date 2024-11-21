@@ -340,6 +340,21 @@ def convert_zstack_sbx_to_tif(sbxsrc):
         tifffile.imwrite(sbxsrc[:-4]+".tif", dat.astype("uint16"))
     return sbxsrc[:-4]+".tif"
 
+def zip_file(source_file, output_zip):
+    """
+    Zips a single file.
+    
+    Parameters:
+    source_file (str): The path to the file to be zipped.
+    output_zip (str): The name/path of the output zip file.
+    """
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        zipf.write(source_file, arcname=source_file.split('/')[-1])
+
+def unzip_file(zip_file, output_dir):
+    with zipfile.ZipFile(zip_file, 'r') as zipf:
+        zipf.extractall(output_dir)
+
 def movesbx(src, dst, fls, fldkeyword='ZD'):
     """useful for moving sbx'es to another drive or to ris archive
         assumes your sbxs are saved within a folder made by scanbox: only true of the newer
@@ -351,7 +366,6 @@ def movesbx(src, dst, fls, fldkeyword='ZD'):
         fldkeyword (str, optional): how your sbx is saved (e.g. 231107_ZD).
         it looks for the folder structure based on this. Defaults to 'ZD'.
     """
-    
     for fl in fls:
         try:
             imgfl = [xx for xx in listdir(fl) if fldkeyword in xx][0]
@@ -365,18 +379,33 @@ def movesbx(src, dst, fls, fldkeyword='ZD'):
             print(f"\n*** no sbx in {fl}***")
 
 def compresssbx_move_to_archive(sbxsrc, dst, compress=True):       
-    if compress:
-        with tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-3]+'tar.gz'), 'w:gz') as tar:
-            tar.add(sbxsrc) 
-            tar.add(sbxsrc[:-4]+'.mat') 
-        os.remove(sbxsrc)
-    else:
-        # test
-        # # open file 
-        file = tarfile.open(os.path.join(dst,os.path.basename(sbxsrc)[:-4]+'tar.gz')) 
-        # extracting file 
-        file.extractall(r"C:\Users\Han\Desktop\test\open")     
-        file.close() 
+    for fl in fls:
+        try:
+            if compress:
+                imgfl = [xx for xx in listdir(fl) if fldkeyword in xx][0]
+                sbxfl = [xx for xx in listdir(imgfl) if ".sbx" in xx][0]
+                matfl = [xx for xx in listdir(imgfl) if ".mat" in xx][0]
+                # make move folder:
+                mvfld =os.path.join(imgfl, 'sbx')
+                if not os.path.exists(mvfld): os.mkdir(mvfld)
+                shutil.move(sbxfl, mvfld)
+                shutil.copy(matfl, mvfld)
+                output_zip=os.path.join(imgfl, f'{sbxfl[:-4]}_zip')
+                zip_file(mvfld, output_zip)
+                print(f"\n*** moving {sbxfl}***")
+                shutil.move(sbxfl, dst)
+                print(f"\n*** copying {matfl}***")
+                shutil.copy(matfl, dst)
+            else:
+                imgfl = [xx for xx in listdir(fl) if fldkeyword in xx][0]
+                sbxfl = [xx for xx in listdir(imgfl) if ".sbx" in xx][0]
+                matfl = [xx for xx in listdir(imgfl) if ".mat" in xx][0]
+                print(f"\n*** moving {sbxfl}***")
+                shutil.move(sbxfl, dst)
+                print(f"\n*** copying {matfl}***")
+                shutil.copy(matfl, dst)
+        except:
+            print(f"\n*** no sbx in {fl}***")
     
 if __name__ == "__main__":
     usb = r"G:\2023-2024_ZD_VR"
