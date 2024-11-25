@@ -186,5 +186,13 @@ fig,ax=plt.subplots(figsize=(2.2,5))
 sns.stripplot(x='behavior',y='latency (s)',data=df,s=8,alpha=0.3,dodge=True)
 sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers=False,whis=0)
 ax.axhline(0,color='k',linestyle='--')
+for an in df.animal.unique():
+    dfan = df[df.animal==an]
+    for dy in dfan.day.unique():
+        dfdy = dfan[dfan.day==dy]
+        for celliid in dfdy.cellid.unique():
+            sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
+                alpha=0.1,color='gray')
+
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)

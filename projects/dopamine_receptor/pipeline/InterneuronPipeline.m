@@ -25,7 +25,7 @@
 %tiffs put together
 % 
 pr_dir={};
-days = [28];
+days = [29,30,31];
 src ='Y:\drd';
 animal='e262';
 for i=1:length(days)

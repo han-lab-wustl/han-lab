@@ -13,8 +13,9 @@ function loadVideoTiffNoSplit_EH2_new_sbx_uint16(varargin)
 % assumption that max value in movie is 65535)
 
 %ZD added for Gerardo's workstation
-javaaddpath "C:\Program Files\MATLAB\R2021b\java\mij.jar"
-javaaddpath "C:\Program Files\MATLAB\R2021b\java\ij.jar"
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
     dir='uni';
@@ -30,7 +31,7 @@ end
 % win=60*Fs;
 
 % cd (filepath); %set path
-stripped_filename=regexprep(filename,'.sbx','');
+stripped_filename= strtok(fullfile(filename,filepath),'.');
 z = sbxread(stripped_filename,1,1);
 global info;
 % chone = sbxread(stripped_filename,0,info.max_idx+1);
