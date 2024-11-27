@@ -20,8 +20,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
     make_velocity_tuning_curves
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity,\
-    calculate_pre_latencies,calculate_post_latencies,compare_latencies
+from rewardcell import get_radian_position, extract_data_nearrew, perireward_binned_activity
 from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 from projects.memory.behavior import get_behavior_tuning_curve
@@ -125,7 +124,7 @@ for k,v in radian_alignment_saved.items():
     rew_per_plane[rew_stop_with_lick.astype(int)] = 1
     move_start = np.zeros_like(fall['changeRewLoc'][0])
     move_start[movement_starts.astype(int)] = 1
-    range_val=10;binsize=0.2
+    range_val=7;binsize=0.1
     gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
     # get latencies based on average of trials
     for gc in goal_cell_iind:
@@ -146,7 +145,7 @@ for k,v in radian_alignment_saved.items():
                 transient_after_rew=np.nan
             gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
             iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
-            transient_before_move=iind[iind>int(range_val/binsize-5/binsize)]
+            transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+2/binsize))]
             if len(transient_before_move)>0:
                 transient_before_move=transient_before_move[0]
             else:
@@ -168,6 +167,7 @@ for k,v in radian_alignment_saved.items():
     df['cellid']=np.concatenate([cellid]*2)
 
     dfs.append(df)
+
 #%%
 #plot all cells
 df=pd.concat(dfs)
@@ -178,6 +178,14 @@ fig,ax=plt.subplots(figsize=(8,5))
 sns.stripplot(x='behavior',y='latency (s)',data=df,hue='animal',s=8,alpha=0.3,dodge=True)
 sns.boxplot(x='behavior',y='latency (s)',data=df,hue='animal',fill=False,showfliers=False,whis=0)
 ax.axhline(0,color='k',linestyle='--')
+for an in df.animal.unique():
+    dfan = df[df.animal==an]
+    for dy in dfan.day.unique():
+        dfdy = dfan[dfan.day==dy]
+        for celliid in dfdy.cellid.unique():
+            sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
+                alpha=0.1,color='gray')
+
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
 #%%

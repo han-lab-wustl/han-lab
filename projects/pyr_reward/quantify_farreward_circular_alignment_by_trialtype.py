@@ -24,9 +24,9 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'reward_relative_correcttr_skewfilt.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_nopto_20241108.p"
-with open(saveddataset, "rb") as fp: #unpickle
-        radian_alignment_saved = pickle.load(fp)
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_farreward_cell_bytrialtype_nopto.p"
+# with open(saveddataset, "rb") as fp: #unpickle
+#         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
 # radian_alignment_saved = {} # overwrite

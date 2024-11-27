@@ -82,6 +82,7 @@ for ii in range(len(conddf)):
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
         lasttr=8 # last trials
         bins=90
+        # relative to start of reward zone
         rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins        
@@ -124,6 +125,22 @@ for ii in range(len(conddf)):
             # change to relative value 
             coms_rewrel = np.array([com-np.pi for com in coms_correct])
             perm = list(combinations(range(len(coms_correct)), 2))     
+            # account for cells that move to the end/front
+            # Define a small window around pi (e.g., epsilon)
+            epsilon = 1.2 # 50 cm
+            # Find COMs near pi and shift to -pi
+            com_loop_w_in_window = []
+            for pi,p in enumerate(perm):
+                for cll in range(coms_rewrel.shape[1]):
+                    com1_rel = coms_rewrel[p[0],cll]
+                    com2_rel = coms_rewrel[p[1],cll]
+                    com_diff = com_remap[pi,cll]
+                    # print(com1_rel,com2_rel,com_diff)
+                    if ((abs(com1_rel - np.pi) < epsilon) and 
+                        (abs(com2_rel + np.pi) < epsilon)):
+                        com_loop_w_in_window.append(cll)
+            # get abs value instead
+            coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
             # if 4 ep
             com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
             com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
