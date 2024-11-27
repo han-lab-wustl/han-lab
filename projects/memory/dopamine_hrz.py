@@ -123,7 +123,7 @@ for day in days:
         axes = axes.flatten()  # Flatten the axes array for easier plotting
         ax=axes[0]
         ax.imshow(params['params'][0][0][0],cmap="Greys_r")
-        ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
+        # ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
         ax.axis('off')
         ax = axes[1]
         ax.imshow(clean_arr)

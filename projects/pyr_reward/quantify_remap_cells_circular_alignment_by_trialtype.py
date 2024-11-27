@@ -124,7 +124,7 @@ for ii in range(len(conddf)):
         # if 4 ep
         # account for cells that move to the end/front
         # Define a small window around pi (e.g., epsilon)
-        epsilon = 1.2 # 50 cm
+        epsilon = 1 # 28 cm
         # Find COMs near pi and shift to -pi
         com_loop_w_in_window = []
         for pi,p in enumerate(perm):
@@ -198,25 +198,40 @@ for ii in range(len(conddf)):
         # max of 5 epochs = 10 perms
         goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
         for i in range(num_iterations):
-            # shuffle locations
-            rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-            shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
-            [random.shuffle(shuf) for shuf in shufs]
-            # first com is as ep 1, others are shuffled cell identities
-            com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
-            com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-            # OR shuffle cell identities
-            # relative to reward
-            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-            perm = list(combinations(range(len(coms_correct)), 2))     
-            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-            # get goal cells across all epochs
-            com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-            goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_shuf]
-            goal_cells_shuf = intersect_arrays(*com_goal_shuf); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
-            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
-            goal_cell_shuf_ps.append(goal_cell_shuf_p)
-            goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
+                # shuffle locations
+                rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
+                shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
+                [random.shuffle(shuf) for shuf in shufs]
+                # first com is as ep 1, others are shuffled cell identities
+                com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
+                com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+                # OR shuffle cell identities
+                # relative to reward
+                coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+                perm = list(combinations(range(len(coms_correct)), 2)) 
+                # account for cells that move to the end/front
+                # Define a small window around pi (e.g., epsilon)
+                epsilon = 1 # 28 cm
+                # Find COMs near pi and shift to -pi
+                com_loop_w_in_window = []
+                for pi,p in enumerate(perm):
+                        for cll in range(coms_rewrel.shape[1]):
+                                com1_rel = coms_rewrel[p[0],cll]
+                                com2_rel = coms_rewrel[p[1],cll]
+                                # print(com1_rel,com2_rel,com_diff)
+                                if ((abs(com1_rel - np.pi) < epsilon) and 
+                                (abs(com2_rel + np.pi) < epsilon)):
+                                        com_loop_w_in_window.append(cll)
+                # get abs value instead
+                coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+                com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+                # get goal cells across all epochs
+                com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+                goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_shuf]
+                goal_cells_shuf = intersect_arrays(*com_goal_shuf); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
+                goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
+                goal_cell_shuf_ps.append(goal_cell_shuf_p)
+                goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
         # save median of goal cell shuffle
         goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
         goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
@@ -356,8 +371,8 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
-# plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
-#         bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
+        bbox_inches='tight')
 #%%
 
 df['recorded_neurons_per_session'] = total_cells
