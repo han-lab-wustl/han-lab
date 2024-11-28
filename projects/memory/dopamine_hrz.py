@@ -19,12 +19,12 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e242'
+animal = 'e241'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Desktop"#Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [21]
+days = [28]
 
 range_val = 6; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -106,14 +106,14 @@ for day in days:
         # mask = np.arange(0,eps[2])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = perireward_binned_activity(dff[mask], rewards[mask], 
-                                    timedFF[mask], trialnum[mask],
-                                    range_val, binsize)
+                timedFF[mask], trialnum[mask],
+                range_val, binsize)
         _, meanvel, __, vel = perireward_binned_activity(velocity[mask], rewards[mask], 
-                                    timedFF[mask], trialnum[mask],
-                                    range_val, binsize)
+            timedFF[mask], trialnum[mask],
+            range_val, binsize)
         _, meanlick, __, licktr = perireward_binned_activity(licks[mask], rewards[mask], 
-                                    timedFF[mask], trialnum[mask],
-                                    range_val, binsize)
+                timedFF[mask], trialnum[mask],
+                range_val, binsize)
 
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)

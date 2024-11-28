@@ -25,12 +25,12 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'near_rew.pdf')
 #%%
-goal_window_cm=40 # to search for rew cells
+goal_window_cm=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iinds = []
 goal_cell_props = []
 goal_cell_nulls = []
@@ -40,7 +40,7 @@ rates_all = []
 total_cells_all = []
 epoch_perm = []
 radian_alignment = {}
-lasttr=8 # last trials
+lasttr=8 #  last trials
 bins=90
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 #%%
@@ -78,6 +78,8 @@ df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_nulls]
+df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
+df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
 
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
@@ -123,6 +125,9 @@ df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
 # df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
+df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
+df_perms['session_num'] = np.concatenate(df_perm_days)
+
 df_perms = df_perms[df_perms.animals!='e189']
 # skipped fro now because it wasn't working
 # df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
@@ -173,8 +178,8 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.25
-pshift=.03
+y = 0.16
+pshift=.02
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -189,9 +194,44 @@ for ii,ep in enumerate(eps):
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45)
-ax.set_title('Post-reward cells',pad=100)
+ax.set_title('Post-reward cells',pad=90)
 plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
+#%%
+# as a function of session/day
+df_plt = df.groupby(['animals','session_num','num_epochs']).mean(numeric_only=True)
+df_permsav2 = df_perms.groupby(['animals', 'session_num','num_epochs']).mean(numeric_only=True)
+# compare to shuffle
+df_plt2 = pd.concat([df_permsav2,df_plt])
+# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2[(df_plt2.index.get_level_values('num_epochs')==2) & (df_plt2.index.get_level_values('animals')!='e200')]
+df_plt2 = df_plt2.groupby(['animals', 'session_num','num_epochs']).mean(numeric_only=True)
+# number of epochs vs. reward cell prop incl combinations    
+fig,ax = plt.subplots(figsize=(7,5))
+# av across mice
+sns.stripplot(x='session_num', y='goal_cell_prop',hue='animals',
+        data=df_plt2,s=10,alpha=0.7)
+sns.barplot(x='session_num', y='goal_cell_prop',color='darkslateblue',
+        data=df_plt2,fill=False,ax=ax, errorbar='se')
+ax.set_xlim([-.5,9.5])
+# ax = sns.lineplot(data=df_plt2, # correct shift
+#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
+#         label='shuffle')
+ax.spines[['top','right']].set_visible(False)
+# ax.legend().set_visible(False)
+ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+ax.set_xlabel('# of sessions')
+ax.set_ylabel('Reward-distance cell proportion')
+df_reset = df_plt2.reset_index()
+sns.regplot(x='session_num', y='goal_cell_prop',
+        data=df_reset, scatter=False, color='k')
+r, p = scipy.stats.pearsonr(df_reset['session_num'], 
+        df_reset['goal_cell_prop'])
+ax = plt.gca()
+ax.text(.5, .8, 'r={:.3f}, p={:.3g}'.format(r, p),
+        transform=ax.transAxes)
+ax.set_title('2 epoch combinations')
+
 #%%
 # per session
 df_plt2 = pd.concat([df_perms,df])

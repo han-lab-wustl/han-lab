@@ -28,7 +28,7 @@ from projects.memory.behavior import get_behavior_tuning_curve
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 
-goal_window_cm=40 # to search for rew cells
+goal_window_cm=20 # to search for rew cells
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
@@ -145,7 +145,7 @@ for k,v in radian_alignment_saved.items():
                 transient_after_rew=np.nan
             gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
             iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
-            transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+2/binsize))]
+            transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+3/binsize))]
             if len(transient_before_move)>0:
                 transient_before_move=transient_before_move[0]
             else:
@@ -178,13 +178,13 @@ fig,ax=plt.subplots(figsize=(8,5))
 sns.stripplot(x='behavior',y='latency (s)',data=df,hue='animal',s=8,alpha=0.3,dodge=True)
 sns.boxplot(x='behavior',y='latency (s)',data=df,hue='animal',fill=False,showfliers=False,whis=0)
 ax.axhline(0,color='k',linestyle='--')
-for an in df.animal.unique():
-    dfan = df[df.animal==an]
-    for dy in dfan.day.unique():
-        dfdy = dfan[dfan.day==dy]
-        for celliid in dfdy.cellid.unique():
-            sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
-                alpha=0.1,color='gray')
+# for an in df.animal.unique():
+#     dfan = df[df.animal==an]
+#     for dy in dfan.day.unique():
+#         dfdy = dfan[dfan.day==dy]
+#         for celliid in dfdy.cellid.unique():
+#             sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
+#                 alpha=0.1,color='gray')
 
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
@@ -192,7 +192,7 @@ ax.spines[['top','right']].set_visible(False)
 
 fig,ax=plt.subplots(figsize=(2.2,5))
 sns.stripplot(x='behavior',y='latency (s)',data=df,s=8,alpha=0.3,dodge=True)
-sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers=False,whis=0)
+sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers= False,whis=0)
 ax.axhline(0,color='k',linestyle='--')
 for an in df.animal.unique():
     dfan = df[df.animal==an]
