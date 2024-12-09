@@ -220,7 +220,7 @@ def get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
                 rew_stop_success_tmpts.append(np.nan)
         else:
             closest_future_stop = stop_success_tmpts[np.where((stop_success_tmpts - r >= 0) &
-                                                              (stop_success_tmpts - r < max_reward_stop))[0]]
+                        (stop_success_tmpts - r < max_reward_stop))[0]]
             if len(closest_future_stop) > 0:
                 rew_stop_success_tmpts.append(closest_future_stop[0])
             else:

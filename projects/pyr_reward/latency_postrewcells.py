@@ -204,3 +204,22 @@ for an in df.animal.unique():
 
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
+
+#%%
+plt.close('all')
+# per animal pair
+ansq = int(np.sqrt(len(df.animal.unique())))
+fig,axes=plt.subplots(nrows=ansq,ncols=ansq,figsize=(8,12),sharex=True, sharey=True)
+axes = axes.flatten()
+for ii,an in enumerate(df.animal.unique()):
+    dfan = df[df.animal==an]
+    ax=axes[ii]
+    sns.stripplot(x='behavior',y='latency (s)',data=dfan,ax=ax,s=8,alpha=0.3,dodge=True)
+    sns.boxplot(x='behavior',y='latency (s)',data=dfan,ax=ax,fill=False,showfliers= False,whis=0)
+    for dy in dfan.day.unique():
+        dfdy = dfan[dfan.day==dy]
+        for celliid in dfdy.cellid.unique():
+            sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
+                alpha=0.1,color='gray',ax=ax)
+    ax.set_title(an)
+fig.tight_layout()

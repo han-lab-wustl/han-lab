@@ -43,13 +43,14 @@ epoch_perm = []
 radian_alignment = {}
 cm_window = 20
 dists = []
+#%%
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-for ii in range(len(conddf)):
+for ii in range(254,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
-        if animal=='e145': pln=2 
+        if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
@@ -96,6 +97,8 @@ for ii in range(len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
+        if 'bordercells' not in fall.keys(): # if no border cell var
+                fall['bordercells'] = [np.zeros_like(fall['iscell'][:,0]).astype(bool)]
         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
@@ -304,7 +307,7 @@ for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
     rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
     shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-    t,pval = scipy.stats.ranksums(rewprop, shufprop)
+    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
     print(f'{ep} epochs, pval: {pval}')
 #%%    
 # include all comparisons 
@@ -319,7 +322,7 @@ df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animal
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
 df_perms['session_num'] = np.concatenate(df_perm_days)
-df_perms = df_perms[df_perms.animals!='e189']
+# df_perms = df_perms[df_perms.animals!='e189']
 df_permsav = df_perms.groupby(['animals','rewzone_comparison']).mean(numeric_only=True)
 
 fig,ax = plt.subplots(figsize=(7,5))
@@ -341,7 +344,7 @@ for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
     rewprop = df_permsav.loc[(df_permsav.index.get_level_values('rewzone_comparison')==ep), 'goal_cell_prop'].values
     shufprop = df_permsav.loc[(df_permsav.index.get_level_values('rewzone_comparison')==ep), 'goal_cell_prop_shuffle'].values
-    t,pval = scipy.stats.ranksums(rewprop, shufprop)
+    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
     print(f'{ep} epochs, pval: {pval}')
 
 # take a mean of all epoch comparisons
@@ -350,7 +353,7 @@ df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True
 #%%
 # compare to shuffle
 df_plt2 = pd.concat([df_permsav2,df_plt])
-# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
@@ -362,10 +365,11 @@ sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
 ax = sns.lineplot(data=df_plt2, # correct shift
-        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
+        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
+        y='goal_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
-ax.legend().set_visible(False)
+ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Reward-distance cell proportion')
 eps = [2,3,4]
@@ -375,7 +379,7 @@ fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:

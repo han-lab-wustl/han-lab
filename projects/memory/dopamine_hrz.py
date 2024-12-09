@@ -19,14 +19,14 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e241'
+animal = 'e242'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
-dst = r"C:\Users\Han\Desktop"#Box\neuro_phd_stuff\han_2023-\dopamine_projects"
+dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [28]
+days = [26]
 
-range_val = 6; binsize=0.2
+range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs
@@ -51,6 +51,7 @@ for day in days:
         # dff is in row 7 - roibasemean3/basemean
         if old:
             dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
+            # dff = np.hstack(params['params'][0][0][10])/np.nanmean(np.hstack(params['params'][0][0][10]))
         else:
             dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))
         
@@ -123,7 +124,7 @@ for day in days:
         axes = axes.flatten()  # Flatten the axes array for easier plotting
         ax=axes[0]
         ax.imshow(params['params'][0][0][0],cmap="Greys_r")
-        # ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
+        ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
         ax.axis('off')
         ax = axes[1]
         ax.imshow(clean_arr)
@@ -174,18 +175,27 @@ pdf.close()
 #%%
 # heatmap across days
 pln_mean = np.squeeze(np.array([[np.nanmean(v[i],axis=0) for i in range(4)] for k,v in day_date_dff.items()]))
-
+alltr = np.array([np.concatenate([v[i] for k,v in day_date_dff.items()]) for i in range(4)])
+# all trials
 for pln in range(4): 
-    fig, ax = plt.subplots()
-    cax=ax.imshow(pln_mean[:,pln,:])    
+    fig, axes = plt.subplots(ncols=2,width_ratios=[1,2],sharex=True,figsize=(6,3))
+    ax=axes[0]
+    cax=ax.imshow(alltr[pln,:,:])    
     ax.set_xlabel('Time from CS (s)')
-    ax.set_ylabel('HRZ day')
+    ax.set_ylabel('Trials (last 4 days)')
     ax.axvline(int(range_val/binsize),linestyle='--',color='w')
-    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-    ax.set_xticklabels(range(-range_val, range_val+1, 1))
-    ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
     ax.set_title(f'Plane {planelut[pln]}')
     fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+    ax=axes[1]
+    mf = np.nanmean(alltr[pln,:,:],axis=0)
+    ax.plot(mf)    
+    ax.fill_between(range(0,int(range_val/binsize)*2), 
+    mf-scipy.stats.sem(alltr[pln,:,:],axis=0,nan_policy='omit'),
+    mf+scipy.stats.sem(alltr[pln,:,:],axis=0,nan_policy='omit'), alpha=0.3)
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+    ax.set_xticklabels(range(-range_val, range_val+1, 2))
+    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
     fig.tight_layout()
 
 #%%
