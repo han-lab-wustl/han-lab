@@ -18,15 +18,19 @@ def main(file_path, output_folder='heatmap_stack'):
 
     # Compute p-values using a paired t-test between each frame and a reference
     # Here we compare each pair of consecutive frames
-    p_values = np.empty(smoothed_diffs.shape[1:])  # shape (z, y, x)
+    p_values = np.empty(smoothed_diffs.shape)  # shape (z, y, x)
 
-    for y in range(smoothed_diffs.shape[1]):
-        for x in range(smoothed_diffs.shape[2]):
-            p_values[y, x] = scipy.stats.ttest_rel(stack[:-1, y, x], stack[1:, y, x])[1]
+    for t in range(smoothed_diffs.shape[0]):
+        for y in range(smoothed_diffs.shape[1]):
+            for x in range(smoothed_diffs.shape[2]):
+                p_values[t,y, x] = scipy.stats.ttest_rel(stack[:-1, y, x], 
+                                    stack[1:, y, x])[1]
+        
+    return p_values
 
 
 # Example usage
-file_path = r'Y:\halo_grabda\e242\26\241207_ZD_000_000\suite2p\plane3\reg_tif\file005000.tif'
+file_path = r"Y:\halo_grabda\e243\33\241209_ZD_000_001\suite2p\plane3\reg_tif\file004500.tif"
 output_folder=r'C:\Users\Han\Desktop\so'
 p_values = main(file_path,output_folder)
 

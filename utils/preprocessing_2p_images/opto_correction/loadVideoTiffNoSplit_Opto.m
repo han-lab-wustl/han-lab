@@ -50,8 +50,9 @@ for day=days
         choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
         %         chtemp=chtemp(:,90:730,:);
 
-        chtemp=chtemp_original(110:end,125:718,:)-choptotemp(110:end,125:718,:); % zd added option to crop etl
+        chtemp=chtemp_original(20:end,125:718,:)-choptotemp(20:end,125:718,:); % zd added option to crop etl
         % used to be: (:,90:718,:)
+        % or (110:end,125:718,:)
         % matlab order: x,y,z
         % chtemp original is with etl/opto artifact intact used to find
         % opto artifact
