@@ -641,7 +641,11 @@ def get_shuffled_goal_cell_indices(rewlocs, coms_correct, goal_window, suite2pin
                     for jj in range(len(perm))])        
         # get goal cells across all epochs
         com_goal = [np.where((comr<goal_window) & 
-                (comr>-goal_window))[0] for comr in com_remap]            
+                (comr>-goal_window))[0] for comr in com_remap]     
+        # (com near goal)
+        com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>0))] for com in com_goal if len(com)>0]
         goal_cells = intersect_arrays(*com_goal)
         goal_cells_s2p_ind = suite2pind_remain[goal_cells]
         goal_cells_shuf_s2pind.append(goal_cells_s2p_ind)

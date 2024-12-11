@@ -46,7 +46,7 @@ relative_coms_shufs=[]
 #%%
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-for ii in range(len(conddf)):
+for ii in range(254,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
@@ -153,7 +153,7 @@ for ii in range(len(conddf)):
         relcoms = [np.nanmedian(coms_rewrel[:,goal_cells],axis=0),
                     np.nanmean(coms_rewrel[:,twoepgcx],axis=0)]
         relative_coms.append(relcoms)
-        s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+        # s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])        
@@ -265,7 +265,7 @@ plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
+df = df[((df.animals!='e217') & (df.animals!='e139')) & (df.optoep<2) & (df.index.isin(inds))]
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = [xx[1] for xx in goal_cell_prop]
 df['opto'] = df.optoep.values>1
@@ -288,10 +288,37 @@ ax.set_ylabel('Sessions')
 #%%
 # TODO
 # com of persistent cells across epochs
-plt.hist(np.concatenate([xx[1] for xx in relative_coms]))
-plt.hist(np.concatenate([xx[0] for xx in relative_coms]))
+fig,ax = plt.subplots()
+ax.hist(np.concatenate([xx[1] for xx in relative_coms]), color='slategray',alpha=.7,
+    density=True,label='2 epochs')
+ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==3]), 
+    color='darkcyan',alpha=.4,density=True,label='3 epochs')
+ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==4]), 
+    color='orange',alpha=.4,density=True,label='4 epochs')
+# ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==5]), 
+#     color='orange',alpha=.5,density=True)
+ax.set_ylabel('Density of COMs of reward-map cells')
+ax.set_xlabel('Reward-relative distance')
+ax.spines[['top','right']].set_visible(False)
+ax.legend()
 #%%
+# Histogram of # of epochs / days a cell is a goal cell
+fig,ax = plt.subplots()
+ax.hist(np.concatenate([[2]*len(xx[0]) for ii,xx in enumerate(relative_coms) if num_epochs[ii]==2]), color='slategray',alpha=.7,
+    label='2 epochs')
+ax.hist(np.concatenate([[3]*len(xx[0]) for ii,xx in enumerate(relative_coms) if num_epochs[ii]==3]), 
+    color='orchid',alpha=.4,label='3 epochs')
+ax.hist(np.concatenate([[4]*len(xx[0]) for ii,xx in enumerate(relative_coms) if num_epochs[ii]==4]), 
+    color='royalblue',alpha=.4,label='4 epochs')
+# ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==5]), 
+#     color='orange',alpha=.5,density=True)
+ax.set_ylabel('Density of COMs of reward-map cells')
+ax.set_xlabel('Reward-relative distance')
+ax.spines[['top','right']].set_visible(False)
+ax.legend()
 
+#%%
+#%%
 # number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(5,5))
 df_plt = df

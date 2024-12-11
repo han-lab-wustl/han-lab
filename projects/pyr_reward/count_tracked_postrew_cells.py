@@ -18,6 +18,7 @@ from itertools import combinations, chain
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
+
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
@@ -28,11 +29,11 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
 animals = ['e218','e216','e217','e201','e186','e189',
-        'e190', 'e145', 'z8', 'z9']
+        'e190', 'e145', 'z8', 'z9', 'e139']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-goal_window_cm=40 # to search for rew cells
-radian_tuning_dct = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
+goal_window_cm=20 # to search for rew cells
+radian_tuning_dct = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_20cm_window.p'
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 celltrackpth = r'Y:\analysis\celltrack'
@@ -48,58 +49,59 @@ maxep = 5
 shuffles = 1000
 # redo across days analysis but init array per animal
 for animal in animals:
-    # all rec days
-    dys = conddf.loc[conddf.animals==animal, 'days'].values
-    # index compared to org df
-    dds = list(conddf[conddf.animals==animal].index)
-    # init 
-    tracked_rew_cell_inds,tracked_rew_cell_ind_shufs = [],[]
-    for ii, day in enumerate(dys): # iterate per day
-        if animal!='e217' and conddf.optoep.values[ii]<2:
-            if animal=='e145': pln=2
-            else: pln=0
-            # get lut
-            tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
-            if ii==0:
-                # init with min 4 epochs
-                # ep x cells x days
-                # instead of filling w/ coms, fill w/ binary
-                tracked = np.zeros((tracked_lut.shape[0]))
-                tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
-            # get vars
-            params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-            dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
-                rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
-            goal_window = 40*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
-            k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
-            tcs_correct, coms_correct, tcs_fail, coms_fail,\
-                    com_goal, goal_cell_shuf_ps_per_comp_av,\
-                        goal_cell_shuf_ps_av,pdist = radian_alignment_saved[k]            
-            assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
-            # get goal cells across all epochs        
-            goal_cells = intersect_arrays(*com_goal)            
-            if len(goal_cells)>0:
-                # suite2p indices of rew cells
-                goal_cells_s2p_ind = suite2pind_remain[goal_cells]                
-                # if a tracked cell, add 1 to tracked cell ind
-                goal_tracked_idx = []
-                for c in goal_cells_s2p_ind:
-                    tridx = np.where(tracked_lut[day]==c)[0]
-                    if len(tridx)>0:
-                        goal_tracked_idx.append(tridx[0])
-                tracked[goal_tracked_idx] += 1
-                # populate shuffles
-                # goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
-                #             goal_window,suite2pind_remain)
-                # for sh in range(shuffles):
-                #     goal_tracked_idx = []
-                #     for c in goal_cells_shuf_s2pind[sh]:
-                #         tridx = np.where(tracked_lut[day]==c)[0]
-                #         if len(tridx)>0:
-                #             goal_tracked_idx.append(tridx[0])                
-                #     tracked_shuf[sh, goal_tracked_idx] += 1
-                
-    trackeddct[animal] = tracked#[tracked, tracked_shuf]
+        # all rec days
+        dys = conddf.loc[conddf.animals==animal, 'days'].values
+        # index compared to org df
+        dds = list(conddf[conddf.animals==animal].index)
+        # init 
+        tracked_rew_cell_inds,tracked_rew_cell_ind_shufs = [],[]
+        for ii, day in enumerate(dys): # iterate per day
+                if animal!='e217' and conddf.optoep.values[ii]<2:
+                        if animal=='e145' or animal=='e139': pln=2
+                        else: pln=0
+                        # get lut
+                        tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
+                        if day in days:
+                                if ii==0:
+                                        # init with min 4 epochs
+                                        # ep x cells x days
+                                        # instead of filling w/ coms, fill w/ binary
+                                        tracked = np.zeros((tracked_lut.shape[0]))
+                                        tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
+                                # get vars
+                                params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+                                dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
+                                        rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
+                                goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
+                                k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
+                                tcs_correct, coms_correct, tcs_fail, coms_fail,\
+                                        com_goal, goal_cell_shuf_ps_per_comp_av,\
+                                                goal_cell_shuf_ps_av,pdist = radian_alignment_saved[k]            
+                                assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
+                                # get goal cells across all epochs        
+                                goal_cells = intersect_arrays(*com_goal)            
+                                if len(goal_cells)>0:
+                                        # suite2p indices of rew cells
+                                        goal_cells_s2p_ind = suite2pind_remain[goal_cells]                
+                                        # if a tracked cell, add 1 to tracked cell ind
+                                        goal_tracked_idx = []
+                                        for c in goal_cells_s2p_ind:
+                                                tridx = np.where(tracked_lut[day]==c)[0]
+                                                if len(tridx)>0:
+                                                        goal_tracked_idx.append(tridx[0])
+                                                tracked[goal_tracked_idx] += 1
+                                                # populate shuffles
+                                                goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
+                                                        goal_window,suite2pind_remain)
+                                        for sh in range(shuffles):
+                                                goal_tracked_idx = []
+                                                for c in goal_cells_shuf_s2pind[sh]:
+                                                        tridx = np.where(tracked_lut[day]==c)[0]
+                                                        if len(tridx)>0:
+                                                                goal_tracked_idx.append(tridx[0])                
+                                                tracked_shuf[sh, goal_tracked_idx] += 1
+                        
+                trackeddct[animal] = [tracked, tracked_shuf]
 
 dct = {}; dct['rew_cells_coms_tracked'] = [trackeddct]
 # save pickle of dcts
