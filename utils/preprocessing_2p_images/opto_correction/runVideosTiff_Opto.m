@@ -7,8 +7,8 @@
 % triggered optogenetics
 
 clear all; close all;
-days=[33]; 
-src = "Y:\halo_grabda\e241";
+days=[29]; 
+src = "Y:\halo_grabda\e242";
 % src = 'X:\vipcre\e217';
 lenVid=3000;
 threshold = 0.4; % a tunable parameter to find stims, set at 0.4 for chr2 data 

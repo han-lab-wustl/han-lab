@@ -29,7 +29,7 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 
 animals = ['e218','e216','e217','e201','e186','e189',
-        'e190', 'e145', 'z8', 'z9', 'e139']
+        'e190', 'e145', 'z8', 'z9']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 goal_window_cm=20 # to search for rew cells
@@ -73,34 +73,36 @@ for animal in animals:
                                 dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
                                         rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
                                 goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
-                                k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
-                                tcs_correct, coms_correct, tcs_fail, coms_fail,\
-                                        com_goal, goal_cell_shuf_ps_per_comp_av,\
-                                                goal_cell_shuf_ps_av,pdist = radian_alignment_saved[k]            
-                                assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
-                                # get goal cells across all epochs        
-                                goal_cells = intersect_arrays(*com_goal)            
-                                if len(goal_cells)>0:
-                                        # suite2p indices of rew cells
-                                        goal_cells_s2p_ind = suite2pind_remain[goal_cells]                
-                                        # if a tracked cell, add 1 to tracked cell ind
-                                        goal_tracked_idx = []
-                                        for c in goal_cells_s2p_ind:
-                                                tridx = np.where(tracked_lut[day]==c)[0]
-                                                if len(tridx)>0:
-                                                        goal_tracked_idx.append(tridx[0])
-                                                tracked[goal_tracked_idx] += 1
-                                                # populate shuffles
-                                                goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
-                                                        goal_window,suite2pind_remain)
-                                        for sh in range(shuffles):
+                                k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx]
+                                if len(k)>0:
+                                        k=k[0]
+                                        tcs_correct, coms_correct, tcs_fail, coms_fail,\
+                                                com_goal, goal_cell_shuf_ps_per_comp_av,\
+                                                        goal_cell_shuf_ps_av,pdist = radian_alignment_saved[k]            
+                                        assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
+                                        # get goal cells across all epochs        
+                                        goal_cells = intersect_arrays(*com_goal)            
+                                        if len(goal_cells)>0:
+                                                # suite2p indices of rew cells
+                                                goal_cells_s2p_ind = suite2pind_remain[goal_cells]                
+                                                # if a tracked cell, add 1 to tracked cell ind
                                                 goal_tracked_idx = []
-                                                for c in goal_cells_shuf_s2pind[sh]:
+                                                for c in goal_cells_s2p_ind:
                                                         tridx = np.where(tracked_lut[day]==c)[0]
                                                         if len(tridx)>0:
-                                                                goal_tracked_idx.append(tridx[0])                
-                                                tracked_shuf[sh, goal_tracked_idx] += 1
-                        
+                                                                goal_tracked_idx.append(tridx[0])
+                                                        tracked[goal_tracked_idx] += 1
+                                                        # populate shuffles
+                                                        goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
+                                                                goal_window,suite2pind_remain)
+                                                for sh in range(shuffles):
+                                                        goal_tracked_idx = []
+                                                        for c in goal_cells_shuf_s2pind[sh]:
+                                                                tridx = np.where(tracked_lut[day]==c)[0]
+                                                                if len(tridx)>0:
+                                                                        goal_tracked_idx.append(tridx[0])                
+                                                        tracked_shuf[sh, goal_tracked_idx] += 1
+                                
                 trackeddct[animal] = [tracked, tracked_shuf]
 
 dct = {}; dct['rew_cells_coms_tracked'] = [trackeddct]
@@ -113,7 +115,7 @@ with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
 # get number of tracked rew cells across days (vs. shuf cells)
 plt.rc('font', size=24)
 animals = ['e218','e216','e201',
-        'e186','e189','e145', 'z8', 'z9']
+        'e186','e145', 'z8', 'z9']
 df = pd.DataFrame()
 df['tracked_cells_num'] = np.concatenate([trackeddct[an][0][trackeddct[an][0]>0] for an in animals]).astype(int)
 df['tracked_cells_shuf_1'] = np.concatenate([trackeddct[an][1][random.randint(0,shuffles),trackeddct[an][0]>0] for an in animals]).astype(int)
@@ -131,7 +133,7 @@ sns.histplot(data=df[df.p_values_per_cell<0.05], x='tracked_cells_num', color='d
 sns.histplot(data=df[(df.p_values_per_cell<0.05) & 
         (df['tracked_cells_shuf_1']>=1)], x='tracked_cells_shuf_1',  color='dimgray',
         bins=3,alpha=0.5, label='shuffle')
-ax.legend(bbox_to_anchor=(1.001, 1.001))
+ax.legend(bbox_to_anchor=(1.1, 1.1))
 
 dfs_av = df
 # reorganize
@@ -144,23 +146,22 @@ df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_p
 df2['animal'] = np.concatenate([animals]*len(days))
 df2['days_tracked'] = np.concatenate(np.concatenate([[[day]*len(animals)] for day in days]))
 fig,ax=plt.subplots(figsize=(3,6))
-sns.stripplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',s=8, color='k',ax=ax)
+sns.stripplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',s=12, color='k',ax=ax)
 sns.barplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',fill=False, color='k',ax=ax, errorbar='se')
 sns.lineplot(data=df2, # correct shift
         x=df2.days_tracked.values-1, y='shuf_num_tracked_cells_per_mouse',
         color='grey', label='shuffle',ax=ax)
-
 ax.set_xlabel('# of days tracked')
-ax.set_ylabel('# of reward-distance cells')
+ax.set_ylabel('# of post-rew cells')
 eps = [1,2,3]
-y = 180
-pshift = 30
+y = 10
+pshift = 1
 fs=50
 pfs = 12
 for ii,ep in enumerate(eps):
         rewprop = df2.loc[(df2.days_tracked==ep), 'num_tracked_cells_per_mouse']
         shufprop = df2.loc[(df2.days_tracked==ep), 'shuf_num_tracked_cells_per_mouse']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
@@ -169,8 +170,8 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=pfs)
-
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=pfs,rotation=45)
+ax.legend(bbox_to_anchor=(1.3, .95))
 ax.spines[['top','right']].set_visible(False)
 plt.savefig(os.path.join(savedst, 'across_days_rew_cells.svg'), bbox_inches='tight', dpi=500)
 #%%

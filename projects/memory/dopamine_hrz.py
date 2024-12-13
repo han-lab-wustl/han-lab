@@ -19,12 +19,12 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e242'
+animal = 'e241'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [27]
+days = [35]
 
 range_val = 8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -124,7 +124,7 @@ for day in days:
         axes = axes.flatten()  # Flatten the axes array for easier plotting
         ax=axes[0]
         ax.imshow(params['params'][0][0][0],cmap="Greys_r")
-        ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
+        # ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
         ax.axis('off')
         ax = axes[1]
         ax.imshow(clean_arr)

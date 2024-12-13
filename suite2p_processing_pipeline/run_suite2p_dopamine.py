@@ -25,6 +25,7 @@ def main(**args):
         ##########################TRANSFER (COPY) DATA##########################
         preprocessing.copy_folder(params["transferdir"], os.path.join(params["datadir"], params["mouse_name"], params["day"]))
 
+        print('\n****** remember to run opto correction before s2p if doing opto!******\n')
     elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
         #args should be the info you need to specify the params
@@ -33,7 +34,7 @@ def main(**args):
         print(params)
         #check to see if imaging files are transferred
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
-                                        params["mouse_name"], params["day"])) if "000" in xx][0]
+            params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], 
                 imagingfl)
         if not params["cell_detect_only"]: 
@@ -42,10 +43,10 @@ def main(**args):
                 print(imagingfl)
                 if params["crop_opto"]:
                     imagingflnm = preprocessing.maketifs(imagingflnm,89,
-                                512,89,718,nplanes=params["nplanes"])
+                        512,89,718,nplanes=params["nplanes"])
                 else:
                     imagingflnm = preprocessing.maketifs(imagingflnm,0,
-                                512,89,718,nplanes=params["nplanes"])            
+                        512,89,718,nplanes=params["nplanes"])            
                 print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -64,7 +65,7 @@ def main(**args):
             'h5py_key': 'data',
             'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
             'data_path': [imagingflnm], # a list of folders with tiffs 
-                                                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
+                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
                                                 
             'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
             # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
