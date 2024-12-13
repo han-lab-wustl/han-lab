@@ -102,8 +102,6 @@ for ii in range(254,len(conddf)):
         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-        # skew_mask = skew_filter>2
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
             tcs_correct, coms_correct, tcs_fail, coms_fail, \

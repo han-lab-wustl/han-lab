@@ -118,7 +118,10 @@ animals = ['e218','e216','e201',
         'e186','e145', 'z8', 'z9']
 df = pd.DataFrame()
 df['tracked_cells_num'] = np.concatenate([trackeddct[an][0][trackeddct[an][0]>0] for an in animals]).astype(int)
+# only one shuffle eg
 df['tracked_cells_shuf_1'] = np.concatenate([trackeddct[an][1][random.randint(0,shuffles),trackeddct[an][0]>0] for an in animals]).astype(int)
+# mean of shuffles
+df['tracked_cells_shuf_1'] = np.concatenate([np.nanmedian(trackeddct[an][1][:,trackeddct[an][0]>0],axis=0) for an in animals])
 df['p_values_per_cell'] = np.concatenate([sum(trackeddct[an][1][:,(trackeddct[an][0]>0)]>trackeddct[an][0][trackeddct[an][0]>0])/shuffles for an in animals])
 df['animals'] = np.concatenate([[an]*len(trackeddct[an][0][trackeddct[an][0]>0]) for an in animals])
 df['animals_shuf'] = np.concatenate([[an+'_shuf']*len(trackeddct[an][0][trackeddct[an][0]>0]) for an in animals])
@@ -140,7 +143,8 @@ dfs_av = df
 df2 = pd.DataFrame()
 days = [1,2,3]
 tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day) for an in animals] for day in range(1,4)]
-tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']==day) for an in df.animals_shuf.unique()] for day in range(1,4)]
+tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']>=day) \
+        for an in df.animals_shuf.unique()] for day in range(1,4)]
 df2['num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse)
 df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse_shuf)
 df2['animal'] = np.concatenate([animals]*len(days))
