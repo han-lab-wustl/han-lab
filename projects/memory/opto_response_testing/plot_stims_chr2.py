@@ -1,6 +1,6 @@
 """zahra
-sept 2024
-opn3/halo power tests
+dec 2024
+lc chr2 power tests
 """
 #%%
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd

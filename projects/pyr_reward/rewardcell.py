@@ -655,6 +655,50 @@ def get_shuffled_goal_cell_indices(rewlocs, coms_correct, goal_window, suite2pin
         coms_rewrels.append(coms_rewrel)
     return goal_cells_shuf_s2pind, coms_rewrels
 
+
+def get_shuffled_goal_cell_indices_com_away_from_goal(rewlocs, coms_correct, goal_window, suite2pind_remain,
+                num_iterations = 1000):
+    # get shuffled iterations
+    shuffled_dist = np.zeros((num_iterations))
+    # max of 5 epochs = 10 perms
+    goal_cells_shuf_s2pind = []; coms_rewrels = []
+    goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
+    for i in range(num_iterations):
+        if i%1000==0: print(f'shuffle number: {i}')
+        # shuffle locations
+        rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
+        shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, 
+                len(coms_correct))]
+        [random.shuffle(shuf) for shuf in shufs]
+        # first com is as ep 1, others are shuffled cell identities
+        com_shufs = np.zeros_like(coms_correct)
+        com_shufs[0,:] = coms_correct[0]
+        com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 
+                                            1+len(shufs))]
+        # OR shuffle cell identities
+        # relative to reward
+        coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+        perm = list(combinations(range(len(coms_correct)), 2))     
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) 
+                    for jj in range(len(perm))])        
+        # get goal cells across all epochs
+        com_goal = [np.where((comr<goal_window) & 
+                (comr>-goal_window))[0] for comr in com_remap]     
+        # (com away from goal)
+        com_goal_pr = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>0))] for com in com_goal if len(com)>0]
+        goal_cells = intersect_arrays(*com_goal)
+        goal_cells_pr = intersect_arrays(*com_goal_pr)
+        goal_cells = [xx for xx in goal_cells if xx not in goal_cells_pr]
+        if len(goal_cells)>0:
+            goal_cells_s2p_ind = suite2pind_remain[goal_cells]
+        else:
+            goal_cells_s2p_ind = []
+        goal_cells_shuf_s2pind.append(goal_cells_s2p_ind)
+        coms_rewrels.append(coms_rewrel)
+    return goal_cells_shuf_s2pind, coms_rewrels
+
 def get_reward_cells_that_are_tracked(tracked_lut, goal_cells_s2p_ind, 
         animal, day,  suite2pind_remain):
     tracked_rew_cell_ind = [ii for ii,xx in enumerate(tracked_lut[day].values) if xx in goal_cells_s2p_ind]

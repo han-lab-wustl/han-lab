@@ -206,6 +206,26 @@ for an in df.animal.unique():
 ax.spines[['top','right']].set_visible(False)
 
 #%%
+# histogram of latencies
+plt.rc('font', size=22) 
+fig,ax=plt.subplots()
+# per animal
+sns.histplot(x='latency (s)',hue='animal',data=df[df.behavior=='Reward'], bins=30)
+# sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers= False,whis=0)
+# ax.axhline(0,color='k',linestyle='--')
+# for an in df.animal.unique():
+#     dfan = df[df.animal==an]
+#     for dy in dfan.day.unique():
+#         dfdy = dfan[dfan.day==dy]
+#         for celliid in dfdy.cellid.unique():
+#             sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
+#                 alpha=0.1,color='gray')
+ax.set_ylabel('# Post-reward cells')
+ax.set_xlabel('Latency from reward (s)')
+# sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
+ax.spines[['top','right']].set_visible(False)
+
+#%%
 plt.close('all')
 # per animal pair
 ansq = int(np.sqrt(len(df.animal.unique())))
@@ -223,3 +243,5 @@ for ii,an in enumerate(df.animal.unique()):
                 alpha=0.1,color='gray',ax=ax)
     ax.set_title(an)
 fig.tight_layout()
+
+#%%
