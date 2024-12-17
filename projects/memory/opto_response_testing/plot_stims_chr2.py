@@ -20,7 +20,7 @@ import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
-
+#%%
 plt.close('all')
 # save to pdf
 # dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
@@ -28,8 +28,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'X:\lc_chr2_grabda'
-animals = ['e280']
-days_all = [[1]]
+animals = ['e278']
+days_all = [[2]]
 
 range_val = 6; binsize=0.2 #s
 dur=1# s stim duration
@@ -102,7 +102,7 @@ for ii,animal in enumerate(animals):
             ax=axes[1,pln]
             ax.plot(dff-1,label=f'plane: {pln}')
             ax.plot(startofstims-1)
-            ax.set_ylim([-.1,.1])
+            ax.set_ylim([-.1,.2])
             ax.set_title(f'Stim events')
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \

@@ -2,19 +2,26 @@
 july 2024
 """
 import os, scipy, numpy as np, pandas as pd, sys
+import matplotlib.pyplot as plt
+from pathlib import Path
+
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 
 from projects.memory.behavior import consecutive_stretch
+from projects.pyr_reward.rewardcell import perireward_binned_activity
+from projects.opto.behavior.behavior import get_success_failure_trials
 
 
-def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
+def extract_vars(src, animal, day, condrewloc, opto_cond, dst, 
+        pdf, rolling_win=3, planes=4,range_val = 5, binsize=0.2):
     # set vars
     print(f'*******Animal: {animal}, Day: {day}*******\n')
-    day=str(day)
-    newrewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0])
+    # day=str(day)
+    planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
+    newrewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'rewloc'].values[0])
     numtrialsstim=condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'numtrialsstim'].values[0]
     if ~np.isnan(numtrialsstim): numtrialsstim=int(numtrialsstim)
-    rewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0])
+    rewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'prevrewloc'].values[0])
     plndff = []
     optoday = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0]
     # hack
@@ -83,8 +90,9 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
             rews_centered[min_iind]=1
         
             normmeanrewdFF, meanrewdFF, normrewdFF, \
-                rewdFF = eye.perireward_binned_activity(forwardvel[:firstrew], 
-                        rews_centered, timedFF[:firstrew], range_val, binsize)
+                rewdFF = perireward_binned_activity(forwardvel[:firstrew], 
+                        rews_centered.astype(bool), timedFF[:firstrew], trialnum[:firstrew],
+                        range_val, binsize)
 
             fig, axes = plt.subplots(nrows=4,ncols=2,sharex=True)#,gridspec_kw={'width_ratios':[4,1]})
             ax = axes[0,0]
@@ -131,8 +139,9 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
             rews_centered = np.zeros_like(failed_trialnum)
             rews_centered[min_iind]=1
             normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
-                rewdFF_nonopto = eye.perireward_binned_activity(forwardvel[failtr_bool],
-                rews_centered, timedFF[failtr_bool], range_val, binsize)
+                rewdFF_nonopto = perireward_binned_activity(forwardvel[failtr_bool],
+                rews_centered.astype(bool), timedFF[failtr_bool], trialnum[failtr_bool],
+                range_val, binsize)
             # plot
             ax = axes[1,0]
             ax.imshow(rewdFF_nonopto.T, cmap="Greys_r")
@@ -159,8 +168,9 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
             rews_centered = np.zeros_like(failed_trialnum)
             rews_centered[min_iind]=1
             normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
-                rewdFF_nonopto = eye.perireward_binned_activity(forwardvel[failtr_bool],
-                rews_centered, timedFF[failtr_bool], range_val, binsize)
+                rewdFF_nonopto = perireward_binned_activity(forwardvel[failtr_bool],
+                rews_centered.astype(bool), timedFF[failtr_bool], trialnum[failtr_bool],
+                range_val, binsize)
             # plot
             ax = axes[2,0]
             ax.imshow(rewdFF_nonopto.T, cmap="Greys_r")
@@ -181,8 +191,8 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
             
             # all subsequent rews
             normmeanrewdFF, meanrewdFF, normrewdFF, \
-                rewdFF = eye.perireward_binned_activity(forwardvel, rewards, timedFF, 
-                                        range_val, binsize)
+                rewdFF = perireward_binned_activity(forwardvel, rewards.astype(bool), timedFF, 
+                            trialnum, range_val, binsize)
             # Find the rows that contain NaNs
             # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
             # Select rows that do not contain any NaNs
@@ -204,9 +214,19 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
             fig.tight_layout()
             pdf.savefig(fig)
         ################################### dff ###################################
+        # initial probes            
+        firstrew = np.where(rewards==1)[0][0]
+        rews_centered = np.zeros_like(ybinned[:firstrew])
+        rews_centered[(ybinned[:firstrew] >= rewloc-3) & (ybinned[:firstrew] <= rewloc+3)]=1
+        rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+        min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+        rews_centered = np.zeros_like(ybinned[:firstrew])
+        rews_centered[min_iind]=1
+        
         # plot pre-first reward dop activity    
         normmeanrewdFF, meanrewdFF, normrewdFF, \
-            rewdFF = eye.perireward_binned_activity(dff[:firstrew], rews_centered, timedFF[:firstrew], range_val, binsize)
+            rewdFF = perireward_binned_activity(dff[:firstrew], rews_centered.astype(bool), timedFF[:firstrew], 
+                    trialnum[:firstrew], range_val, binsize)
         # peri reward initial probes        
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
@@ -254,8 +274,9 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
         rews_centered = np.zeros_like(failed_trialnum)
         rews_centered[min_iind]=1
         normmeanrewdFF_opto, meanrewdFF_opto, normrewdFF, \
-            rewdFF_opto = eye.perireward_binned_activity(dff[failtr_bool],
-            rews_centered, timedFF[failtr_bool], range_val, binsize)
+            rewdFF_opto = perireward_binned_activity(dff[failtr_bool],
+            rews_centered.astype(bool), timedFF[failtr_bool], trialnum[failtr_bool],
+            range_val, binsize)
         
         # nonopto  
         failtr_bool = np.array([(xx in ftr_trials) and 
@@ -268,8 +289,9 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
         rews_centered = np.zeros_like(failed_trialnum)
         rews_centered[min_iind]=1
         normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
-            rewdFF_nonopto = eye.perireward_binned_activity(dff[failtr_bool],
-            rews_centered, timedFF[failtr_bool], range_val, binsize)
+            rewdFF_nonopto = perireward_binned_activity(dff[failtr_bool],
+            rews_centered.astype(bool), timedFF[failtr_bool], trialnum[failtr_bool],
+            range_val, binsize)
         # plot
         ax = axes[1,0]
         ax.imshow(np.concatenate([rewdFF_opto.T, rewdFF_nonopto.T]))
@@ -298,7 +320,6 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
 
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
-        ax.set_title('Failed Trials (Centered by rewloc)')
         # catch trials only  
         failtr_bool = np.array([(xx in catchtrialsnum) for xx in trialnum])        
         failed_trialnum = trialnum[failtr_bool]
@@ -309,8 +330,9 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
         rews_centered = np.zeros_like(failed_trialnum)
         rews_centered[min_iind]=1
         normmeanrewdFF_nonopto, meanrewdFF_nonopto, normrewdFF, \
-            rewdFF_nonopto = eye.perireward_binned_activity(dff[failtr_bool],
-            rews_centered, timedFF[failtr_bool], range_val, binsize)
+            rewdFF_nonopto = perireward_binned_activity(dff[failtr_bool],
+            rews_centered.astype(bool), timedFF[failtr_bool], trialnum[failtr_bool],
+            range_val, binsize)
         # plot
         ax = axes[2,0]
         ax.imshow(rewdFF_nonopto.T)
@@ -333,14 +355,15 @@ def extract_vars(animal, day, condrewloc, opto_cond, rolling_win=3, planes=4):
         mask = ~(trialnum%numtrialsstim==0)
         # all subsequent rews
         normmeanrewdFF, meanrewdFF_opto, normrewdFF, \
-            rewdFF_opto = eye.perireward_binned_activity(dff[mask], rewards[mask], timedFF[mask], 
-                                    range_val, binsize)
+            rewdFF_opto = perireward_binned_activity(dff[mask], 
+                rewards[mask].astype(bool), timedFF[mask], 
+                            trialnum[mask], range_val, binsize)
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
         # Select rows that do not contain any NaNs
         clean_arr_opto = rewdFF_opto.T#[~rows_with_nans]  normmeanrewdFF, meanrewdFF, normrewdFF, \
-        normmeanrewdFF, meanrewdFF_nonopto, normrewdFF, rewdFF_nonopto = eye.perireward_binned_activity(dff[~mask], rewards[~mask], timedFF[~mask], 
-                                range_val, binsize)  
+        normmeanrewdFF, meanrewdFF_nonopto, normrewdFF, rewdFF_nonopto = perireward_binned_activity(dff[~mask], rewards[~mask].astype(bool), timedFF[~mask], 
+            trialnum[~mask],range_val, binsize)  
         clean_arr_nonopto = rewdFF_nonopto.T
         ax = axes[3,0]
         ax.imshow(np.concatenate([clean_arr_opto,clean_arr_nonopto]))
