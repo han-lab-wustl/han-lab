@@ -43,7 +43,6 @@ def get_tuning_curve(ybinned, f, bins=270):
     # Discretize the position data into bins
     df['position_bin'] = pd.cut(df['position'], bins=bins, labels=False)
     
-    # Calculate the lick probability for each bin
     grouped = df.groupby('position_bin')['f'].agg(['mean', 'count']).reset_index()
     f_tc = np.ones(bins)*np.nan
     f_tc[:np.array(grouped['mean'].shape[0])] = grouped['mean'] 

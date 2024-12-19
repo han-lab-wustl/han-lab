@@ -18,10 +18,10 @@ def extract_vars(src, animal, day, condrewloc, opto_cond, dst,
     print(f'*******Animal: {animal}, Day: {day}*******\n')
     # day=str(day)
     planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-    newrewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'rewloc'].values[0])
+    newrewloc_ = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'rewloc'].values[0])
     numtrialsstim=condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'numtrialsstim'].values[0]
     if ~np.isnan(numtrialsstim): numtrialsstim=int(numtrialsstim)
-    rewloc = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'prevrewloc'].values[0])
+    rewloc_ = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'prevrewloc'].values[0])
     plndff = []
     optoday = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0]
     # hack
@@ -37,7 +37,9 @@ def extract_vars(src, animal, day, condrewloc, opto_cond, dst,
         stims = scipy.io.loadmat(stimspth)        
         if len(stims['stims']>0): stims = np.hstack(stims['stims']) # nan out stims
         else: stims = np.zeros_like(params['forwardvelALL'][0])
-        VR = params['VR'][0][0]; gainf = VR[14][0][0]             
+        VR = params['VR'][0][0]; gainf = VR[14][0][0]      
+        # adjust for gain
+        rewloc = rewloc_/gainf; newrewloc = newrewloc_/gainf
         planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
         pln = int(planenum[-1])
         layer = planelut[pln]

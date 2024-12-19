@@ -43,12 +43,10 @@ condrewloc['Day'] = condrewloc['Day'].astype(int)
 condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values]
 
 src = r"Y:\halo_grabda"
-animals = ['e241','e242','e243']
-# first batch - 1 trial on/ 1 trial off
-# days_all = [[4,5,6,7,8,11,12,13,14,15,16,17],
-#         [44,45,46,47,48,49,50,51,52,54,55,56,57,58,59]]
-# second batch - 10 trials led on / 1 trial off
-days_all = [[35,36],[29,30],[36,37]]
+animals = ['e241','e243']#,'e242','e243']
+animals = ['e241']
+days_all = [[34,35,36,37],[35,36,37,38]]#,[29,30],[36,37]]
+days_all = [[34,35,36,37]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -203,7 +201,7 @@ height=1.04
 fig, axes = plt.subplots(nrows = 1, ncols = 2, sharex=True,
                         figsize=(17,7))
 supledon = []
-deepledon = []
+deepledon = [] 
 supledoff = []
 deepledoff = []
 
@@ -297,11 +295,11 @@ fig.tight_layout()
 # 4-combine days and split by trials
 # transient trace of so
 # per trial
-height=.025
-ymin=-.03
-fig, ax = plt.subplots(figsize=(7,5))
+height=.02
+ymin=-.05
+fig, ax = plt.subplots(figsize=(9,5))
 pln=3
-trialtype = 1# even
+trialtype = 0# odd bc red laser
 opto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in \
     enumerate(day_date_dff_arr_opto_all_tr)]).T
 # subset of trials
@@ -314,13 +312,13 @@ rng1, rng2 = int(range_val/binsize), int(range_val/binsize+stimsec/binsize)+1
 opto_all_trial_ledon[:,rng1:rng2]=opto_all_trial[:,rng1:rng2]
 opto_all_trial_ledoff[:,rng1+1:rng2-1]=np.nan
 ax.plot(np.nanmean(opto_all_trial_ledon,axis=0), 
-        color='mediumturquoise',label='LED on', linewidth=4)
+        color='crimson',label='LED on', linewidth=4)
 ax.fill_between(range(0,int(range_val/binsize)*2), 
             np.nanmean(opto_all_trial_ledon,axis=0)-scipy.stats.sem(opto_all_trial_ledon,
                                     axis=0,nan_policy='omit'),
             np.nanmean(opto_all_trial_ledon,axis=0)+scipy.stats.sem(opto_all_trial_ledon,
                                             axis=0,nan_policy='omit'), 
-            alpha=0.3, color='mediumturquoise')
+            alpha=0.3, color='crimson')
 # off period
 ax.plot(np.nanmean(opto_all_trial_ledoff,axis=0), 
         color='slategray',label='LED on', linewidth=4)
@@ -333,7 +331,7 @@ ax.add_patch(
 patches.Rectangle(
     xy=(range_val/binsize,ymin),  # point of origin.
     width=stimsec/binsize, height=height-ymin, linewidth=1, # width is s
-    color='mediumspringgreen', alpha=0.15))
+    color='lightcoral', alpha=0.15))
 ax.set_ylim(ymin, height) 
 ax.set_xlabel('Time from Conditioned Stimulus (s)')
 ax.set_ylabel('$\Delta$ F/F')
@@ -365,9 +363,7 @@ ax.spines['right'].set_visible(False)
 
 # fig.suptitle('Basal dendrite layer (stratum oriens)')
 fig.tight_layout()
-# plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
-
-
+plt.savefig(os.path.join(dst, 'halo_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
 
 #%%
 # all planes
