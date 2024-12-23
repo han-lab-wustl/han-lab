@@ -43,10 +43,10 @@ condrewloc['Day'] = condrewloc['Day'].astype(int)
 condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values]
 
 src = r"Y:\halo_grabda"
-animals = ['e241','e243']#,'e242','e243']
-animals = ['e241']
-days_all = [[34,35,36,37],[35,36,37,38]]#,[29,30],[36,37]]
-days_all = [[34,35,36,37]]
+# animals = ['e241','e243']#,'e242','e243']
+animals = ['e243']
+# days_all = [[34,35,36,37],[35,36,37,38,39]]#,[29,30],[36,37]]
+days_all = [[36,38,39,40]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -296,16 +296,18 @@ fig.tight_layout()
 # transient trace of so
 # per trial
 height=.02
-ymin=-.05
+ymin=-.01
 fig, ax = plt.subplots(figsize=(9,5))
 pln=3
 trialtype = 0# odd bc red laser
+stimsec=4
 opto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in \
     enumerate(day_date_dff_arr_opto_all_tr)]).T
 # subset of trials
 # color part of trace turqoise, the other part grey
-stimsec=2
-opto_all_trial = opto_all_trial[:,:]-1
+# normalize to before 1 s
+pre_window = 0 #s
+opto_all_trial = np.array([xx-np.nanmean(xx[int((range_val/binsize)-(pre_window/binsize)):int((range_val/binsize)+(1/binsize))]) for xx in opto_all_trial])
 opto_all_trial_ledon = np.ones_like(opto_all_trial)*np.nan
 opto_all_trial_ledoff = opto_all_trial
 rng1, rng2 = int(range_val/binsize), int(range_val/binsize+stimsec/binsize)+1
@@ -338,7 +340,9 @@ ax.set_ylabel('$\Delta$ F/F')
 trialtype = 0 # odd
 nonopto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in enumerate(day_date_dff_arr_nonopto_all_tr)]).T
 # subset of trials
-nonopto_all_trial = nonopto_all_trial[:,:]-1
+# normalize to before 1 s
+pre_window = 0 #s
+nonopto_all_trial = np.array([xx-np.nanmean(xx[int((range_val/binsize)-(pre_window/binsize)):int((range_val/binsize)+(1/binsize))]) for xx in nonopto_all_trial])
 ax.plot(np.nanmean(nonopto_all_trial,axis=0), 
         color='slategray',label='LED off', linewidth=4)
 ax.fill_between(range(0,int(range_val/binsize)*2), 

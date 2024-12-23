@@ -19,14 +19,13 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e241'
+animal = 'e242'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [38]
-
-range_val =6; binsize=0.2
+days = [33]
+range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs
@@ -61,7 +60,7 @@ for day in days:
         rewards = np.hstack(params['solenoid2'])
         velocity = np.hstack(params['forwardvel'])
         veldf = pd.DataFrame({'velocity': velocity})
-        velocity = np.hstack(veldf.rolling(5).mean().values)
+        velocity = np.hstack(veldf.rolling(10).mean().values)
         trialnum = np.hstack(params['trialnum'])
         ybinned = np.hstack(params['ybinned'])/(2/3)
         licks = np.hstack(params['licks'])

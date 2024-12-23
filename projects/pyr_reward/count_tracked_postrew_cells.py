@@ -46,6 +46,7 @@ trackeddct = {}
 coms = {}
 # defined vars
 maxep = 5
+
 shuffles = 1000
 # redo across days analysis but init array per animal
 for animal in animals:
@@ -67,6 +68,7 @@ for animal in animals:
                                         # ep x cells x days
                                         # instead of filling w/ coms, fill w/ binary
                                         tracked = np.zeros((tracked_lut.shape[0]))
+                                        com_tracked = np.ones((tracked_lut.shape[0]))*np.nan
                                         tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
                                         total_eligible_cells = []
                                 # get vars
@@ -89,11 +91,12 @@ for animal in animals:
                                                 goal_cells_s2p_ind = suite2pind_remain[goal_cells]                
                                                 # if a tracked cell, add 1 to tracked cell ind
                                                 goal_tracked_idx = []
-                                                for c in goal_cells_s2p_ind:
+                                                for jj,c in enumerate(goal_cells_s2p_ind):
                                                         tridx = np.where(tracked_lut[day]==c)[0]
                                                         if len(tridx)>0:
                                                                 goal_tracked_idx.append(tridx[0])
                                                         tracked[goal_tracked_idx] += 1
+                                                        com_tracked[goal_tracked_idx] = np.nanmedian(coms_correct[:, goal_cells[jj]])
                                                 # populate shuffles
                                                 goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
                                                         goal_window,suite2pind_remain)
@@ -105,7 +108,7 @@ for animal in animals:
                                                                         goal_tracked_idx.append(tridx[0])                
                                                         tracked_shuf[sh, goal_tracked_idx] += 1
                                 
-                trackeddct[animal] = [tracked, tracked_shuf, total_eligible_cells]
+                trackeddct[animal] = [tracked, tracked_shuf, total_eligible_cells, com_tracked]
 
 dct = {}; dct['rew_cells_coms_tracked'] = [trackeddct]
 # save pickle of dcts
@@ -119,7 +122,7 @@ plt.rc('font', size=24)
 animals = ['e218','e216','e201',
         'e186','e145', 'z8', 'z9']
 df = pd.DataFrame()
-# gets the indices of cells that are considered rew cells
+# gets # of days cells that are considered rew cells
 df['tracked_cells_num'] = np.concatenate([trackeddct[an][0][trackeddct[an][0]>0] for an in animals]).astype(int)
 # only one shuffle eg
 df['tracked_cells_shuf_1'] = np.concatenate([trackeddct[an][1][random.randint(0,shuffles),trackeddct[an][0]>0] for an in animals]).astype(int)
@@ -133,9 +136,9 @@ df['animals_shuf'] = np.concatenate([[an+'_shuf']*len(trackeddct[an][0][trackedd
 fig,ax=plt.subplots(figsize=(3,6))
 
 df_plt = df[df.p_values_per_cell<0.05]
-    
+
 sns.histplot(data=df[df.p_values_per_cell<0.05], x='tracked_cells_num', color='darkcyan',
-            bins=3, label = 'Reward-distance cells')
+bins=3, label = 'Reward-distance cells')
 sns.histplot(data=df[(df.p_values_per_cell<0.05) & 
         (df['tracked_cells_shuf_1']>=1)], x='tracked_cells_shuf_1',  color='dimgray',
         bins=3,alpha=0.5, label='shuffle')
@@ -145,10 +148,11 @@ dfs_av = df
 #%%
 # reorganize
 df2 = pd.DataFrame()
-days = [1,2,3]
-tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day) for an in animals] for day in range(1,4)]
-tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']>=day) \
-        for an in df.animals_shuf.unique()] for day in range(1,4)]
+days_tracked = 5
+days = np.arange(1, days_tracked+1)
+tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day)/np.nanmean(trackeddct[an][2]) for an in animals] for day in range(1,days_tracked+1)]
+tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']>=day)/np.nanmean(trackeddct[an[:-5]][2]) \
+        for an in df.animals_shuf.unique()] for day in range(1,days_tracked+1)]
 df2['num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse)
 df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse_shuf)
 df2['animal'] = np.concatenate([animals]*len(days))
@@ -160,10 +164,11 @@ sns.lineplot(data=df2, # correct shift
         x=df2.days_tracked.values-1, y='shuf_num_tracked_cells_per_mouse',
         color='grey', label='shuffle',ax=ax)
 ax.set_xlabel('# of days tracked')
-ax.set_ylabel('# of post-rew cells')
-eps = [1,2,3]
-y = 10
-pshift = 1
+ax.set_ylabel('% of cells')
+ax.set_title('Post-rew cells',pad=90)
+eps = days
+y = .06
+pshift = .01
 fs=50
 pfs = 12
 for ii,ep in enumerate(eps):

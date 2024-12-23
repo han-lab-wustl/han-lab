@@ -144,7 +144,6 @@ for ii,animal in enumerate(animals):
             ax.set_title(f'Peri-stim')
             plndff.append(rewdFF)
             fig.tight_layout()
-            # plt.show()      
         condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0]    
 
         day_date_dff[f'{animal}_{day}_{condition}'] = plndff
@@ -161,7 +160,7 @@ deep_rewdff_drug = []
 sup_rewdff_saline = []
 sup_rewdff_drug = []
 # halo
-for pln in range(planes):
+for pln in range(2,planes):
     ii=0; 
     saline_dff = []
     drug_dff = []
@@ -211,8 +210,8 @@ drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
 lbls = ['Deep', 'Superficial']
 fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(7,6), sharex=True)
-ymin=-0.05
-ymax=0.1
+ymin=-0.03
+ymax=0.07
 stimsec=1.2
 height=ymax-ymin
 for i in range(len(saline)):
@@ -254,3 +253,152 @@ for i in range(len(saline)):
     ax.set_ylabel('$\Delta$ F/F')
     ax.set_xticks(range(0, (int(range_val/binsize)*2)-frames_to_show+1,15))
     ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))
+# plot control-drug
+# plot
+drug = [deep_rewdff_drug, sup_rewdff_drug]
+saline = [deep_rewdff_saline, sup_rewdff_saline]
+startframe = int(range_val/binsize)-frames_to_show
+for i in range(len(saline)):
+    # plot
+    ax=axes[i,1]
+    drugtrace = np.nanmean(drug[i],axis=1)
+    drugtrace_padded = np.zeros_like(drugtrace)
+    drugtrace_padded[startframe:int((stimsec+1.5)/binsize+startframe)] = \
+        drugtrace[startframe:int((stimsec+1.5)/binsize+startframe)] 
+    rewcond = np.array([xx-drugtrace for xx in saline[i].T]).T #-ctrl_mean_trace_per_pln[pln]
+    meancond = np.nanmean(rewcond,axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
+
+    ax.plot(meancond,linewidth=1.5,color='k',label='Saline-SCH23390')   
+    xmin,xmax = ax.get_xlim()         
+    ax.fill_between(range(0,(int(range_val/binsize)*2)-frames_to_show), 
+    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+    alpha=0.5,color='k')  
+    ax.add_patch(
+        patches.Rectangle(
+    xy=(patch_start,ymin),  # point of origin.
+    width=stimsec/binsize, height=height, linewidth=1, # width is s
+    color='mediumspringgreen', alpha=0.2))
+    ax.axhline(0,color='k',linestyle='--')
+
+    ii+=1    
+    ax.set_ylim([ymin,ymax])
+    if i==0: ax.legend(); ax.set_title(f'Subtracted \n\n {lbls[i]}')
+    else: ax.set_title(f'{lbls[i]}')
+    ax.set_xticks(range(0, (int(range_val/binsize)*2)-frames_to_show+1,15))
+    ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))
+    if i==1: ax.set_xlabel('Time from LED onset (s)')
+    ax.spines[['top','right']].set_visible(False)
+fig.suptitle('LC axons, ChR2')    
+fig.tight_layout()
+
+#%%
+
+# collect values for ttest
+# get subtraction
+drug = [deep_rewdff_drug, sup_rewdff_drug]
+saline = [deep_rewdff_saline, sup_rewdff_saline]
+
+andrug = [an_deep_rewdff_drug, an_sup_rewdff_drug]
+ansaline = [an_deep_rewdff_saline, an_sup_rewdff_saline]
+start_frame = int((range_val/binsize)-frames_to_show)
+
+save = []
+for i in range(2): # deep vs. sup
+    rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
+    stimdff_h = np.nanmean(rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
+                axis=0)    
+    t,pval = scipy.stats.ttest_1samp(stimdff_h, popmean=0)
+    save.append([stimdff_h, pval, ansaline[i]])    
+# superficial vs. deep
+deep_rewcond_h = np.array([xx-np.nanmean(drug[0],axis=1) for xx in saline[0].T]).T 
+sup_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[1].T]).T 
+deep_stimdff_h = np.nanmean(deep_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
+                axis=0)
+sup_stimdff_h = np.nanmean(sup_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
+                axis=0)
+t,pval_deep_vs_sup = scipy.stats.ttest_ind(deep_stimdff_h, sup_stimdff_h)
+#%%
+lbls = ['Deep', 'Superficial']
+plt.rc('font', size=25)
+dfs = []
+for pln in range(2):
+    df = pd.DataFrame()
+    df['mean_dff_during_stim'] = save[pln][0]
+    pval=save[pln][1]
+    df['pval']=[pval]*len(df)
+    df['plane_subgroup'] =lbls[pln]
+    df['animal'] =  save[pln][2]
+    # df['plane_subgroup'] = np.concatenate([[plnsg]*len(df)])
+    dfs.append(df)
+bigdf = pd.concat(dfs)
+bigdf = bigdf.reset_index()
+import seaborn as sns
+
+fig,ax = plt.subplots(figsize=(2,5))
+# pink and grey
+cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
+g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
+        data=bigdf,fill=False,palette=cmap,
+            linewidth=3)
+# sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
+#         data=bigdf,s=11,palette=cmap,
+#         alpha=0.2,ax=ax,dodge=True)
+ax.axhline(0, color='k', linestyle='--',linewidth=3)
+ax.spines[['top','right']].set_visible(False)
+# ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=10)
+ax.set_xticklabels(ax.get_xticklabels(), rotation =45, ha='right')
+ax.set_ylabel('Mean $\Delta F/F$ during stim.')
+y=0.03
+fs=12
+i=0
+for i in range(len(lbls)):
+    pval = bigdf.loc[bigdf.plane_subgroup==lbls[i], 'pval'].values[0]
+    trials = bigdf[bigdf.plane_subgroup==lbls[i]]
+    ax.text(i, y, f'p={pval:.7f}, \n{len(trials)} trials', ha='center', fontsize=fs, rotation=45)
+    i+=1
+
+ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
+        fontsize=fs, rotation=45)
+ax.set_title('n=trials, 3 animals',pad=40,fontsize=14)
+
+#%%
+
+bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
+# # # Specify the desired order
+# desired_order = ['SLM', 'SR', 'SP', 'SO']
+
+# # Convert the 'City' column to a categorical type with the specified order
+# bigdfan['plane'] = pd.Categorical(bigdfan['plane'], categories=desired_order, ordered=True)
+
+# # Sort the DataFrame by the 'City' column
+# bigdfan.sort_values('plane')
+# pink and grey
+fig,ax = plt.subplots(figsize=(2,5))
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,
+        errorbar='se',ax=ax,linewidth=4,err_kws={'linewidth': 4},
+        palette=cmap)
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,
+        s=17,alpha=0.8,ax=ax,palette=cmap,dodge=True)
+ax.spines[['top','right']].set_visible(False)
+# ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=12)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_ylabel('Mean $\Delta F/F$ during stim.')
+ax.axhline(0, color='k', linestyle='--',linewidth=3)
+
+y=0.02
+fs=14
+i=0
+for i in range(len(lbls)):
+    halo = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[i])), 'mean_dff_during_stim'].values
+    t,pval = scipy.stats.ttest_1samp(halo, popmean=0)
+    ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs, rotation=45)
+    i+=1
+
+halo_d = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[0])), 'mean_dff_during_stim'].values
+halo_s = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[1])), 'mean_dff_during_stim'].values
+t,pval = scipy.stats.ttest_rel(halo_d, halo_s)
+ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
+    fontsize=fs, rotation=45)
+
+ax.set_title('n=3 animals',pad=80,fontsize=14)
