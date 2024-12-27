@@ -19,12 +19,12 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e242'
+animal = 'e241'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [33]
+days = [16,17,18,19,20,21,22,23,24,25]
 range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -198,7 +198,7 @@ for pln in range(4):
     fig.tight_layout()
 
 #%%
-# pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
+pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
 fig, axes = plt.subplots(nrows = 4, sharex=True,sharey=True,
                         figsize=(3,6))
 ymin, ymax = .98, 1.01

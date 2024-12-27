@@ -68,7 +68,8 @@ for animal in animals:
                                         # ep x cells x days
                                         # instead of filling w/ coms, fill w/ binary
                                         tracked = np.zeros((tracked_lut.shape[0]))
-                                        com_tracked = np.ones((tracked_lut.shape[0]))*np.nan
+                                        # get com of tracked cells per day (mean of epochs)
+                                        com_tracked = np.ones((len(dys),tracked_lut.shape[0]))*np.nan
                                         tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
                                         total_eligible_cells = []
                                 # get vars
@@ -96,7 +97,8 @@ for animal in animals:
                                                         if len(tridx)>0:
                                                                 goal_tracked_idx.append(tridx[0])
                                                         tracked[goal_tracked_idx] += 1
-                                                        com_tracked[goal_tracked_idx] = np.nanmedian(coms_correct[:, goal_cells[jj]])
+                                                        # get mean com across epochs
+                                                        com_tracked[ii,goal_tracked_idx] = np.nanmean(coms_correct[:, goal_cells[jj]])
                                                 # populate shuffles
                                                 goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
                                                         goal_window,suite2pind_remain)
@@ -224,3 +226,25 @@ ax.set_xlabel('% of total days tracked as a post. rew. cell')
 ax.spines[['top','right']].set_visible(False)
 # ax.legend(bbox_to_anchor=(1,1))
 fig.tight_layout()
+
+#%% 
+import matplotlib.ticker as ticker
+
+# com vs. total days tracked?
+coms = [trackeddct[an][3] for an in animals]
+df['coms']=coms
+# sns.lineplot(x='tracked_cells_num',y='coms',data=df)
+fig,ax=plt.subplots(figsize=(11,7))
+sns.stripplot(x='tracked_cells_num',y='coms',hue='animals',data=df,s=10)
+ax.set_xlabel('Sessions')
+ax.set_ylabel('Median COM across epochs')
+ax.set_title('Post-reward cells')
+ax.spines[['top','right']].set_visible(False)
+ax.xaxis.set_major_locator(ticker.MultipleLocator(3))
+ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+
+#%%
+# median com distribution?
+
+fig,ax=plt.subplots(figsize=(11,7))
+sns.histplot(x='coms',data=df)
