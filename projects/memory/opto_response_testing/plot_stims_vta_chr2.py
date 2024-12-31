@@ -28,13 +28,13 @@ plt.close('all')
 # pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
 #     f"halo_opto.pdf"))
 
-src = r'X:\lc_chr2_grabda'
+src = r'X:\vta_chr2_grabda'
 range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
 
-conddf = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - chr2_lc_grabda3m.csv") # day vs. condition LUT
+conddf = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - chr2_vta_grabda3m.csv") # day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
@@ -69,6 +69,7 @@ for ii,animal in enumerate(animals):
             # plot mean img
             ax=axes[0,pln]
             ax.imshow(params['params'][0][0][0],cmap='Greys_r')
+            ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
             ax.axis('off')
             ax.set_title(f'{animal}, day {day}, {planelut[pln]}')
             # nan out stims
@@ -160,7 +161,7 @@ deep_rewdff_drug = []
 sup_rewdff_saline = []
 sup_rewdff_drug = []
 # halo
-for pln in range(2,planes):
+for pln in range(planes):
     ii=0; 
     saline_dff = []
     drug_dff = []
@@ -255,6 +256,8 @@ for i in range(len(saline)):
     ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))
 # plot control-drug
 # plot
+ymin=-0.01
+ymax=0.02
 drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
 startframe = int(range_val/binsize)-frames_to_show

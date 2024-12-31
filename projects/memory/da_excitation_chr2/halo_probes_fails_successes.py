@@ -27,11 +27,6 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"halo_opto_peri_analysis.pdf"))
 
-# if numtrialsstim==10:
-#     mask = ~(trialnum%numtrialsstim==0)
-# else:
-#     mask = (trialnum%2==1)
-
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 # convert rewlcos to float
 # Drop rows with non-numeric values
@@ -46,7 +41,7 @@ src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
 # days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [[35,36,38,39,40,41]]
+days_all = [[35,36,38,39,40,41,42,43]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -57,7 +52,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         # extract variables and makes plots into pdf
         plndff = extract_vars(src, animal, day, condrewloc, opto_cond, dst,
-        pdf, rolling_win=3, planes=4)
+        pdf, rolling_win=5, planes=4)
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
