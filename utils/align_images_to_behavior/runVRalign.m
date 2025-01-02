@@ -26,9 +26,9 @@ savepthfmat = VRalign_dopamine_w_opto_events(vrfl,fmatfl, length(fmatfl));
 disp(savepthfmat)
 %%
 clear all;
-mouse_name = "e242";
-days = [25];
-src = 'Y:\halo_grabda';
+mouse_name = "e280";
+days = [7];
+src = 'X:\lc_chr2_grabda';
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, string(day), "behavior\vr\*.mat"));

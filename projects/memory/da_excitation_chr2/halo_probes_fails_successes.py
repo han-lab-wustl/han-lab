@@ -41,7 +41,7 @@ src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
 # days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [[35,36,38,39,40,41,42,43]]
+days_all = [[35,36,38,39,40,41,42,43,44,45]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -52,7 +52,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         # extract variables and makes plots into pdf
         plndff = extract_vars(src, animal, day, condrewloc, opto_cond, dst,
-        pdf, rolling_win=5, planes=4)
+        pdf, rolling_win=5, planes=4,range_val=10)
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
@@ -88,11 +88,10 @@ learning_day_opto = learning_day[opto_condition].astype(int)
 learning_day_nonopto = learning_day[~opto_condition].astype(int)
 # rewzone_learning_opto = rewzone_learning[opto_condition]
 # rewzone_learning_nonopto = rewzone_learning[~opto_condition]
-height = 1.035 # ylim
 #%%
 # 2 -quantify so transients
 # get time period around stim
-range_val=5;binsize=0.2
+range_val=10;binsize=0.2
 time_rng = range(int(range_val/binsize-0/binsize),
             int(range_val/binsize+(1/binsize))) # during and after stim
 before_time_rng = range(int(range_val/binsize-2/binsize),
@@ -354,8 +353,8 @@ ax.fill_between(range(0,int(range_val/binsize)*2),
 
 ax.legend(bbox_to_anchor=(1.1, 1.05))
 # ax.get_legend().set_visible(False)
-ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,5))
-ax.set_xticklabels(np.arange(-range_val, range_val+1, 1))
+ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,10))
+ax.set_xticklabels(np.arange(-range_val, range_val+1, 2))
 ax.set_ylim(ymin, height)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)

@@ -24,7 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[37,38,39,40,41,42],[31,32,33,34,35,36],[38,39,40,41,42,43]]#,[29,30],[36,37]]
+days_all = [[34,35,36,37,38,39,40,41,42,43,44],
+            [28,29,30,31,32,33,34,35,36,37,38],
+            [35,36,41,42,43,44,45]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -174,11 +176,11 @@ for ii,animal in enumerate(animals):
             com_opto = np.nanmean(ypos[failtr_opto][lick.astype(bool)[failtr_opto]])-newrewloc
             lick_selectivity_during_stim = get_lick_selectivity_post_reward(ypos[failtr_opto], 
                         trialnum[failtr_opto], lick[failtr_opto], time[failtr_opto], 
-                        newrewloc, rewsize)
-
+                        newrewloc, rewsize)        
         else:
             vel_failed_opto = [np.nan];lick_selectivity_fail_opto=[np.nan]
             lick_selectivity_during_stim = [np.nan]
+            com_opto = [np.nan]
         # even trials
         failtr_nonopto = np.array([(xx in ftr_trials) and 
                 (xx not in catchtrialsnum) and (xx%2==0) for xx in trialnum])
@@ -409,7 +411,7 @@ plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}')
 dfonline = df.groupby(['animal', 'opto']).mean(numeric_only = True)
 
 fig, ax = plt.subplots(figsize=(2.2,5))
-sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=df, fill=False,
+sns.barplot(x='opto', y='licks_selectivity_last8trials', hue='opto', data=dfonline, fill=False,
                 errorbar='se',
                 palette={False: "slategray", True: "crimson"},
                 ax=ax)

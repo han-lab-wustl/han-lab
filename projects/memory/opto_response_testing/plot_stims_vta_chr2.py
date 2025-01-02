@@ -23,10 +23,6 @@ from projects.memory.dopamine import get_rewzones
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
-# save to pdf
-# dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-# pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
-#     f"halo_opto.pdf"))
 
 src = r'X:\vta_chr2_grabda'
 range_val = 5; binsize=0.2 #s
@@ -129,7 +125,7 @@ for ii,animal in enumerate(animals):
             meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
             meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),            
             color='k',alpha=0.4)
-            ax.set_ylim([-0.1,0.1])
+            ax.set_ylim([-0.04,0.05])
             ax.axhline(0, color='k', linestyle='--')
             # ax.axhline(-.01, color='k', linestyle='--')
             ymin=min(meanrewdFF)-.05

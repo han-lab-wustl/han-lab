@@ -19,7 +19,6 @@ plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones
 
-
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
@@ -55,7 +54,6 @@ for ii,animal in enumerate(animals):
 
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             params = scipy.io.loadmat(path)
-            VR = params['VR'][0][0]; gainf = VR[14][0][0]             
             timedFF = np.hstack(params['timedFF'])
             planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
             pln = int(planenum[-1])
@@ -69,6 +67,8 @@ for ii,animal in enumerate(animals):
             # plot mean img
             ax=axes[0,pln]
             ax.imshow(params['params'][0][0][0],cmap='Greys_r')
+            ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
+
             ax.axis('off')
             ax.set_title(f'{animal}, day {day}, {planelut[pln]}')
             # nan out stims
@@ -91,19 +91,7 @@ for ii,animal in enumerate(animals):
             unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
             startofstims = np.zeros_like(dff)
             startofstims[unrewstimidx]=1
-            # # get on plane stim for red laser
-            # offpln=pln
-            # ss = consecutive_stretch(np.where(stims[offpln::4])[0])
-            # min_iind = [min(xx) for xx in ss if len(xx)>0]
-            # # remove rewarded stims
-            # cs=params['solenoid2'][0]
-            # # cs within 50 frames of start of stim - remove
-            # nan out stims
-            # dff[stims[pln::4].astype(bool)] = np.nan
-            # # fig, ax = plt.subplots()
-            # if pln>1:
-            #     plt.plot(dff[:], label=f'plane {pln}')
-
+            
             ax=axes[1,pln]
             ax.plot(dff-1,label=f'plane: {pln}')
             ax.plot(startofstims-1)
@@ -211,7 +199,7 @@ saline = [deep_rewdff_saline, sup_rewdff_saline]
 lbls = ['Deep', 'Superficial']
 fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(7,6), sharex=True)
 ymin=-0.03
-ymax=0.07
+ymax=0.08
 stimsec=1.2
 height=ymax-ymin
 for i in range(len(saline)):
@@ -255,8 +243,8 @@ for i in range(len(saline)):
     ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))
 # plot control-drug
 # plot
-ymin=-0.07
-ymax=0.02
+ymin=-0.01
+ymax=0.04
 drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
 startframe = int(range_val/binsize)-frames_to_show
