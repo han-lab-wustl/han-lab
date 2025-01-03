@@ -28,11 +28,11 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'X:\lc_chr2_grabda'
-range_val = 6; binsize=0.2 #s
+range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 2 # for which to normalize
-
+prewin = 1 # for which to normalize
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
 conddf = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - chr2_lc_grabda3m.csv") # day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
@@ -79,7 +79,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(2).mean().values)
+            dff = np.hstack(dffdf.rolling(3).mean().values)
             # get off plane stim
             offpln=pln+1 if pln<3 else pln-1
             startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
@@ -282,6 +282,7 @@ for i in range(len(saline)):
 fig.suptitle('LC axons, ChR2')    
 fig.tight_layout()
 
+plt.savefig(os.path.join(savedst, 'lc_axon_traces_v_subtracted.svg'))
 #%%
 
 # collect values for ttest
@@ -294,8 +295,11 @@ ansaline = [an_deep_rewdff_saline, an_sup_rewdff_saline]
 start_frame = int((range_val/binsize)-frames_to_show)
 
 save = []
+stimsec=1.2
 for i in range(2): # deep vs. sup
+    # drug subtracted
     rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
+    # rewcond_h = np.array([xx for xx in saline[i].T]).T 
     stimdff_h = np.nanmean(rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
                 axis=0)    
     t,pval = scipy.stats.ttest_1samp(stimdff_h, popmean=0)
@@ -351,6 +355,7 @@ for i in range(len(lbls)):
 ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
         fontsize=fs, rotation=45)
 ax.set_title('n=trials, 3 animals',pad=40,fontsize=14)
+plt.savefig(os.path.join(savedst, 'lc_axon_subtracted_trial_quant.svg'))
 
 #%%
 
@@ -392,3 +397,4 @@ ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
     fontsize=fs, rotation=45)
 
 ax.set_title('n=3 animals',pad=80,fontsize=14)
+plt.savefig(os.path.join(savedst, 'lc_axon_subtracted_animal_quant.svg'))
