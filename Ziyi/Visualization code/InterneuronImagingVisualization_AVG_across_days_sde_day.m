@@ -1,0 +1,164 @@
+% 08/29 ZH Make this version to have the superfical plane together
+% late the average 
+%close all
+clear
+mouse_id = 227;
+day = 3;
+
+pr_dir0 = uipickfiles;
+
+%allROI_data = cell(1, 4); % Initialize a cell array to collect all ROI data for each plane
+all_plane_dff = cell(1,4);
+all_roinorm_single_tracesCS = cell(1, 4);
+all_roinorm_single_traces_roesmthCS = cell(1, 4);
+speed_event_data_acrossdays = [];
+
+% Constants
+frame_rate = 7.8; % Frame rate in Hz
+num_seconds = 5; % Number of seconds to display from -5 to +5 around the reward
+pre_win = 5;
+post_win = 5;
+pre_win_frames = round(pre_win * frame_rate);
+post_win_frames = round(post_win * frame_rate);
+
+% Compute frame range for plotting
+frame_step = frame_rate * num_seconds; % Number of frames that correspond to 5 seconds
+
+% Assuming the middle point (0 seconds) is at frame 40 of the extracted -39 to +39 frames
+mid_point = 40; % This is frame 0 on your original scale
+%frame_ticks = mid_point + (-num_seconds:num_seconds) * frame_rate; % Frame positions for each second from -5 to +5
+frame_ticks = [1 40 79];
+time_ticks = -5:5:5; % Time labels from -5 to +5
+reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP','Plane 4 SO'};
+
+
+
+for alldays = 1:length(pr_dir0)%
+    planeroii = 0;
+    speed_event_data = [];
+    for allplanes = 1:4 %%change plane info
+        plane = allplanes;
+        Day = alldays;
+        pr_dir1 = pr_dir0{Day};
+        pr_dir = strcat(pr_dir1,'\suite2p', '\plane', num2str(plane-1), '\reg_tif\');
+
+        if exist(pr_dir, 'dir')
+
+            cd(pr_dir)
+
+            load(['file0000_XC_plane_' num2str(allplanes) '_roibyclick_F.mat'])
+            %load(['file0000_cha_XC_plane_' num2str(allplanes) '_roibyclick_F.mat'])
+
+            if ~exist('lickVoltage')
+                oldversionfile = dir('file*.mat');
+                load(oldversionfile.name)
+                if ~exist('forwardvel')
+                    forwardvel = speed_binned;
+                end
+            end
+            if exist('forwardvelALL')
+                speed_binned=forwardvelALL;
+            end
+
+            % Variable definitions here for clarity
+            %frame_rate = 31.25;
+
+            %R = find(rewards);
+
+            roi_event_data_smth=smoothdata(speed_binned,'gaussian',1)';
+
+            if mod(length(roi_event_data_smth), 4) ~= 0
+                error('Data length must be divisible by 4.');
+            end
+
+            % Reshape the data into a 4-row matrix
+            reshaped_data = reshape(roi_event_data_smth, 4, []);
+
+            % Compute the mean of each column
+            binned_speed = mean(reshaped_data, 1);
+
+            R = find(solenoid2);
+            temp = consecutive_stretch(R);
+            reward_indices = cellfun(@(x) x(1), temp,'UniformOutput',1);
+
+            df_f = mat2cell(dFF, size(dFF, 1), ones(1, size(dFF, 2)))';
+           
+            plane_dFF = mean(dFF,2);
+            roi_event_data = [];
+            
+            for rew_idx = 1:length(reward_indices)
+                center_frame = reward_indices(rew_idx);
+                frame_range = max(1, center_frame - 39):min(size(plane_dFF, 1), center_frame + 39);
+                if size(frame_range,2)  ==  pre_win_frames + post_win_frames +1
+                    roi_event_data = [roi_event_data; plane_dFF(frame_range)'];
+                    if allplanes == 1
+                    speed_event_data = [speed_event_data; binned_speed(frame_range)];
+                    end
+                end
+            end
+            roi_event_data_smth=smoothdata(roi_event_data','gaussian',5);
+           % all_plane_dff{1,allplanes} = roi_event_data_smth';
+
+            all_roinorm_single_tracesCS{plane} = [all_roinorm_single_tracesCS{plane}, roi_event_data_smth];
+            %speed_event_data_acrossdays = [speed_event_data_acrossdays, speed_event_data];
+          
+        end
+    end
+    speed_event_data_acrossdays = [speed_event_data_acrossdays, speed_event_data'];
+end
+
+grey = [0.5, 0.5, 0.5];  % Grey color
+pink = [1, 0.4, 0.6];    % Pink color
+planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
+planenames = {"SLM","SR","SP","SO"};
+
+
+figure('Position', [100, 100, 800, 400])
+% Plotting the mean DeltaF/F for each plane
+%allROI_data = all_plane_dff;
+make_it_tight = true;
+subplot = @(m,n,p) subtightplot (m, n, p, [0.01 0.05], [0.1 0.02], [0.1 0.01]);
+if ~make_it_tight,  clear subplot;  end
+mean_speed = mean(speed_event_data_acrossdays,2);
+
+   % title([reg_name{p}]);
+    xlabel('seconds from CS')
+    ylabel('dF/F')
+    superPlanes_E227 = [];
+    for p = 1:3
+    superPlanes_E227 = [superPlanes_E227, all_roinorm_single_tracesCS{p}];
+    end
+
+    mean_data = mean(superPlanes_E169, 2);
+    norm_mean_data = mean_data./mean(mean_data(1:pre_win_frames));
+    yax = norm_mean_data;
+    se_yax=std(superPlanes_E169,[],2)./sqrt(size(superPlanes_E169,2))';
+    xax = -pre_win_frames:post_win_frames;
+    h10 = shadedErrorBar(xax', yax, se_yax, [], 1);
+    xt=[-3*ones(1,length(reg_name))];
+    yt=[0.992:0.001:1];
+    
+    xticks(frame_ticks - mid_point) % Shift ticks to align with the plotted data range
+    xticklabels(time_ticks) % Label ticks from -5 to +5 seconds
+    
+    if sum(isnan(se_yax))~=length(se_yax)
+        h10.patch.FaceColor = planecolors{grey}; h10.mainLine.Color = planecolors{grey}; h10.edge(1).Color = planecolors{p};
+        h10.edge(2).Color=planecolors{grey};
+        %text(xt(grey),yt(p),reg_name{p},'Color',planecolors{p},'Fontsize',10)
+    end
+    hold on 
+
+
+    % plot(xax,rescale(mean_speed, 0.85, 0.9),'k','LineWidth',2);
+    % 
+    % 
+    % hold on 
+    ylims = ylim;
+    pls = plot([0 0],ylims,'--k','Linewidth',1);
+    ylim(ylims)
+    pls.Color(4) = 0.5;  
+    
+   
+% filename = sprintf('Mouse%d_Day%d_Cell_boundry_roi_avg.jpg', mouse_id, day);
+% saveas(gcf, filename)
+% 

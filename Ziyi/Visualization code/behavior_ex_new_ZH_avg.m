@@ -1,7 +1,7 @@
 clear all
-%close all
+close all
 
-mouse_id = 227;
+mouse_id = 244;
 addon = '_dark_reward';
 mov_corr = []; 
 stop_corr = []; 
@@ -21,8 +21,10 @@ oldbatch = 0; %input('if oldbatch press 1 else 0=');
 % Initialize variables for averaging across days
 all_roinorm_single_tracesCS = cell(1, 4);
 all_roinorm_single_traces_roesmthCS = cell(1, 4);
+all_day_roinorm_single_tracesCS = cell(1, 4);
 
- reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP','Plane 4 SO'};
+reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP','Plane 4 SO'};
+
 
 planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
 roiplaneidx = cellfun(@(x) str2num(x(7)),reg_name,'UniformOutput',1);
@@ -76,6 +78,7 @@ for alldays = 1:length(pr_dir0)
             Stopped_frame = 15;
             max_reward_stop = 5 * frame_rate;
             frame_tol = 5;
+         
             CSUStimelag = 0.5;
             frame_time = 1 / frame_rate;
             num_rew_win_frames = round(num_rew_win_sec / frame_time);
@@ -140,6 +143,7 @@ for alldays = 1:length(pr_dir0)
                 
                 roisingle_tracesCS = zeros(pre_win_frames + post_win_frames + 1, length(singlerew));
                 roisingle_traces_roesmthCS = zeros(pre_win_framesALL + post_win_framesALL + 1, length(singlerew));
+                % This is the part to align with CS
                 for i = 1:length(singlerew)
                     currentnrrewCSidxperplane = find(timedFF >= utimedFF(singlerew(i)), 1);
                     roisingle_tracesCS(:, i) = roibase_mean(currentnrrewCSidxperplane - pre_win_frames:currentnrrewCSidxperplane + post_win_frames)';
@@ -149,10 +153,12 @@ for alldays = 1:length(pr_dir0)
                 roinorm_single_tracesCS = roisingle_tracesCS ./ mean(roisingle_tracesCS(1:pre_win_frames, :));
                 roinorm_single_tracesCS_smth = smoothdata(roinorm_single_tracesCS,'gaussian',5);
                 roinorm_single_traces_roesmthCS = roisingle_traces_roesmthCS;
+                roinorm_single_tracesCS_each_day= mean(roinorm_single_tracesCS_smth,2);
                 
                 % Aggregate data across days for each plane
                 all_roinorm_single_tracesCS{plane} = [all_roinorm_single_tracesCS{plane}, roinorm_single_tracesCS_smth];
                 all_roinorm_single_traces_roesmthCS{plane} = [all_roinorm_single_traces_roesmthCS{plane}, roinorm_single_traces_roesmthCS];
+                all_day_roinorm_single_tracesCS{plane} = [all_day_roinorm_single_tracesCS{plane}, roinorm_single_tracesCS_each_day];
             end
         end
     end
@@ -163,8 +169,16 @@ avg_roinorm_single_tracesCS = cellfun(@(x) mean(x, 2), all_roinorm_single_traces
 avg_roinorm_single_traces_roesmthCS = cellfun(@(x) nanmean(x, 2), all_roinorm_single_traces_roesmthCS, 'UniformOutput', false);
 
 % Plot results for each plane
-figure('Position', [100, 100, 800, 500]);
+%figure('Position', [100, 100, 800, 400]);
+% make_it_tight = true;
+% subplot = @(m,n,p) subtightplot (m, n, p, [0.05 0.05], [0.1 0.01], [0.1 0.01]);
+% if ~make_it_tight,  clear subplot;  end
+
+num_days = size(all_day_roinorm_single_tracesCS{plane},2); % Number of days
+
 for plane = 1:4
+    
+    find_figure('Avg_dFF')
     subplot(2, 2, plane);
     xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
     xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
@@ -172,13 +186,17 @@ for plane = 1:4
     se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
     h10 = shadedErrorBar(xax, yax, se_yax, [], 1);
     hold on;
-    plot(xaxSpeed, rescale(avg_roinorm_single_traces_roesmthCS{plane}, 0.99, 0.995), 'k', 'LineWidth', 2);
+    if plane ==1
+        plot(xaxSpeed, rescale(avg_roinorm_single_traces_roesmthCS{plane}, 0.98, 0.985), 'k', 'LineWidth', 2);
+    end
     %plot(xaxSpeed, rescale(avg_roinorm_single_traces_roesmthCS{plane}, 0.975, 0.98), 'k', 'LineWidth', 2);
     xt=[-3*ones(1,length(reg_name))];
-    yt=[0.992:0.001:1];
-    title(['Plane ', num2str(plane)]);
+    yt=[0.996:0.001:1];
+    %title([reg_name{plane}]);
     xlabel('Seconds from CS');
+    if (plane == 1) ||(plane == 3)
     ylabel('dF/F');
+    end
     %legend({'Licks', '2% dF/F', 'Speed', 'Reward'});
 
     if sum(isnan(se_yax))~=length(se_yax)
@@ -186,10 +204,65 @@ for plane = 1:4
         h10.edge(2).Color=color{plane};
         text(xt(plane),yt(plane),reg_name{plane},'Color',color{plane},'Fontsize',10)
     end
-
+    %ylim([0.98 1.05])
     ylims = ylim;
     pls = plot([0 0],ylims,'--k','Linewidth',1);
     ylim(ylims)
     pls.Color(4) = 0.5;
+
+    find_figure('dFF_accross_days')
+     subplot(4,1,plane)
+
+    imagesc(xax,1:num_days,all_day_roinorm_single_tracesCS{plane}');
+    %imagesc(all_day_roinorm_single_tracesCS{plane}')
+    colorbar
+    y_tick_positions = 0.5:num_days-0.5;
+    y_tick_labels = 1:num_days;
+    %yticks(1:num_days)
+    % Adjust the y-axis to represent days
+
+    %colorbar; % Add a colorbar to show the scaling
+    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+
+
+    % Add labels and title
+    xlabel('Time (seconds)');
+    ylabel('Day');
+    title('Daily Data Representation Over Time');
+    hold on
+    title(reg_name(plane))
+
+    find_figure('Avg_dFF_same_panel')
+    xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
+    xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
+    yax = avg_roinorm_single_tracesCS{plane}';
+    se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
+    h10 = shadedErrorBar(xax, yax, se_yax, [], 1);
+    hold on;
+    if plane ==1
+        plot(xaxSpeed, rescale(avg_roinorm_single_traces_roesmthCS{plane}, 0.98, 0.985), 'k', 'LineWidth', 2);
+    end
+    %plot(xaxSpeed, rescale(avg_roinorm_single_traces_roesmthCS{plane}, 0.975, 0.98), 'k', 'LineWidth', 2);
+    xt=[-3*ones(1,length(reg_name))];
+    yt=[0.996:0.001:1];
+    %title([reg_name{plane}]);
+    xlabel('Seconds from CS');
+    if (plane == 1) ||(plane == 3)
+    ylabel('dF/F');
+    end
+    %legend({'Licks', '2% dF/F', 'Speed', 'Reward'});
+
+    if sum(isnan(se_yax))~=length(se_yax)
+        h10.patch.FaceColor = color{plane}; h10.mainLine.Color = color{plane}; h10.edge(1).Color = color{plane};
+        h10.edge(2).Color=color{plane};
+        text(xt(plane),yt(plane),reg_name{plane},'Color',color{plane},'Fontsize',10)
+    end
+    ylim([0.98 1.01])
+    ylims = ylim;
+    pls = plot([0 0],ylims,'--k','Linewidth',1);
+    ylim(ylims)
+    pls.Color(4) = 0.5;
+    hold on
 
 end

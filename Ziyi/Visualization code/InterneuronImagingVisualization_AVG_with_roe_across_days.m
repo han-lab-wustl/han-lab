@@ -26,8 +26,9 @@ frame_step = frame_rate * num_seconds; % Number of frames that correspond to 5 s
 
 % Assuming the middle point (0 seconds) is at frame 40 of the extracted -39 to +39 frames
 mid_point = 40; % This is frame 0 on your original scale
-frame_ticks = mid_point + (-num_seconds:num_seconds) * frame_rate; % Frame positions for each second from -5 to +5
-time_ticks = -5:1:5; % Time labels from -5 to +5
+%frame_ticks = mid_point + (-num_seconds:num_seconds) * frame_rate; % Frame positions for each second from -5 to +5
+frame_ticks = [1 40 79];
+time_ticks = -5:5:5; % Time labels from -5 to +5
 reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP','Plane 4 SO'};
 
 
@@ -112,15 +113,18 @@ planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
 planenames = {"SLM","SR","SP","SO"};
 
 
-figure('Position', [100, 100, 800, 600])
+figure('Position', [100, 100, 800, 400])
 % Plotting the mean DeltaF/F for each plane
 %allROI_data = all_plane_dff;
+make_it_tight = true;
+subplot = @(m,n,p) subtightplot (m, n, p, [0.01 0.05], [0.1 0.02], [0.1 0.01]);
+if ~make_it_tight,  clear subplot;  end
 mean_speed = mean(speed_event_data_acrossdays,2);
 
 for p = 1:4
     subplot(2,2,p)
     hold on
-    title(['Plane',num2str(p)]);
+   % title([reg_name{p}]);
     xlabel('seconds from CS')
     ylabel('dF/F')
     mean_data = mean(all_roinorm_single_tracesCS{p}, 2);
@@ -134,14 +138,17 @@ for p = 1:4
     
     xticks(frame_ticks - mid_point) % Shift ticks to align with the plotted data range
     xticklabels(time_ticks) % Label ticks from -5 to +5 seconds
-
+    
     if sum(isnan(se_yax))~=length(se_yax)
         h10.patch.FaceColor = planecolors{p}; h10.mainLine.Color = planecolors{p}; h10.edge(1).Color = planecolors{p};
         h10.edge(2).Color=planecolors{p};
         text(xt(p),yt(p),reg_name{p},'Color',planecolors{p},'Fontsize',10)
     end
     hold on 
-    plot(xax,rescale(mean_speed, 0.96, 0.98),'k','LineWidth',2);
+    if p == 1
+
+     plot(xax,rescale(mean_speed, 0.85, 0.9),'k','LineWidth',2);
+    end
     
     hold on 
     ylims = ylim;
@@ -151,6 +158,6 @@ for p = 1:4
     
 end
 
-filename = sprintf('Mouse%d_Day%d_Interneuron_pipeline_roi_avg.jpg', mouse_id, day);
-saveas(gcf, filename)
-  
+% filename = sprintf('Mouse%d_Day%d_Cell_boundry_roi_avg.jpg', mouse_id, day);
+% saveas(gcf, filename)
+% 

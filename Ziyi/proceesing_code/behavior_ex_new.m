@@ -3,7 +3,7 @@ close all
 mouse_id=227;
 addon = '_dark_reward';
 mov_corr=[]; stop_corr=[]; mov_stop=[];
-mov_corr_success=[]; stop_corr_success=[];
+mov_corr_success=[]; stop_corr_succebatss=[];
 mov_corr_prob=[]; stop_corr_prob=[];
 mov_corr_fail=[]; stop_corr_fail=[]; cnt=0;
 
@@ -278,8 +278,10 @@ for alldays = 1:length(pr_dir0)%[3:1
 %                 legend(['n = ',num2str(size(roinorm_single_tracesCS,2))],'speed')%n=
                 
                 xax=frame_time*(-pre_win_frames)*numplanes:frame_time:frame_time*post_win_frames*numplanes;
+                %plot(xax,rescale(mean( roinorm_single_traces_roesmthCS,2),0.94,0.98),'k','LineWidth',2);
                 plot(xax,rescale(mean( roinorm_single_traces_roesmthCS,2),0.99,0.995),'k','LineWidth',2);
                         xt=[-3*ones(1,length(reg_name))];
+                        %yt=[0.9:0.001:1];
                         yt=[0.992:0.001:1];
                 
                 if sum(isnan(se_yax))~=length(se_yax)

@@ -110,7 +110,7 @@ for allplanes=1:size(planefolders,2)
         end
         %         pr_dir3=strcat(pr_dir,num2str(mouse_id),'\Day_',num2str(1),'\');
         dir_s2p = struct2cell(dir([pr_dir{days} '\**\suite2p']));
-    planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
+        planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
     
         pr_dir4=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
         pr_dir4ref = pr_dir4;
@@ -199,7 +199,7 @@ for allplanes=1:size(planefolders,2)
             
         end
         dir_s2p = struct2cell(dir([pr_dir{roi_sel} '\**\suite2p']));
-    planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
+        planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
         pr_dir_s=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
         cd(pr_dir_s)
         params.mimg=mpimg;
@@ -222,7 +222,7 @@ tic
 
  for days=days_check
      dir_s2p = struct2cell(dir([pr_dir{days} '\**\suite2p']));
-    planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
+       planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
      days
 for allplanes=1:size(planefolders,2) %1:4
         clearvars -except mouse_id pr_dir days_check days dir_s2p planefolders allplanes

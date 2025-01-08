@@ -4,6 +4,7 @@ pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
 planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
 timewindow = 10; %s peri window
+%timedFF = 1:5000;
  for days=days_check
      dir_s2p = struct2cell(dir([pr_dir{days} '\**\suite2p']));
     planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
@@ -26,12 +27,12 @@ for allplanes=1:size(planefolders,2) %1:4
         xlims = xlim;
         plot([0.9*xlims(2) 0.9*xlims(2)],[allplanes-0.02/range(dFF) allplanes],'k-','LineWidth',1.5)
 
-        abfstims = bwlabel(stims>0.5);
+         abfstims = bwlabel(stims>0.5);
             for dw = 1:max(abfstims)-1
                 if utimedFF(find(abfstims==dw+1,1))-utimedFF(find(abfstims==dw,1,'last'))<0.5
                     abfstims(find(abfstims==dw,1):find(abfstims==dw+1,1)) = dw+1;
                 end
-                
+
             end
          abfstims = abfstims>0.5;
             abfrect =  consecutive_stretch(find(abfstims));

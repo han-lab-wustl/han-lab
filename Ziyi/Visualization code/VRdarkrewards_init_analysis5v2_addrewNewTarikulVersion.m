@@ -478,7 +478,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                 if size(forwardvelALL,2) == 1
                     [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)),speed_thresh,Stopped_frame,speedftol);
                 else
-                    [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5))',speed_thresh,Stopped_frame,speedftol);
+                    [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)),speed_thresh,Stopped_frame,speedftol);
                 end
                 mov_success_tmpts = moving_middle(find(diff(moving_middle)>1)+1);
                 
@@ -1345,7 +1345,7 @@ for alldays = 1:length(pr_dir0)%[3:12 14:19]%[3:12 13:19]%[3 5:1]%[5:12 14]%[5:1
                     if size(forwardvelALL,2) == 1
                     [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)),speed_thresh,Stopped_frame,speedftol);
                 else
-                    [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5))',speed_thresh,Stopped_frame,speedftol);
+                    [moving_middle stop]=get_moving_time_V3(smoothdata(forwardvelALL,'gaussian',round(gauss_win*1.5)),speed_thresh,Stopped_frame,speedftol);
                 end
                     mov_success_tmpts = moving_middle(find(diff(moving_middle)>1)+1);
                     idx_rm=(mov_success_tmpts- pre_win_framesALL)<=0;

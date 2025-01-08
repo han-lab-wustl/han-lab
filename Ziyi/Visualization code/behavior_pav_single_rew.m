@@ -1,0 +1,56 @@
+clear all
+load('E:\Ziyi\Data\240917_ZH\246reward_omit_workspace_workspace_00.mat')
+data = roi_dop_alldays_planes_periCS;
+roe = roi_roe_alldays_planes_periCS;
+rew_double = cell(1, 4);
+roe_double = cell(1, 4);
+
+
+for j = 1:size(data, 2)
+    % Start with an empty matrix for concatenation
+    dff_temp_concat = [];
+    roe_temp_concat = [];
+    for i = 1:size(data, 1)
+        dff_temp_concat = [dff_temp_concat data{i, j}];  % Concatenate each 4x79 matrix vertically
+        roe_temp_concat = [roe_temp_concat roe{i, j}];
+    end
+    rew_double{j} = dff_temp_concat;  % Store the concatenated 10x79 (or larger) matrix in result
+    roe_double{j} = roe_temp_concat;
+end
+rew_omit_avg_trace = cellfun(@(x) mean(x, 2), rew_double, 'UniformOutput', false);
+roe_omit_avg_trace = cellfun(@(x) mean(x, 2), roe_double, 'UniformOutput', false);
+
+figure
+for plane = 1:4
+    subplot(2, 2, plane);
+    xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
+    xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
+    yax = rew_omit_avg_trace{plane};
+    se_yax = std(rew_double{plane}, [], 2) / sqrt(size(rew_double{plane}, 2));
+    h10 = shadedErrorBar(xax, yax, se_yax, [], 1);
+    hold on;
+    if plane ==1
+        plot(xaxSpeed, rescale(roe_omit_avg_trace{plane}, 0.98, 0.985), 'k', 'LineWidth', 2);
+    end
+    
+    xt=[-3*ones(1,length(4))];
+    yt=[0.996:0.001:1];
+    %title([reg_name{plane}]);
+    xlabel('Seconds from CS');
+    if (plane == 1) ||(plane == 3)
+    ylabel('dF/F');
+    end
+    %legend({'Licks', '2% dF/F', 'Speed', 'Reward'});
+
+    if sum(isnan(se_yax))~=length(se_yax)
+        h10.patch.FaceColor = color{plane}; h10.mainLine.Color = color{plane}; h10.edge(1).Color = color{plane};
+        h10.edge(2).Color=color{plane};
+        %text(xt(plane),yt(plane),reg_name{plane},'Color',color{plane},'Fontsize',10)
+    end
+    %ylim([0.98 1.05])
+    ylims = ylim;
+    pls = plot([0 0],ylims,'--k','Linewidth',1);
+    ylim(ylims)
+    pls.Color(4) = 0.5;
+
+end

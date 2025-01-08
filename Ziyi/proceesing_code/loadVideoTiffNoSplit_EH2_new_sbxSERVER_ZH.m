@@ -3,12 +3,15 @@ function loadVideoTiffNoSplit_EH2_new_sbxSERVER(varargin)
 % 200329. EH.
 % 200501 EH. changed java path for this computer
 % also change to imagej save file name.
+% 241008 ZH. Cropped the top part of the etl artifact, use the batch
+% processing no cropping to aviod accessive cropping 
 % Uses sbxread to load chunks of .sbx files, limiting RAM requirements
 % for some reason, suite2p turns everything into unsigned 16bit with max
 % intensity value of 32767 (after motion correction). think this will actually clip high end of
 % values. moi's code scaled all based on max/min of entire movie. current
 % version just divides intensity value by 2 and subtracts 1 to get max value of 32767 (makes
 % assumption that max value in movie is 65535)
+
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
     dir='bi new';
