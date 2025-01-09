@@ -18,10 +18,10 @@ def extract_vars(src, animal, day, condrewloc, opto_cond, dst,
     print(f'*******Animal: {animal}, Day: {day}*******\n')
     # day=str(day)
     planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-    newrewloc_ = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'rewloc'].values[0])
-    numtrialsstim=condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'numtrialsstim'].values[0]
+    newrewloc_ = float(condrewloc.loc[((condrewloc.Day.values==day)&(condrewloc.Animal.values==animal)), 'rewloc'].values[0])
+    numtrialsstim=condrewloc.loc[((condrewloc.Day.values==day)&(condrewloc.Animal.values==animal)), 'numtrialsstim'].values[0]
     if ~np.isnan(numtrialsstim): numtrialsstim=int(numtrialsstim)
-    rewloc_ = float(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'prevrewloc'].values[0])
+    rewloc_ = float(condrewloc.loc[((condrewloc.Day.values==day)&(condrewloc.Animal.values==animal)), 'prevrewloc'].values[0])
     plndff = []
     optoday = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0]
     # hack

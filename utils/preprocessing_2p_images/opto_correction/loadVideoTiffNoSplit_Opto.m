@@ -1,4 +1,4 @@
-function loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold)
+function loadVideoTiffNoSplit_Opto(src, days, lenVid, threshold, crop_etl)
 %called by "runVideosTiff_EH_new_sbx_uint16"
 %version that doesn't divide by 2 for non-suite2p analysis
 % modified from moi's version.
@@ -49,8 +49,11 @@ for day=days
         chtemp_original=double(squeeze(chtemp));
         choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
         %         chtemp=chtemp(:,90:730,:);
-
-        chtemp=chtemp_original(20:end,125:718,:)-choptotemp(20:end,125:718,:); % zd added option to crop etl
+        if crop_etl==1
+            chtemp=chtemp_original(110:end,125:718,:)-choptotemp(110:end,125:718,:);
+        else
+            chtemp=chtemp_original(20:end,125:718,:)-choptotemp(20:end,125:718,:); % zd added option to crop etl
+        end
         % used to be: (:,90:718,:)
         % or (110:end,125:718,:)
         % matlab order: x,y,z

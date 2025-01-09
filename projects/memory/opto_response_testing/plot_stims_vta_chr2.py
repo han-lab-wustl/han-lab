@@ -19,7 +19,6 @@ plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones
 
-
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
@@ -29,7 +28,7 @@ range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
-
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
 conddf = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - chr2_vta_grabda3m.csv") # day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
@@ -48,7 +47,7 @@ for ii,animal in enumerate(animals):
         stims = np.hstack(stims['stims']) # nan out stims
         plndff = []
         fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
-
+        condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0]    
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             params = scipy.io.loadmat(path)
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             
@@ -76,11 +75,16 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(2).mean().values)
+            dff = np.hstack(dffdf.rolling(4).mean().values)
             # get off plane stim
             offpln=pln+1 if pln<3 else pln-1
             startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
-            min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            # min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            # threshold for length of stims
+            # designed to catch when you acc put >1 frame stim in scanbox
+            min_iind = [min(xx) for xx in startofstims if len(xx)>0 and len(xx)<9]
+            # if animal=='e277' and str(condition)=='nan' and planenum=='plane3':
+            #     min_iind = [min(xx)+2 for xx in startofstims if len(xx)>0]
             # # remove rewarded stims
             cs=params['solenoid2'][0]
             # # cs within 50 frames of start of stim - remove
@@ -140,16 +144,22 @@ for ii,animal in enumerate(animals):
             ax.set_xticklabels(range(-range_val, range_val+1, 1))
             ax.set_title(f'Peri-stim')
             plndff.append(rewdFF)
-            fig.tight_layout()
-        condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0]    
+            fig.tight_layout()        
 
         day_date_dff[f'{animal}_{day}_{condition}'] = plndff
 
 #%%
+# only specific animals/days
+day_date_dff = {}
+for k,v in day_date_dff_org.items():
+    if 'e276' in k:#e277_1_nan' not in k and 'e277_2_nan' not in k and 'e277_3_nan' not in k:
+        day_date_dff[k]=v
+# day_date_dff=day_date_dff_org
+#%%
 # plot deep vs. superficial
 # plot control vs. drug
 plt.rc('font', size=12)
-norm_window = 3 #s
+norm_window = 2 #s
 planes=4
 # assumes 4 planes
 deep_rewdff_saline = []
@@ -207,9 +217,9 @@ drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
 lbls = ['Deep', 'Superficial']
 fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(7,6), sharex=True)
-ymin=-0.03
-ymax=0.07
-stimsec=1.2
+ymin=-0.035
+ymax=0.02
+stimsec=1.3
 height=ymax-ymin
 for i in range(len(saline)):
     # plot
@@ -288,9 +298,9 @@ for i in range(len(saline)):
     ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))
     if i==1: ax.set_xlabel('Time from LED onset (s)')
     ax.spines[['top','right']].set_visible(False)
-fig.suptitle('LC axons, ChR2')    
+fig.suptitle('VTA axons, ChR2')    
 fig.tight_layout()
-
+plt.savefig(os.path.join(savedst, 'vta_stim_traces.svg'),bbox_inches='tight')
 #%%
 
 # collect values for ttest
@@ -301,7 +311,7 @@ saline = [deep_rewdff_saline, sup_rewdff_saline]
 andrug = [an_deep_rewdff_drug, an_sup_rewdff_drug]
 ansaline = [an_deep_rewdff_saline, an_sup_rewdff_saline]
 start_frame = int((range_val/binsize)-frames_to_show)
-
+stimsec=.8
 save = []
 for i in range(2): # deep vs. sup
     rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
@@ -360,8 +370,8 @@ for i in range(len(lbls)):
 ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
         fontsize=fs, rotation=45)
 ax.set_title('n=trials, 3 animals',pad=40,fontsize=14)
+plt.savefig(os.path.join(savedst, 'vta_stim_ttest_per_trial.svg'),bbox_inches='tight')
 
-#%%
 
 bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
 # # # Specify the desired order
@@ -385,7 +395,7 @@ ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 ax.set_ylabel('Mean $\Delta F/F$ during stim.')
 ax.axhline(0, color='k', linestyle='--',linewidth=3)
 
-y=0.02
+y=0.01
 fs=14
 i=0
 for i in range(len(lbls)):
@@ -400,4 +410,5 @@ t,pval = scipy.stats.ttest_rel(halo_d, halo_s)
 ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
     fontsize=fs, rotation=45)
 
-ax.set_title('n=3 animals',pad=80,fontsize=14)
+ax.set_title('n=3 animals',pad=50,fontsize=14)
+plt.savefig(os.path.join(savedst, 'vta_stim_ttest_per_animal.svg'),bbox_inches='tight')

@@ -1,4 +1,4 @@
-"""
+""""
 quantify licks and velocity during consolidation task
 aug 2024
 TODO: get first lick during probes
@@ -36,8 +36,8 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,69,71,72,76,77,78,79,81],
-            [107,108,109,111,114,115,116,117,118,119,120,121,122,123]]
+days_all = [[65,66,69,71,76,77,78,79,81],
+            [107,108,109,111,114,115,116,117,118,119,120,121,123]]
 mem_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -95,32 +95,33 @@ for ii,animal in enumerate(animals):
         
         # example plot
         # # if before==True:
-        #     rewloc = changerewloc[0]
-        #     import matplotlib.patches as patches
-        #     fig, ax = plt.subplots()
-        #     ax.plot(ypos[probe])
-        #     ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
-        #     color='k',s=80)
-        #     ax.add_patch(
-        #     patches.Rectangle(
-        #         xy=(0,rewloc-10),  # point of origin.
-        #         width=len(ypos[probe]), height=20, linewidth=1, # width is s
-        #         color='slategray', alpha=0.3))
-        #     ax.set_ylim([0,270])
-        #     ax.spines[['top','right']].set_visible(False)
-        #     ax.set_title(f'{day}')
-        #     plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
+            # import matplotlib.patches as patches
+            # fig, ax = plt.subplots()
+            # ax.plot(ypos[probe])
+            # ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
+            # color='k',s=80)
+            # ax.add_patch(
+            # patches.Rectangle(
+            #     xy=(0,rewloc-10),  # point of origin.
+            #     width=len(ypos[probe]), height=20, linewidth=1, # width is s
+            #     color='slategray', alpha=0.3))
+            # ax.set_ylim([0,270])
+            # ax.spines[['top','right']].set_visible(False)
+            # ax.set_title(f'{day}')
+            # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
 
         
-        # # example plot during learning
+        # example plot during learning
         # eps = np.where(changerewloc)[0]
         # rew = (rewards==1).astype(int)
         # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
         # mask = np.zeros_like(trialnum).astype(bool)
-        # mask[eps[0]+8500:eps[1]+2700]=True
+        # mask[2000:20000]=True
         # import matplotlib.patches as patches
         # fig, ax = plt.subplots(figsize=(9,5))
         # ax.plot(ypos[mask],zorder=1)
+        # # remove dt licks
+        # lick[ypos<3]=0
         # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',
         #         zorder=2)
         # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
@@ -154,11 +155,12 @@ for ii,animal in enumerate(animals):
                     window_size, sampling_rate=31.25*1.5)
         vel_probe_near_reward = vel_probe.interpolate(method='linear').ffill().bfill().values[int(rewloc)-30:int(rewloc+(.5*rewsize))]
         # lick selectivity last 8 trials
-        lasttr =3
-        mask = np.array([xx in str_trials[-lasttr:] for xx in trialnum])
+        lasttr =8
+        mask = np.array([xx in ftr_trials[-lasttr:] for xx in trialnum])
+        # get only failed trials for this exp
         lick_selectivity_success = get_lick_selectivity(ypos[mask], 
                         trialnum[mask], lick[mask], newrewloc, rewsize,
-                        fails_only = False)            
+                        fails_only = True)            
         # failed trials with opto stim
         # opto
         failtr_opto = np.array([(xx in ftr_trials) and 

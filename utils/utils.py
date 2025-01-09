@@ -48,7 +48,7 @@ def copyvr(usb, drive, animal, days=False): #TODO: find a way to do the same for
     for day in days:
         print(day)
         fls = listdir(day)
-        imgfl = [xx for xx in fls if "23" in xx or "ZD" in xx or "24" in xx][0] # change conditional strings if you need!
+        imgfl = [xx for xx in fls if "25" in xx or "ZD" in xx or "24" in xx][0] # change conditional strings if you need!
         date = os.path.basename(imgfl)[:6]
         datetime_object = datetime.strptime(date, '%y%m%d')
         dates.append(str(datetime_object.date()))
@@ -410,8 +410,8 @@ def compresssbx_move_to_archive(sbxsrc, dst, compress=True):
 if __name__ == "__main__":
     usb = r"G:\2023-2024_ZD_VR"
     drives = [r'Y:\halo_grabda', r'Y:\halo_grabda',r'Y:\halo_grabda',
-            r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda']
+            r'X:\vta_chr2_grabda', r'X:\vta_chr2_grabda', r'X:\lc_chr2_grabda']
     animals = ['e241','e242','e243', 
-        'e278', 'e279', 'e280']
+        'e276', 'e277', 'e280']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])

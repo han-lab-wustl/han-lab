@@ -1,4 +1,4 @@
-"""
+""""
 quantify licks and velocity during consolidation task
 aug 2024
 TODO: get first lick during probes
@@ -26,20 +26,10 @@ src = r"Z:\chr2_grabda"
 animals = ['e231', 'e232']
 # animals = ['e232']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-# all days to quantify for stim @ reward memory analysis
-# days_all = [[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,
-# 28,29,30,31,32,33,34,35,36],
-#         [44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,
-#         70,71,72,73,74,75,76,77,78]]
-
-# days to quantify for stim @ reward memory analysis
-# days_all = [[28,29,31,33,34,35,36],
-#     [70,71,72,73,74,75,76,77,78]]
-# days to quantify for stim @ reward with limited rew eligible
-days_all = [[65,66,67,69,71,72,76,77,78,79,81],
-            [107,108,109,111,114,115,116,117,118,119,120,121,122,123]]
-mem_cond = 'Opto_memory_day'
-opto_cond = 'Opto'
+days_all = [[18, 19, 20, 21, 22, 23, 24, 25, 26, 28],
+            [59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69]]
+mem_cond = 'Dark_time_stim_ctrl'
+opto_cond = 'Dark_time_memory_day'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 
 near_reward_per_day = []
@@ -94,33 +84,34 @@ for ii,animal in enumerate(animals):
         probe = trialnum<3
         
         # example plot
-        # # if before==True:
-        #     rewloc = changerewloc[0]
-        #     import matplotlib.patches as patches
-        #     fig, ax = plt.subplots()
-        #     ax.plot(ypos[probe])
-        #     ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
-        #     color='k',s=80)
-        #     ax.add_patch(
-        #     patches.Rectangle(
-        #         xy=(0,rewloc-10),  # point of origin.
-        #         width=len(ypos[probe]), height=20, linewidth=1, # width is s
-        #         color='slategray', alpha=0.3))
-        #     ax.set_ylim([0,270])
-        #     ax.spines[['top','right']].set_visible(False)
-        #     ax.set_title(f'{day}')
-        #     plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
-
-        
+        # if before==True:
+            # import matplotlib.patches as patches
+            # fig, ax = plt.subplots()
+            # lick[ypos<3]=0
+            # ax.plot(ypos[probe])
+            # ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
+            # color='k',s=80,zorder=2)
+            # ax.add_patch(
+            # patches.Rectangle(
+            #     xy=(0,rewloc-10),  # point of origin.
+            #     width=len(ypos[probe]), height=20, linewidth=1, # width is s
+            #     color='slategray', alpha=0.3))
+            # ax.set_ylim([0,270])
+            # ax.spines[['top','right']].set_visible(False)
+            # ax.set_title(f'{day}')
+            # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
+      
         # # example plot during learning
         # eps = np.where(changerewloc)[0]
         # rew = (rewards==1).astype(int)
         # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
         # mask = np.zeros_like(trialnum).astype(bool)
-        # mask[eps[0]+8500:eps[1]+2700]=True
+        # mask[2000:16000]=True
         # import matplotlib.patches as patches
         # fig, ax = plt.subplots(figsize=(9,5))
         # ax.plot(ypos[mask],zorder=1)
+        # # remove dt licks
+        # lick[ypos<3]=0
         # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',
         #         zorder=2)
         # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
@@ -154,11 +145,12 @@ for ii,animal in enumerate(animals):
                     window_size, sampling_rate=31.25*1.5)
         vel_probe_near_reward = vel_probe.interpolate(method='linear').ffill().bfill().values[int(rewloc)-30:int(rewloc+(.5*rewsize))]
         # lick selectivity last 8 trials
-        lasttr =3
-        mask = np.array([xx in str_trials[-lasttr:] for xx in trialnum])
+        lasttr =8
+        mask = np.array([xx in ftr_trials[-lasttr:] for xx in trialnum])
+        # get only failed trials for this exp
         lick_selectivity_success = get_lick_selectivity(ypos[mask], 
                         trialnum[mask], lick[mask], newrewloc, rewsize,
-                        fails_only = False)            
+                        fails_only = True)            
         # failed trials with opto stim
         # opto
         failtr_opto = np.array([(xx in ftr_trials) and 
@@ -211,8 +203,8 @@ df['animal'] = list(itertools.chain(*[[xx]*len(days_all[ii]) for ii,xx in enumer
 lds = [[condrewloc.loc[((condrewloc.Day.values==str(dy))&(condrewloc.Animal.values==animals[ii])), 'learning_date'].values[0] for dy in dys] 
     for ii,dys in enumerate(days_all)]
 df['learning_day'] = list(itertools.chain(*lds))
-df['opto_day_before'] = [True if xx=='TRUE' else False for xx in list(itertools.chain(*optodays_before_per_an))]
-df['opto'] = [True if xx=='1' else False for xx in list(itertools.chain(*optodays_per_an))]
+df['opto_day_before'] = [True if xx==True else False for xx in list(itertools.chain(*optodays_before_per_an))]
+df['opto'] = [True if xx==True else False for xx in list(itertools.chain(*optodays_per_an))]
 df['lick_selectivity_near_rewardloc_mean'] = [np.nanmean(xx[0]) for xx in near_reward_per_day]
 df['velocity_near_rewardloc_mean'] = [np.nanmean(xx[1]) for xx in near_reward_per_day]
 df['com_lick_probe'] = [xx[2] for xx in near_reward_per_day]
@@ -255,7 +247,7 @@ print(f'Velocity near reward in memory probes\nPer session t-test p-value: {pval
 # lick_selectivity_near_rewardloc_mean
 fig,ax = plt.subplots(figsize=(2.2,5))
 ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
-                hue='opto_day_before', data=df, fill=False,errorbar='se',
+                hue='opto_day_before', data=dfagg, fill=False,errorbar='se',
                 palette={False: "slategray", True: "mediumturquoise"})
 ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
                 hue='opto_day_before', data=df,
@@ -279,7 +271,7 @@ ax.get_legend().set_visible(False)
 ax.spines[['top','right']].set_visible(False)
 plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
 # fig.tight_layout()
-plt.savefig(os.path.join(dst, 'fewrewmostlystim_memory_lick_selectivity.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'darktime_memory_lick_selectivity.svg'), bbox_inches='tight')
 
 #%%
 # lick selectivity last 8 trials
@@ -316,7 +308,7 @@ ax.set_ylabel('Lick selectivity, last 8 trials')
 ax.set_xticklabels(['LED off', 'LED on'],rotation=45)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
-plt.savefig(os.path.join(dst, 'fewrewmostlystim_online_performance.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'darktime_online_performance.svg'), bbox_inches='tight')
 #%%
 # success rate
 dfld = df#[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
@@ -353,4 +345,4 @@ ax.set_title(f'persession pval = {pvals1:.4f}\n\
 
 ax.get_legend().set_visible(False)
 ax.spines[['top','right']].set_visible(False)
-plt.savefig(os.path.join(dst, 'fewrewmostlystim_performance_success_rate.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'darktime_performance_success_rate.svg'), bbox_inches='tight')

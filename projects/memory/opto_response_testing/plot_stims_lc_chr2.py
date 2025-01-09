@@ -33,7 +33,7 @@ dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 1 # for which to normalize
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-conddf = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - chr2_lc_grabda3m.csv") # day vs. condition LUT
+conddf = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - chr2_lc_grabda3m_new.csv") # day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
@@ -282,7 +282,7 @@ for i in range(len(saline)):
 fig.suptitle('LC axons, ChR2')    
 fig.tight_layout()
 
-plt.savefig(os.path.join(savedst, 'lc_axon_traces_v_subtracted.svg'))
+# plt.savefig(os.path.join(savedst, 'lc_axon_traces_v_subtracted.svg'))
 #%%
 
 # collect values for ttest
@@ -355,11 +355,12 @@ for i in range(len(lbls)):
 ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
         fontsize=fs, rotation=45)
 ax.set_title('n=trials, 3 animals',pad=40,fontsize=14)
-plt.savefig(os.path.join(savedst, 'lc_axon_subtracted_trial_quant.svg'))
+# plt.savefig(os.path.join(savedst, 'lc_axon_subtracted_trial_quant.svg'))
 
 #%%
 
 bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
+
 # # # Specify the desired order
 # desired_order = ['SLM', 'SR', 'SP', 'SO']
 
@@ -397,4 +398,4 @@ ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
     fontsize=fs, rotation=45)
 
 ax.set_title('n=3 animals',pad=80,fontsize=14)
-plt.savefig(os.path.join(savedst, 'lc_axon_subtracted_animal_quant.svg'))
+# plt.savefig(os.path.join(savedst, 'lc_axon_subtracted_animal_quant.svg'))

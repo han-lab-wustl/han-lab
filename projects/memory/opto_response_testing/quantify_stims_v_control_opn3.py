@@ -9,7 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
-from behavior import consecutive_stretch
+from projects.memory.behavior import consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
-from dopamine import get_rewzones
+from projects.memory.dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
@@ -27,10 +27,10 @@ plt.close('all')
 # pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
 #     f"halo_opto.pdf"))
 
-src = r'Z:\opn3_grabda'
+src = r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\opn3_grabda"
 range_val = 20; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-conddf = pd.read_excel(r'Z:\opn3_grabda\opn3_key_zd_updated.xlsx',sheet_name='opn3')
+conddf = pd.read_excel(os.path.join(src, 'opn3_key_zd_updated.xlsx'),sheet_name='opn3')
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs=False
@@ -38,8 +38,8 @@ show_figs=False
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = conddf.loc[((conddf.animal==animal) & (conddf.artifact!=True)), 'day'].values.astype(int)    
-    if ((animal=='e219') or (animal=='e221') or (animal=='e222')): src = r'Z:\opn3_grabda\opto_control_grabda_2m'
-    else: src = r'Z:\opn3_grabda'
+    if ((animal=='e219') or (animal=='e221') or (animal=='e222')): src = os.path.join(src, 'opto_control_grabda_2m')
+    else: src = r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\opn3_grabda"
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # for each plane
@@ -117,7 +117,14 @@ for ii,animal in enumerate(animals):
         day_date_dff[f'{animal}_{day}'] = plndff
 
 #%%
-
+# filter by animal
+# lat vta/snc inj: e213, 215
+# vta only inj: e214
+# day_date_dff_org = day_date_dff
+day_date_dff = {}
+for k,v in day_date_dff_org.items():
+    if 'e214' not in k:
+        day_date_dff[k]=v
 # plot deep vs. superficial
 # plot control vs. opn3
 plt.rc('font', size=15)
@@ -286,7 +293,7 @@ for i in range(len(saline)):
 fig.suptitle('SNc/VTA axons, eOPN3')    
 fig.tight_layout()
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-plt.savefig(os.path.join(savedst, 'per_trial_opn3_trace.svg'))
+# plt.savefig(os.path.join(savedst, 'per_trial_opn3_trace.svg'))
 # %%
 # ttest
 an = [an_deep_rewdff_saline, an_sup_rewdff_saline]
@@ -346,7 +353,7 @@ for i in range(len(lbls)):
 ax.text(i, y, f' deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
         fontsize=fs, rotation=45)
 ax.set_title('n=trials, 3 animals',pad=30,fontsize=14)
-plt.savefig(os.path.join(savedst, 'per_trial_opn3_quant.svg'))
+# plt.savefig(os.path.join(savedst, 'per_trial_opn3_quant.svg'))
 
 #%%
 # per animal 

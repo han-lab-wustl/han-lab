@@ -9,7 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
-from behavior import consecutive_stretch
+from projects.memory.behavior import consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
-from dopamine import get_rewzones
+from  projects.memory.dopamine import get_rewzones
 # plt.rc('font', size=12)          # controls default text sizes
 
 plt.close('all')
@@ -34,7 +34,7 @@ animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
-rolling_win = 10
+rolling_win = 12
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = conddf.loc[((conddf.animal==animal)), 'day'].values.astype(int)    
@@ -490,8 +490,8 @@ fig.tight_layout()
 
 #%%
 # plot control-drug
-ymin=-0.01
-ymax=0.01
+ymin=-0.005
+ymax=0.005
 plt.rc('font', size=12) 
 # plot
 drug = [deep_rewdff_drug, sup_rewdff_drug]

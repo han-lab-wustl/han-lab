@@ -27,7 +27,7 @@ disp(savepthfmat)
 %%
 clear all;
 mouse_name = "e279";
-days = [1:4];
+days = [6];
 src = 'X:\lc_chr2_grabda';
 
 for day=days
