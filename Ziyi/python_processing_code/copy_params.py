@@ -24,8 +24,8 @@ def copy_params_mat_with_custom_structure(src_dir, dst_dir):
                 print(f"Copied: {src_file} to {dst_file}")
 
 # Example usage
-source_directory = r"E:\Ziyi\Data\E247_Ach_GrabDA_red\Pavlovian\240924_ZH_000_002\green_opto_corrected_tifs"
-destination_directory = r"E:\Ziyi\Data\E247_Ach_GrabDA_red\Pavlovian\Ach"
+source_directory = r"E:\Ziyi\Data\250116_ZH\250116_ZH_000_001"
+destination_directory = r"\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\VTA_mice\E277"
 
 copy_params_mat_with_custom_structure(source_directory, destination_directory)
 

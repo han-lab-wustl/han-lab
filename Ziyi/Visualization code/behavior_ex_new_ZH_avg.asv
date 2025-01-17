@@ -234,6 +234,12 @@ for plane = 1:4
     title(reg_name(plane))
 
     find_figure('Avg_dFF_same_panel')
+    xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
+    xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
+    yax = avg_roinorm_single_tracesCS{plane}';
+    se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
+    h10 = shadedErrorBar(xax, yax, se_yax, [], 1);
+    hold on;
     if plane ==1
         plot(xaxSpeed, rescale(avg_roinorm_single_traces_roesmthCS{plane}, 0.98, 0.985), 'k', 'LineWidth', 2);
     end
@@ -252,12 +258,33 @@ for plane = 1:4
         h10.edge(2).Color=color{plane};
         text(xt(plane),yt(plane),reg_name{plane},'Color',color{plane},'Fontsize',10)
     end
-    hold on
-    %ylim([0.98 1.05])
+    ylim([0.98 1.01])
     ylims = ylim;
     pls = plot([0 0],ylims,'--k','Linewidth',1);
     ylim(ylims)
     pls.Color(4) = 0.5;
-    
+    hold on
 
+    % plotting perireward
+    find_figure('Avg_dFF_same_panel_fig')
+    yaxxs{1} = squeeze(nanmean(cell2mat(reshape(yaxs(1:3),1,1,[])),3));
+    yaxxs{2} = yaxs{4};
+    % plotting perireward
+    subplot(4,6,8+exm)
+    for jj = 1:2
+    yax = nanmean(yaxxs{jj},2);
+    xax = linspace(-5,5,length(yax));
+    se_yax = nanstd(yaxxs{jj},[],2)/size(currdop,1);
+     hold on, ;h10 = shadedErrorBar(xax,yax,se_yax,[],1);
+            if sum(isnan(se_yax))~=length(se_yax)
+                h10.patch.FaceColor = colors{jj}; h10.mainLine.Color = colors{jj}; h10.edge(1).Color = colors{jj};
+                h10.edge(2).Color=colors{jj};
+%                 text(xt(jj),yt(jj),currROI_labels{jj},'Color',color{jj})
+                h10.patch.FaceAlpha = 0.07;
+                h10.mainLine.LineWidth = 1.5;
+                h10.edge(1).Color(4) = 0.07;
+                h10.edge(2).Color(4) = 0.07;
+%                 h10.edge(1).LineWidth =
+            end
+    end
 end

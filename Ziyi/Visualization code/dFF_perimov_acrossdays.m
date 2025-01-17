@@ -1,5 +1,5 @@
 
-load('E:\Ziyi\Data\E247_Ach_GrabDA_red\Pavlovian\Dopamine\247_DA_workspace.mat')
+load('E:\Ziyi\Data\E247_Ach_GrabDA_red\Pavlovian\Ach\247_ACh_workspace.mat')
 %dop_alldays_planes_success_mov
 
 numplanes = 4;
@@ -35,7 +35,7 @@ num_days = size(dop_alldays_planes_success_mov,2); % Number of days
 
 % Initialize the 1x4 result cell array
 normdFF_perimove = cell(1, size(dop_alldays_planes_success_mov, 2));
-normdFF_perimove = cell(1, size(roe_alldays_planes_success_stop, 2));
+%normdFF_perimove = cell(1, size(roe_alldays_planes_success_stop, 2));
 roe_perimove = cell(1, size(roe_alldays_planes_success_mov, 2));
 
 pre_win_frames = 39;
@@ -144,226 +144,324 @@ end
 
 
 
+% Figure plotting
+% for plane = 1:4
+% 
+%     % find_figure('Avg_dop')
+%     % subplot(2, 2, plane);
+%     xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
+% 
+%     fig1=find_figure('dFF_Days_peristarts')
+%     %figure
+%     fig1.Position = [100, 100, 600, 600]
+%     subplot(4,1,plane)
+% 
+%     imagesc(xax,1:num_days,normdFF_perimove{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     hold on
+%     title(reg_name(plane))
+% 
+% 
+%     fig2 = find_figure('roe_Days_peristart')
+%     fig2.Position = [100, 100, 600, 150]
+%     %figure
+% if plane ==1
+%     imagesc(xax,1:num_days,roe_perimove{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     cb2 = colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+%     colormap("gray")
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     ylabel(cb2,'Speed (cm/s)','FontSize',12,'Rotation',90)
+% end
+% 
+%     fig3 = find_figure('dFF_Days_peristop')
+%     fig3.Position = [100, 100, 600, 600]
+%     %figure
+%     subplot(4,1,plane)
+% 
+%     imagesc(xax,1:num_days,normdFF_peristop{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     hold on
+%     title(reg_name(plane))
+% 
+% 
+%     fig4 = find_figure('roe_Days_peristop')
+%     fig4.Position = [100, 100, 600, 150]
+%     %figure
+%    if plane==1
+%     imagesc(xax,1:num_days,roe_peristop{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     cb4 = colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+%     colormap("gray")
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     ylabel(cb4,'Speed (cm/s)','FontSize',12,'Rotation',90)
+% end
+% 
+%     fig5 = find_figure('dFF_Days_peristop_no_reward')
+%     fig5.Position = [100, 100, 600, 600]
+%     %figure
+%     subplot(4,1,plane)
+% 
+%     imagesc(xax,1:num_days,normdFF_peristop_no_reward{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     hold on
+%     title(reg_name(plane))
+% 
+% 
+%     fig6 = find_figure('roe_Days_peristop_no_reward')
+%     fig6.Position = [100, 100, 600, 150]
+%     %figure
+%     %subplot(4,1,plane)
+% 
+%     if plane==1
+%     imagesc(xax,1:num_days,roe_peristop_no_reward{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     cb6 = colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+%     colormap("gray")
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     ylabel(cb6,'Speed (cm/s)','FontSize',12,'Rotation',90)
+%     end
+% 
+% 
+%     fig7 = find_figure('dFF_Days_peristop_reward')
+%     fig7.Position = [100, 100, 600, 600]
+%     %figure
+%     subplot(4,1,plane)
+% 
+%     imagesc(xax,1:num_days,normdFF_peristop_reward{plane});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     colorbar
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     hold on
+%     title(reg_name(plane))
+% 
+% 
+%     fig8 = find_figure('roe_Days_peristop_with_reward')
+%     fig8.Position = [100, 100, 600, 150]
+%     %figure
+%     %subplot(4,1,plane)
+% 
+%     if plane==1 
+%     imagesc(xax,1:num_days,roe_peristop_reward{1});
+%     %imagesc(all_day_roinorm_single_tracesCS{plane}')
+%     cb8 = colorbar;
+%     y_tick_positions = 0.5:num_days-0.5;
+%     y_tick_labels = 1:num_days;
+%     %yticks(1:num_days)
+%     % Adjust the y-axis to represent days
+% 
+%     %colorbar; % Add a colorbar to show the scaling
+%     set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+%     set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+%     colormap("gray")
+%     ylabel(cb8,'Speed (cm/s)','FontSize',12,'Rotation',90)
+% 
+% 
+%     % Add labels and title
+%     xlabel('Time (seconds)');
+%     ylabel('Day');
+%     title('Daily Data Representation Over Time');
+%     %hold on
+%     %title(reg_name(plane))
+%     end 
+% 
+% end
 
-for plane = 1:4
-
-    % find_figure('Avg_dop')
-    % subplot(2, 2, plane);
-    xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;
-
-    fig1=find_figure('dFF_Days_peristarts')
-    %figure
-    fig1.Position = [100, 100, 600, 600]
-    subplot(4,1,plane)
-
-    imagesc(xax,1:num_days,normdFF_perimove{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    hold on
-    title(reg_name(plane))
-
-
-    fig2 = find_figure('roe_Days_peristart')
-    fig2.Position = [100, 100, 600, 150]
-    %figure
-if plane ==1
-    imagesc(xax,1:num_days,roe_perimove{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    cb2 = colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-    colormap("gray")
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    ylabel(cb2,'Speed (cm/s)','FontSize',12,'Rotation',90)
-end
-
-    fig3 = find_figure('dFF_Days_peristop')
-    fig3.Position = [100, 100, 600, 600]
-    %figure
-    subplot(4,1,plane)
-
-    imagesc(xax,1:num_days,normdFF_peristop{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    hold on
-    title(reg_name(plane))
-
-
-    fig4 = find_figure('roe_Days_peristop')
-    fig4.Position = [100, 100, 600, 150]
-    %figure
-   if plane==1
-    imagesc(xax,1:num_days,roe_peristop{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    cb4 = colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-    colormap("gray")
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    ylabel(cb4,'Speed (cm/s)','FontSize',12,'Rotation',90)
-end
-
-    fig5 = find_figure('dFF_Days_peristop_no_reward')
-    fig5.Position = [100, 100, 600, 600]
-    %figure
-    subplot(4,1,plane)
-
-    imagesc(xax,1:num_days,normdFF_peristop_no_reward{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    hold on
-    title(reg_name(plane))
-
-
-    fig6 = find_figure('roe_Days_peristop_no_reward')
-    fig6.Position = [100, 100, 600, 150]
-    %figure
-    %subplot(4,1,plane)
-    
-    if plane==1
-    imagesc(xax,1:num_days,roe_peristop_no_reward{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    cb6 = colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-    colormap("gray")
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    ylabel(cb6,'Speed (cm/s)','FontSize',12,'Rotation',90)
+fig9 = find_figure('dFF_Days_peristarts_traces')
+    all_roinorm_single_tracesCS = cellfun(@transpose,normdFF_perimove,"UniformOutput",false);
+    colors = {[153 153 153]/255,[230 84 128]/255};
+    yaxxs{1} = squeeze(nanmean(cell2mat(reshape(all_roinorm_single_tracesCS(1:3),1,1,[])),3));
+    yaxxs{2} = all_roinorm_single_tracesCS{4};
+    % plotting perireward
+    %subplot(4,6,8+exm)
+    for jj = 1:2
+    yax1 = nanmean(yaxxs{jj},2);
+    xax1 = linspace(-5,5,length(yax1));
+    %se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
+    se_yax1 = nanstd(yaxxs{jj},[],2)/size(yaxxs{jj},1);
+     hold on, ;
+     h10 = shadedErrorBar(xax1,yax1',se_yax1,[],1);
+            if sum(isnan(se_yax1))~=length(se_yax1)
+                h10.patch.FaceColor = colors{jj}; h10.mainLine.Color = colors{jj}; h10.edge(1).Color = colors{jj};
+                h10.edge(2).Color=colors{jj};
+%                 text(xt(jj),yt(jj),currROI_labels{jj},'Color',color{jj})
+                h10.patch.FaceAlpha = 0.07;
+                h10.mainLine.LineWidth = 1.5;
+                h10.edge(1).Color(4) = 0.07;
+                h10.edge(2).Color(4) = 0.07;
+%                 h10.edge(1).LineWidth =
+            end
     end
 
+    hold on 
+    fig10 = find_figure('roe_Days_peristarts_traces')
+    roe_peristarts_fourplane = transpose(roe_perimove{1});
+    roe_peristarts =  roe_peristarts_fourplane(:,1);
+    xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
+    plot(xaxSpeed, roe_peristarts, 'k', 'LineWidth', 2);
 
-    fig7 = find_figure('dFF_Days_peristop_reward')
-    fig7.Position = [100, 100, 600, 600]
-    %figure
-    subplot(4,1,plane)
+    fig11 = find_figure('dFF_Days_peristop_no_reward_traces')
+    all_roinorm_single_tracesCS = cellfun(@transpose,normdFF_peristop_no_reward,"UniformOutput",false);
+    colors = {[153 153 153]/255,[230 84 128]/255};
+    yaxxs{1} = squeeze(nanmean(cell2mat(reshape(all_roinorm_single_tracesCS(1:3),1,1,[])),3));
+    yaxxs{2} = all_roinorm_single_tracesCS{4};
+    % plotting perireward
+    %subplot(4,6,8+exm)
+    for jj = 1:2
+    yax1 = nanmean(yaxxs{jj},2);
+    xax1 = linspace(-5,5,length(yax1));
+    se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
+    se_yax1 = nanstd(yaxxs{jj},[],2)/size(yaxxs{jj},1);
+     hold on, ;
+     h10 = shadedErrorBar(xax1,yax1',se_yax1,[],1);
+            if sum(isnan(se_yax1))~=length(se_yax1)
+                h10.patch.FaceColor = colors{jj}; h10.mainLine.Color = colors{jj}; h10.edge(1).Color = colors{jj};
+                h10.edge(2).Color=colors{jj};
+%                 text(xt(jj),yt(jj),currROI_labels{jj},'Color',color{jj})
+                h10.patch.FaceAlpha = 0.07;
+                h10.mainLine.LineWidth = 1.5;
+                h10.edge(1).Color(4) = 0.07;
+                h10.edge(2).Color(4) = 0.07;
+%                 h10.edge(1).LineWidth =
+            end
+    end
 
-    imagesc(xax,1:num_days,normdFF_peristop_reward{plane});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    colorbar
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
-
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-
-
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    hold on
-    title(reg_name(plane))
-
-
-    fig8 = find_figure('roe_Days_peristop_with_reward')
-    fig8.Position = [100, 100, 600, 150]
-    %figure
-    %subplot(4,1,plane)
+    hold on 
+    fig12 = find_figure('roe_Days_peristop_no_reward_traces');
+    roe_peristarts_fourplane = transpose(roe_peristop_no_reward{1});
+    roe_peristarts =  roe_peristarts_fourplane(:,1);
+    xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
+    plot(xaxSpeed, roe_peristarts, 'k', 'LineWidth', 2);
     
-    if plane==1 
-    imagesc(xax,1:num_days,roe_peristop_reward{1});
-    %imagesc(all_day_roinorm_single_tracesCS{plane}')
-    cb8 = colorbar;
-    y_tick_positions = 0.5:num_days-0.5;
-    y_tick_labels = 1:num_days;
-    %yticks(1:num_days)
-    % Adjust the y-axis to represent days
 
-    %colorbar; % Add a colorbar to show the scaling
-    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
-    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
-    colormap("gray")
-    ylabel(cb8,'Speed (cm/s)','FontSize',12,'Rotation',90)
+    fig13 = find_figure('dFF_Days_peristop_with_reward_traces')
+    all_roinorm_single_tracesCS = cellfun(@transpose,normdFF_peristop_reward,"UniformOutput",false);
+    colors = {[153 153 153]/255,[230 84 128]/255};
+    yaxxs{1} = squeeze(nanmean(cell2mat(reshape(all_roinorm_single_tracesCS(1:3),1,1,[])),3));
+    yaxxs{2} = all_roinorm_single_tracesCS{4};
+    % plotting perireward
+    %subplot(4,6,8+exm)
+    for jj = 1:2
+    yax1 = nanmean(yaxxs{jj},2);
+    xax1 = linspace(-5,5,length(yax1));
+    %se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
+    se_yax1 = nanstd(yaxxs{jj},[],2)/size(yaxxs{jj},1);
+     hold on, ;
+     h10 = shadedErrorBar(xax1,yax1',se_yax1,[],1);
+            if sum(isnan(se_yax1))~=length(se_yax1)
+                h10.patch.FaceColor = colors{jj}; h10.mainLine.Color = colors{jj}; h10.edge(1).Color = colors{jj};
+                h10.edge(2).Color=colors{jj};
+%                 text(xt(jj),yt(jj),currROI_labels{jj},'Color',color{jj})
+                h10.patch.FaceAlpha = 0.07;
+                h10.mainLine.LineWidth = 1.5;
+                h10.edge(1).Color(4) = 0.07;
+                h10.edge(2).Color(4) = 0.07;
+%                 h10.edge(1).LineWidth =
+            end
+    end
+
+    hold on 
+    fig14 = find_figure('roe_Days_peristop_with_reward_traces');
+    roe_peristarts_fourplane = transpose(roe_peristop_reward{1});
+    roe_peristarts =  roe_peristarts_fourplane(:,1);
+    xaxSpeed=frame_time*(-pre_win_framesALL):frame_time:frame_time*post_win_framesALL;
+    plot(xaxSpeed, roe_peristarts, 'k', 'LineWidth', 2);
 
 
-    % Add labels and title
-    xlabel('Time (seconds)');
-    ylabel('Day');
-    title('Daily Data Representation Over Time');
-    %hold on
-    %title(reg_name(plane))
-    end 
-
-
-
-
-
-end

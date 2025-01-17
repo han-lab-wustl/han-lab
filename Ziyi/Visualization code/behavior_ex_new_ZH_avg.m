@@ -265,4 +265,29 @@ for plane = 1:4
     pls.Color(4) = 0.5;
     hold on
 
+    % plotting perireward
+    find_figure('Avg_dFF_same_panel_fig')
+    colors = {[153 153 153]/255,[230 84 128]/255};
+    yaxxs{1} = squeeze(nanmean(cell2mat(reshape(all_roinorm_single_tracesCS(1:3),1,1,[])),3));
+    yaxxs{2} = all_roinorm_single_tracesCS{4};
+    % plotting perireward
+    %subplot(4,6,8+exm)
+    for jj = 1:2
+    yax1 = nanmean(yaxxs{jj},2);
+    xax1 = linspace(-5,5,length(yax1));
+    %se_yax = std(all_roinorm_single_tracesCS{plane}, [], 2) / sqrt(size(all_roinorm_single_tracesCS{plane}, 2));
+    se_yax1 = nanstd(yaxxs{jj},[],2)/size(yaxxs{jj},1);
+     hold on, ;
+     h10 = shadedErrorBar(xax1,yax1',se_yax1,[],1);
+            if sum(isnan(se_yax1))~=length(se_yax1)
+                h10.patch.FaceColor = colors{jj}; h10.mainLine.Color = colors{jj}; h10.edge(1).Color = colors{jj};
+                h10.edge(2).Color=colors{jj};
+%                 text(xt(jj),yt(jj),currROI_labels{jj},'Color',color{jj})
+                h10.patch.FaceAlpha = 0.07;
+                h10.mainLine.LineWidth = 1.5;
+                h10.edge(1).Color(4) = 0.07;
+                h10.edge(2).Color(4) = 0.07;
+%                 h10.edge(1).LineWidth =
+            end
+    end
 end
