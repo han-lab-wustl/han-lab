@@ -30,7 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -43,10 +43,9 @@ epoch_perm = []
 radian_alignment = {}
 cm_window = 20
 dists = []
-#%%
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-for ii in range(254,len(conddf)):
+for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
@@ -55,8 +54,8 @@ for ii in range(254,len(conddf)):
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+                'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+                'stat'])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         try:
@@ -97,26 +96,24 @@ for ii in range(254,len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        if 'bordercells' not in fall.keys(): # if no border cell var
-                fall['bordercells'] = [np.zeros_like(fall['iscell'][:,0]).astype(bool)]
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+                tcs_correct, coms_correct, tcs_fail, coms_fail, \
+                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
-            # 9/19/24
-            # find correct trials within each epoch!!!!
-            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                # 9/19/24
+                # find correct trials within each epoch!!!!
+                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
         fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
         ops = fall_stat['ops']
         stat = fall_stat['stat']
         meanimg=np.squeeze(ops)[()]['meanImg']
         s2p_iind = np.arange(stat.shape[1])
-        s2p_iind_filter = s2p_iind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        s2p_iind_filter = s2p_iind[(fall['iscell'][:,0]).astype(bool)]
         s2p_iind_filter = s2p_iind_filter[skew>2]
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
@@ -145,7 +142,7 @@ for ii in range(254,len(conddf)):
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)   
-        s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
+        # s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
         # Create a colormap
         cmap = plt.cm.viridis_r  # Choose your preferred colormap
         cmap.set_under('none')
@@ -166,14 +163,14 @@ for ii in range(254,len(conddf)):
         #         centers.append(center)        
         # pdf.savefig(fig)
         # plt.close(fig)
-        points = np.array(centers)
-        dist = pairwise_distances(points)
+        # points = np.array(centers)
+        # dist = pairwise_distances(points)
         # Exclude self-pairs (distances to the same point)
         # We do this by flattening the distance matrix and excluding zero distances
-        non_self_distances = dist[np.triu_indices_from(dist, k=1)]
+        # non_self_distances = dist[np.triu_indices_from(dist, k=1)]
         # Compute the average distance
-        average_distance = np.mean(non_self_distances)
-        dists.append((average_distance))
+        # average_distance = np.mean(non_self_distances)
+        # dists.append((average_distance))
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])        
@@ -255,8 +252,8 @@ for ii in range(254,len(conddf)):
 
 pdf.close()
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#     pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+        pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -300,7 +297,7 @@ ax = sns.lineplot(data=df_plt, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 
-eps = [2,3,4]
+eps = [2,3,4,5]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
     rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -377,7 +374,7 @@ fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
@@ -389,7 +386,7 @@ for ii,ep in enumerate(eps):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 # com
-plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
+plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 #%%
 # as a function of session/day

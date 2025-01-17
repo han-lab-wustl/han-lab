@@ -79,7 +79,7 @@ for ii,an in enumerate(animals):
             
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(3).mean().values)
-            if nuc == 'SNc': # gerardos way with old stim detect????
+            if nuc == 'Snc': # gerardos way with old stim detect????
                 # Assuming stims, utimedFF, and solenoid2ALL are defined numpy arrays
                 utimedFF = params['utimedFF'][0]
                 # Step 1: Label the regions in stims greater than 0.5

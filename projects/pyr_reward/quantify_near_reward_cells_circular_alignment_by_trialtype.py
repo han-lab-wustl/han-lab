@@ -1,11 +1,11 @@
 
-
+#%%
 """
 zahra
 july 2024
 quantify reward-relative cells near reward
 """
-#%%
+
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd, os
 import pickle, seaborn as sns, random, math
 from collections import Counter
@@ -43,7 +43,7 @@ radian_alignment = {}
 lasttr=8 #  last trials
 bins=90
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
-#%%
+
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii] 
@@ -91,7 +91,7 @@ ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
 # number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(5,5))
+fig,ax = plt.subplots(figsize=(3,5))
 df_plt = df[(df.opto==False)]
 # av across mice
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
@@ -167,7 +167,7 @@ fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
         data=df_plt2,
-        s=10)
+        s=10,alpha=0.7)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -175,11 +175,12 @@ ax = sns.lineplot(data=df_plt2, # correct shift
         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
-ax.legend().set_visible(False)
+ax.legend()
+ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.16
-pshift=.02
+y = 0.18
+pshift=.03
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -193,7 +194,7 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45)
+        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 ax.set_title('Post-reward cells',pad=90)
 plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')

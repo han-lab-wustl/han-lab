@@ -24,9 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[40,41,42,43,44,45],
-            [34,35,36,37,38,39],
-            [42,43,44,45,46]]#,[29,30],[36,37]]
+days_all = [[40,41,42,43,44,45,46,47,48,49,50],
+            [34,35,36,37,38,39,40,41,42,43],
+            [42,43,44,45,46,47,48,49,51,52]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -281,7 +281,7 @@ for i in range(len(ans)):
 ax.get_legend().set_visible(False)
 ax.set_ylabel('Memory lick selectivity')
 ax.spines[['top','right']].set_visible(False)
-plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}')
+plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
 # plt.savefig(os.path.join(dst, 'memory_lick_selectivity.svg'), bbox_inches='tight')
 
 #%%
@@ -381,8 +381,8 @@ ax.set_xticklabels(['LED off', 'LED on'])
 x1 = dfagg.loc[dfagg.index.get_level_values('opto')==True, 'success_rate'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto')==False, 'success_rate'].values
 t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-x1 = df_mem.loc[df_mem.opto_day_before==True, 'success_rate'].values
-x2 = df_mem.loc[df_mem.opto_day_before==False, 'success_rate'].values
+x1 = dfld.loc[dfld.opto_day_before==True, 'success_rate'].values
+x2 = dfld.loc[dfld.opto_day_before==False, 'success_rate'].values
 t,pvals1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 ax.set_title(f'persession pval = {pvals1:.4f}\n\
     peranimal paired pval = {pvals2:.4f}',fontsize=12)

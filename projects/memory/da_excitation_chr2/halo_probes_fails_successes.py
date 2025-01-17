@@ -41,7 +41,7 @@ src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e241']
 # days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [[44,45,46]]
+days_all = [[44,45,46,47,48,49,50]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -52,7 +52,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         # extract variables and makes plots into pdf
         plndff = extract_vars(src, animal, day, condrewloc, opto_cond, dst,
-        pdf, rolling_win=5, planes=4,range_val=10)
+        pdf, rolling_win=5, planes=4,range_val=8)
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
@@ -289,8 +289,8 @@ fig.tight_layout()
 # 4-combine days and split by trials
 # transient trace of so
 # per trial
-height=.03
-ymin=-.01
+height=.04
+ymin=-.02
 fig, ax = plt.subplots(figsize=(9,5))
 pln=3
 trialtype = 0# odd bc red laser

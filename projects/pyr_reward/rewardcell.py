@@ -58,8 +58,8 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
     Fc3 = fall_fc3['Fc3']
     dFF = fall_fc3['dFF']
-    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     # skew_mask = skew_filter>2
@@ -77,7 +77,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     stat = fall_stat['stat']
     meanimg=np.squeeze(ops)[()]['meanImg']
     s2p_iind = np.arange(stat.shape[1])
-    s2p_iind_filter = s2p_iind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    s2p_iind_filter = s2p_iind[((fall['iscell'][:,0]).astype(bool))]
     s2p_iind_filter = s2p_iind_filter[skew>2]
     goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
