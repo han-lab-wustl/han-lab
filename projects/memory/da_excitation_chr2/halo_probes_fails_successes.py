@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones, extract_vars
-
 # plt.rc('font', size=12)          # controls default text sizes
 
 plt.close('all')
@@ -39,9 +38,9 @@ condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values
 
 src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
-animals = ['e241']
+animals = ['e243']
 # days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [[44,45,46,47,48,49,50]]
+days_all = [np.arange(43,49)]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -56,7 +55,7 @@ for ii,animal in enumerate(animals):
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
-plt.rc('font', size=20)          # controls default text sizes
+plt.rc('font', size=20) # controls default text sizes
 # plot mean and sem of opto days vs. control days
 # on same plane
 # 1 - set conditions
@@ -89,9 +88,9 @@ learning_day_nonopto = learning_day[~opto_condition].astype(int)
 # rewzone_learning_opto = rewzone_learning[opto_condition]
 # rewzone_learning_nonopto = rewzone_learning[~opto_condition]
 #%%
-# 2 -quantify so transients
+# 2 -quantify so transients 
 # get time period around stim
-range_val=10;binsize=0.2
+range_val=8;binsize=0.2
 time_rng = range(int(range_val/binsize-0/binsize),
             int(range_val/binsize+(1/binsize))) # during and after stim
 before_time_rng = range(int(range_val/binsize-2/binsize),
@@ -290,7 +289,7 @@ fig.tight_layout()
 # transient trace of so
 # per trial
 height=.04
-ymin=-.02
+ymin=-.04
 fig, ax = plt.subplots(figsize=(9,5))
 pln=3
 trialtype = 0# odd bc red laser

@@ -1,7 +1,7 @@
 #%%
 import os, re, numpy as np
 #change
-srcpth = r'Y:\halo_grabda\e243\33\241209_ZD_000_001'
+srcpth = r'Y:\halo_grabda\e243\48\250107_ZD_000_002'
 pths = []
 planes = [0,1,2,3] # specify number of planes
 for plane in planes:

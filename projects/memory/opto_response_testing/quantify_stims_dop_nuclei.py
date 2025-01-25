@@ -79,7 +79,7 @@ for ii,an in enumerate(animals):
             
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(3).mean().values)
-            if nuc == 'Snc': # gerardos way with old stim detect????
+            if nuc == 'SNc': # gerardos way with old stim detect????
                 # Assuming stims, utimedFF, and solenoid2ALL are defined numpy arrays
                 utimedFF = params['utimedFF'][0]
                 # Step 1: Label the regions in stims greater than 0.5
@@ -213,8 +213,8 @@ for nuc in nuclei:
 
 # params per nuc
 # ymin,ymax,stimsec,antag
-nuc_params = {'SNc': [-0.02,0.05,1.2,'Eticlopride'],'LC': [-0.03,0.08,1.2,'SCH23390'],
-            'VTA': [-0.035,0.03,1.2,'SCH23390']}
+nuc_params = {'SNc': [-0.02,0.05,1.2,'Eticlopride'],'LC': [-0.03,0.05,1.2,'SCH23390'],
+            'VTA': [-0.01,0.03,1.2,'SCH23390']}
 save_pvals = {}
 for nuc in nuclei:
     print(nuc)
@@ -349,7 +349,7 @@ for nuc in nuclei:
     t,pval_deep_vs_sup = scipy.stats.ttest_ind(deep_stimdff_h, sup_stimdff_h)
     
     save_pvals[nuc]=save
-plt.savefig(os.path.join(savedst, f'{nuc}_axon_traces_v_subtracted.svg'))
+    plt.savefig(os.path.join(savedst, f'{nuc}_axon_traces_v_subtracted.svg'))
 #%%
 # plots per trial vs. animal
 sldf = []

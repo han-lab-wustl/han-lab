@@ -26,8 +26,8 @@ savepthfmat = VRalign_dopamine_w_opto_events(vrfl,fmatfl, length(fmatfl));
 disp(savepthfmat)
 %%
 clear all;
-mouse_name = "e243";
-days = [50,51];
+mouse_name = "e242";
+days = [44];
 src = 'Y:\halo_grabda';
 
 for day=days

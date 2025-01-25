@@ -30,7 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -359,14 +359,19 @@ sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.lineplot(data=df_plt2, # correct shift
-        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
-        y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle')
+# ax = sns.lineplot(data=df_plt2, # correct shift
+#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
+#         y='goal_cell_prop_shuffle',color='grey', 
+#         label='shuffle')
+# bar plot of shuffle instead
+ax = sns.barplot(data=df_plt2, # correct shift
+        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
+
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-distance cell proportion')
+ax.set_ylabel('Reward-centric cell proportion')
 eps = [2,3,4]
 y = 0.3
 pshift = 0.04
@@ -388,6 +393,90 @@ for ii,ep in enumerate(eps):
 # com
 plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.svg'), 
         bbox_inches='tight')
+
+#%% 
+# find tau/decay
+
+from scipy.optimize import curve_fit
+
+# Define the exponential decay function
+def exponential_decay(t, A, tau):
+    return A * np.exp(-t / tau)
+tau_all = []; y_fit_all = []
+# df_plt2=df_plt2.reset_index()
+for an in df_plt2.animals.unique():
+        # Initial guesses for the optimization
+        initial_guess = [4, 2]  # Amplitude guess and tau guess
+        y = df_plt2[df_plt2.animals==an]
+        t=np.array([2,3,4])
+        # Fit the model to the data using curve_fit
+        params, params_covariance = curve_fit(exponential_decay, t, y.goal_cell_prop.values, p0=initial_guess)
+        # Extract the fitted parameters
+        A_fit, tau_fit = params
+        tau_all.append(tau_fit)
+        # Generate the fitted curve using the optimized parameters
+        y_fit = exponential_decay(t, A_fit, tau_fit)
+        y_fit_all.append(y_fit)
+        
+# plot fit
+fig,ax = plt.subplots(figsize=(3,5))
+sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
+        data=df_plt2,s=10,alpha=0.7)
+plt.plot(np.array(y_fit_all).T,color='grey')
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend()#.set_visible(False)
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('Reward-centric cell proportion')
+plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'), 
+        bbox_inches='tight')
+
+#%%
+# compare to persistent cells
+tau_all_postrew = [2.2404155724121564,
+ 1.8680482627734762,
+ 11.193678521179619,
+ 3.5444438041337274,
+ 2.7430491682467073,
+ 2.6043856404608356,
+ 1.7110353116800554,
+ 1.5385274515979739,
+ 1.1991769514236397,
+ 3.4326324582254113]
+df = pd.DataFrame()
+df['tau'] = np.concatenate([tau_all,tau_all_postrew])
+df['cell_type'] =np.concatenate([['Reward-centric']*len(tau_all),
+                                ['Post-reward']*len(tau_all_postrew)])
+# number of epochs vs. reward cell prop incl combinations    
+fig,ax = plt.subplots(figsize=(2,5))
+# av across mice
+sns.stripplot(x='cell_type', y='tau',color='k',
+        data=df,s=10,alpha=0.7)
+sns.barplot(x='cell_type', y='tau',
+        data=df, fill=False,ax=ax, color='k', errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+ax.legend().set_visible(False)
+ax.set_ylabel(f'Decay over epochs ($\\tau$)')
+ax.set_xlabel('')
+ax.tick_params(axis='x', rotation=45)
+
+rc = df.loc[df.cell_type=='Reward-centric', 'tau'].values
+prc = df.loc[df.cell_type=='Post-reward', 'tau'].values
+t,pval = scipy.stats.ttest_rel(rc,prc)
+print(f'{ep} epochs, pval: {pval}')
+# statistical annotation      
+y=11;   
+x=0.5
+fs=40
+if pval < 0.001:
+        plt.text(x, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+        plt.text(x, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+        plt.text(x, y, "*", ha='center', fontsize=fs)
+plt.savefig(os.path.join(savedst, 'decay_rewardcell.svg'), 
+        bbox_inches='tight')
+
 #%%
 # as a function of session/day
 df_plt = df.groupby(['animals','session_num','num_epochs']).mean(numeric_only=True)

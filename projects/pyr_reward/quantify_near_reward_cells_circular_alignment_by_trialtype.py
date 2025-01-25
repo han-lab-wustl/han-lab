@@ -30,7 +30,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iinds = []
 goal_cell_props = []
 goal_cell_nulls = []
@@ -171,9 +171,14 @@ sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.lineplot(data=df_plt2, # correct shift
-        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle')
+# ax = sns.lineplot(data=df_plt2, # correct shift
+#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
+#         label='shuffle')
+# bar plot of shuffle instead
+ax = sns.barplot(data=df_plt2, # correct shift
+        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
+
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
 ax.set_xlabel('# of reward loc. switches')
@@ -198,6 +203,32 @@ for ii,ep in enumerate(eps):
 ax.set_title('Post-reward cells',pad=90)
 plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
+df_plt2=df_plt2.reset_index()
+
+#%%
+# find tau/decay
+from scipy.optimize import curve_fit
+# Define the exponential decay function
+def exponential_decay(t, A, tau):
+    return A * np.exp(-t / tau)
+tau_all = []
+for an in df_plt2.animals.unique():
+        try:
+                # Initial guesses for the optimization
+                initial_guess = [4, 2]  # Amplitude guess and tau guess
+                y = df_plt2[df_plt2.animals==an]
+                t=np.array([2,3,4])
+                # Fit the model to the data using curve_fit
+                params, params_covariance = curve_fit(exponential_decay, t, y.goal_cell_prop.values, p0=initial_guess)
+                # Extract the fitted parameters
+                A_fit, tau_fit = params
+                tau_all.append(tau_fit)
+                # Generate the fitted curve using the optimized parameters
+                y_fit = exponential_decay(t, A_fit, tau_fit)
+        except:
+                print(an)
+
+
 #%%
 # as a function of session/day
 df_plt = df.groupby(['animals','session_num','num_epochs']).mean(numeric_only=True)

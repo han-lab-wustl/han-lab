@@ -24,9 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[40,41,42,43,44,45,46,47,48,49,50],
-            [34,35,36,37,38,39,40,41,42,43],
-            [42,43,44,45,46,47,48,49,51,52]]#,[29,30],[36,37]]
+days_all = [[46,47,48,49,50,52],
+            [38,39,40,41,42,43],
+            [47,48,49,51,52,53]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -143,7 +143,7 @@ for ii,animal in enumerate(animals):
         # ax.set_title(f'{day}')
         # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
 
-        probe = trialnum<str_trials[0] # trials before first successful trial as probes
+        # probe = trialnum<str_trials[0] # trials before first successful trial as probes
         com_probe = np.nanmean(ypos[probe][lick.astype(bool)[probe]])-rewloc
         pos_bin, vel_probe = get_behavior_tuning_curve(ypos[probe], velocity[probe], bins=270)
         lick_selectivity = get_lick_selectivity(ypos[probe], trialnum[probe], lick[probe], rewloc, rewsize,
@@ -248,7 +248,6 @@ x2 = df.loc[df.opto==False, 'licks_selectivity_last8trials'].values
 t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 print(f'Lick selectivity during learning\nPer session t-test p-value: {pval:02f}')
 
-
 dfagg = df.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'lick_selectivity_near_rewardloc_mean'].values
@@ -270,7 +269,6 @@ sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean',
                 hue='opto_day_before', data=dfagg,
                 palette={False: "slategray", True: "crimson"},
                 s=15,ax=ax)
-
 
 ans = dfagg.index.get_level_values('animal').unique().values
 for i in range(len(ans)):
@@ -427,8 +425,8 @@ ax.spines[['top','right']].set_visible(False)
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'velocity_near_rewardloc_mean'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'velocity_near_rewardloc_mean'].values
 t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-x1 = df_mem.loc[df_mem.opto_day_before==True, 'velocity_near_rewardloc_mean'].values
-x2 = df_mem.loc[df_mem.opto_day_before==False, 'velocity_near_rewardloc_mean'].values
+x1 = dfld.loc[dfld.opto_day_before==True, 'velocity_near_rewardloc_mean'].values
+x2 = dfld.loc[dfld.opto_day_before==False, 'velocity_near_rewardloc_mean'].values
 t,pvals1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 ax.set_title(f'persession pval = {pvals1:.4f}\n\
     peranimal paired pval = {pvals2:.4f}',fontsize=12)
