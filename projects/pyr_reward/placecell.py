@@ -288,7 +288,8 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
     return tcs_correct, coms_correct, tcs_fail, coms_fail
 
 def make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size,bins=90,velocity_filter=False,probe=[0]):    
+            rewards,forwardvel,rewsize,bin_size,bins=90,velocity_filter=False,
+            probe=[0]):    
     """
     Description: This function creates tuning curves for neuronal activity aligned to reward locations and categorizes them by trial type (correct or fail). The tuning curves are generated for each epoch, and the data is filtered based on velocity if the option is enabled.
     Parameters:
