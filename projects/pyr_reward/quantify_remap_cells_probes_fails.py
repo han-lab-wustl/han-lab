@@ -30,19 +30,8 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
-# radian_alignment_saved = {} # overwrite
-goal_cell_iind = []
-goal_cell_prop = []
-goal_cell_null = []
-dist_to_rew = [] # per epoch
-num_epochs = []
-pvals = []
-rates_all = []
-total_cells = []
-epoch_perm = []
-radian_alignment = {}
 cm_window = 20
-dists = []
+data_dct= {}
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -88,9 +77,7 @@ for ii in range(len(conddf)):
                 eprng = range(eps[ep],eps[ep+1])
                 success, fail, str_trials, ftr_trials, ttr, \
                 total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-                rates.append(success/total_trials)
-        rates_all.append(np.nanmean(np.array(rates)))
-        
+                rates.append(success/total_trials)        
         # added to get anatomical info
         # takes time
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -108,6 +95,7 @@ for ii in range(len(conddf)):
                 # find correct trials within each epoch!!!!
                 tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)          
+        # get each probe tc
         tcs_probe1, coms_probe1 = make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                 rewards,forwardvel,rewsize,bin_size)  
         tcs_probe2, coms_probe2 = make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
@@ -125,9 +113,7 @@ for ii in range(len(conddf)):
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
-        perm = list(combinations(range(len(coms_probe)), 2)) 
-        rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
-        epoch_perm.append([perm,rz_perm]) 
+        perm = list(combinations(range(len(coms_correct)), 2)) 
         # if 4 ep
         # account for cells that move to the end/front
         # Define a small window around pi (e.g., epsilon)
@@ -146,90 +132,62 @@ for ii in range(len(conddf)):
         coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = intersect_arrays(*com_goal)   
         colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+        binsz = 3 # for 270 track
         if len(goal_cells)>0:
-                rows = int(np.ceil(np.sqrt(len(goal_cells))))
-                cols = int(np.ceil(len(goal_cells) / rows))
-                fig, axes = plt.subplots(rows, cols, figsize=(30,30),sharex=True)
-                if len(goal_cells) > 1:
-                        axes = axes.flatten()
-                else:
-                        axes = [axes]
+                rows = 4; cols=1
                 for i,gc in enumerate(goal_cells):            
+                        fig, axes = plt.subplots(cols, rows, figsize=(10,3),sharex=True)
+                        axes = axes.flatten()
                         for ep in range(len(coms_correct)):
-                                ax = axes[i]
-                                ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                                ax = axes[0]
+                                ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', 
+                                color=colors[ep],linewidth=2)
+                                ax.axvline((coms_correct[ep,gc])/(2*np.pi/track_length)/binsz,
+                                        color=colors[ep])
+                                ax=axes[1]
                                 try:
-                                        ax.plot(tcs_probe1[ep+1,gc,:], label=f'probe rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
+                                        ax.plot(tcs_probe1[ep+1,gc,:],
+                                        color=colors[ep],linewidth=2)
+                                        ax.axvline((coms_probe1[ep+1,gc])/(2*np.pi/track_length)/binsz,
+                                        color=colors[ep])
+                                        ax.set_title('Probe 1')
                                 except Exception as e:
                                         print(e)
-                                ax.axvline((bins/2), color='k')
-                                ax.set_title(f'cell # {gc}')
-                                ax.spines[['top','right']].set_visible(False)
-                ax.set_xticks(np.arange(0,bins+1,20))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
-                ax.set_xlabel('Radian position (centered start rew loc)')
-                ax.set_ylabel('Fc3')
-        #     ax.legend()
-                fig.tight_layout()
-                pdf.savefig(fig)
-                plt.close(fig)
-        # get shuffled iteration
-        num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
-        # max of 5 epochs = 10 perms
-        goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
-        for i in range(num_iterations):
-                # shuffle locations
-                rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-                shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
-                [random.shuffle(shuf) for shuf in shufs]
-                # first com is as ep 1, others are shuffled cell identities
-                com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
-                com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-                # OR shuffle cell identities
-                # relative to reward
-                coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-                perm = list(combinations(range(len(coms_correct)), 2)) 
-                # account for cells that move to the end/front
-                # Find COMs near pi and shift to -pi
-                com_loop_w_in_window = []
-                for pi,p in enumerate(perm):
-                        for cll in range(coms_rewrel.shape[1]):
-                                com1_rel = coms_rewrel[p[0],cll]
-                                com2_rel = coms_rewrel[p[1],cll]
-                                # print(com1_rel,com2_rel,com_diff)
-                                if ((abs(com1_rel - np.pi) < epsilon) and 
-                                (abs(com2_rel + np.pi) < epsilon)):
-                                        com_loop_w_in_window.append(cll)
-                # get abs value instead
-                # cont.
-                coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-                com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-                # get goal cells across all epochs
-                com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-                goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_shuf]
-                goal_cells_shuf = intersect_arrays(*com_goal_shuf); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
-                goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
-                goal_cell_shuf_ps.append(goal_cell_shuf_p)
-                goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
-        # save median of goal cell shuffle
-        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
-        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
-        goal_cell_null.append([goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av])
-        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        pvals.append(p_value); 
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
-        total_cells.append(len(coms_correct[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+                                ax=axes[2]
+                                try:
+                                        ax.plot(tcs_probe2[ep+1,gc,:], 
+                                        color=colors[ep], linewidth=2)
+                                        ax.axvline((coms_probe2[ep+1,gc])/(2*np.pi/track_length)/binsz,
+                                        color=colors[ep])
+                                        ax.set_title('Probe 2')
+                                except Exception as e:
+                                        print(e)
+                                ax=axes[3]
+                                try:
+                                        ax.plot(tcs_probe3[ep+1,gc,:], 
+                                        color=colors[ep], linewidth=2)
+                                        ax.axvline((coms_probe3[ep+1,gc])/(2*np.pi/track_length)/binsz,
+                                        color=colors[ep])
+                                        ax.set_title('Probe 3')
+                                except Exception as e:
+                                        print(e)                        
+                        fig.suptitle(f'cell # {gc}')
+                        ax.set_xticks(np.arange(0,bins+1,20))
+                        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),1))
+                        ax.set_xlabel('Radian position (centered start rew loc)')
+                        ax.set_ylabel('$\Delta F/F$')
+                        pdf.savefig(fig)
+                        plt.close('all')
+        data_dct[f'{animal}_{day}'] = [coms_correct, coms_probe1, coms_probe2, coms_probe3, rates, rewlocs]
 
 pdf.close()
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_probes.p"
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
+        pickle.dump(data_dct, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs

@@ -61,7 +61,7 @@ for ii in range(len(conddf)):
         epoch_perm.append(perm); goal_cell_iinds.append(goal_cell_iind); 
         goal_cell_props.append(goal_cell_prop); num_epochs.append(num_epoch)
         goal_cell_nulls.append(goal_cell_null)
-pdf.close()
+pdf.close() 
 
 # save pickle of dcts
 with open(saveto, "wb") as fp:   #Pickling
@@ -81,7 +81,7 @@ df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_nulls]
 df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
 df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
 
-fig,ax = plt.subplots(figsize=(5,5))
+fig,ax = plt.subplots(figsize=(5,5) )
 ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(x=0.05, color='k', linestyle='--')
@@ -163,45 +163,8 @@ df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
-# av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,
-        s=10,alpha=0.7)
-sns.barplot(x='num_epochs', y='goal_cell_prop',
-        data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
-# ax = sns.lineplot(data=df_plt2, # correct shift
-#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
-#         label='shuffle')
-# bar plot of shuffle instead
-ax = sns.barplot(data=df_plt2, # correct shift
-        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
-
-ax.spines[['top','right']].set_visible(False)
-ax.legend()
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Post reward cell proportion')
-eps = [2,3,4]
-y = 0.18
-pshift=.03
-fs=36
-for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
-ax.set_title('Post-reward cells',pad=90)
-plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
+ 
+plt.savefig(os.path.join(savedst, 'prerew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 df_plt2=df_plt2.reset_index()
 

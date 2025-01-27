@@ -267,9 +267,10 @@ def extract_data_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])                
     # tuning curves that are close to each other across epochs
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    # in addition, com near but after goal
+    # in addition, com near but before goal
+    lowerbound = -np.pi/3
     com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>=-np.pi/2) & (np.nanmedian(coms_rewrel[:,
+        xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
         xx], axis=0)<0))] for com in com_goal if len(com)>0]
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal)
@@ -359,7 +360,7 @@ def extract_data_prerew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         # (com near goal)
         com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>=-np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
             xx], axis=0)<0))] for com in com_goal if len(com)>0]
         goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         if len(com_goal)>0:
