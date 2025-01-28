@@ -443,12 +443,23 @@ tau_all_postrew = [2.2404155724121564,
  1.5385274515979739,
  1.1991769514236397,
  3.4326324582254113]
+tau_all_prerew = [1.635096415224901,
+ 1.2518725660615262,
+ 3.8502273715196713,
+ 1.343018147567173,
+ 0.7099184166061284,
+ 1.2798217473069395,
+ 1.118924582663642,
+ 1.27303882959974,
+ 1.2018593185708712,
+ 1.810657906442272]
 df = pd.DataFrame()
-df['tau'] = np.concatenate([tau_all,tau_all_postrew])
+df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
 df['cell_type'] =np.concatenate([['Reward-centric']*len(tau_all),
-                                ['Post-reward']*len(tau_all_postrew)])
+                                ['Post-reward']*len(tau_all_postrew),
+                                ['Pre-reward']*len(tau_all_prerew)])
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(2,5))
+fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 sns.stripplot(x='cell_type', y='tau',color='k',
         data=df,s=10,alpha=0.7)
@@ -460,20 +471,59 @@ ax.set_ylabel(f'Decay over epochs ($\\tau$)')
 ax.set_xlabel('')
 ax.tick_params(axis='x', rotation=45)
 
-rc = df.loc[df.cell_type=='Reward-centric', 'tau'].values
-prc = df.loc[df.cell_type=='Post-reward', 'tau'].values
-t,pval = scipy.stats.ttest_rel(rc,prc)
-print(f'{ep} epochs, pval: {pval}')
-# statistical annotation      
-y=11;   
-x=0.5
-fs=40
-if pval < 0.001:
-        plt.text(x, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        plt.text(x, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        plt.text(x, y, "*", ha='center', fontsize=fs)
+import scipy.stats as stats
+from scikit_posthocs import posthoc_dunn
+from statsmodels.stats.multitest import multipletests
+
+df = df.reset_index()
+
+# Perform Kruskal-Wallis test
+grouped = [df[df['cell_type'] == group]['tau'] for group in df['cell_type'].unique()]
+kruskal_result = stats.kruskal(*grouped)
+print(f"Kruskal-Wallis H-statistic: {kruskal_result.statistic}, p-value: {kruskal_result.pvalue}")
+
+# Perform Dunn's test for pairwise comparisons and apply Bonferroni correction
+dunn_result = posthoc_dunn(df, val_col='tau', group_col='cell_type', 
+        p_adjust='bonferroni')
+# Annotate the plot
+# Annotate the plot
+def add_stat_annotation(ax, x1, x2, y, adjusted_p):
+        h = 0.1  # height offset
+        line_offset = 0.3  # offset of the horizontal line
+        # Draw horizontal line
+        ax.plot([x1, x1, x2, x2], [y, y + line_offset, y + line_offset, y], lw=1.5, c='k')
+        # Determine significance level
+        if adjusted_p < 0.001:
+                significance = '***'
+        elif adjusted_p < 0.01:
+                significance = '**'
+        elif adjusted_p < 0.05:
+                significance = '*'
+        else:
+                significance = 'ns'  # Not significant
+        # Combine significance level and p-value in the annotation
+        text = f'{significance}\n(p={adjusted_p:.3g})'
+        line_offset2=.3
+        # Add p-value text
+        ax.text((x1 + x2) * 0.5, y + line_offset2, text, ha='center', va='bottom', color='k',
+                fontsize=10)
+
+# Example usage of add_stat_annotation with group annotations and asterisks
+y_max = df['tau'].max()-6  # maximum y value of the plot
+y_range = df['tau'].max() - df['tau'].min()  # range of y values
+
+cell_types = df['cell_type'].unique()
+for i, group1 in enumerate(cell_types):
+        for j, group2 in enumerate(cell_types):
+                if i < j:
+                        p_value = dunn_result.loc[group1, group2]
+                        adjusted_p = p_value  # Already Bonferroni-adjusted
+                        x1 = list(cell_types).index(group1)
+                        x2 = list(cell_types).index(group2)
+                        y = y_max + (i + j+3) * y_range * .1  # adjust y position
+                        print(i,y)
+                        add_stat_annotation(ax, x1, x2, y, adjusted_p)
+
 plt.savefig(os.path.join(savedst, 'decay_rewardcell.svg'), 
         bbox_inches='tight')
 

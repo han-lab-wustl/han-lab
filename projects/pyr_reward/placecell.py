@@ -339,7 +339,9 @@ def make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
             mask = [True if xx in probe else False for xx in trialnum[eprng][moving_middle]] # probe 1 ONLY
             F = F_all[mask,:]
             relpos = relpos_all[mask]                
-            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T if len(f)>0])
+            if len(tc)==0:
+                tc = np.ones((Fc3.shape[1], bins))*np.nan
             com = calc_COM_EH(tc,bin_size)
             tcs_probe[ep, :,:] = tc
             coms_probe[ep, :] = com

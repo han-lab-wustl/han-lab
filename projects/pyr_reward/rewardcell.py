@@ -22,6 +22,7 @@ from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_ra
     consecutive_stretch
 from projects.opto.behavior.behavior import get_success_failure_trials
 
+
 def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_window_cm,pdf,
     num_iterations=1000):

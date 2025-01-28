@@ -34,7 +34,7 @@ cm_window = 20
 data_dct= {}
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-for ii in range(len(conddf)):
+for ii in range(0,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
