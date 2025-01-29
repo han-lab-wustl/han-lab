@@ -24,9 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[46,47,48,49,50,52],
-            [38,39,40,41,42,43],
-            [47,48,49,51,52,53]]#,[29,30],[36,37]]
+days_all = [[44,45,48,49,52,53,54],
+            [44,45,46],
+            [45,46,49,50,54,55]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -53,8 +53,8 @@ for ii,animal in enumerate(animals):
         before = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), memory_cond].values[0]
         optodays_before.append(before)    
         optodays.append(condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
-        # for each plane
-        path=list(Path(os.path.join(src, animal, str(day))).rglob('params.mat'))[0]
+        # get vr file
+        path=list(Path(os.path.join(src, animal, str(day))).rglob('*time*.mat'))[0]
         params = scipy.io.loadmat(path)
         print(path)
         VR = params['VR'][0][0]
@@ -143,7 +143,7 @@ for ii,animal in enumerate(animals):
         # ax.set_title(f'{day}')
         # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
 
-        # probe = trialnum<str_trials[0] # trials before first successful trial as probes
+        probe = trialnum<str_trials[0] # trials before first successful trial as probes
         com_probe = np.nanmean(ypos[probe][lick.astype(bool)[probe]])-rewloc
         pos_bin, vel_probe = get_behavior_tuning_curve(ypos[probe], velocity[probe], bins=270)
         lick_selectivity = get_lick_selectivity(ypos[probe], trialnum[probe], lick[probe], rewloc, rewsize,
@@ -153,6 +153,7 @@ for ii,animal in enumerate(animals):
         # also estimate sampling rate
         lick_rate_probes = calculate_lick_rate(lick[probe], 
                     window_size, sampling_rate=31.25*1.5)
+        
         vel_probe_near_reward = vel_probe.interpolate(method='linear').ffill().bfill().values[int(rewloc)-30:int(rewloc+(.5*rewsize))]
         # lick selectivity last 8 trials
         lasttr = 8

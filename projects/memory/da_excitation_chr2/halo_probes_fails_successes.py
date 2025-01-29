@@ -40,7 +40,7 @@ src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
 # days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [np.arange(43,49)]
+days_all = [[41,42,45,46,55]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -97,7 +97,7 @@ before_time_rng = range(int(range_val/binsize-2/binsize),
             int(range_val/binsize-0/binsize)) # during and after stim
 # normalize pre-window to 1
 # remember than here we only take led off trials bc of artifact
-trialtype=1
+trialtype=0
 so_traces = day_date_dff_arr_opto[:,3,trialtype,:]#[learning_day_opto==1]
 so_transients_opto = [so_traces[ii,:]-np.nanmean(so_traces[ii,before_time_rng]) for ii,xx in enumerate(range(so_traces.shape[0]))]
 so_transients_opto = [np.nanmax(xx[time_rng]) for xx in so_transients_opto]

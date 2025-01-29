@@ -44,7 +44,7 @@ epoch_perm = []
 radian_alignment = {}
 lasttr=8 #  last trials
 bins=90
-num_iterations=1000
+num_iterations=100
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 
 # iterate through all animals
@@ -188,7 +188,7 @@ for ii in range(len(conddf)):
         goal_cell_iind=goal_cells
         goal_cell_p=len(goal_cells)/len(coms_correct[0])
         goal_cell_prop=[goal_cells_p_per_comparison,goal_cell_p]
-        num_epochs=len(coms_correct)
+        num_epoch=len(coms_correct)
         colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
         if len(goal_cells)>0:
             rows = int(np.ceil(np.sqrt(len(goal_cells))))
@@ -247,10 +247,6 @@ for ii in range(len(conddf)):
             gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
             # get latencies based on average of trials
             for gc in goal_cells_shuf:
-                # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
-                #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-                # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
-                #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
                 _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
                     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
                 _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
@@ -283,13 +279,14 @@ for ii in range(len(conddf)):
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
         total_cells=len(coms_correct[0])
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                    com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av,pdist]
         # save
         rates_all.append(rate); pvals.append(p_value); total_cells_all.append(total_cells)
         epoch_perm.append(perm); goal_cell_iinds.append(goal_cell_iind); 
         goal_cell_props.append(goal_cell_prop); num_epochs.append(num_epoch)
         goal_cell_nulls.append(goal_cell_null)
+        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
+            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+
 pdf.close()
 
 # save pickle of dcts
