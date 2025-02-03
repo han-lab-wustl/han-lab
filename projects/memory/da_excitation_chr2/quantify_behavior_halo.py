@@ -24,9 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[44,45,48,49,52,53,54],
-            [44,45,46],
-            [45,46,49,50,54,55]]#,[29,30],[36,37]]
+days_all = [[44,45,48,49,52,53,54,55,58],
+            [44,45,46,47,50],
+            [45,46,49,50,54,55,56,59]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -181,8 +181,7 @@ for ii,animal in enumerate(animals):
         else:
             vel_failed_opto = [np.nan];lick_selectivity_fail_opto=[np.nan]
             lick_selectivity_during_stim = [np.nan]
-            com_opto = [np.nan]
-        # even trials
+            com_opto = [np.nan]        # even trials
         failtr_nonopto = np.array([(xx in ftr_trials) and 
                 (xx not in catchtrialsnum) and (xx%2==0) for xx in trialnum])
         if sum(failtr_nonopto)>10:

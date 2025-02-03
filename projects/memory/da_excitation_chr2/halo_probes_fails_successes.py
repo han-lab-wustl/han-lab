@@ -40,7 +40,7 @@ src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
 # days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [[41,42,45,46,55]]
+days_all = [[54,55,56,57]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -60,7 +60,7 @@ plt.rc('font', size=20) # controls default text sizes
 # on same plane
 # 1 - set conditions
 days_all=[[int(yy) for yy in xx] for xx in days_all]
-animals_days=[[f'{animal[ii]}_{yy}' for yy in xx] for ii,xx in enumerate(days_all)]
+animals_days=[[f'{animals[ii]}_{yy}' for yy in xx] for ii,xx in enumerate(days_all)]
 
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & \
@@ -70,14 +70,14 @@ animal = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all[ii])) & (
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
 opto_days = np.concatenate(animals_days)[opto_condition]
 # only mean values
-day_date_dff_arr = np.array([[[p[0],p[1]] for p in v] for k,v in day_date_dff.items()])
+day_date_dff_arr = np.array([np.array([np.array([p[0],p[1]]) for p in v]) for k,v in day_date_dff.items()])
 # all trials
 day_date_dff_arr_all_tr = [[[p[2],p[3]] for p in v] for k,v in day_date_dff.items()]
 day_date_dff_arr_opto_all_tr = [[[p[2],p[3]] for p in v] for k,v in day_date_dff.items() \
     if k in opto_days]
 day_date_dff_arr_nonopto_all_tr = [[[p[2],p[3]] for p in v] for k,v in day_date_dff.items() \
     if k not in opto_days]
-day_date_dff_arr_opto = day_date_dff_arr[opto_condition]
+day_date_dff_arr_opto = np.array(day_date_dff_arr[opto_condition])
 animal_opto = animal[opto_condition]
 animal_nonopto = animal[~opto_condition]
 day_date_dff_arr_nonopto = day_date_dff_arr[~opto_condition]

@@ -4,6 +4,7 @@
 zahra
 nov 2024
 quantify reward-relative cells post reward
+# TODO: take all the cells and quantify their transient in rewarded vs. unrewarded stops
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd, os
@@ -31,7 +32,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # test
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
-iind='e218_032_index011'
+iind='e201_054_index024'
 radian_alignment=radian_alignment_saved
 tcs_correct, coms_correct, tcs_fail, coms_fail,\
         com_goal, goal_cell_shuf_ps_per_comp_av,\
@@ -101,7 +102,8 @@ velocity = np.hstack(veldf.rolling(5).mean().values)
 # ftol - int: Frame tolerance for merging stop periods
 moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
 pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
-nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick,=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
+nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick,\
+        mov_success_tmpts=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
         velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
         max_reward_stop=31.25*5)
 # nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
@@ -114,7 +116,7 @@ rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 #%%
 range_val,binsize=10, .1
-for gc in goal_cell_iind[:2]:
+for gc in goal_cell_iind[:3]:
     # TODO: make condensed
     _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)

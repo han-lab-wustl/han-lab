@@ -25,7 +25,7 @@ from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'near_rew.pdf')
+savepth = os.path.join(savedst, 'near_rew_acc.pdf')
 #%%
 goal_window_cm=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -44,7 +44,7 @@ epoch_perm = []
 radian_alignment = {}
 lasttr=8 #  last trials
 bins=90
-num_iterations=100
+num_iterations=1000
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 
 # iterate through all animals
@@ -94,6 +94,7 @@ for ii in range(len(conddf)):
         # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         # skew_mask = skew_filter>2
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+        dFF=dFF[:,skew>2]
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
             tcs_correct, coms_correct, tcs_fail, coms_fail, \
             com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av,pdist = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
@@ -127,62 +128,18 @@ for ii in range(len(conddf)):
             s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
         else: 
             s2p_iind_goal_cells=[]
-        ### get latencies
+        ### get acc correlation
         velocity = fall['forwardvel'][0]
         veldf = pd.DataFrame({'velocity': velocity})
         velocity = np.hstack(veldf.rolling(5).mean().values)
-        # velocity - ndarray: velocity of the animal
-        # thres - float: Threshold speed in cm/s
-        # Fs - int: Number of frames minimum to be considered stopped
-        # ftol - int: Frame tolerance for merging stop periods
-        moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
-        pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
-        nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
-        rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, 
-                    pre_win_framesALL, post_win_framesALL,\
-                velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
-                max_reward_stop=31.25*5)    
-        # nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
-        #         post_win_framesALL,velocity, fall['rewards'][0])
-        nonrew_stop_without_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
-        nonrew_stop_without_lick_per_plane[nonrew_stop_without_lick.astype(int)] = 1
-        nonrew_stop_with_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
-        nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
-        movement_starts=mov_success_tmpts.astype(int)
-        rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
-        rew_per_plane[rew_stop_with_lick.astype(int)] = 1
-        move_start = np.zeros_like(fall['changeRewLoc'][0])
-        move_start[movement_starts.astype(int)] = 1
-        range_val=7;binsize=0.1
-        gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
-        # get latencies based on average of trials
-        for gc in goal_cells:
-            # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
-            #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-            # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
-            #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-            _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
-                fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-            # if np.nanmax(meanrew)>1: # only get highly active cells?
-            _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-            iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
-            transient_after_rew=iind[iind>int(range_val/binsize)]
-            if len(transient_after_rew)>0:
-                transient_after_rew=transient_after_rew[0]
-            else:
-                transient_after_rew=np.nan
-            gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
-            iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
-            transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+3/binsize))]
-            if len(transient_before_move)>0:
-                transient_before_move=transient_before_move[0]
-            else:
-                transient_before_move=np.nan
-            gc_latencies_mov.append((transient_before_move-int(range_val/binsize))*binsize)
-            cellid.append(gc)
-        # only get goal cells with large latencies
-        goal_cells = [xx for ii,xx in enumerate(goal_cells) if gc_latencies_rew[ii]>3 and gc_latencies_mov[ii]<2]
+        acc=velocity[1:]/np.diff(fall['timedFF'][0])
+        acc_ = pd.DataFrame(acc).interpolate(method ='linear',limit_direction ='backward').values
+        acc_ = pd.DataFrame(acc_).interpolate(method ='linear',limit_direction ='forward').values[:,0]
+
+        racc = [scipy.stats.pearsonr(acc_,dFF[1:,gc])[1] for gc in goal_cells]
+        # threshold of .2 correlation
+        thres=0.1
+        goal_cells = [gc for ii,gc in enumerate(goal_cells) if racc[ii]>thres]
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
         goal_cell_iind=goal_cells
@@ -242,32 +199,22 @@ for ii in range(len(conddf)):
                 goal_cells_shuf = intersect_arrays(*com_goal)
             else:
                 goal_cells_shuf=[]
-                    ### get latencies
-            range_val=7;binsize=0.1
-            gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
-            # get latencies based on average of trials
+            ### get acc correlation
+            velocity = fall['forwardvel'][0]
+            veldf = pd.DataFrame({'velocity': velocity})
+            velocity = np.hstack(veldf.rolling(5).mean().values)
+            acc=velocity[1:]/np.diff(fall['timedFF'][0])
+            # interpoalte for nans
+            acc_ = pd.DataFrame(acc).interpolate(method ='linear',limit_direction ='backward').values
+            acc_ = pd.DataFrame(acc_).interpolate(method ='linear',limit_direction ='forward').values[:,0]
+            racc=[]
             for gc in goal_cells_shuf:
-                _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
-                    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-                _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-                fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-                iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
-                transient_after_rew=iind[iind>int(range_val/binsize)]
-                if len(transient_after_rew)>0:
-                    transient_after_rew=transient_after_rew[0]
-                else:
-                    transient_after_rew=np.nan
-                gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
-                iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
-                transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+3/binsize))]
-                if len(transient_before_move)>0:
-                    transient_before_move=transient_before_move[0]
-                else:
-                    transient_before_move=np.nan
-                gc_latencies_mov.append((transient_before_move-int(range_val/binsize))*binsize)
-                cellid.append(gc)
-            # only get goal cells with large latencies after rew and before loc
-            goal_cells_shuf = [xx for ii,xx in enumerate(goal_cells_shuf) if gc_latencies_rew[ii]>3 and gc_latencies_mov[ii]<2]
+                dff = pd.DataFrame(dFF[1:,gc]).interpolate(method ='linear',limit_direction ='backward').values
+                dff = pd.DataFrame(dff).interpolate(method ='linear',limit_direction ='forward').values[:,0]
+                r = scipy.stats.pearsonr(acc_,dff)[1]
+                racc.append(r)
+            # threshold of .2 correlation
+            goal_cells_shuf = [gc for ii,gc in enumerate(goal_cells_shuf) if racc[ii]>thres]
             shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
             goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
             goal_cell_shuf_ps.append(goal_cell_shuf_p)
@@ -285,8 +232,7 @@ for ii in range(len(conddf)):
         goal_cell_props.append(goal_cell_prop); num_epochs.append(num_epoch)
         goal_cell_nulls.append(goal_cell_null)
         radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
-
+            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av,goal_cells]
 pdf.close()
 
 # save pickle of dcts
@@ -297,7 +243,8 @@ plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep<2)]
+df=df[df.index.isin(inds)]
+df = df[((df.animals!='e217') | (df.animals!='e145') | (df.animals!='e139')) & (df.optoep<2)]
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = [xx[1] for xx in goal_cell_props]
 df['opto'] = df.optoep.values>1
