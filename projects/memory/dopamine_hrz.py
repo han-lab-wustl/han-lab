@@ -19,12 +19,12 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e243'
+animal = 'e242'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [45,46]
+days = [47,48]
 range_val=7; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False

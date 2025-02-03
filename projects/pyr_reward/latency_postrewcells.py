@@ -76,8 +76,8 @@ for k,v in radian_alignment_saved.items():
     except:
         rewsize = 10
 
-    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     # skew_mask = skew_filter>2

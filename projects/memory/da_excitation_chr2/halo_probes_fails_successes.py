@@ -35,12 +35,10 @@ condrewloc = condrewloc[pd.to_numeric(condrewloc['prevrewloc'], errors='coerce')
 condrewloc[['rewloc', 'prevrewloc']] = condrewloc[['rewloc', 'prevrewloc']].astype(float)
 condrewloc['Day'] = condrewloc['Day'].astype(int)
 condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values]
-
 src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
-# days_all = [[34,35,36,37,38,39,40],[35,36,37,38,39,40,41]]#,[29,30],[36,37]]
-days_all = [[54,55,56,57]]
+days_all = [[45,46,51,52,55,56,57]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -165,15 +163,15 @@ df['animal'] = np.concatenate([animal_opto, animal_nonopto])
 df = df.sort_values('condition')
 df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
 ax = sns.barplot(x='condition', y='slopes',hue='condition', data=df_plt, fill=False,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"},)
+    palette={'LED off': "slategray", 'LED on': "crimson"},)
 ax = sns.stripplot(x='condition', y='slopes', hue='condition', data=df_plt,s=15,
-            palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+            palette={'LED off': "slategray", 'LED on': "crimson"})
 
 for i in range(len(df.animal.unique())):
     ax = sns.lineplot(x='condition', y='slopes', data=df[df.animal==df.animal.unique()[i]],
             errorbar=None, color='dimgray', linewidth=2)
 ax = sns.stripplot(x='condition', y='slopes', hue='condition', data=df,s=12,
-    alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+    alpha=0.5,palette={'LED off': "slategray", 'LED on': "crimson"})
 # ax.set_ylim(0, 1.04)
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('$\Delta$ F/F Slope')
@@ -288,8 +286,8 @@ fig.tight_layout()
 # 4-combine days and split by trials
 # transient trace of so
 # per trial
-height=.04
-ymin=-.04
+height=.02
+ymin=-.02
 fig, ax = plt.subplots(figsize=(9,5))
 pln=3
 trialtype = 0# odd bc red laser
@@ -299,7 +297,7 @@ opto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in \
 # subset of trials
 # color part of trace turqoise, the other part grey
 # normalize to before 1 s
-pre_window = 3 #s
+pre_window = 2 #s
 opto_all_trial = np.array([xx-np.nanmean(xx[int((range_val/binsize)-(pre_window/binsize)):int(range_val/binsize)]) for xx in opto_all_trial])
 opto_all_trial_ledon = np.ones_like(opto_all_trial)*np.nan
 opto_all_trial_ledoff = opto_all_trial
@@ -330,7 +328,6 @@ patches.Rectangle(
 ax.set_ylim(ymin, height) 
 ax.set_xlabel('Time from Conditioned Stimulus (s)')
 ax.set_ylabel('$\Delta$ F/F')
-trialtype = 0 # odd
 nonopto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in enumerate(day_date_dff_arr_nonopto_all_tr)]).T
 # subset of trials
 # normalize to before 1 s
