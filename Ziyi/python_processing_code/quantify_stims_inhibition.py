@@ -9,6 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
+import matplotlib.pyplot as plt
 from projects.memory.behavior import get_success_failure_trials, consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -27,7 +28,7 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 # src = r"Z:\halo_grabda"
-srcs = [r"\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\VTA_mice\E277\250103_ZH_000_000"]
+srcs = [r"\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\VTA_mice_copy\E277\9"]
 # animals = ['e241']
 # days_all = [[1]]
 

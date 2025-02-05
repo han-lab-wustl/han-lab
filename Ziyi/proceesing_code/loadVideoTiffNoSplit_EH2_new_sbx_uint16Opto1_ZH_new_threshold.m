@@ -1,10 +1,12 @@
-function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto1(varargin)
+function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto1_ZH_new_threshold(varargin)
 %called by "runVideosTiff_EH_new_sbx_uint16"
 %version that doesn't divide by 2 for non-suite2p analysis
 % modified from moi's version. 
 % 200329. EH.
 % 200501 EH. changed java path for this computer
 % also change to imagej save file name.
+% 250128 ZH change the method to find the stims, using 2std above the 
+% mean
 % Uses sbxread to load chunks of .sbx files, limiting RAM requirements
 % for some reason, suite2p turns everything into unsigned 16bit with max
 % intensity value of 32767 (after motion correction). think this will actually clip high end of
@@ -19,7 +21,7 @@ javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\mij.jar'
 filepath=varargin{1};
 filename=varargin{2};
 dir=varargin{3};  
-threshold = varargin{4};
+%threshold = varargin{4};
 
 % win=60*Fs;
 

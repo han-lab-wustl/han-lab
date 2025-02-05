@@ -1,4 +1,4 @@
-function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto1(varargin)
+function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto1_stims_db_mode(varargin)
 %called by "runVideosTiff_EH_new_sbx_uint16"
 %version that doesn't divide by 2 for non-suite2p analysis
 % modified from moi's version. 
@@ -16,11 +16,19 @@ function loadVideoTiffNoSplit_EH2_new_sbx_uint16Opto1(varargin)
 javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\ij.jar'
 javaaddpath 'C:\Program Files\MATLAB\R2023b\java\jar\mij.jar'
 
+if nargin<2
+    [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
+    dir='bi new';
+elseif nargin<3
+filepath=varargin{1};
+filename=varargin{2};
+dir='bi new';
+else
 filepath=varargin{1};
 filename=varargin{2};
 dir=varargin{3};  
-threshold = varargin{4};
-
+%threshold = varargin{4};
+end
 % win=60*Fs;
 
 cd (filepath); %set path
@@ -70,7 +78,9 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
 %         chtemp=chtemp(:,90:718,:)-choptotemp(:,90:718,:);
         choptotemp = repmat((nanmean(chtemp_original(:,740:end,:),2)),1,size(chtemp_original,2),1);
         %         chtemp=chtemp(:,90:730,:);
-        chtemp=chtemp_original(110:end,125:718,:)-choptotemp(110:end,125:718,:); % zd added option to crop etl
+        %chtemp=chtemp_original(110:end,125:718,:)-choptotemp(110:end,125:718,:); % zd added option to crop etl
+        chtemp=chtemp_original(1:20,:,:)-choptotemp(1:20,:,:); % zh have this for only have etl
+
     end
     
    chtemp=(((double(chtemp))/2)-1); %make max of movie 32767 (assuming it was 65535 before)
@@ -92,11 +102,11 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     MIJ.run('Close All');
 end
 
- % tempstims = zeros(length(temps),1);
+
  %   for p = 1:size(info.etl_table,1)
  %       currx = p:size(info.etl_table,1):length(temps);
  %       temp2 = (abs(temps(currx)/nanmean(temps(currx))-1));
- %       s = find(temp2>threshold);
+ %       s = find(temp2>0.05);
  %       if ~isempty(s)
  %       tempstims(currx(s)) = 1;
  %       end

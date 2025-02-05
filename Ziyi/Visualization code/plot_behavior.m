@@ -14,7 +14,7 @@ clear all; close all
 
 mouse_name = "e228";
 days = [2]; % can be string or integer (has to be your folder names)
-src = 'E:\Ziyi\Data\241226_ZH\vr';
+src = 'E:\Ziyi\Data\250128_ZH\vr';
 % src = '\\storage1.ris.wustl.edu\ebhan\Active\dzahra';
 grayColor = [.7 .7 .7];
 ind = 1;
@@ -24,7 +24,8 @@ ind = 1;
 %     daypth = dir(fullfile(src,"vr\*.mat")); % path to vr file per mouse   
 % %     daypth = dir(fullfile(src, mouse_name, string(day), "*time*.mat"));    
     % mouse = load(fullfile(daypth.folder,daypth.name)); 
-    mouse = load('E244_26_Dec_2024_time(14_37_09)');
+    mouse = load('H:\E245_23_Jan_2025_time(15_02_33).mat')
+    %mouse = load('E:\Ziyi\Data\241226_ZH\vr\E245_21_Jan_2025_time(15_06_25).mat');
     % get success and fail trials
     [s,f,str, ftr, ttr, tr] = get_success_failure_trials(mouse.VR.trialNum, mouse.VR.reward);
     success_prop{ind} = s/tr;

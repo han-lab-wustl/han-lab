@@ -1,0 +1,139 @@
+clear all
+close all
+
+mouse_id = 244;
+addon = '_dark_reward';
+mov_corr = []; 
+stop_corr = []; 
+mov_stop = [];
+mov_corr_success = []; 
+stop_corr_success = [];
+mov_corr_prob = []; 
+stop_corr_prob = [];
+mov_corr_fail = [];
+stop_corr_fail = [];
+cnt = 0;
+
+pr_dir0 = uipickfiles;
+
+oldbatch = 0; %input('if oldbatch press 1 else 0=');
+
+% Initialize variables for averaging across days
+
+roi_mean_all = cell(1, 4);
+img_mean_all = cell(1, 4);
+reg_name={'Plane 1 SLM','Plane 2 SR','Plane 3 SP','Plane 4 SO'};
+
+
+planecolors={[0 0 1],[0 1 0],[204 164 61]/256,[231 84 128]/256};
+roiplaneidx = cellfun(@(x) str2num(x(7)),reg_name,'UniformOutput',1);
+[v, w] = unique( roiplaneidx, 'stable' );
+duplicate_indices = setdiff( 1:numel(roiplaneidx), w )
+color = planecolors(roiplaneidx);
+color(duplicate_indices)=cellfun(@(x) x/2 ,color(duplicate_indices) ,'UniformOutput' ,false)
+
+for alldays = 1:length(pr_dir0)
+    planeroii = 0;
+    for allplanes = 1:4
+        plane = allplanes;
+        Day = alldays;
+        pr_dir1 = strcat(pr_dir0{Day}, '\suite2p');
+        pr_dir = strcat(pr_dir1, '\plane', num2str(plane-1), '\reg_tif\', '');
+        
+        if exist(pr_dir, 'dir')
+            cd(pr_dir)
+            load('params.mat')
+            
+            if isfield(params, 'base_mean')
+                base_mean = params.base_mean;
+            else
+                oldversionfile = dir('file*.mat');
+                load(oldversionfile.name)
+                if ~exist('forwardvel')
+                    forwardvel = speed_binned;
+                end
+            end
+            
+            if ~exist('lickVoltage')
+                oldversionfile = dir('file*.mat');
+                load(oldversionfile.name)
+                if ~exist('forwardvel')
+                    forwardvel = speed_binned;
+                end
+            end
+            
+            numplanes = 4;
+            gauss_win = 5;
+            frame_rate = 31.25;
+            lickThresh = -0.085;
+            rew_thresh = 0.001;
+            sol2_thresh = 1.5;
+            num_rew_win_sec = 5;
+            rew_lick_win = 10;
+            pre_win = 5;
+            post_win = 5;
+            exclusion_win = 10;
+            speed_thresh = 5;
+            Stopped_frame = 15;
+            max_reward_stop = 5 * frame_rate;
+            frame_tol = 5;
+         
+            CSUStimelag = 0.5;
+            frame_time = 1 / frame_rate;
+            num_rew_win_frames = round(num_rew_win_sec / frame_time);
+            rew_lick_win_frames = round(rew_lick_win / frame_time);
+            post_win_frames = round(post_win / frame_time / numplanes);
+            post_win_framesALL = round(post_win / frame_time);
+            pre_win_framesALL = round(pre_win / frame_time);
+            pre_win_frames = round(pre_win / frame_time / numplanes);
+            exclusion_win_frames = round(exclusion_win / frame_time);
+            CSUSframelag_win_frames = round(CSUStimelag / frame_time);
+            speedftol = 10;
+            
+            mean_base_mean = mean(base_mean);
+            norm_base_mean = base_mean;
+            
+            if exist('forwardvelALL')
+                speed_binned = forwardvelALL;
+            end
+            reward_binned = rewardsALL;
+            temp = find(reward_binned);
+            reward_binned(temp(find(diff(temp) == 1))) = 0;
+            
+            speed_smth_1 = smoothdata(speed_binned, 'gaussian', gauss_win)';
+            dop_smth = smoothdata(norm_base_mean, 'gaussian', gauss_win);     
+            df_f = params.roibasemean3;
+            
+            roi_mean = mean(params.roirawmean2{1,1});
+            roi_mean_all{plane} = [roi_mean_all{plane}, roi_mean];
+
+            img_mean = mean(params.raw_mean);
+            img_mean_all{plane} = [img_mean_all{plane}, roi_mean];;
+            
+        end
+
+    end
+end
+% 
+% % Average results over days for each plane
+% avg_roinorm_single_tracesCS = cellfun(@(x) mean(x, 2), all_roinorm_single_tracesCS, 'UniformOutput', false);
+% avg_roinorm_single_traces_roesmthCS = cellfun(@(x) nanmean(x, 2), all_roinorm_single_traces_roesmthCS, 'UniformOutput', false);
+% 
+% % Plot results for each plane
+% %figure('Position', [100, 100, 800, 400]);
+% % make_it_tight = true;
+% % subplot = @(m,n,p) subtightplot (m, n, p, [0.05 0.05], [0.1 0.01], [0.1 0.01]);
+% % if ~make_it_tight,  clear subplot;  end
+% 
+% num_days = size(all_day_roinorm_single_tracesCS{plane},2); % Number of days
+% 
+figure
+set(gcf, 'Position', [100, 100, 800, 300])
+for plane = 1:4
+    subplot(2,2,plane)
+    plot(roi_mean_all{plane})
+    title(reg_name{plane})
+    xlabel('Days');
+    ylabel('Intensity');
+    xlim([1 length(roi_mean_all{plane})])
+end
