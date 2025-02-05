@@ -33,6 +33,7 @@ def consecutive_stretch(x):
         y.append(x[prev_idx:])
     
     return y
+
 def calculate_ALR(licks_cue, duration_cue, licks_baseline, duration_baseline):
     # Calculate lick rates
     lick_rate_cue = licks_cue / duration_cue

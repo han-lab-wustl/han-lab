@@ -4,7 +4,7 @@ clc
 
 COMbytrial = figure;
 variance = figure;
-mice_names= [{'e200'} {'e201'}];
+mice_names= [{'e216'}];
 days_per_mouse = {[65:76,78:93], [55:73,75:80, 82:92]}; % opto sequence, ep2 5 trials, ep3 5 trials, control
 conditions = {'ep2', 'ep3', 'control'};
 cond_days = {{[65    68    71    74    78    81    84    87    90 93], ...
@@ -13,7 +13,7 @@ cond_days = {{[65    68    71    74    78    81    84    87    90 93], ...
     {[55    58    61    64    67    70    73    77    80    83    86 88 91 92], ....
     [56    59    62    65    68    71    75    78    82    84    87 89], ....
     [57    60    63    66    69    72    76    79    85]}}; % animal x condition
-srcs = ["Y:\sstcre_imaging", "Z:\sstcre_imaging"];
+srcs = ["X:\vipcre"];
 %iterate through conditions
 
 for condind=1:length(conditions)

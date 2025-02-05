@@ -5,8 +5,6 @@ april 2024
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
-from sklearn.cluster import KMeans
-import seaborn as sns
 from placecell import get_rewzones, find_differentially_activated_cells, \
 find_differentially_inactivated_cells, convert_com_to_radians, get_pyr_metrics_opto
 import matplotlib.backends.backend_pdf
@@ -20,9 +18,13 @@ plt.rcParams["font.family"] = "Arial"
 
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com.csv", index_col=None)
-savepth = r'Z:\opto_analysis_stable_vs_remap_all_an.pdf'
+conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data\vip_inhibition'
+savepth = os.path.join(savedst, 'opto_analysis_stable_vs_remap_all_an.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+# import raw data
+with open("Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
+        dcts = pickle.load(fp)
 
 #%%
 figcom, axcom = plt.subplots()
@@ -41,7 +43,8 @@ for ii in range(len(conddf)):
     animal = conddf.animals.values[ii]
     day = conddf.days.values[ii]
     if True:# conddf.in_type.values[ii]=='vip': #and conddf.animals.values[ii]=='e218':#and conddf.optoep.values[ii]==2:# and conddf.animals.values[ii]=='e218':
-        plane=0 #TODO: make modular        
+        plane=0 #TODO: make modular  
+        dct = dcts[ii]      
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{plane}_Fall.mat"
         # fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'tuning_curves_pc_early_trials',
         #     'tuning_curves_pc_late_trials', 'coms_pc_late_trials', 'coms_pc_early_trials'])
@@ -49,13 +52,11 @@ for ii in range(len(conddf)):
             'tuning_curves_late_trials', 'coms', 'coms_early_trials'])        
         changeRewLoc = np.hstack(fall['changeRewLoc'])
         eptest = conddf.optoep.values[ii]
-        if conddf.optoep.values[ii]<2: eptest = random.randint(2,3)    
         eps = np.where(changeRewLoc>0)[0]
         rewlocs = changeRewLoc[eps]*1.5
         rewzones = get_rewzones(rewlocs, 1.5)        
         eps = np.append(eps, len(changeRewLoc))    
-        if len(eps)<4: eptest = 2 # if no 3 epochs
-        comp = [eptest-2,eptest-1] # eps to compare 
+        comp = dct['comp'] # eps to compare 
         other_eps = [xx for xx in range(len(eps)-1) if xx not in comp]   
         rewzones_comps.append(rewzones[comp])
         bin_size = 3    
@@ -66,9 +67,8 @@ for ii in range(len(conddf)):
         tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
         tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))        
         # Find differentially inactivated cells
-        threshold=7
-        differentially_inactivated_cells = find_differentially_inactivated_cells(tc1_late, tc2_late, threshold, bin_size)
-        differentially_activated_cells = find_differentially_activated_cells(tc1_late,tc2_late, threshold, bin_size)
+        differentially_inactivated_cells = dct['inactive']
+        differentially_activated_cells = dct['active']
         # coms = fall['coms_pc_late_trials'][0]
         # coms_early = fall['coms_pc_early_trials'][0]
         coms = fall['coms'][0]
@@ -78,9 +78,10 @@ for ii in range(len(conddf)):
         coms1_early = np.hstack(coms_early[comp[0]])
         coms2_early = np.hstack(coms_early[comp[1]])
         com_remap = (coms1-rewlocs[comp[0]])-(coms2-rewlocs[comp[1]])
-        window = 10 # cm
+        window = 20 # cm
+        goal_window = 10 # cm
         # get proportion of remapping vs. stable cells
-        remap = np.where((com_remap<window) & (com_remap>-window))[0]
+        remap = np.where((com_remap<goal_window) & (com_remap>-goal_window))[0]
         remap = np.array([cl for cl in remap if np.nanmax(tc1_late[cl,:])>0.2])
         stable = np.where(((coms1-coms2)<window) & ((coms1-coms2)>-window))[0]
         stable = np.array([cl for cl in stable if np.nanmax(tc1_late[cl,:])>0.2])
@@ -151,23 +152,26 @@ for ii in range(len(conddf)):
                     ax1.set_xlabel('Spatial bins (3cm)')
                     fig.tight_layout()
                 pdf.savefig(fig)
-                    
+                plt.close(fig)    
             # per cell examples
-            # for cl in inactive_remap:            
-            #     if np.nanmax(tc1_late[cl,:])>0.2:
-            #         fig, ax = plt.subplots()           
-            #         ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
-            #         ax.plot(tc2_late[cl,:],color='red',label='led_on')
+            for cl in remap:            
+                if np.nanmax(tc1_late[cl,:])>0.2:
+                    fig, ax = plt.subplots()           
+                    ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
+                    ax.plot(tc1_early[cl,:],color='k',label='previous_ep_early',linestyle='--')
+                    ax.plot(tc2_late[cl,:],color='red',label='led_on')
+                    ax.plot(tc2_early[cl,:],color='red',label='led_on_early',linestyle='--')
+                    ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
+                    ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
                     
-            #         ax.axvline(rewlocs[comp[0]]/bin_size,color='k', linestyle='dotted')
-            #         ax.axvline(rewlocs[comp[1]]/bin_size,color='red', linestyle='dotted')
-                    
-            #         # ax.set_axis_off()  
-            #         ax.set_title(f'Goal remap cell \n animal: {animal}, day: {day}, optoep: {conddf.optoep.values[ii]}')
-            #         ax.spines['top'].set_visible(False)
-            #         ax.spines['right'].set_visible(False) 
-            #         ax.legend()
-            # for cl in inactive_stable:
+                    # ax.set_axis_off()  
+                    ax.set_title(f'Distance-to-goal cell \n animal: {animal}, day: {day}, optoep: {conddf.optoep.values[ii]}')
+                    ax.spines['top'].set_visible(False)
+                    ax.spines['right'].set_visible(False) 
+                    ax.legend()
+                    pdf.savefig(fig)
+                    plt.close(fig)
+            # for cl in stable:
             #     if np.nanmax(tc1_late[cl,:])>0.2:
             #         fig, ax = plt.subplots()           
             #         ax.plot(tc1_late[cl,:],color='k',label='previous_ep')
@@ -180,7 +184,7 @@ for ii in range(len(conddf)):
             #         ax.set_title(f'Stable tuning cell \n animal: {animal}, day: {day}, optoep: {conddf.optoep.values[ii]}')
             #         ax.spines['top'].set_visible(False)
             #         ax.spines['right'].set_visible(False) 
-            #         ax.legend()
+                    ax.legend()
         # # replace nan coms
         if len(remap)>0 and len(stable)>0:
             if (conddf.optoep.values[ii]>1):
@@ -203,7 +207,7 @@ axcom.spines['top'].set_visible(False)
 axcom.spines['right'].set_visible(False)
 axcom.set_xlabel('Prev Ep COM')
 axcom.set_ylabel('Target Ep COM')
-axcom.set_title('Goal remapping, LED off')
+axcom.set_title('Distance-to-goal coding, LED off')
 figcom.tight_layout()
 axcom2.plot(axcom2.get_xlim(), axcom2.get_ylim(), color='k', linestyle='--')
 axcom2.axvline(0, color='slategray', linestyle='--')
@@ -212,7 +216,7 @@ axcom2.spines['top'].set_visible(False)
 axcom2.spines['right'].set_visible(False)
 axcom2.set_xlabel('Prev Ep COM')
 axcom2.set_ylabel('Target Ep COM')
-axcom2.set_title('Goal remapping, LED on')
+axcom2.set_title('Distance-to-goal coding, LED on')
 figcom2.tight_layout()
 axcom3.plot(axcom3.get_xlim(), axcom3.get_ylim(), color='orange', linestyle='--')
 axcom3.axvline(0, color='yellow', linestyle='--')

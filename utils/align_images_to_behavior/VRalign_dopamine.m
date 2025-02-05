@@ -485,19 +485,4 @@ for n = 1:numfiles
 %     end
 end
 
-%%
-% for n=1:numfiles
-%     fullFfile=[Ffilepath{n} Ffile{n}]
-%     %     load(fullFfile);
-%     %save(fullFfile,'ybinned','numframes','rewards','angle','forwardvel','rotationvel','velbinsize','meanbinforwardvel','meanbinrotationvel','timebinx','-append');
-%     pause(1);
-%
-%
-%     save(fullFfile,'ybinned','rewards','forwardvel','licks','changeRewLoc','trialnum','timedFF','-append'); %131018 added galvobinned
-%     %     if size(data,2)>7%131018
-%     %         save(fullFfile,'ch8binned','-append');
-%     %     end
-% end
-
-
 end

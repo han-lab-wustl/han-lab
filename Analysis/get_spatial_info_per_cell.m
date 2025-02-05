@@ -10,7 +10,8 @@ function info = get_spatial_info_per_cell(Fc3,fv,thres, ftol, ...
 
 %%
 
-[time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
+% [time_moving,~] = get_moving_time_V3(fv, thres, Fs, ftol);
+time_moving = find(fv>thres); % vel greater than 5 cm/s
 bin_size = track_length/nBins;
 pos_moving = position(time_moving);
 

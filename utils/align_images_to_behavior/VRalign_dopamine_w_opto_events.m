@@ -1,4 +1,4 @@
-function [fullFfile] = VRalign_dopamine_w_opto_events(vrfl, params, numfiles)
+function [fullFfile] = VRalign_dopamine(vrfl, params, numfiles)
 % Zahra's function
 % vrfl = path to vr file (for zahra's folder structure, in behavior/vr
 % numfiles = number of planes (I didn't name this variable so didn't change it

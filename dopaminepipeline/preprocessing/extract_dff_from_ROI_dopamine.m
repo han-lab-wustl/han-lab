@@ -1,4 +1,4 @@
-function [params] = extract_dff_from_ROI_dopamine(pr_dir)
+function [params] = extract_dff_from_ROI_dopamine(pr_dir, base_window, pctile)
 
 % extract base mean from all rois selected before
 % also calculates dff
@@ -10,7 +10,7 @@ for days=days_check
     dir_s2p = struct2cell(dir([pr_dir{days} '\**\suite2p']));
     planefolders = dir_s2p(:,~cellfun(@isempty,regexp(dir_s2p(1,:),'plane')));
     for allplanes=1:size(planefolders,2) %1:4
-        clearvars -except mouse_id pr_dir days_check days dir_s2p planefolders allplanes
+        clearvars -except mouse_id pr_dir days_check days dir_s2p planefolders allplanes pctile base_window
 
         pr_dir2=strcat(planefolders{2,allplanes},'\plane',num2str(allplanes-1),'\reg_tif\')
 
@@ -29,7 +29,7 @@ for days=days_check
         N=info(1).Height;
         chone=[];
         tic
-        for jj=1:length(ntif)            
+        for jj=1:length(ntif)
             myfilename = (list_tif(ntif(jj)).name);
             info=imfinfo(myfilename);
             chone_temp = double(TIFFStack(myfilename));
@@ -39,8 +39,13 @@ for days=days_check
         %         toc
         %%%%%
 
-        crop_points1=[41 169 619 512]; %%% Direct .sbx crop
-        %          crop_points1=[1 169 619 512]; %%% Direct .sbx crop
+        crop_points1=[41-35 169-110 594 403]; %%% Direct .sbx crop
+        % zd made the dimensions compatible with previous cropping
+        % after cropping etl pre motion correction
+        % and new opto cropping params
+        %         crop_points1=[1 169 619 512]; %%% Direct .sbx crop
+        % note that zahra crops off etl before motion correction (110
+        % pixels)
 
         eval(['x1=crop_points' num2str(1) '(1);']);  %x for area for correction
         eval(['x2=crop_points' num2str(1) '(3);']);
@@ -50,7 +55,6 @@ for days=days_check
         M=size(chone,2);
         N=size(chone,1);
         chone=chone(max(y1,1):min(y2,N),max(x1,1):min(x2,M),:);
-
 
         %         toc
 
@@ -102,7 +106,6 @@ for days=days_check
                 junk=squeeze(mean(mean(roim_sel,'omitnan'),'omitnan'));%mean of each image, frame x 1 vector
                 numframes = size(chone,3);
                 mean_all=mean(mean(mean(roim_sel,'omitnan'),'omitnan'),'omitnan');
-                base_window=200;
                 %                 junk2=zeros(size(junk));
                 %                 parfor kk=1:length(junk)
                 %                     kk
@@ -111,13 +114,10 @@ for days=days_check
                 %                     a=round(length(cut)*.08);
                 %                     junk2(kk)=cutsort(a);
                 %                 end
-                junk2 = movquant(junk,0.08,base_window,[],'omitnan','truncate');
-
+                junk2 = movquant(junk,pctile,base_window,[],'omitnan','truncate');
                 parfor i=1:numframes
-                    i
                     roim_sel(:,:,i)=(roim_sel(:,:,i)/junk2(i))*mean_all;
                 end
-
 
                 roibase_mean3{jj,1}=squeeze(mean(mean(roim_sel(:,:,:),1,'omitnan'),'omitnan'));
                 plot(roibase_mean3{jj,1})
@@ -127,10 +127,7 @@ for days=days_check
             params.roibasemean3=roibase_mean3;
             %             params.roibasemean4=roibase_mean4;
             params.roirawmean2=roiraw_mean;
-
-
         end
-        base_window=200;
         numframes = size(chone,3); %fix  to set slidingwindow limits to full video
         % old version
         %         tic
@@ -143,7 +140,7 @@ for days=days_check
         %             a=round(length(cut)*.08);
         %             junk2(kk)=cutsort(a);
         %         end
-        junk2 = movquant(junk,0.08,base_window,[],'omitnan','truncate');
+        junk2 = movquant(junk,pctile,base_window,[],'omitnan','truncate');
         params.raw_mean = junk;
 
         parfor i=1:numframes

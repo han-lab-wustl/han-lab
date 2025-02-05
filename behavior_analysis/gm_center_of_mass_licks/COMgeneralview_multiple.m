@@ -61,7 +61,7 @@ clc
 clear %clean up the environment
 % [filename,filepath] = uigetfile('*.mat','MultiSelect','on');
 mouse_name = "e201";
-days = [55:60];
+days = [55];
 src = "Z:\sstcre_imaging";
 for day=1:length(days)
     daypth = dir(fullfile(src, mouse_name, string(days(day)), "behavior", "vr\*.mat"));
@@ -84,10 +84,10 @@ for day_number = 1:length(filename)
     else
         subplot(min(ceil(length(filename)/4),6),4,mod(day_number,24))
     end
-    file = fullfile(filepath, filename{day_number});
+    file = fullfile(filepath{day_number}, filename{day_number});
     load(file) %load it
     if 1 %length(find(VR.changeRewLoc)) > 1
-        cd (filepath); %EH set path
+        cd (filepath{day_number}); %EH set path
         addpath('C:\Users\Han lab\Documents\MATLAB\han-lab\hidden_reward_zone_task\behavior'); % ZD code path
         COMgeneralanalysis
         

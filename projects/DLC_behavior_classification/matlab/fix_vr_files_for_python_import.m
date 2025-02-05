@@ -1,27 +1,12 @@
-clear all;
-src = 'I:\vids_to_analyze\face_and_pupil';
-fls = dir(fullfile(src, '*time*.mat'));
+ clear all;
+src2 = 'I:\vip_inhibition';
+fls2 = dir(fullfile(src2, '*time*.mat'));
 
-for i=1:length(fls)
-    try
-        load(fullfile(fls(i).folder,fls(i).name))
-        save(fullfile(fls(i).folder,fls(i).name),'VR','-v7.3')
-    catch
-        disp(fls(i).name)
-    end
-    clear VR
-end
-%%
-clear all;
-src = 'Y:\analysis\fmats\218';
-fls = dir(fullfile(src, '*.mat'));
-
-for i=1:length(fls)
-    try
-        load(fullfile(fls(i).folder,fls(i).name))
-        save(fullfile(fls(i).folder,fls(i).name),'VR','-v7.3')
-    catch
-        disp(fls(i).name)
-    end
-    clear 
+for i=1:length(fls2)    
+    load(fullfile(fls2(i).folder,fls2(i).name))    
+    save(fullfile(fls2(i).folder,fls2(i).name),'VR','-v7.3')
+    disp(fls2(i).name)
+%     disp(src)
+%     disp(fls)
+    clearvars -except src2 fls2 i
 end

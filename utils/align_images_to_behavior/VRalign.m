@@ -12,17 +12,34 @@ inds=find((abs(diff(imageSync))>0.3*max(abs(diff(imageSync))))==1);
 meaninds=mean(diff(inds));
 figure;subplot(2,1,1);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
 % subplot(2,1,1); hold on; scatter(1000*(VR.time),zeros(1,length(VR.time)),20,'y','filled');
+%%%%%%%
+% xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
+% xlim([560 780])
+pause
+[uscanstart,y]=ginput(1)
+uscanstart=round(uscanstart)
+%%%%%%%%%%%%%
+
 subplot(2,1,2);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
-xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
-%xlim([770 780])
-[uscanstart,y]=ginput(1);
-uscanstart=round(uscanstart);
+% xlim([inds(1)-2.5*meaninds inds(1)+2.5*meaninds]);
+% % xlim([560 780])
+% pause
+% [uscanstart,y]=ginput(1)
+% uscanstart=round(uscanstart)
 
 figure;subplot(2,1,1);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
-subplot(2,1,2);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
-xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
+%%%%
+% xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
+pause
 [uscanstop,y]=ginput(1)
-uscanstop=round(uscanstop);
+uscanstop=round(uscanstop)
+%%%%
+
+subplot(2,1,2);hold on;plot(imageSync);plot(abs(diff(imageSync))>0.3*max(abs(diff(imageSync))),'r');
+% xlim([inds(end)-4*meaninds inds(end)+2*meaninds]);
+% pause
+% [uscanstop,y]=ginput(1)
+% uscanstop=round(uscanstop)
 disp(['Length of scan is ', num2str(uscanstop-uscanstart)])
 disp(['Time of scan is ', num2str((VR.time(uscanstop)-VR.time(uscanstart)))])
 

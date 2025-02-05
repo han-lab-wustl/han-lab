@@ -12,7 +12,7 @@ import tifffile as tif, numpy as np, os, sys, shutil
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom to your clone
 import SimpleITK as sitk, re
-from avi import read_to_memmap, vidwrite, listdir
+from avi import read_to_memmap, vidwrite, listdir, extract_integer_from_basename
 import argparse, ast   
 
 def main(**args):
@@ -32,7 +32,7 @@ def main(**args):
         flnm = os.path.join(dst, os.path.basename(vid)+'.avi')
         fls = np.array(listdir(vid, ifstring='tif'))
         # order by tif index, wrong if you just do sort!
-        order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[2]) for xx in fls])
+        order = np.array([extract_integer_from_basename(xx, os.path.basename(os.path.dirname(xx))) for xx in fls])    
         fls = fls[np.argsort(order)]
         y,x = sitk.GetArrayFromImage(sitk.ReadImage(fls[0])).shape
         if not os.path.exists(checkflnm[:-4]+'.npy') and not os.path.exists(checkflnm):
@@ -47,6 +47,7 @@ def main(**args):
             # if no vid written 
             # load memmap array 
             arr = np.memmap(flnm[:-4]+'.npy', dtype='uint8', mode='r', shape=(len(fls),y,x))      
+            print(f'*********found memap array! converting to tif...*********')
             vidwrite(flnm,arr)   # make avi 
             del arr # remove var
             # now delete memmap array
@@ -76,7 +77,7 @@ if __name__ == "__main__":
                         help="where to save avis")
     parser.add_argument("checkdst", type=str,
                         help="check to see if video does not already exist")
-    parser.add_argument("--delete_fld", default = 'True',
+    parser.add_argument("--delete_fld", default = 'False',
                         help="delete tifs after making avi")
     
     args = parser.parse_args()

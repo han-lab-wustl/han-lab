@@ -1,4 +1,5 @@
-% Zahra - Nov 2023
+% Zahra - june 2024
+% NEED TO RUN FOR CELL TRACKING AND TO GET PLACE CELL TUNING CURVES
 % makes tuning curves with velocity filter
 % uses suyash's binning method
 
@@ -11,10 +12,12 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-anms = ["e218", "e216", "e217", "e201", "e200", "e189", "e190", "e186"];
-dys_per_an = {[20:50], [7:10, 32,33,35:63,65],  [2:20, 26,27,29,31], [27:30, 32,33,34,36,38,40:75], ...
-    [62:70, 72,73,74, 76, 80:90], [7,8,10,11:15,17:21,24:42,44:46], [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45], ...
-    [1:51]};
+% anms = ["e218", "e216", "e217", "e201", "e200", "e189", "e190", "e186"];
+% dys_per_an = {[20:50], [7:10, 32,33,35:63,65],  [2:20, 26,27,29,31], [27:30, 32,33,34,36,38,40:75], ...
+%     [62:70, 72,73,74, 76, 80:90], [7,8,10,11:15,17:21,24:42,44:46], [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45], ...
+%     [1:51]};
+anms = ["e145"];
+dys_per_an = {[4 5 6 7 9 10 11]};
 % an = 'e190';%an='e189';
 % individual day analysis 
 % dys = [20:50]; % e218
@@ -38,7 +41,7 @@ for ii=1:length(anms)
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx anms dys_per_an ii
     % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
@@ -71,6 +74,10 @@ for dy=dys % for loop per day
         [~, dFF, Fc3] = create_dff_fc3(fullfile(pth.folder,pth.name), Fs);
         fprintf('********made dFF and Fc3 since they did not exist in structure********')
     end
+    load(fullfile(pth.folder,pth.name), 'dFF', ...
+    'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
+    'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+
     % check to see if changerewloc same length as fc3 (only a problem for old
     % multiplane rec
     if (size(Fc3,1)<size(changeRewLoc,2))
@@ -131,16 +138,15 @@ for dy=dys % for loop per day
         rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
             rew_zone/bin_size size(plt,1)], ... 
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        colormap jet
-        xticks([0:bin_size:ceil(track_length/bin_size)])
-        xticklabels([0:bin_size*bin_size:track_length])
+        xticks([0:bin_size*3:ceil(track_length/bin_size)])
+        xticklabels([0:bin_size*bin_size*3:track_length])
         title(sprintf('epoch %i', ep))
     end
 
     sgtitle(sprintf(['animal %s, day %i'], an, dy))
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);        
-    close(fig)
+    % close(fig)
     tuning_curves_pc_late_trials = tuning_curves;
     tuning_curves_pc_early_trials = tuning_curves_early_trials;
     coms_pc_late_trials = coms;
@@ -148,7 +154,7 @@ for dy=dys % for loop per day
     % also append fall with tables    
     save(fullfile(pth.folder,pth.name), 'tuning_curves_pc_late_trials', ...
         'tuning_curves_pc_early_trials', 'coms_pc_late_trials', ...
-        'coms_pc_early_trials', 'pc_tc_s2p_cellind', '-append')
+        'coms_pc_early_trials', 'pc_tc_s2p_cellind', 'pyr_tc_s2p_cellind', '-append')
 end
 end
 % save ppt

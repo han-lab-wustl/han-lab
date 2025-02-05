@@ -70,7 +70,7 @@ prevoptopin = ttlbool; //save the previous state of imaging ttl for diff
 
 
 void receiveEvent(){
-  byte tempa[2];
+  byte tempa[2]; // receive 2 bytes
   for (int i=0;i<2;i++){
    tempa[i] = Wire.read();
   }

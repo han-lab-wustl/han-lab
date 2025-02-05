@@ -13,8 +13,9 @@ function loadVideoTiffNoSplit_EH2_new_sbx_uint16(varargin)
 % assumption that max value in movie is 65535)
 
 %ZD added for Gerardo's workstation
-javaaddpath 'C:\Program Files\MATLAB\R2021b\java\mij.jar'
-javaaddpath 'C:\Program Files\MATLAB\R2021b\java\ij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+
 if nargin<2
     [filename,filepath]=uigetfile('*.sbx','Choose SBX file');
     dir='uni';
@@ -29,8 +30,8 @@ dir=varargin{3};
 end
 % win=60*Fs;
 
-cd (filepath); %set path
-stripped_filename=regexprep(filename,'.sbx','');
+% cd (filepath); %set path
+stripped_filename= strtok(fullfile(filename,filepath),'.');
 z = sbxread(stripped_filename,1,1);
 global info;
 % chone = sbxread(stripped_filename,0,info.max_idx+1);
@@ -70,8 +71,8 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
 %         chtemp=chone(:,110:709,((ii-1)*lenVid+1):min(ii*lenVid,length(chone)));
         chtemp=sbxread(stripped_filename,((ii-1)*lenVid),min(lenVid,(numframes-((ii-1)*lenVid))));
         chtemp=double(squeeze(chtemp));
-%         chtemp=chtemp(:,90:730,:);
-        chtemp=chtemp(:,90:718,:);
+% chtemp=chtemp(:,90:718,:);
+        chtemp=chtemp(100:500,110:718,:);
     end
     
 %    chtemp=(((double(chtemp))/2)-1); %make max of movie 32767 (assuming it was 65535 before)

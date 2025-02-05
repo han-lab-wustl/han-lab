@@ -9,6 +9,7 @@ import os, sys, shutil, tifffile, ast, time, re
 import argparse   
 import pandas as pd, numpy as np
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom your clone
+# sys.path.append(r'C:\Users\workstation2\Documents\MATLAB\han-lab') ## custom your clone
 from utils.utils import makedir 
 from utils import preprocessing
 
@@ -24,6 +25,7 @@ def main(**args):
         ##########################TRANSFER (COPY) DATA##########################
         preprocessing.copy_folder(params["transferdir"], os.path.join(params["datadir"], params["mouse_name"], params["day"]))
 
+        print('\n****** remember to run opto correction before s2p if doing opto!******\n')
     elif args["stepid"] == 1:
         ####CHECK TO SEE IF FILES ARE TRANSFERRED AND MAKE TIFS/RUN SUITE2P####
         #args should be the info you need to specify the params
@@ -32,7 +34,7 @@ def main(**args):
         print(params)
         #check to see if imaging files are transferred
         imagingfl=[xx for xx in os.listdir(os.path.join(params["datadir"],
-                                        params["mouse_name"], params["day"])) if "000" in xx][0]
+            params["mouse_name"], params["day"])) if "000" in xx][0]
         imagingflnm=os.path.join(params["datadir"], params["mouse_name"], params["day"], 
                 imagingfl)
         if not params["cell_detect_only"]: 
@@ -40,9 +42,11 @@ def main(**args):
             if len(imagingfl)!=0:           
                 print(imagingfl)
                 if params["crop_opto"]:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                    imagingflnm = preprocessing.maketifs(imagingflnm,89,
+                        512,89,718,nplanes=params["nplanes"])
                 else:
-                    imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718, dtype='axonal')            
+                    imagingflnm = preprocessing.maketifs(imagingflnm,0,
+                        512,89,718,nplanes=params["nplanes"])            
                 print(imagingflnm)
 
         #do suite2p after tifs are made
@@ -52,6 +56,8 @@ def main(**args):
         #edit ops if needed, based on user input
         ops = preprocessing.fillops(ops, params)
         ops["roidetect"]=0      
+        # no non-rigid
+        ops["nonrigid"]=False     
         # provide an h5 path in 'h5py' or a tiff path in 'data_path'
         # db overwrites any ops (allows for experiment specific settings)
         db = {
@@ -59,7 +65,7 @@ def main(**args):
             'h5py_key': 'data',
             'look_one_level_down': False, # whether to look in ALL subfolders when searching for tiffs
             'data_path': [imagingflnm], # a list of folders with tiffs 
-                                                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
+                    # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
                                                 
             'subfolders': [], # choose subfolders of 'data_path' to look in (optional)
             # 'fast_disk': 'C:/BIN', # string which specifies where the binary file will be stored (should be an SSD)
@@ -98,9 +104,11 @@ def main(**args):
                 if len(imagingfl)!=0:           
                     print(imagingfl)
                     if params["crop_opto"]:
-                        imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718)
+                        imagingflnm = preprocessing.maketifs(imagingflnm,89,512,89,718,
+                                nplanes=params["nplanes"])
                     else:
-                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718,dtype='axonal')            
+                        imagingflnm = preprocessing.maketifs(imagingflnm,0,512,89,718,
+                                nplanes=params["nplanes"])            
                     print(imagingflnm)
 
             #do suite2p after tifs are made
@@ -109,9 +117,9 @@ def main(**args):
             ops = suite2p.default_ops() # populates ops with the default options
             #edit ops if needed, based on user input
             ops = preprocessing.fillops(ops, params)
+            ops["roidetect"]=0 
             # temp
-            ops["threshold_scaling"]=1 #TODO: make modular
-            ops["max_iterations"]=30
+            ops['nonrigid']=False
             # test for e216
             # ops["allow_overlap"] = True
             # provide an h5 path in 'h5py' or a tiff path in 'data_path'
@@ -130,7 +138,7 @@ def main(**args):
             # run one experiment
             opsEnd = suite2p.run_s2p(ops=ops, db=db)
             # fix reg tif order -_- TODO: make into function
-            for npln in ops['nplanes']:
+            for npln in range(ops['nplanes']):
                 pth = os.path.join(imagingflnm, rf'suite2p\plane{npln}\reg_tif')                    
                 fls = [os.path.join(pth, xx) for xx in os.listdir(pth) if 'tif' in xx]
                 order = np.array([int(re.findall(r'\d+', os.path.basename(xx))[0]) for xx in fls])

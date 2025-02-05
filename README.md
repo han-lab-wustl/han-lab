@@ -4,21 +4,89 @@ Project-specific and general scripts from Han Lab @ WUSTL
 
 **For a lot of analysis scripts involving pyramidal cells, you will need to add the entire directory as well as the directory of 'han-lab-archive' to path in MATLAB. This is being updated to allow depreciation of han-lab-archive scripts**
 
+## suite2p install
+This suite2p install is optimized to avoid errors compared to other suite2p installs we have tested.
+
+In anaconda powershell:
+```
+conda create -n suite2p python=3.9
+pip install suite2p==0.12.1 pyqtgraph pyqt5
+notepad C:\Users\workstation2\anaconda3\envs\suite2p\lib\site-packages\suite2p\gui\visualize.py
+```
+edit `from rastermap.mapping` --> `from rastermap`
+
+## video making install
+
+To convert tifs from bonsai to lossless compression avis, following the instructions to install ffmpeg on Windows:
+https://www.wikihow.com/Install-FFmpeg-on-Windows
+
+Make sure this is added to path!
+
+Then, install ffmpeg-python & other dependencies in your conda environment: `pip install ffmpeg-python SimpleITK`
+
+Follow the scripts in `projects/DlC_behavior_formatting/video_formatting` for the pipeline
+1. `curate_tif_to_video_conversion.py` --> gets # of files per folder to make sure they are aligned with imaging (manually check and remove duplicates)
+2. `convert_tif_to_avi` --> takes tif folder, makes memory mapped array, and converts to avi
+
+## general lab pipeline 
+
+### dopamine release imaging
+make sure the repo is added to your MATLAB path with subfolders!
+
+- make tifs: `han-lab\utils\preprocessing_2p_images\runVideosTiff_EH_new_sbx1.m` OR `han-lab\utils\preprocessing_2p_images\opto_correction\runVideosTiff_Opto.m`
+if using `runVideosTiff`, change the MATLAB path in `loadVideoTiffNoSplit...` to your MATLAB directory:
+e.g. from 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\ij.jar'
+```
+to 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+```
+- run suite2p (and set appropriate settings for planes, frame rate, saving tifs, etc.)
+```
+conda activate suite2p
+suite2p
+```
+- run dopamineROI pipeline: `"han-lab\dopaminepipeline\preprocessing\batch_make_roi_and_dff_dopamine_multiplane.m`
+  - pick day files
+  - draw ROIs or recall from a previous day's ROIs
+  - calculate $\Delta$ F/F
+- align to behavior
+- do downstream analysis with align `params.mat` file in each plane
+
+### dopamine receptor imaging
+make sure the repo is added to your MATLAB path with subfolders!
+
+- make tifs: step 1 of `suite2p_processing_pipeline\run_suite2p_drd.py` OR `han-lab\utils\preprocessing_2p_images\runVideosTiff_EH_new_sbx1.m`
+if using `runVideosTiff`, change the MATLAB path in `loadVideoTiffNoSplit_EH2_new_sbx_uint16.m` to your MATLAB directory:
+e.g. from 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2017b\java\ij.jar'
+```
+to 
+```
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\mij.jar'
+javaaddpath 'C:\Program Files\MATLAB\R2023b\java\ij.jar'
+```
+- run suite2p (and set appropriate settings for planes, frame rate, saving tifs, etc.)
+```
+conda activate suite2p
+suite2p
+```
+- run InterneuronPipeline: `projects\dopamine_receptor\pipeline`
+  - pick day files
+  - make .mat of movies
+  - click rois
+- align to behavior
+- do downstream analysis with align `F.mat` file
+
 ## behavior_analysis
 
 General scripts for plotting behavioral variables in Pavlovian conditioning/HRZ. Mostly used for monitoring behavior in Pavlovian conditioning.
-
-## hidden_reward_zone_task
-
-`MasterHRZ.m`
-
-Eleonora's HRZ (and remapping) analysis
-
-Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
-
-### behavior_analysis
-
-Primarily Gerardo's scripts for HRZ analysis
 
 `COMgeneralview_multiple_EBGMEH1602.m`: Plots HRZ behavior using multiple VR files across multiple days. Relies on `COMgeneralanalysis`.
 ` 
@@ -36,9 +104,17 @@ Primarily Gerardo's scripts for HRZ analysis
  
 `mtit`: if you have matlab earlier than 2018(?) will use this function to put a title on a subplotted figure
 
+## hidden_reward_zone_task
+
+`MasterHRZ.m`
+
+Eleonora's HRZ (and remapping) analysis
+
+Filters pyramidal cells and plots tuning curves, calculates cosine similarity, and makes epoch tables.
+
 ## suite2p_processing_pipeline
 
-Zahra's wrappers around suite2p to make tifs, run motion corr, get ROIs, and make concatenated weekly videos
+Zahra's wrappers around suite2p to make tifs, run motion corr, get ROIs
 
 ## place_cell_pipeline
 
@@ -49,36 +125,15 @@ Zahra's scripts to get place cells in HRZ, based off Suyash and Tank lab code
 Goal is to track pyramidal cells detected by Suite2p across weeks/days
 
 Procedure:
-1. Concatenate videos of all days per week and run motion registration / ROI detection in Suite2p (done before this step)
-2. Use day and week `Fall.mat` output to run CellReg
+1. Use day `Fall.mat` output to run CellReg
 
 Relies on installation of [CellReg](https://github.com/zivlab/CellReg)
 
 `format_conversion_Suite2p_CNMF_e.m` to convert Suite2p's output `Fall.mat` into spatial footprints
 
-I would suggest copying `Fall.mat` of all your days/week you want to track into one place for this analysis. I use `copy_fmats.py`.
+I would suggest copying `Fall.mat` of all your daysyou want to track into one place for this analysis. I use `copy_fmats.py`.
 
-`run_cellreg_week2week.m`
-
-Cell track across weeks (**map 1**), first block contains all file/folder specific parameters you may need to change
-
-Uses non-rigid transform
-
-Uses the last week (last file in the list) as a reference image, but you may want to change it to a week that has the most cells, etc.
-
-`get_tracked_cells_per_week.m` 
-
-Uses results of the previous run file to get cell indices and plot them on the mean image per day
-
-NOTE: **this relies on a *specific* folder structure**
-
-`run_cellreg_week2day.m`
-
-Cell track cells detected in the weekly concatenated movies across days (**map 2**)
-
-`get_tracked_cells_week2day.m`
-
-Map cells tracked per week back to at least 1 day that week, plot them on the mean image per day, and align to behavior
+Uses non-rigid transform!
 
 ## projects > dopamine
 
@@ -93,38 +148,6 @@ Munni's original code that aligns behavioral events to dFF. Modifications for la
 `pre_post_diff_anat_darkreward_single_rew.m`
 
 Plots a heatmap of CS-triggered averages across days in the Pavlovian task.
-
-### projects > dopamine > axonal-GCamp
-
-How to run preprocessing and motion correction on axonal-GCamp images from two-photon
-
-NOTE: **most of Zahra's run scripts take command line arguments**
-
-Relies on some dependencies in Python as well as a downloaded version of [Suite2p](https://github.com/MouseLand/suite2p) in your environment
-```
-pip install tifffile matplotlib numpy pandas
-```
-
-`run_axonal_dopamine_motion_reg.py`
-
-On the command line (on Windows, Anaconda Powershell Prompt), navigate to the `axonal-GCamp_dopamine` folder
-
-Type `python run_axonal_dopamine_motion_reg.py -h` for description of input arguments
-
-To make folder structure:
-```
-python .\run_axonal_dopamine_motion_reg.py 0 e194 X:\dopamine_imaging\ --day 6
-```
-
-0 = step (making folder structure)
-
-e194 = mouse name
-
-X:\dopamine_imaging = drive containing mouse folder and imaging day subfolders within it
-
-6 = day (optional argument); this is what the folder will be named
-
-I suggest having a lookup table of day folder to experiment, imaging notes, camera acquisition etc. in a separate spreadsheet
 
 ## utils
 

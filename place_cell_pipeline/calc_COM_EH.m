@@ -26,6 +26,7 @@ for i = 1:size(spatial_act,1)
         com(i,1)= ((bin(i,1)-1)+frac(i,1))*bin_width;%add the fraction to last bin before going over * bin_width = interpolated com
     end
     else
+        
         com(i,1) = NaN;
     end
     

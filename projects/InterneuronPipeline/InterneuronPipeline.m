@@ -1,12 +1,13 @@
+%zahra's modified IN pipeline for DRD+ cells
 %full pipeline run each section in order
 %all of this happens from the sbx
 
-%section 1: run Videos tiff, makes tiffs from the .sbx files for as many
+%% section 1: run Videos tiff, makes tiffs from the .sbx files for as many
 %days as you want
 
 % runVideosTiff_EH_new_sbx1
 %inputs are just the number of sbx to run and then you hand pick each one
-
+% zahra skips this as her python script makes tifs automatically
 
 %% section 2: run suite 2p
 
@@ -23,6 +24,8 @@
 %run this section to create a mat file of containing all of the registered
 %tiffs put together
 
+pr_dir=uipickfiles;
+regtifs = dir(fullfile(pr_dir{dy}, '**', 'plane*'));
 get_stabilized_mat_file_per_day
 
 %just put in the number of planes and then select the reg_tif folder for

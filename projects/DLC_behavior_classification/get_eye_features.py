@@ -1,6 +1,6 @@
 # zahra
 # eye centroid and feature detection from vralign.p
-
+#%%
 import numpy as np, pandas as pd, sys, math
 import os, cv2, pickle
 from PIL import Image, ImageDraw
@@ -17,9 +17,11 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 6
 mpl.rcParams["ytick.major.size"] = 6
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+# TODO: exclude dark time from peri analysis
+# TODO: keep array orientation consistent
 
 if __name__ == "__main__": # TODO; compare with diameter
-    src = r"I:\vids_to_analyze\face_and_pupil\pupil" # path to pickle files you want to analyze
+    src = r"D:\PupilTraining-Matt-2023-07-07\opto-vids\E218_controls" # path to pickle files you want to analyze
     add_to_dct = False # add to previous datadct
     if add_to_dct:
         with open(r"I:\pupil_data.p", "rb") as fp: #unpickle
@@ -38,44 +40,48 @@ if __name__ == "__main__": # TODO; compare with diameter
         lickall_s = datadct['perilick_all_sessions']
         velall_s = datadct['perivel_all_sessions']
     else:    
-        meanrew_s = []; rewall_s = []; lickmean_s = []; lickall_s = []
-        normvelmean_s = []; velmean_s = []; velall_s = []; areas_s = []
-        circumferences_s = []
-        c_x = []; c_y = []
+        meanrew_s = []; rewall_s = [];lickall_s = []
+        normvelmean_s = []; velall_s = []; areas_s = []
+        circumferences_s = []; meanrewfail_s = []; rewallfail_s = []
+        # c_x = []; c_y = []
         sessions = listdir(src, ifstring="vr_dlc_align.p")   
         sessions_to_analyze = sessions 
     for session in sessions_to_analyze:
         print(session)
-        pdst = os.path.join(src, session)
+        pdst = session
+        vrfl = [os.path.join(src,xx) for xx in os.listdir(src) if '.mat' in xx and (xx[:16]==os.path.basename(session)[:16])][0]
         range_val = 8
         binsize = 0.05
-        areas, circumferences, centroids_x, centroids_y, \
-        meanrew, rewall, meanlicks, meanvel = eye.get_area_circumference_from_vralign(pdst, range_val, binsize)
-        c_x.append(centroids_x)
-        c_y.append(centroids_y)
-        lickmean_s.append(meanlicks)
-        velmean_s.append(meanvel)        
+        areas, areas_res, circumferences, meanrew, rewall, meanrewfail, rewallfail = eye.get_area_circumference_from_vralign_with_fails(pdst, vrfl, range_val, binsize)
+        # c_x.append(centroids_x)
+        # c_y.append(centroids_y)
+        # lickmean_s.append(meanlicks)
+        # velmean_s.append(meanvel)        
         circumferences_s.append(circumferences)
         areas_s.append(areas)
         meanrew_s.append(meanrew)
+        meanrewfail_s.append(meanrewfail)
         rewall_s.append(rewall)
+        rewallfail_s.append(rewallfail)
     datadct= {}
     datadct['sessions'] = list(np.hstack(np.array(sessions)))
-    datadct['centroids_x_all_sessions'] = c_x
-    datadct['centroids_y_all_sessions'] = c_y
+    # datadct['centroids_x_all_sessions'] = c_x
+    # datadct['centroids_y_all_sessions'] = c_y
     datadct['perirewall_all_sessions'] = rewall_s
     datadct['perirewmean_all_sessions'] = meanrew_s
-    datadct['perilickmean_all_sessions'] = lickmean_s
-    datadct['perivelmean_all_sessions'] = velmean_s
+    # datadct['perilickmean_all_sessions'] = lickmean_s
+    # datadct['perivelmean_all_sessions'] = velmean_s
     datadct['circumferences_all_sessions'] = circumferences_s
+    datadct['perirewallfail_all_sessions'] = rewallfail_s
+    datadct['perirewmeanfail_all_sessions'] = meanrewfail_s
 
     datadct['areas_all_sessions'] = areas_s    
     with open(r"I:\pupil_data_new_240221.p", "wb") as fp:   #Pickling
         pickle.dump(datadct, fp)
 #%%
 from sklearn.preprocessing import MinMaxScaler
-with open(r"I:\pupil_data_new_240221.p", "wb") as fp:   #Pickling
-    df = pickle.load(fp)
+# with open(r"I:\pupil_data_new_240221.p", "rb") as fp:   #Pickling
+#     df = pickle.load(fp)
 # all trials
 scaler = MinMaxScaler(feature_range=(0, 1)) # normalize
 trials = np.hstack(rewall_s)
@@ -92,51 +98,75 @@ for i in range(len(rewall_s)):
     ax.imshow(trials_norm.T)
     ax.set_title(os.path.basename(sessions[i]))
 #%%
-# plot perireward pupil
-range_val = 10 #s
-binsize = 0.1 #s
+# plot perireward pupil per session (and mean)
+range_val = 8 #s
+binsize = 0.05 #s
 ##################################### fig 1 #####################################
 %matplotlib inline
-fig, axes = plt.subplots(3,1, gridspec_kw={'height_ratios': [3, 1, 1]})
+fig, axes = plt.subplots(2,1, gridspec_kw={'height_ratios': [3, 2]})
+# subfig1
 ax = axes[0]
+for normall in rewall_s:
+    # plot average of individual trials in grey
+    ax.plot(np.nanmean(normall.T,axis=0), color='slategray', alpha=0.2)
+    # plot each trial
+    # for trial in normall.T:
+    #     ax.plot(trial, color='slategray', alpha=0.2)
+meanplot = []
+for mean in rewall_s:
+    meanplot.append(np.nanmean(mean.T,axis=0))
+meanplot = np.nanmean(np.array(meanplot),axis=0)
+ax.plot(meanplot,color='k')
+ax.axvline(np.median(np.arange(0,len(normall))), color='b', linestyle='--')
+ax.axvline(np.median(np.arange(0,len(normall))+10), color='aqua', linestyle='--')
+ax.set_ylabel('Area residual')
+ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,20))
+ax.set_xticklabels(np.arange(-range_val,range_val+1))
 
-for normall in normall_s:
-    # for rew in normall:
+ax.set_xticks([])
+# subfig2
+ax = axes[1]
+for normall in rewallfail_s:
     # plot average of individual trials in grey
     ax.plot(np.nanmean(normall,axis=0), color='slategray', alpha=0.2)
+    # plot each trial
+    # for trial in normall:
+    #     ax.plot(trial, color='slategray', alpha=0.2)
 meanplot = []
-for mean in normall_s:
+for mean in rewallfail_s:
     meanplot.append(np.nanmean(mean,axis=0))
 meanplot = np.nanmean(np.array(meanplot),axis=0)
 ax.plot(meanplot,color='k')
 ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-ax.set_ylabel('Normalized Pupil \n Circumference')
-ax.set_xticks([])
-ax = axes[1]
-ax.set_ylim([0,1])
-for lick in lickmean_s:
-    # lick = lickmean_s[session]
-    ax.plot(lick, color='r', linewidth=0.5)
-ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-ax.set_ylabel('Mean Lick \n Rate')
-ax.set_xticks([])
-ax = axes[2]
-for vel in velmean_s:
-    # vel = velmean_s[session]
-    ax.plot(vel, color='dimgrey', linewidth=0.5)
-ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
-ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
-ax.set_ylabel('Mean \n Velocity \n (cm/s)')
-ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
+ax.axvline(np.median(np.arange(0,len(normall.T))+10), color='aqua', linestyle='--')
+ax.set_ylabel('Area residual (fails)')
+ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,20))
 ax.set_xticklabels(np.arange(-range_val,range_val+1))
 ax.set_xlabel('Time From Reward (s)')
-ax.set_ylim([0,100])
-fig.suptitle('n = 14 sessions, 4 animals') # change for number of sessions
+
+# ax.set_xticks([])
+# fig.suptitle('n = 14 sessions, 4 animals') # change for number of sessions
+# for lick in lickmean_s:
+#     # lick = lickmean_s[session]
+#     ax.plot(lick, color='r', linewidth=0.5)
+# ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+# ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+# ax.set_ylabel('Mean Lick \n Rate')
+# ax.set_xticks([])
+# ax = axes[2]
+# for vel in velmean_s:
+#     # vel = velmean_s[session]
+#     ax.plot(vel, color='dimgrey', linewidth=0.5)
+# ax.axvline(np.median(np.arange(0,len(normall.T))), color='b', linestyle='--')
+# ax.axvline(np.median(np.arange(0,len(normall.T))+5), color='aqua', linestyle='--')
+# ax.set_ylabel('Mean \n Velocity \n (cm/s)')
+# ax.set_xticks(np.arange(0, ((range_val)/binsize*2)+1,10))
+# ax.set_xticklabels(np.arange(-range_val,range_val+1))
+# ax.set_xlabel('Time From Reward (s)')
+# ax.set_ylim([0,100])
 # plt.savefig(r"C:\Users\Han\Box\neuro_phd_stuff\han_2023\dlc\dlc_poster_2023\perirew_pupil.svg", \
 #             bbox_inches='tight',transparent=True)
-
+#%%
 ##################################### fig 2 #####################################
 # trial by trial subplot
 normall_s = np.array(normall_s)

@@ -1,31 +1,33 @@
-% Zahra - Nov 2023
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        % Zahra - Nov 2023
 % makes tuning curves with velocity filter
 % uses suyash's binning method
-
 % per day analysis using iscell boolean and putative place cells identified
 % from spatial info shuffle
-
 % calls functions to calc dff, fc3, putative place cells, 
 % make tuning curves, etc. uses median com
 
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'e217';
+
+an = 'e139';
 % an = 'e190';%an='e189';
 % individual day analysis 
-% dys = [20:50]; % e218
-% dys = [7:10, 32,33,35:63,65]; % e216
-% dys = [2:20, 26,27]; %e217
+dys = [1 2 3 5 6 7 8 10];
+% dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
+% dys = [9 10 37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
+% dys = [2 3 4 5 6 7 8 9 11 12 13	14	15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
 % dys = [27:30, 32,33,34,36,38,40:75]; % e201
 % dys = [62:70, 72,73,74, 76, 80:90]; % e200
 % dys = [7,8,10,11:15,17:21,24:42,44:46]; % e189
 % dys = [6:9, 11,13,15:19,21,22,24,27:29,33:35,40:43,45]; % e190
-dys = [38 39 40];
+% dys = [9 10 14 16:18 20:34]; % z8
+% dys = [12 13 15 16 17 19 20 22 23 24]; % z9
 % dys = [1:51]; % e186
 src = 'X:\vipcre'; % folder where fall is
+% src = 'Z:\sstcre_imaging';
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-% src = 'Y:\analysis\fmats';
+src = 'Y:\analysis\fmats';
 pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -35,12 +37,29 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
+    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
+    if length(pth)>1 % if multi plane imaging, grab the combined f file
+        pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
+    end    
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
         'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
-        'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+        'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')    
+    if ~exist('VR', 'var')==1
+        %% step 0 - align to behavior
+        daypth = dir(fullfile(src, an, string(dy), "behavior", "vr\*.mat"));
+    %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
+        fmatfl = dir(fullfile(src, an, string(dy), '**\Fall.mat')); 
+        savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
+        disp(savepthfmat)
+    end
+
+    % re load
+    load(fullfile(pth.folder,pth.name), 'dFF', ...
+    'Fc3', 'stat', 'iscell', 'ybinned', 'changeRewLoc', ...
+    'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')
+    
     % vars to get com and tuning curves
     bin_size = 3; % cm
     try
@@ -52,13 +71,13 @@ for dy=dys % for loop per day
     try
         rew_zone = VR.settings.rewardZone*gainf; % cm
     catch
-        rew_zone = 15;
+        rew_zone = 10;
     end
     % zahra hard coded to be consistent with the dopamine pipeline
     thres = 5; % 5 cm/s is the velocity filter, only get
     % frames when the animal is moving faster than that
     ftol = 10; % number of frames length minimum to be considered stopped
-    ntrials = 5; % e.g. last 8 trials to compare    
+    ntrials = 10; % e.g. last 8 trials to compare    
     plns = [0]; % number of planes
     Fs = 31.25/length(plns);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CHECKS %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%
@@ -102,6 +121,8 @@ for dy=dys % for loop per day
         dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         nbins = track_length/bin_size;
+
+        % late trials
         [tuning_curves, coms, median_com, peak] = make_tuning_curves(eps, trialnum, rewards, ybinned*gainf, gainf, ntrials,...
     licks, forwardvel, thres, Fs, ftol, bin_size, fc3_pc, dff_pc, nbins);
         
@@ -115,6 +136,7 @@ for dy=dys % for loop per day
     %% step 3 - compare epochs
     comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
     rewloccomp = zeros(size(comparisons,1),2); rewzonecomp = zeros(size(comparisons,1),2);
+    set(gca,'FontName','Arial')  % Set it to arail
     for i=1:size(comparisons,1)
         comparison = comparisons(i,:);
         if exist('ep_comp_pval', 'var') == 1 % if pvals already calculated
@@ -139,7 +161,6 @@ for dy=dys % for loop per day
         rectangle('position',[ceil(rewlocs(comparison(1))/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
             rew_zone/bin_size size(plt,1)], ... 
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        colormap jet
         xticks([0:bin_size:ceil(track_length/bin_size)])
         xticklabels([0:bin_size*bin_size:track_length])
         title(sprintf('epoch %i', comparison(1)))
@@ -152,7 +173,6 @@ for dy=dys % for loop per day
         rectangle('position',[ceil(rewlocs(comparison(2))/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
             rew_zone/bin_size size(plt,1)], ... 
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        colormap jet
         xticks([0:bin_size:ceil(track_length/bin_size)])
         xticklabels([0:bin_size*bin_size:track_length])
         title(sprintf('epoch %i', comparison(2)))
@@ -197,7 +217,6 @@ for dy=dys % for loop per day
         rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
             rew_zone/bin_size size(plt,1)], ... 
             'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        colormap jet
         xticks([0:bin_size:ceil(track_length/bin_size)])
         xticklabels([0:bin_size*bin_size:track_length])
         title(sprintf('epoch %i', ep))
@@ -206,7 +225,7 @@ for dy=dys % for loop per day
 
     %     savefig(fullfile(savedst,sprintf('%s_day%i_tuning_curves_w_ranksum.fig',an,dy)))
     pptx.addPicture(fig);        
-    close(fig)
+    % close(fig)
     tuning_curves_late_trials = tuning_curves;
     % also append fall with tables    
     ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...
@@ -217,4 +236,4 @@ for dy=dys % for loop per day
 end
 
 % save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum_',an)));
+fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum',an)));

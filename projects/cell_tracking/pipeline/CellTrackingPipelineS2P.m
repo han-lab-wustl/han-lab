@@ -6,8 +6,8 @@
 clear all
 dst = 'Y:\analysis\celltrack'; % destination dir
 src = 'Y:\analysis'; % source dir with animal specific folder ('e216')
-animal = 'e190'; 
-planes = [0,1,2,3]; % e.g. [0 1 2 3]
+animal = 'e217'; 
+planes = [0]; % e.g. [0 1 2 3]
 weekst = 1; weekend = 7; % week number
 
 %% 1 - convert fall to appropriate format
@@ -21,7 +21,7 @@ convert_fall_suite2p_cnmf(file_names,files_path,input_format)
 %% 2 - run weekly tracking
 for plane=planes    
     % define path of sample data for all weeks
-    fld = sprintf("fmats\\%s\\converted*week*plane%i_Fall.mat", animal, plane);
+    fld = sprintf("fmats\\%s\\days\\converted*week*plane%i_Fall.mat", animal, plane);
 
     % run
     tracking_per_week(src, animal, planes, weekst, weekend, fld)
