@@ -30,7 +30,7 @@ plt.close('all')
 range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 1 # for which to normalize
+prewin = 2 # for which to normalize
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
 conddf = pd.read_excel(r"X:\dopamine_opto_vtalcsnc.xlsx",sheet_name='Sheet1') # day vs. condition LUT
 animals = np.unique(conddf.animal.values.astype(str))
@@ -213,8 +213,8 @@ for nuc in nuclei:
 
 # params per nuc
 # ymin,ymax,stimsec,antag
-nuc_params = {'SNc': [-0.02,0.05,1.2,'Eticlopride'],'LC': [-0.03,0.05,1.2,'SCH23390'],
-            'VTA': [-0.01,0.03,1.2,'SCH23390']}
+nuc_params = {'SNc': [-0.02,0.05,1.2,'Eticlopride'],'LC': [-0.03,0.07,1.2,'SCH23390'],
+            'VTA': [-0.03,0.03,1.2,'SCH23390']}
 save_pvals = {}
 for nuc in nuclei:
     print(nuc)
@@ -278,7 +278,7 @@ for nuc in nuclei:
         ax.axhline(0,color='k',linestyle='--')
         
         ii+=1
-        if i==0: ax.legend(); ax.set_title(f'Raw \n\n {lbls[i]}')
+        if i==0: ax.legend(); ax.set_title(f'{lbls[i]}')
         else: ax.set_title(f'{lbls[i]}')
         ax.set_ylim([ymin,ymax])
         if i==1: ax.set_xlabel('Time from LED onset (s)')
@@ -314,7 +314,7 @@ for nuc in nuclei:
         ax.axhline(0,color='k',linestyle='--')
         ii+=1    
         ax.set_ylim([ymin,ymax])
-        if i==0: ax.legend(); ax.set_title(f'Subtracted \n\n {lbls[i]}')
+        if i==0: ax.legend(); ax.set_title(f'Sensor-dependent \n {lbls[i]}')
         else: ax.set_title(f'{lbls[i]}')
         ax.set_xticks(range(0, (int(range_val/binsize)*2)-frames_to_show+1,15))
         ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))

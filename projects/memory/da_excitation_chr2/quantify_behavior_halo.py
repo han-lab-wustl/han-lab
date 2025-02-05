@@ -24,9 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[44,45,48,49,52,53,54,55,58],
-            [44,45,46,47,50],
-            [45,46,49,50,54,55,56,59]]#,[29,30],[36,37]]
+days_all = [[44,45,48,49,52,53,54,55,59],
+            [44,45,46,47,52],
+            [45,46,49,50,54,55,56,59,60,61]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -230,8 +230,6 @@ df['licks_during_failed_trials_stim_odd/even'] = df['lick_selectivity_during_sti
 df['licks_selectivity_last8trials'] = [np.nanmean(xx[11]) for xx in near_reward_per_day]
 df['lickrate_probes'] = [np.nanmean(xx[12]) for xx in near_reward_per_day]
 
-# df['lick_prob_near_rewardloc_mean'] = [np.quantile(xx[0], .9) for xx in near_reward_per_day]
-# df['velocity_near_rewardloc_mean'] = [np.quantile(xx[1], .9) for xx in near_reward_per_day]
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
 # df = df[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 dfagg = df

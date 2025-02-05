@@ -32,7 +32,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # test
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
-iind='e201_054_index024'
+iind='e186_014_index026'
 radian_alignment=radian_alignment_saved
 tcs_correct, coms_correct, tcs_fail, coms_fail,\
         com_goal, goal_cell_shuf_ps_per_comp_av,\
@@ -115,6 +115,7 @@ nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
 rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 #%%
+plt.rc('font', size=18)
 range_val,binsize=10, .1
 for gc in goal_cell_iind[:3]:
     # TODO: make condensed
@@ -224,7 +225,7 @@ for gc in goal_cell_iind[:3]:
     )                    
     ax.axvline(int(range_val / binsize), color='k', linestyle='--')
     ax.spines[['top', 'right']].set_visible(False)    
-    ax.set_ylabel('Licks')
+    ax.set_ylabel('Licks binned')
     ax=axes[3]
     # meanlickrew, __, lickrew
     ax.plot(meanrewrewstops,color='navy', label='rewarded stops')

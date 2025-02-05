@@ -41,8 +41,10 @@ rates_all = []
 total_cells = []
 epoch_perm = []
 radian_alignment = {}
-cm_window = 20
+goal_window_cm = 20
 dists = []
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
+
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -52,203 +54,11 @@ for ii in range(len(conddf)):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-                'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-                'stat'])
-        VR = fall['VR'][0][0][()]
-        scalingf = VR['scalingFACTOR'][0][0]
-        try:
-                rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
-        except:
-                rewsize = 10
-        ybinned = fall['ybinned'][0]/scalingf
-        track_length=180/scalingf    
-        forwardvel = fall['forwardvel'][0]    
-        changeRewLoc = np.hstack(fall['changeRewLoc'])
-        trialnum=fall['trialnum'][0]
-        rewards = fall['rewards'][0]
-        if animal=='e145':
-                ybinned=ybinned[:-1]
-                forwardvel=forwardvel[:-1]
-                changeRewLoc=changeRewLoc[:-1]
-                trialnum=trialnum[:-1]
-                rewards=rewards[:-1]
-        # set vars
-        eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        lasttr=8 # last trials
-        bins=90
-        rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
-        track_length_rad = track_length*(2*np.pi/track_length)
-        bin_size=track_length_rad/bins 
-        rz = get_rewzones(rewlocs,1/scalingf)       
-        # get average success rate
-        rates = []
-        for ep in range(len(eps)-1):
-                eprng = range(eps[ep],eps[ep+1])
-                success, fail, str_trials, ftr_trials, ttr, \
-                total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-                rates.append(success/total_trials)
-        rates_all.append(np.nanmean(np.array(rates)))
-        
-        # added to get anatomical info
-        # takes time
-        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-        Fc3 = fall_fc3['Fc3']
-        dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-                tcs_correct, coms_correct, tcs_fail, coms_fail, \
-                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-        else:# remake tuning curves relative to reward        
-                # 9/19/24
-                # find correct trials within each epoch!!!!
-                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                rewards,forwardvel,rewsize,bin_size)          
-        fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
-        ops = fall_stat['ops']
-        stat = fall_stat['stat']
-        meanimg=np.squeeze(ops)[()]['meanImg']
-        s2p_iind = np.arange(stat.shape[1])
-        s2p_iind_filter = s2p_iind[(fall['iscell'][:,0]).astype(bool)]
-        s2p_iind_filter = s2p_iind_filter[skew>2]
-        goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
-        # change to relative value 
-        coms_rewrel = np.array([com-np.pi for com in coms_correct])
-        perm = list(combinations(range(len(coms_correct)), 2)) 
-        rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
-        epoch_perm.append([perm,rz_perm]) 
-        # if 4 ep
-        # account for cells that move to the end/front
-        # Define a small window around pi (e.g., epsilon)
-        epsilon = .7 # 20 cm
-        # Find COMs near pi and shift to -pi
-        com_loop_w_in_window = []
-        for pi,p in enumerate(perm):
-                for cll in range(coms_rewrel.shape[1]):
-                        com1_rel = coms_rewrel[p[0],cll]
-                        com2_rel = coms_rewrel[p[1],cll]
-                        # print(com1_rel,com2_rel,com_diff)
-                        if ((abs(com1_rel - np.pi) < epsilon) and 
-                        (abs(com2_rel + np.pi) < epsilon)):
-                                com_loop_w_in_window.append(cll)
-        # get abs value instead
-        coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        dist_to_rew.append(coms_rewrel)
-        # get goal cells across all epochs        
-        goal_cells = intersect_arrays(*com_goal)   
-        # s2p_iind_goal_cells = s2p_iind_filter[goal_cells]
-        # Create a colormap
-        cmap = plt.cm.viridis_r  # Choose your preferred colormap
-        cmap.set_under('none')
-        # cmap.set_under('white', alpha=0)  # Set 0 values to transparent white
-        # get x y coords!!
-        # fig,ax = plt.subplots()
-        # stat = np.squeeze(stat)        
-        # ax.imshow(meanimg, cmap='Greys_r')
-        # centers = []
-        # for gc in s2p_iind_goal_cells:
-        #         ypix=stat[gc][0][0][0][0]    
-        #         xpix=stat[gc][0][0][1][0]     
-        #         coords = np.column_stack((xpix, ypix))  
-        #         mask,cmask,center=create_mask_from_coordinates(coords, 
-        #                 meanimg.shape)                         
-        #         ax.imshow(cmask,cmap=cmap,vmin=1)
-        #         ax.axis('off')
-        #         centers.append(center)        
-        # pdf.savefig(fig)
-        # plt.close(fig)
-        # points = np.array(centers)
-        # dist = pairwise_distances(points)
-        # Exclude self-pairs (distances to the same point)
-        # We do this by flattening the distance matrix and excluding zero distances
-        # non_self_distances = dist[np.triu_indices_from(dist, k=1)]
-        # Compute the average distance
-        # average_distance = np.mean(non_self_distances)
-        # dists.append((average_distance))
-        # get per comparison
-        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
-        goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])        
-        goal_cell_prop.append([goal_cells_p_per_comparison,goal_cell_p]);num_epochs.append(len(coms_correct))
-        colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
-        if len(goal_cells)>0:
-            rows = int(np.ceil(np.sqrt(len(goal_cells))))
-            cols = int(np.ceil(len(goal_cells) / rows))
-            fig, axes = plt.subplots(rows, cols, figsize=(30,30),sharex=True)
-            if len(goal_cells) > 1:
-                axes = axes.flatten()
-            else:
-                axes = [axes]
-            for i,gc in enumerate(goal_cells):            
-                for ep in range(len(coms_correct)):
-                    ax = axes[i]
-                    ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                    if len(tcs_fail)>0:
-                            ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                    ax.axvline((bins/2), color='k')
-                    ax.set_title(f'cell # {gc}')
-                    ax.spines[['top','right']].set_visible(False)
-            ax.set_xticks(np.arange(0,bins+1,20))
-            ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
-            ax.set_xlabel('Radian position (centered start rew loc)')
-            ax.set_ylabel('Fc3')
-        #     ax.legend()
-            fig.tight_layout()
-            pdf.savefig(fig)
-            plt.close(fig)
-        # get shuffled iteration
-        num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
-        # max of 5 epochs = 10 perms
-        goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan; goal_cell_shuf_ps = []
-        for i in range(num_iterations):
-                # shuffle locations
-                rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
-                shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
-                [random.shuffle(shuf) for shuf in shufs]
-                # first com is as ep 1, others are shuffled cell identities
-                com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
-                com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-                # OR shuffle cell identities
-                # relative to reward
-                coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-                perm = list(combinations(range(len(coms_correct)), 2)) 
-                # account for cells that move to the end/front
-                # Find COMs near pi and shift to -pi
-                com_loop_w_in_window = []
-                for pi,p in enumerate(perm):
-                        for cll in range(coms_rewrel.shape[1]):
-                                com1_rel = coms_rewrel[p[0],cll]
-                                com2_rel = coms_rewrel[p[1],cll]
-                                # print(com1_rel,com2_rel,com_diff)
-                                if ((abs(com1_rel - np.pi) < epsilon) and 
-                                (abs(com2_rel + np.pi) < epsilon)):
-                                        com_loop_w_in_window.append(cll)
-                # get abs value instead
-                # cont.
-                coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-                com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-                # get goal cells across all epochs
-                com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-                goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_shuf]
-                goal_cells_shuf = intersect_arrays(*com_goal_shuf); shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
-                goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
-                goal_cell_shuf_ps.append(goal_cell_shuf_p)
-                goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
-        # save median of goal cell shuffle
-        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
-        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
-        goal_cell_null.append([goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av])
-        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        pvals.append(p_value); 
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
-        total_cells.append(len(coms_correct[0]))
-        radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+        radian_alignment,rate,p_value,total_cells,goal_cell_iind,\
+        perm,goal_cell_prop,num_epochs,goal_cell_null=extract_data_rewcentric(ii,params_pth,\
+                animal,day,bins,radian_alignment,
+    radian_alignment_saved,goal_window_cm,pdf,
+    num_iterations=1000)
 
 pdf.close()
 # save pickle of dcts
@@ -297,7 +107,7 @@ ax = sns.lineplot(data=df_plt, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 
-eps = [2,3,4,5]
+eps = [2,3,4]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
     rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -391,7 +201,7 @@ for ii,ep in enumerate(eps):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 # com
-plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'farreward_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 
 #%% 
@@ -433,16 +243,15 @@ plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'),
 
 #%%
 # compare to persistent cells
-tau_all_postrew = [2.2404155724121564,
- 1.8680482627734762,
- 11.193678521179619,
- 3.5444438041337274,
- 2.7430491682467073,
- 2.6043856404608356,
- 1.7110353116800554,
- 1.5385274515979739,
- 1.1991769514236397,
- 3.4326324582254113]
+tau_all_postrew = [1.5558888419938333,
+ 4.4178256350586915,
+ 3.2708590127783985,
+ 2.5821113447837094,
+ 2.5764919726093116,
+ 1.6051801445093699,
+ 1.319833755750061,
+ 1.2942726755139733,
+ 3.6077301232540058]
 tau_all_prerew = [1.635096415224901,
  1.2518725660615262,
  3.8502273715196713,

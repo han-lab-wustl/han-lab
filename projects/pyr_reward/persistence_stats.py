@@ -46,7 +46,7 @@ relative_coms_shufs=[]
 #%%
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-for ii in range(254,len(conddf)):
+for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
@@ -265,7 +265,7 @@ plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217') & (df.animals!='e139')) & (df.optoep<2) & (df.index.isin(inds))]
+df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
 df['num_epochs'] = num_epochs
 df['goal_cell_prop'] = [xx[1] for xx in goal_cell_prop]
 df['opto'] = df.optoep.values>1
@@ -289,16 +289,16 @@ ax.set_ylabel('Sessions')
 # TODO
 # com of persistent cells across epochs
 fig,ax = plt.subplots()
-ax.hist(np.concatenate([xx[1] for xx in relative_coms]), color='slategray',alpha=.7,
+ax.hist(np.concatenate([xx[1] for xx in relative_coms]), color='k',alpha=.5,
     density=True,label='2 epochs')
 ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==3]), 
-    color='darkcyan',alpha=.4,density=True,label='3 epochs')
+    color='slategray',alpha=.5,density=True,label='3 epochs')
 ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==4]), 
-    color='orange',alpha=.4,density=True,label='4 epochs')
+    color='darkcyan',alpha=.5,density=True,label='4 epochs')
 # ax.hist(np.concatenate([xx[0] for ii,xx in enumerate(relative_coms) if num_epochs[ii]==5]), 
 #     color='orange',alpha=.5,density=True)
-ax.set_ylabel('Density of COMs of reward-map cells')
-ax.set_xlabel('Reward-relative distance')
+ax.set_ylabel('Density of COMs')
+ax.set_xlabel(f'Reward-relative distance ($\Theta$)')
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
 #%%

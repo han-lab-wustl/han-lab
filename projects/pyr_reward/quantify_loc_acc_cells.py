@@ -48,6 +48,7 @@ num_iterations=1000
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 
 # iterate through all animals
+
 for ii in range(len(conddf)):
     day = conddf.days.values[ii] 
     animal = conddf.animals.values[ii]
@@ -138,7 +139,7 @@ for ii in range(len(conddf)):
 
         racc = [scipy.stats.pearsonr(acc_,dFF[1:,gc])[1] for gc in goal_cells]
         # threshold of .2 correlation
-        thres=0.1
+        thres=0
         goal_cells = [gc for ii,gc in enumerate(goal_cells) if racc[ii]>thres]
         # get per comparison
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
@@ -357,8 +358,8 @@ ax.legend()
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.18
-pshift=.03
+y = 0.15
+pshift=.02
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -373,9 +374,12 @@ for ii,ep in enumerate(eps):
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
-ax.set_title('Post-reward cells',pad=90)
+ax.set_title('Post-reward cells',pad=80)
 plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.jpg'), 
+        bbox_inches='tight')
+
 df_plt2=df_plt2.reset_index()
 
 #%%
