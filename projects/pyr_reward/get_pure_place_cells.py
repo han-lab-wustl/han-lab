@@ -25,11 +25,11 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'true_pc.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\tuning_curves_pcs_nopto.p"
-with open(saveddataset, "rb") as fp: #unpickle
-        datadct = pickle.load(fp)
+# with open(saveddataset, "rb") as fp: #unpickle
+#         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-datadct = {}
+datadct = {} # overwrite
 coms_all = []
 pc_ind = []
 pc_prop = []
@@ -78,12 +78,21 @@ for ii in range(len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        #if pc in all but 1 epoch
-        pc_bool = np.sum(pcs,axis=0)>=1       
+        #if pc in all but 1
+        pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
+        # looser restrictions
+        pc_bool = np.sum(pcs,axis=0)>=1
         Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
+        # if no cells pass these crit
+        if Fc3.shape[1]==0:
+                Fc3 = fall_fc3['Fc3']
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+                pc_bool = np.sum(pcs,axis=0)>=1
+                Fc3 = Fc3[:,((skew>2)&pc_bool)]
+
         bin_size=3 # cm
         # get abs dist tuning 
         tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
@@ -159,8 +168,8 @@ for ii in range(len(conddf)):
 
 pdf.close()
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(datadct, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#         pickle.dump(datadct, fp) 
 
 #%%
 radian_alignment=datadct
@@ -257,23 +266,23 @@ df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(5,5))
+fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 sns.stripplot(x='num_epochs', y='place_cell_prop',color='k',
         data=df_plt2,
-        s=8)
+        s=10,alpha=.7)
 sns.barplot(x='num_epochs', y='place_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.lineplot(data=df_plt2, # correct shift
-        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
+ax = sns.barplot(data=df_plt2, # correct shift
+        x='num_epochs', 
         y='place_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 
 eps = [2,3,4]
-y = 0.3
+y = 0.25
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'place_cell_prop']
@@ -287,7 +296,7 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+.05, f'p={pval:.3g}')
+        ax.text(ii, y+.03, f'p={pval:.3g}', rotation=45,fontsize=12)
 
 plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.svg'), 
         bbox_inches='tight')

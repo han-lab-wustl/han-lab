@@ -308,13 +308,13 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     # Find COMs near pi and shift to -pi
     com_loop_w_in_window = []
     for pi,p in enumerate(perm):
-            for cll in range(coms_rewrel.shape[1]):
-                    com1_rel = coms_rewrel[p[0],cll]
-                    com2_rel = coms_rewrel[p[1],cll]
-                    # print(com1_rel,com2_rel,com_diff)
-                    if ((abs(com1_rel - np.pi) < epsilon) and 
-                    (abs(com2_rel + np.pi) < epsilon)):
-                            com_loop_w_in_window.append(cll)
+        for cll in range(coms_rewrel.shape[1]):
+            com1_rel = coms_rewrel[p[0],cll]
+            com2_rel = coms_rewrel[p[1],cll]
+            # print(com1_rel,com2_rel,com_diff)
+            if ((abs(com1_rel - np.pi) < epsilon) and 
+            (abs(com2_rel + np.pi) < epsilon)):
+                    com_loop_w_in_window.append(cll)
     # get abs value instead
     coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
@@ -322,11 +322,11 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     # in addition, com near but after goal
     com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
         xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>0))] for com in com_goal if len(com)>0]
+        xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal ]
     # check to make sure just a subset
-    assert sum([len(xx) for xx in com_goal])>sum([len(xx) for xx in com_goal_postrew])
     print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}\n\
-        Post-reward cells: {[len(xx) for xx in com_goal_postrew]}')
+    Post-reward cells: {[len(xx) for xx in com_goal_postrew]}')
+    assert sum([len(xx) for xx in com_goal])>sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal_postrew)   
@@ -398,10 +398,43 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         # in addition, com near but after goal
         com_goal_postrew_shuf = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-        xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>0))] for com in com_goal_shuf if len(com)>0]
+            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
         # check to make sure just a subset
-        assert sum([len(xx) for xx in com_goal_shuf])>sum([len(xx) for xx in com_goal_postrew_shuf])
+        # otherwise reshuffle
+        while not sum([len(xx) for xx in com_goal_shuf])>sum([len(xx) for xx in com_goal_postrew_shuf]):
+            print('redo')
+            shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
+            [random.shuffle(shuf) for shuf in shufs]
+            # first com is as ep 1, others are shuffled cell identities
+            com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
+            com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+            # OR shuffle cell identities
+            # relative to reward
+            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+            perm = list(combinations(range(len(coms_correct)), 2)) 
+            # account for cells that move to the end/front
+            # Find COMs near pi and shift to -pi
+            com_loop_w_in_window = []
+            for pi,p in enumerate(perm):
+                for cll in range(coms_rewrel.shape[1]):
+                    com1_rel = coms_rewrel[p[0],cll]
+                    com2_rel = coms_rewrel[p[1],cll]
+                    # print(com1_rel,com2_rel,com_diff)
+                    if ((abs(com1_rel - np.pi) < epsilon) and 
+                    (abs(com2_rel + np.pi) < epsilon)):
+                            com_loop_w_in_window.append(cll)
+            # get abs value instead
+            # cont.
+            coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+            # get goal cells across all epochs
+            com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+            # in addition, com near but after goal
+            com_goal_postrew_shuf = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+                xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
+
         goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_shuf]
         if len(com_goal_postrew_shuf)>0:
             goal_cells_shuf = intersect_arrays(*com_goal_postrew_shuf); 
