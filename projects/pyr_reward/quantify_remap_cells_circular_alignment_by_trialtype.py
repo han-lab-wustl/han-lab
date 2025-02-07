@@ -17,9 +17,8 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances
+from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric
 from projects.opto.behavior.behavior import get_success_failure_trials
-from projects.memory.dopamine import get_rewzones
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -30,7 +29,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -42,6 +41,8 @@ total_cells = []
 epoch_perm = []
 radian_alignment = {}
 goal_window_cm = 20
+lasttr=8 # last trials
+bins=90
 dists = []
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 
@@ -54,11 +55,11 @@ for ii in range(len(conddf)):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        radian_alignment,rate,p_value,total_cells,goal_cell_iind,\
-        perm,goal_cell_prop,num_epochs,goal_cell_null=extract_data_rewcentric(ii,params_pth,\
-                animal,day,bins,radian_alignment,
-    radian_alignment_saved,goal_window_cm,pdf,
-    num_iterations=1000)
+        radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
+                goal_cell_null,epoch_perm,pvals=extract_data_rewcentric(ii,params_pth,\
+                animal,day,bins,radian_alignment,radian_alignment_saved,goal_window_cm,
+                pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
+                total_cells)
 
 pdf.close()
 # save pickle of dcts
@@ -201,7 +202,26 @@ for ii,ep in enumerate(eps):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 # com
-plt.savefig(os.path.join(savedst, 'farreward_cell_prop_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'allreward_cell_prop_per_an.svg'), 
+        bbox_inches='tight')
+
+#%%
+# subtract from shuffle
+# df_plt2=df_plt2.reset_index()
+df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
+fig,ax = plt.subplots(figsize=(3,5))
+# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
+        data=df_plt2,s=10,alpha=0.7)
+sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
+        data=df_plt2,
+        fill=False,ax=ax, color='k', errorbar='se')
+
+ax.spines[['top','right']].set_visible(False)
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('Reward-centric cell proportion')
+
+plt.savefig(os.path.join(savedst, 'allreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
 
 #%% 
@@ -243,15 +263,17 @@ plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'),
 
 #%%
 # compare to persistent cells
-tau_all_postrew = [1.5558888419938333,
- 4.4178256350586915,
- 3.2708590127783985,
- 2.5821113447837094,
- 2.5764919726093116,
- 1.6051801445093699,
- 1.319833755750061,
- 1.2942726755139733,
- 3.6077301232540058]
+tau_all_postrew = [2.7388246087772568,
+ 1.8680482627734762,
+ 11.08137800165117,
+ 3.5444438041337274,
+ 2.7430491682467073,
+ 2.601022229148832,
+ 1.71137469526335,
+ 1.540867103403629,
+ 1.1991769514236397,
+ 3.4399765192223892]
+
 tau_all_prerew = [1.635096415224901,
  1.2518725660615262,
  3.8502273715196713,

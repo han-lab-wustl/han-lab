@@ -25,42 +25,38 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'near_rew.pdf')
 #%%
-goal_window_cm=20 # to search for rew cells
+goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
+saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 # radian_alignment_saved = {} # overwrite
-goal_cell_iinds = []
-goal_cell_props = []
-goal_cell_nulls = []
+goal_cell_iind = []
+goal_cell_prop = []
+goal_cell_null = []
 num_epochs = []
 pvals = []
 rates_all = []
-total_cells_all = []
+total_cells = []
 epoch_perm = []
 radian_alignment = {}
 lasttr=8 #  last trials
 bins=90
-saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
+saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
 
 # iterate through all animals
 for ii in range(len(conddf)):
-    day = conddf.days.values[ii] 
+    day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if animal!='e217' and conddf.optoep.values[ii]<2:
-        pln=0
-        if animal=='e145': pln=2
+    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+        if animal=='e145' or animal=='e139': pln=2 
+        else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        radian_alignment,rate,p_value,total_cells,\
-        goal_cell_iind,perm,goal_cell_prop,num_epoch,goal_cell_null=extract_data_nearrew(ii,
-                params_pth,animal, day,
-                bins,radian_alignment,radian_alignment_saved,goal_window_cm,pdf)
-        # save
-        rates_all.append(rate); pvals.append(p_value); total_cells_all.append(total_cells)
-        epoch_perm.append(perm); goal_cell_iinds.append(goal_cell_iind); 
-        goal_cell_props.append(goal_cell_prop); num_epochs.append(num_epoch)
-        goal_cell_nulls.append(goal_cell_null)
+        radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
+                goal_cell_null,epoch_perm,pvals=extract_data_nearrew(ii,params_pth,\
+                animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,
+                pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
+                total_cells)
 pdf.close()
 
 # save pickle of dcts
@@ -73,11 +69,11 @@ inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
 df = df[((df.animals!='e217')) & (df.optoep<2)]
 df['num_epochs'] = num_epochs
-df['goal_cell_prop'] = [xx[1] for xx in goal_cell_props]
+df['goal_cell_prop'] = [xx[1] for xx in goal_cell_prop]
 df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
-df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_nulls]
+df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_null]
 df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
 df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
 
@@ -118,8 +114,8 @@ for ep in eps:
 # include all comparisons 
 df_perms = pd.DataFrame()
 # epcomp= [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
-goal_cell_perm = [xx[0] for xx in goal_cell_props]
-goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_nulls]
+goal_cell_perm = [xx[0] for xx in goal_cell_prop]
+goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
 # df_perms['epoch_comparison']=
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
 # df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)

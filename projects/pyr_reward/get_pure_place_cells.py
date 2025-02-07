@@ -16,8 +16,8 @@ mpl.rcParams["ytick.major.size"] = 8
 plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_by_trialtype, intersect_arrays
-from rewardcell import get_radian_position
+from projects.pyr_reward.placecell import make_tuning_curves, intersect_arrays
+from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -25,23 +25,26 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'true_pc.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\tuning_curves_pcs_nopto.p"
-# with open(saveddataset, "rb") as fp: #unpickle
-#         radian_alignment_saved = pickle.load(fp)
+with open(saveddataset, "rb") as fp: #unpickle
+        datadct = pickle.load(fp)
 # initialize var
-radian_alignment_saved = {} # overwrite
+#%%
+datadct = {}
 coms_all = []
 pc_ind = []
 pc_prop = []
 num_epochs = []
 epoch_perm = []
-# cm_window = [10,20,30,40,50,60,70,80] # cm
-#%%
+pvals = []
+total_cells = []
+num_iterations=1000
+place_cell_null=[]
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if ((animal!='e217') & (animal!='e200')) & (conddf.optoep.values[ii]==-1):
-        if animal=='e145': pln=2 
+    if (animal!='e217'):
+        if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
@@ -75,19 +78,19 @@ for ii in range(len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         #if pc in all but 1 epoch
-        pc_bool = np.sum(pcs,axis=0)>=len(eps)-2        
+        pc_bool = np.sum(pcs,axis=0)>=1       
         Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
         bin_size=3 # cm
         # get abs dist tuning 
         tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
-            Fc3,trialnum,rewards,forwardvel,
-            rewsize,bin_size)
+                Fc3,trialnum,rewards,forwardvel,
+                rewsize,bin_size)
         # get cells that maintain their coms across at least 2 epochs
-        place_window = 15 # cm converted to rad                
+        place_window = 10 # cm converted to rad                
         perm = list(combinations(range(len(coms_correct_abs)), 2))     
         com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
@@ -104,35 +107,74 @@ for ii in range(len(conddf)):
         colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'steelblue']
         coms_all.append(coms_correct_abs)
         for gc in pcs:
-            fig, ax = plt.subplots()
-            for ep in range(len(coms_correct_abs)):
-                ax.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
-                ax.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
-                ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-                ax.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,10))
-                ax.set_xticklabels(np.arange(0,track_length+bin_size*10,bin_size*10).astype(int))
-                ax.set_xlabel('Absolute position (cm)')
-                ax.set_ylabel('Fc3')
-                ax.spines[['top','right']].set_visible(False)
-            ax.legend()
+                fig, ax = plt.subplots()
+                for ep in range(len(coms_correct_abs)):
+                        ax.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
+                        ax.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
+                        ax.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
+                        ax.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,10))
+                        ax.set_xticklabels(np.arange(0,track_length+bin_size*10,bin_size*10).astype(int))
+                        ax.set_xlabel('Absolute position (cm)')
+                        ax.set_ylabel('Fc3')
+                        ax.spines[['top','right']].set_visible(False)
+                        ax.legend()
         #     plt.savefig(os.path.join(savedst, 'true_place_cell.png'), bbox_inches='tight', dpi=500)
-            plt.close('all')
-            pdf.savefig(fig)
-        
-pdf.close()
-#%%
+                plt.close('all')
+                pdf.savefig(fig)
+        # get shuffled iterations
+        shuffled_dist = np.zeros((num_iterations))
+        # max of 5 epochs = 10 perms
+        place_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan
+        place_cell_shuf_ps = []
+        for i in range(num_iterations):
+                # shuffle locations
+                shufs = [list(range(coms_correct_abs[ii].shape[0])) for ii in range(1, len(coms_correct_abs))]
+                [random.shuffle(shuf) for shuf in shufs]
+                # first com is as ep 1, others are shuffled cell identities
+                com_shufs = np.zeros_like(coms_correct_abs); com_shufs[0,:] = coms_correct_abs[0]
+                com_shufs[1:1+len(shufs),:] = [coms_correct_abs[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+                # get cells that maintain their coms across at least 2 epochs
+                perm = list(combinations(range(len(com_shufs)), 2))     
+                com_per_ep = np.array([(com_shufs[perm[jj][0]]-com_shufs[perm[jj][1]]) for jj in range(len(perm))])        
+                compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+                # get cells across all epochs that meet crit
+                pcs = np.unique(np.concatenate(compc))
+                pcs_all = intersect_arrays(*compc)
+                # get per comparison
+                pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
+                shuffled_dist[i] = len(pcs_all)/len(coms_correct_abs[0])
+                place_cell_shuf_p=len(pcs_all)/len(com_shufs[0])
+                place_cell_shuf_ps.append(place_cell_shuf_p)
+                place_cell_shuf_ps_per_comp[i, :len(pcs_p_per_comparison)] = pcs_p_per_comparison
+        # save median of goal cell shuffle
+        place_cell_shuf_ps_per_comp_av = np.nanmedian(place_cell_shuf_ps_per_comp,axis=0)        
+        place_cell_shuf_ps_av = np.nanmedian(np.array(place_cell_shuf_ps)[1])
+        place_cell_null.append([place_cell_shuf_ps_per_comp_av,place_cell_shuf_ps_av])
+        p_value = sum(shuffled_dist>pc_p)/num_iterations
+        print(f'{animal}, day {day}: significant place cells proportion p-value: {p_value}')
+        pvals.append(p_value);     
+        total_cells.append(len(coms_correct_abs[0]))
+        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs, 
+                pcs_all, place_cell_shuf_ps_per_comp_av, place_cell_shuf_ps_av]
 
+pdf.close()
+# save pickle of dcts
+with open(saveddataset, "wb") as fp:   #Pickling
+        pickle.dump(datadct, fp) 
+
+#%%
+radian_alignment=datadct
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep==-1) & (df.index.isin(inds))]
+df = df[((df.animals!='e217')) & (df.index.isin(inds))]
 df['num_epochs'] = num_epochs
 df['place_cell_prop'] = [xx[1] for xx in pc_prop]
 df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
-df['place_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_null]
+df['place_cell_prop_shuffle'] = [xx[1] for xx in place_cell_null]
 
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
@@ -142,52 +184,55 @@ sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.o
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
+#%%
 # number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(5,5))
 df_plt = df[(df.opto==False)]
 # av across mice
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
-sns.stripplot(x='num_epochs', y='goal_cell_prop',
+sns.stripplot(x='num_epochs', y='place_cell_prop',
         hue='animals',data=df_plt,
         s=10)
-sns.barplot(x='num_epochs', y='goal_cell_prop',
+sns.barplot(x='num_epochs', y='place_cell_prop',
         data=df_plt,
         fill=False,ax=ax, color='k', errorbar='se')
 ax = sns.lineplot(data=df_plt, # correct shift
-        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
+        x=df_plt.index.get_level_values('num_epochs')-2, y='place_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 
 eps = [2,3,4]
 for ep in eps:
-    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-    shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-    t,pval = scipy.stats.ranksums(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
-    
+        # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+        rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 
+                'place_cell_prop']
+        shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep),
+        'place_cell_prop_shuffle']
+        t,pval = scipy.stats.ranksums(rewprop, shufprop)
+        print(f'{ep} epochs, pval: {pval}')
+#%%
 # include all comparisons 
 df_perms = pd.DataFrame()
 df_perms['epoch_comparison'] = [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
-goal_cell_perm = [xx[0] for xx in goal_cell_prop]
-goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
-df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+goal_cell_perm = [xx[0] for xx in pc_prop]
+goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in place_cell_null]
+df_perms['place_cell_prop'] = np.concatenate(goal_cell_perm)
+df_perms['place_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perms = df_perms[df_perms.animals!='e189']
 df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
 
 fig,ax = plt.subplots(figsize=(7,5))
-sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
+sns.stripplot(x='epoch_comparison', y='place_cell_prop',
         hue='animals',data=df_permsav,
         s=8,ax=ax)
-sns.barplot(x='epoch_comparison', y='goal_cell_prop',
+sns.barplot(x='epoch_comparison', y='place_cell_prop',
         data=df_permsav,
         fill=False,ax=ax, color='k', errorbar='se')
 ax = sns.lineplot(data=df_permsav, # correct shift
-        x='epoch_comparison', y='goal_cell_prop_shuffle',
+        x='epoch_comparison', y='place_cell_prop_shuffle',
         color='grey', label='shuffle')
 
 ax.spines[['top','right']].set_visible(False)
@@ -195,11 +240,13 @@ ax.legend(bbox_to_anchor=(1.01, 1.05))
 
 eps = df_permsav.index.get_level_values("epoch_comparison").unique()
 for ep in eps:
-    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop'].values
-    shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
-    t,pval = scipy.stats.ranksums(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
+        # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+        rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 
+        'place_cell_prop'].values
+        shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 
+                'place_cell_prop_shuffle'].values
+        t,pval = scipy.stats.ranksums(rewprop, shufprop)
+        print(f'{ep} epochs, pval: {pval}')
 
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
@@ -212,14 +259,15 @@ df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
 fig,ax = plt.subplots(figsize=(5,5))
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
+sns.stripplot(x='num_epochs', y='place_cell_prop',color='k',
         data=df_plt2,
         s=8)
-sns.barplot(x='num_epochs', y='goal_cell_prop',
+sns.barplot(x='num_epochs', y='place_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
 ax = sns.lineplot(data=df_plt2, # correct shift
-        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
+        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
+        y='place_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
@@ -228,8 +276,8 @@ eps = [2,3,4]
 y = 0.3
 fs=36
 for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
+        rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'place_cell_prop']
+        shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'place_cell_prop_shuffle']
         t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
@@ -241,7 +289,7 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii, y+.05, f'p={pval:.3g}')
 
-plt.savefig(os.path.join(savedst, 'nearrew_cell_prop_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 #%%
 
