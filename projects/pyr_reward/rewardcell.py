@@ -22,6 +22,23 @@ from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_ra
     consecutive_stretch
 from projects.opto.behavior.behavior import get_success_failure_trials
 
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
 def get_rewzones(rewlocs, gainf):
     # note that gainf is multiplied here
     # gainf = 1/scalingf
@@ -236,13 +253,13 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+            'stat', 'timedFF'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     try:
-            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
     except:
-            rewsize = 10
+        rewsize = 10
     ybinned = fall['ybinned'][0]/scalingf
     track_length=180/scalingf    
     forwardvel = fall['forwardvel'][0]    
@@ -250,11 +267,11 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -266,10 +283,10 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     # get average success rate
     rates = []
     for ep in range(len(eps)-1):
-            eprng = range(eps[ep],eps[ep+1])
-            success, fail, str_trials, ftr_trials, ttr, \
-            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-            rates.append(success/total_trials)
+        eprng = range(eps[ep],eps[ep+1])
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
     
     # added to get anatomical info
@@ -322,11 +339,32 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     # in addition, com near but after goal
     com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
         xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal ]
+        xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
+    acc = fall['forwardvel'][0][1:]/np.diff(fall['timedFF'][0])
+    acc=np.hstack(pd.DataFrame({'acc': acc}).rolling(5).mean().values)    
+    nans,x = nan_helper(acc)
+    acc[nans] = np.interp(x(nans), x(~nans), acc[~nans])
     # check to make sure just a subset
+    # calc acc corr
+    raccs_all = []
+    for com in com_goal_postrew:
+        raccs = []
+        if len(com)>0:
+            for cll in com:
+                try: # if dff is nans
+                    dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
+                    _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
+                except Exception as e:
+                    racc = np.nan
+                raccs.append(racc)
+        raccs_all.append(raccs)
+    thres=1e-100 # correlation thres
+    com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
+        if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
+        
     print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}\n\
     Post-reward cells: {[len(xx) for xx in com_goal_postrew]}')
-    assert sum([len(xx) for xx in com_goal])>sum([len(xx) for xx in com_goal_postrew])
+    assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal_postrew)   
@@ -402,7 +440,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
             xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
         # check to make sure just a subset
         # otherwise reshuffle
-        while not sum([len(xx) for xx in com_goal_shuf])>sum([len(xx) for xx in com_goal_postrew_shuf]):
+        while not sum([len(xx) for xx in com_goal_shuf])>=sum([len(xx) for xx in com_goal_postrew_shuf]):
             print('redo')
             shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
             [random.shuffle(shuf) for shuf in shufs]
@@ -434,6 +472,24 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
             com_goal_postrew_shuf = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
                 xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
                 xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
+
+        # calc acc corr
+        raccs_all = []
+        for com in com_goal_postrew_shuf:
+            raccs = []
+            if len(com)>0:
+                for cll in com:
+                    nans,x = nan_helper(dFF[1:,cll])
+                    try: # if dff is nans
+                        dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
+                        _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
+                    except Exception as e:
+                        racc = np.nan
+                    raccs.append(racc)
+            raccs_all.append(raccs)
+        thres=0 # correlation thres
+        com_goal_postrew_shuf = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
+            if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew_shuf)]
 
         goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_shuf]
         if len(com_goal_postrew_shuf)>0:

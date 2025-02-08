@@ -30,9 +30,9 @@ plt.close('all')
 range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 2 # for which to normalize
+prewin = 2 # normalize pre window
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-conddf = pd.read_excel(r"X:\dopamine_opto_vtalcsnc.xlsx",sheet_name='Sheet1') # day vs. condition LUT
+conddf = pd.read_excel(r"X:\dopamine_opto_vtalcsnc_newsnc.xlsx",sheet_name='Sheet1') # day vs. condition LUT
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
@@ -88,7 +88,6 @@ for ii,an in enumerate(animals):
                 for dw in range(1, num_features):
                     index_next = np.where(abfstims == (dw + 1))[0]
                     index_current = np.where(abfstims == dw)[0]
-                    
                     if len(index_next) > 0 and len(index_current) > 0:
                         time_diff = utimedFF[index_next[0]] - utimedFF[index_current[-1]]
                         
@@ -101,7 +100,7 @@ for ii,an in enumerate(animals):
                 min_iind = [int(np.floor(min(xx)/4))-2 for xx in abfrect]
             else:   
                 # get off plane stim
-                offpln=pln+1 if pln<3 else pln-1
+                offpln=pln-1 if pln<3 else pln+1
                 startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
                 min_iind = [min(xx) for xx in startofstims if len(xx)>0]
             # # remove rewarded stims

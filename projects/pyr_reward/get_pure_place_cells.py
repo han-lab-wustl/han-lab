@@ -277,12 +277,12 @@ sns.barplot(x='num_epochs', y='place_cell_prop',
 ax = sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', 
         y='place_cell_prop_shuffle',color='grey', 
-        label='shuffle')
+        label='shuffle',alpha=0.7)
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 
 eps = [2,3,4]
-y = 0.25
+y = 0.19
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'place_cell_prop']
@@ -308,20 +308,55 @@ df_plt_= df_plt_[(df_plt_.animals!='e200')&(df_plt_.animals!='e189')]
 df_plt_ = df_plt_.groupby(['animals']).mean(numeric_only=True)
 
 fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
+sns.scatterplot(x='recorded_neurons_per_session', y='place_cell_prop',hue='animals',
         data=df_plt_,
         s=150, ax=ax)
-sns.regplot(x='recorded_neurons_per_session', y='goal_cell_prop',
+sns.regplot(x='recorded_neurons_per_session', y='place_cell_prop',
         data=df_plt_,
         ax=ax, scatter=False, color='k'
 )
 r, p = scipy.stats.pearsonr(df_plt_['recorded_neurons_per_session'], 
-        df_plt_['goal_cell_prop'])
+        df_plt_['place_cell_prop'])
 ax = plt.gca()
 ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
         transform=ax.transAxes)
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
-plt.savefig(os.path.join(savedst, 'rec_cell_nearrew_prop_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'place_cell_nearrew_prop_per_an.svg'), 
         bbox_inches='tight')
+#%%
+
+# as a function of session/day
+df_plt = df.groupby(['animals','session_num','num_epochs']).mean(numeric_only=True)
+df_permsav2 = df_perms.groupby(['animals', 'session_num','num_epochs']).mean(numeric_only=True)
+# compare to shuffle
+df_plt2 = pd.concat([df_permsav2,df_plt])
+# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2[(df_plt2.index.get_level_values('num_epochs')==2) & (df_plt2.index.get_level_values('animals')!='e200')]
+df_plt2 = df_plt2.groupby(['animals', 'session_num','num_epochs']).mean(numeric_only=True)
+# number of epochs vs. reward cell prop incl combinations    
+fig,ax = plt.subplots(figsize=(7,5))
+# av across mice
+sns.stripplot(x='session_num', y='place_cell_prop',hue='animals',
+        data=df_plt2,s=10,alpha=0.7)
+sns.barplot(x='session_num', y='place_cell_prop',color='darkslateblue',
+        data=df_plt2,fill=False,ax=ax, errorbar='se')
+ax.set_xlim([-.5,9.5])
+# ax = sns.lineplot(data=df_plt2, # correct shift
+#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
+#         label='shuffle')
+ax.spines[['top','right']].set_visible(False)
+# ax.legend().set_visible(False)
+ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+ax.set_xlabel('# of sessions')
+ax.set_ylabel('Reward-distance cell proportion')
+df_reset = df_plt2.reset_index()
+sns.regplot(x='session_num', y='place_cell_prop',
+        data=df_reset, scatter=False, color='k')
+r, p = scipy.stats.pearsonr(df_reset['session_num'], 
+        df_reset['place_cell_prop'])
+ax = plt.gca()
+ax.text(.5, .8, 'r={:.3f}, p={:.3g}'.format(r, p),
+        transform=ax.transAxes)
+ax.set_title('2 epoch combinations')

@@ -56,12 +56,12 @@ end
 %%
 % for dopamine
 clear all
-mouse_name = "e231";
-days = [71,72];
-src = "Z:\chr2_grabda";
+mouse_name = "E232";
+days = [16,17,18];
+src = "X:\";
 
 for day=days
-    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
+    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "**\*time*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
     savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
