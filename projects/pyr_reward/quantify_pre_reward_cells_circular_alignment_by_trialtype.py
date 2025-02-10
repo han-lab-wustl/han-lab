@@ -23,7 +23,7 @@ from rewardcell import get_radian_position,extract_data_prerew
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'near_rew.pdf')
+savepth = os.path.join(savedst, 'pre_rew.pdf')
 #%%
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)

@@ -184,6 +184,7 @@ df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['place_cell_prop_shuffle'] = [xx[1] for xx in place_cell_null]
+df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
 
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', hue='animals', bins=40)
@@ -232,6 +233,9 @@ df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animal
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perms = df_perms[df_perms.animals!='e189']
 df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
+# df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
+# df_perms['session_num'] = np.concatenate(df_perm_days)
+
 
 fig,ax = plt.subplots(figsize=(7,5))
 sns.stripplot(x='epoch_comparison', y='place_cell_prop',

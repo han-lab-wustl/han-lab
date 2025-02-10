@@ -29,7 +29,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 #%%
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -184,7 +184,7 @@ ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Reward-centric cell proportion')
 eps = [2,3,4]
-y = 0.3
+y = 0.35
 pshift = 0.04
 fs=36
 for ii,ep in enumerate(eps):

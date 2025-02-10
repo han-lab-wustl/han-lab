@@ -9,7 +9,6 @@ import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
 from scipy.ndimage import label
-
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
@@ -26,7 +25,6 @@ from projects.memory.dopamine import get_rewzones
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
-
 range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
@@ -200,7 +198,7 @@ for nuc in nuclei:
         if pln==3:
             if len(drug_dff)>0: deep_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
             deep_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
-        else:
+        elif ((pln==2) | (pln==1)):
             if len(drug_dff)>0: sup_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
             sup_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
     
@@ -209,10 +207,9 @@ for nuc in nuclei:
     sup_rewdff_saline_per_nuc[nuc]=sup_rewdff_saline
     sup_rewdff_drug_per_nuc[nuc]=sup_rewdff_drug
 #%%
-
 # params per nuc
 # ymin,ymax,stimsec,antag
-nuc_params = {'SNc': [-0.02,0.05,1.2,'Eticlopride'],'LC': [-0.03,0.07,1.2,'SCH23390'],
+nuc_params = {'SNc': [-0.02,0.02,1,'Eticlopride'],'LC': [-0.03,0.07,1.2,'SCH23390'],
             'VTA': [-0.03,0.03,1.2,'SCH23390']}
 save_pvals = {}
 for nuc in nuclei:
