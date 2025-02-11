@@ -263,30 +263,30 @@ plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'),
 
 #%%
 # compare to persistent cells
-tau_all_postrew = [2.7388246087772568,
- 1.8680482627734762,
- 11.08137800165117,
- 3.5444438041337274,
- 2.7430491682467073,
- 2.601022229148832,
- 1.71137469526335,
- 1.540867103403629,
- 1.1991769514236397,
- 3.4399765192223892]
+tau_all_postrew = [2.3945452847380753,
+ 1.2715792413414906,
+ 2.80344386166323,
+ 3.4292618526769596,
+ 1.1694569158784902,
+ 2.260117900095717,
+ 1.6581020410143807,
+ 1.6247022808660903,
+ 1.5364510638834197,
+ 1.9311296922887673]
 
-tau_all_prerew = [1.635096415224901,
- 1.2518725660615262,
- 3.8502273715196713,
- 1.343018147567173,
- 0.7099184166061284,
- 1.2798217473069395,
- 1.118924582663642,
- 1.27303882959974,
- 1.2018593185708712,
- 1.810657906442272]
+tau_all_prerew = [1.612888245641297,
+ 1.441306440702924,
+ 4.4010311203040535,
+ 1.4264369902283522,
+ 1.1067958504033675,
+ 1.3433893804786057,
+ 1.1098115538940039,
+ 1.4081993860602793,
+ 1.2795305457369521,
+ 1.8312094423839418]
 df = pd.DataFrame()
 df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Reward-centric']*len(tau_all),
+df['cell_type'] =np.concatenate([['All reward-centric']*len(tau_all),
                                 ['Post-reward']*len(tau_all_postrew),
                                 ['Pre-reward']*len(tau_all_prerew)])
 # number of epochs vs. reward cell prop incl combinations    
@@ -340,7 +340,7 @@ def add_stat_annotation(ax, x1, x2, y, adjusted_p):
                 fontsize=10)
 
 # Example usage of add_stat_annotation with group annotations and asterisks
-y_max = df['tau'].max()-6  # maximum y value of the plot
+y_max = df['tau'].max()  # maximum y value of the plot
 y_range = df['tau'].max() - df['tau'].min()  # range of y values
 
 cell_types = df['cell_type'].unique()

@@ -849,7 +849,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
                     racc = np.nan
                 raccs.append(racc)
         raccs_all.append(raccs)
-    thres=1e-50 # correlation thres
+    thres=1e-10 # correlation thres
     com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
         if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
     #only get perms with non zero cells

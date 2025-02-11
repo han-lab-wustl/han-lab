@@ -34,7 +34,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
-num_epochs = []
+num_epochs = [] 
 pvals = []
 rates_all = []
 total_cells = []
@@ -180,8 +180,8 @@ ax.legend()
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.16
-pshift=.03
+y = 0.15
+pshift=.02
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -196,10 +196,29 @@ for ii,ep in enumerate(eps):
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
-ax.set_title('Post-reward cells',pad=90)
+ax.set_title('Post-reward cells',pad=80)
 plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 df_plt2=df_plt2.reset_index()
+
+#%%
+# subtract from shuffle
+# df_plt2=df_plt2.reset_index()
+df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
+fig,ax = plt.subplots(figsize=(3,5))
+# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
+        data=df_plt2,s=10,alpha=0.7)
+sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
+        data=df_plt2,
+        fill=False,ax=ax, color='k', errorbar='se')
+
+ax.spines[['top','right']].set_visible(False)
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('Reward-centric cell proportion')
+
+plt.savefig(os.path.join(savedst, 'postreward_cell_prop-shuffle_per_an.svg'), 
+        bbox_inches='tight')
 
 #%%
 # find tau/decay

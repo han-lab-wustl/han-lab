@@ -120,8 +120,6 @@ for ep in eps:
 #%%    
 # include all comparisons 
 df_perms = pd.DataFrame()
-df_perms['epoch_comparison'] = [str(tuple(xx)) for xx in np.concatenate([yy[0] for yy in epoch_perm])]
-df_perms['rewzone_comparison'] = [str(tuple(xx)) for xx in np.concatenate([yy[1] for yy in epoch_perm])]
 goal_cell_perm = [xx[0] for xx in goal_cell_prop]
 goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)

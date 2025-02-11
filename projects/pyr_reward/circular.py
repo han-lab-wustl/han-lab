@@ -7,7 +7,7 @@ import scipy, numpy as np
 from projects.pyr_reward.rewardcell import get_radian_position, get_rewzones
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
-    consecutive_stretch,make_tuning_curves_radians_trial_by_trial
+    consecutive_stretch,make_tuning_curves_radians_trial_by_trial, make_tuning_curves
 from itertools import combinations, chain
 
 def compute_circular_stats(tuning_curve, positions, track_length):
@@ -119,10 +119,22 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
     # get tuning curves trial by trial and get calculate radians
-    trialstates, licks_trial_by_trial, tcs_trial_by_trial,\
-    coms_trial_by_trial = make_tuning_curves_radians_trial_by_trial(eps,rewlocs,
-        lick,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)
+    if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
+        tcs_correct, coms_correct, tcs_fail, coms_fail, \
+        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+    else:# remake tuning curves relative to reward        
+        # 9/19/24
+        # find correct trials within each epoch!!!!
+        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        rewards,forwardvel,rewsize,bin_size)      
+    # allocentric ref
+    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        Fc3,trialnum,rewards,forwardvel,
+        rewsize,bin_size)
+    tcs_abs_mean = np.nanmean(tcs_correct_abs,axis=0)
+    com_abs_mean = np.nanmean(coms_correct_abs,axis=0)
+    # tc mean across epochs    
+    tc_mean = np.nanmean(tcs_correct,axis=0)
     # first get goal cells
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
@@ -145,31 +157,38 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
                     com_loop_w_in_window.append(cll)
     # get abs value instead
     coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-    com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    epoch_perm.append([perm,rz_perm]) 
-    # get goal cells across all epochs        
-    goal_cells = intersect_arrays(*com_goal)   
-    all_goal_cells = np.concatenate(com_goal)
+    #average after looping
+    com_mean_rewrel = np.nanmean(coms_rewrel,axis=0)    
     rad_binned = np.linspace(0, 2*np.pi, bins)
     # compute circular statistics
-    meanangles_all_gc = []; rvals_all_gc = []
-    for ep in range(len(eps)-1):
-        meanangle = []; rval = []
-        for cll in all_goal_cells:
-            tc = tcs_correct[ep,cll,:]
-            mean_ang, r = compute_circular_stats_rad(tc, rad_binned)
-            meanangle.append(mean_ang); rval.append(r)
-        meanangles_all_gc.append(meanangle); rvals_all_gc.append(rval)
-    # compute circular statistics for dedicated cells
-    meanangles_gc = []; rvals_gc = []
-    for ep in range(len(eps)-1):
-        meanangle = []; rval = []
-        for cll in goal_cells:
-            tc = tcs_correct[ep,cll,:]
-            mean_ang, r = compute_circular_stats_rad(tc, rad_binned)
-            meanangle.append(mean_ang); rval.append(r)
-        meanangles_gc.append(meanangle); rvals_gc.append(rval)
-        
-    return meanangles_gc, rvals_gc, meanangles_all_gc, rvals_all_gc, tcs_correct, coms_correct, \
-        goal_cells, all_goal_cells
+    meanangles_rad = []; rvals_rad = []
+    for cll in range(tc_mean.shape[0]):
+        tc = tc_mean[cll,:]
+        mean_ang, r = compute_circular_stats_rad(tc, rad_binned)
+        meanangles_rad.append(mean_ang); rvals_rad.append(r)
+    # allocentric ref
+    ypos_binned = np.linspace(0, track_length, bins)
+    meanangles_abs = []; rvals_abs = []
+    for cll in range(tcs_abs_mean.shape[0]):
+        tc = tcs_abs_mean[cll,:]
+        mean_ang, r = compute_circular_stats(tc, ypos_binned, track_length)
+        meanangles_abs.append(mean_ang); rvals_abs.append(r)
+    # # Create a 2D density plot
+    # fig, ax = plt.subplots(figsize=(6,5))
+    # sns.kdeplot(x=com_mean_rewrel+np.pi, y=rvals_rad, cmap="Purples", fill=True, thresh=0)
+    # ax.axvline(np.pi, color='k', linestyle='--')
+    # ax.set_xlabel("Reward-relative distance")
+    # ax.set_ylabel("r value")
+    # ax.set_title("Reward-relative map")
+    # plt.show()
+
+    # fig, ax = plt.subplots(figsize=(6,5))
+    # sns.kdeplot(x=com_abs_mean, y=rvals_abs, cmap="Blues", fill=True, thresh=0)
+    # ax.axvline(0, color='k', linestyle='--')
+    # ax.axvline(2*np.pi, color='k', linestyle='--')
+    # plt.xlabel("Allocentric distance")
+    # ax.set_ylabel("r value")
+    # plt.title("Place map")
+    # plt.show()
+    return meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,tc_mean,com_mean_rewrel,\
+        tcs_abs_mean,com_abs_mean

@@ -178,9 +178,9 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Post reward cell proportion')
+ax.set_ylabel('Pre-reward cell proportion')
 eps = [2,3,4]
-y = 0.14
+y = 0.18
 pshift=.03
 fs=36
 for ii,ep in enumerate(eps):
@@ -200,6 +200,25 @@ ax.set_title('Pre-reward cells',pad=100)
 plt.savefig(os.path.join(savedst, 'prerew_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 df_plt2=df_plt2.reset_index()
+
+#%%
+# subtract from shuffle
+# df_plt2=df_plt2.reset_index()
+df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
+fig,ax = plt.subplots(figsize=(3,5))
+# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
+        data=df_plt2,s=10,alpha=0.7)
+sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
+        data=df_plt2,
+        fill=False,ax=ax, color='k', errorbar='se')
+
+ax.spines[['top','right']].set_visible(False)
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('Reward-centric cell proportion')
+
+plt.savefig(os.path.join(savedst, 'prereward_cell_prop-shuffle_per_an.svg'), 
+        bbox_inches='tight')
 
 #%%
 # find tau/decay
