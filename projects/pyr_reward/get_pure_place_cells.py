@@ -103,6 +103,11 @@ for ii in range(len(conddf)):
         perm = list(combinations(range(len(coms_correct_abs)), 2))     
         com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+            perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
+    rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_farrew[ii])>0]
+    com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
+    print(f'Far-reward cells total: {[len(xx) for xx in com_goal_farrew]}')
+
         # get cells across all epochs that meet crit
         pcs = np.unique(np.concatenate(compc))
         pcs_all = intersect_arrays(*compc)

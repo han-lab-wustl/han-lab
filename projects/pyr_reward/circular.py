@@ -4,7 +4,7 @@ generate circular statistics
 """
 
 import scipy, numpy as np
-from projects.pyr_reward.rewardcell import get_radian_position, get_rewzones
+from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
     consecutive_stretch,make_tuning_curves_radians_trial_by_trial, make_tuning_curves
@@ -96,7 +96,8 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
     bins=90
-    rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
+                                trialnum, track_length) # get radian coordinates
     track_length_rad = track_length*(2*np.pi/track_length)
     bin_size=track_length_rad/bins 
     rz = get_rewzones(rewlocs,1/scalingf)       
@@ -128,6 +129,7 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size)      
     # allocentric ref
+    bin_size=track_length/bins 
     tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
         Fc3,trialnum,rewards,forwardvel,
         rewsize,bin_size)

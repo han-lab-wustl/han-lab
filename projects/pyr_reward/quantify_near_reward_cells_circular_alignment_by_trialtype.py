@@ -180,7 +180,7 @@ ax.legend()
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.15
+y = 0.11
 pshift=.02
 fs=36
 for ii,ep in enumerate(eps):
@@ -215,7 +215,7 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('Post-reward-centric cell proportion')
 
 plt.savefig(os.path.join(savedst, 'postreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')

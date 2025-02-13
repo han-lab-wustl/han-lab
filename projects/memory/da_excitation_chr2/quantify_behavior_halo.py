@@ -24,9 +24,9 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[44,45,48,49,52,53,54,55,59],
-            [44,45,46,47,52],
-            [45,46,49,50,54,55,56,59,60,61]]#,[29,30],[36,37]]
+days_all = [[44,45,48,49,52,53,54,55,59,61,62,63],
+            [44,45,46,47,52,53,54,55],
+            [45,46,49,50,54,55,56,59,60,61,62,63]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis

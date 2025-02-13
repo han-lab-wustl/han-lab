@@ -38,7 +38,7 @@ condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values
 src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
-days_all = [[45,46,51,52,55,56,57]]
+days_all = [[45,46,51,52,55,56,57,62,63,64,65]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -288,7 +288,7 @@ fig.tight_layout()
 # per trial
 height=.02
 ymin=-.02
-fig, ax = plt.subplots(figsize=(9,5))
+fig, ax = plt.subplots(figsize=(8,5))
 pln=3
 trialtype = 0# odd bc red laser
 stimsec=4

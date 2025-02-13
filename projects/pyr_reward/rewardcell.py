@@ -67,7 +67,7 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
+            'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     try:
@@ -80,12 +80,14 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
     changeRewLoc = np.hstack(fall['changeRewLoc'])
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
+    licks=fall['licks'][0]
     if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
+        licks=licks[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -252,11 +254,12 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
     
     return radian_alignment,rate,p_value,total_cells,goal_cell_iind,\
         goal_cell_prop,num_epochs,goal_cell_null,epoch_perm,pvals
-
-def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
-    radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
-    goal_cell_null,pvals,total_cells,
-    num_iterations=1000):
+        
+        
+def extract_data_prerew(ii,params_pth,
+    animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,
+    pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
+    total_cells,num_iterations=1000):
     """
     changed on 2/6/25 to make it more consistent with splitting the different
     subpopulations
@@ -264,7 +267,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat', 'timedFF'])
+            'stat', 'timedFF', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     try:
@@ -277,17 +280,20 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     changeRewLoc = np.hstack(fall['changeRewLoc'])
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
+    lick=fall['licks'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
         changeRewLoc=changeRewLoc[:-1]
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
+        lick=lick[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
     bins=90
-    rad = get_radian_position(eps,ybinned,rewlocs,track_length,rewsize) # get radian coordinates
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
+                    trialnum, track_length) # get radian coordinates
     track_length_rad = track_length*(2*np.pi/track_length)
     bin_size=track_length_rad/bins 
     rz = get_rewzones(rewlocs,1/scalingf)       
@@ -348,37 +354,17 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
+    lowerbound = -np.pi/4
     com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-        xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
-    acc = fall['forwardvel'][0][1:]/np.diff(fall['timedFF'][0])
-    acc=np.hstack(pd.DataFrame({'acc': acc}).rolling(5).mean().values)    
-    nans,x = nan_helper(acc)
-    acc[nans] = np.interp(x(nans), x(~nans), acc[~nans])
-    # check to make sure just a subset
-    # calc acc corr
-    raccs_all = []
-    for com in com_goal_postrew:
-        raccs = []
-        if len(com)>0:
-            for cll in com:
-                try: # if dff is nans
-                    dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
-                    _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
-                except Exception as e:
-                    racc = np.nan
-                raccs.append(racc)
-        raccs_all.append(raccs)
-    thres=1e-50 # correlation thres
-    com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
-        if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
+        xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
+        xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal]
     #only get perms with non zero cells
     perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
     rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
     com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
 
     print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}\n\
-    Post-reward cells: {[len(xx) for xx in com_goal_postrew]}')
+    Pre-reward cells: {[len(xx) for xx in com_goal_postrew]}')
     assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
     # get goal cells across all epochs   
@@ -454,8 +440,8 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         # in addition, com near but after goal
         com_goal_postrew_shuf = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
+            xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal_shuf]
         # check to make sure just a subset
         # otherwise reshuffle
         while not sum([len(xx) for xx in com_goal_shuf])>=sum([len(xx) for xx in com_goal_postrew_shuf]):
@@ -488,26 +474,9 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
             com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
             # in addition, com near but after goal
             com_goal_postrew_shuf = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-                xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-                xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
+                xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
+                xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal_shuf]
 
-        # calc acc corr
-        raccs_all = []
-        for com in com_goal_postrew_shuf:
-            raccs = []
-            if len(com)>0:
-                for cll in com:
-                    nans,x = nan_helper(dFF[1:,cll])
-                    try: # if dff is nans
-                        dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
-                        _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
-                    except Exception as e:
-                        racc = np.nan
-                    raccs.append(racc)
-            raccs_all.append(raccs)
-        com_goal_postrew_shuf = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
-            if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew_shuf)]
-        #only get perms with non zero cells
         perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew_shuf[ii])>0]
         com_goal_postrew_shuf=[com for com in com_goal_postrew_shuf if len(com)>0]
 
@@ -625,7 +594,7 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}\n')
     # com away from rew
     #only get perms with non zero cells
-    lowerbound = np.pi/2
+    lowerbound = np.pi/4
     com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
         xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
     perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
@@ -687,7 +656,7 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         # OR shuffle cell identities
         # relative to reward
         coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
-        perm = list(combinations(range(len(coms_correct)), 2)) 
+        # perm = list(combinations(range(len(coms_correct)), 2)) 
         # account for cells that move to the end/front
         # Find COMs near pi and shift to -pi
         com_loop_w_in_window = []
@@ -828,8 +797,9 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
+    upperbound = np.pi/4
     com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-        xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+        xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
         xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
     acc = fall['forwardvel'][0][1:]/np.diff(fall['timedFF'][0])
     acc=np.hstack(pd.DataFrame({'acc': acc}).rolling(5).mean().values)    
@@ -849,7 +819,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
                     racc = np.nan
                 raccs.append(racc)
         raccs_all.append(raccs)
-    thres=1e-10 # correlation thres
+    thres=1e-50 # correlation thres
     com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
         if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
     #only get perms with non zero cells
@@ -934,7 +904,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         # in addition, com near but after goal
         com_goal_postrew_shuf = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
             xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
         # check to make sure just a subset
         # otherwise reshuffle
@@ -1211,6 +1181,64 @@ def get_radian_position(eps,ybinned,rewlocs,track_length,rewsize):
         rad.append((((((y-rew)*2*np.pi)/track_length)+np.pi)%(2*np.pi))-np.pi)
     rad = np.concatenate(rad)
     return rad
+
+import numpy as np
+
+def get_radian_position_first_lick_after_rew(eps, ybinned, licks, reward, rewsize,rewlocs,
+                    trialnum, track_length):
+    """
+    Computes radian position aligned to the first lick after reward.
+
+    Parameters:
+    - eps: List of trial start indices.
+    - ybinned: 1D array of position values.
+    - licks: 1D binary array (same length as ybinned) indicating lick events.
+    - reward: 1D binary array (same length as ybinned) indicating reward delivery.
+    - track_length: Total length of the circular track.
+
+    Returns:
+    - rad: 1D array of radian positions aligned to the first lick after reward.
+    """
+    rad = []  # Store radian coordinates
+    for i in range(len(eps) - 1):
+        # Extract data for the current trial
+        y_trial = ybinned[eps[i]:eps[i+1]]
+        licks_trial = licks[eps[i]:eps[i+1]]
+        reward_trial = reward[eps[i]:eps[i+1]]
+        trialnum_trial = trialnum[eps[i]:eps[i+1]]
+        unique_trials = np.unique(trialnum[eps[i]:eps[i+1]])  # Get unique trial numbers
+        for trial in unique_trials:
+            # Extract data for the current trial
+            trial_mask = trialnum_trial == trial  # Boolean mask for the current trial
+            y = y_trial[trial_mask]
+            licks_trial_ = licks_trial[trial_mask]
+            reward_trial_ = reward_trial[trial_mask]
+            # Find the reward location in this trial
+            reward_indices = np.where(reward_trial_ > 0)[0]  # Indices where reward occurs
+            if len(reward_indices) == 0:
+                try:
+                    y_rew = np.where((y<(rewlocs[i]+rewsize*1.5)) & (y>(rewlocs[i]-rewsize*1.5)))[0][0]
+                    reward_idx=y_rew
+                except Exception as e: # if trial is empty??
+                    reward_idx=int(len(y)/2) # put in random middle place of trials
+            else:
+                reward_idx = reward_indices[0]  # First occurrence of reward
+            # Find the first lick after the reward
+            lick_indices_after_reward = np.where((licks_trial_ > 0) & (np.arange(len(licks_trial_)) > reward_idx))[0]
+            if len(lick_indices_after_reward) > 0:
+                first_lick_idx = lick_indices_after_reward[0]  # First lick after reward
+            else:
+                # if animal did not lick after reward/no reward was given
+                first_lick_idx=reward_idx
+            # Convert positions to radians relative to the first lick
+            first_lick_pos = y[first_lick_idx]
+            rad.append((((((y - first_lick_pos) * 2 * np.pi) / track_length) + np.pi) % (2 * np.pi)) - np.pi)
+
+    if len(rad) > 0:
+        rad = np.concatenate(rad)
+        return rad
+    else:
+        return np.array([])  # Return empty array if no valid trials
 
 def get_goal_cells(track_length,coms_correct,window=30):
     goal_window = window*(2*np.pi/track_length) # cm converted to rad

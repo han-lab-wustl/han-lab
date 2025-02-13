@@ -30,7 +30,7 @@ dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # normalize pre window
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-conddf = pd.read_excel(r"X:\dopamine_opto_vtalcsnc_newsnc.xlsx",sheet_name='Sheet1') # day vs. condition LUT
+conddf = pd.read_excel(r"X:\dopamine_opto_vtalcsnc_80snc.xlsx",sheet_name='Sheet1') # day vs. condition LUT
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 

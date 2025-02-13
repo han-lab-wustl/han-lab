@@ -12,8 +12,8 @@ from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"]=8
+mpl.rcParams["ytick.major.size"]=8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
@@ -43,25 +43,23 @@ radian_alignment = {}
 lasttr=8 #  last trials
 bins=90
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_prereward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
-
 # iterate through all animals
 for ii in range(len(conddf)):
-    day = conddf.days.values[ii]
-    animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
-        if animal=='e145' or animal=='e139': pln=2 
-        else: pln=0
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
-                goal_cell_null,epoch_perm,pvals=extract_data_prerew(ii,params_pth,\
+        day = conddf.days.values[ii]
+        animal = conddf.animals.values[ii]
+        if (animal!='e217') & (conddf.optoep.values[ii]<2):
+                if animal=='e145' or animal=='e139': pln=2 
+                else: pln=0
+                params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+                radian_alignment,rate,p_value,total_cells,goal_cell_iind,\
+                goal_cell_prop,num_epochs,goal_cell_null,epoch_perm,pvals=extract_data_prerew(ii,params_pth,
                 animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,
                 pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
                 total_cells)
 pdf.close()
-
 # save pickle of dcts
 with open(saveto, "wb") as fp:   #Pickling
-    pickle.dump(radian_alignment, fp)
+        pickle.dump(radian_alignment, fp)
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -155,7 +153,7 @@ df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 
 df_plt2 = pd.concat([df_permsav2,df_plt])
-# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2[(df_plt2.index.get_level_values('animals')!='e189') & (df_plt2.index.get_level_values('animals')!='e200')]
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
@@ -180,8 +178,8 @@ ax.legend()
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Pre-reward cell proportion')
 eps = [2,3,4]
-y = 0.18
-pshift=.03
+y = 0.11
+pshift=.02
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -215,7 +213,7 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('Pre-reward-centric cell proportion')
 
 plt.savefig(os.path.join(savedst, 'prereward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')

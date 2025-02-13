@@ -56,9 +56,9 @@ end
 %%
 % for dopamine
 clear all
-mouse_name = "E232";
-days = [2:6];
-src = "X:\";
+mouse_name = "E231";
+days = [10 16 20 21 22];
+src = "Z:\";
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "**\*time*.mat"));
