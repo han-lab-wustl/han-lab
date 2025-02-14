@@ -57,7 +57,7 @@ end
 % for dopamine
 clear all
 mouse_name = "E231";
-days = [10 16 20 21 22];
+days = [22];
 src = "Z:\";
 
 for day=days

@@ -178,7 +178,7 @@ ax.legend()
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Pre-reward cell proportion')
 eps = [2,3,4]
-y = 0.11
+y = 0.15
 pshift=.02
 fs=36
 for ii,ep in enumerate(eps):

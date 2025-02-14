@@ -17,12 +17,12 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_farrew
+from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_warped_rewcentric
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'far_rew.pdf')
+savepth = os.path.join(savedst, 'warped_rewrel.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
@@ -44,24 +44,23 @@ goal_window_cm = 20
 lasttr=8 # last trials
 bins=90
 dists = []
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_farreward_all.p"
+
+# cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
-        day = conddf.days.values[ii]
-        animal = conddf.animals.values[ii]
-        if (animal!='e217') & (conddf.optoep.values[ii]<2):
-                if animal=='e145' or animal=='e139': pln=2 
-                else: pln=0
-                params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-                radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
-                        goal_cell_null,epoch_perm,pvals=extract_data_farrew(ii,params_pth,\
-                        animal,day,bins,radian_alignment,radian_alignment_saved,goal_window_cm,
-                        pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
-                        total_cells)
+    day = conddf.days.values[ii]
+    animal = conddf.animals.values[ii]
+    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+        if animal=='e145' or animal=='e139': pln=2 
+        else: pln=0
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+        radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
+                goal_cell_null,epoch_perm,pvals=extract_data_warped_rewcentric(ii,params_pth,\
+                animal,day,bins,radian_alignment,radian_alignment_saved,goal_window_cm,
+                pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
+                total_cells)
+
 pdf.close()
-# save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -93,8 +92,6 @@ fig,ax = plt.subplots(figsize=(5,5))
 df_plt = df
 # av across mice
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
-df_plt=df_plt.reset_index()
-df_plt=df_plt[df_plt.num_epochs<5]
 sns.stripplot(x='num_epochs', y='goal_cell_prop',
         hue='animals',data=df_plt,
         s=10)
@@ -102,7 +99,7 @@ sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt,
         fill=False,ax=ax, color='k', errorbar='se')
 ax = sns.lineplot(data=df_plt, # correct shift
-        x=df_plt.num_epochs-2, y='goal_cell_prop_shuffle',color='grey', 
+        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
@@ -110,13 +107,15 @@ ax.legend(bbox_to_anchor=(1.01, 1.05))
 eps = [2,3,4]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    shufprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop_shuffle']
+    rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
+    shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
     t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
     print(f'{ep} epochs, pval: {pval}')
 #%%    
 # include all comparisons 
 df_perms = pd.DataFrame()
+df_perms['epoch_comparison'] = [str(tuple(xx)) for xx in np.concatenate([yy[0] for yy in epoch_perm])]
+df_perms['rewzone_comparison'] = [str(tuple(xx)) for xx in np.concatenate([yy[1] for yy in epoch_perm])]
 goal_cell_perm = [xx[0] for xx in goal_cell_prop]
 goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
@@ -125,17 +124,39 @@ df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animal
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
 df_perms['session_num'] = np.concatenate(df_perm_days)
+# df_perms = df_perms[df_perms.animals!='e189']
+df_permsav = df_perms.groupby(['animals','rewzone_comparison']).mean(numeric_only=True)
+
+fig,ax = plt.subplots(figsize=(7,5))
+sns.stripplot(x='rewzone_comparison', y='goal_cell_prop',
+        hue='animals',data=df_permsav,
+        s=8,ax=ax)
+sns.barplot(x='rewzone_comparison', y='goal_cell_prop',
+        data=df_permsav,
+        fill=False,ax=ax, color='k', errorbar='se')
+ax = sns.lineplot(data=df_permsav, # correct shift
+        x='rewzone_comparison', y='goal_cell_prop_shuffle',
+        color='grey', label='shuffle')
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+
+eps = df_permsav.index.get_level_values("rewzone_comparison").unique()
+for ep in eps:
+    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+    rewprop = df_permsav.loc[(df_permsav.index.get_level_values('rewzone_comparison')==ep), 'goal_cell_prop'].values
+    shufprop = df_permsav.loc[(df_permsav.index.get_level_values('rewzone_comparison')==ep), 'goal_cell_prop_shuffle'].values
+    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+    print(f'{ep} epochs, pval: {pval}')
 
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-df_permsav2=df_permsav2.reset_index()
-
+#%%
 # compare to shuffle
-# df_permsav2=df_permsav2.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189')]
-df_plt2 = df_plt2[df_plt2.num_epochs<5]
+df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
+df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 # number of epochs vs. reward cell prop incl combinations    
 fig,ax = plt.subplots(figsize=(3,5))
@@ -157,15 +178,15 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Far reward-centric cell proportion')
+ax.set_ylabel('Reward-centric cell proportion')
 eps = [2,3,4]
-y = 0.07
-pshift = 0.01
+y = 0.35
+pshift = 0.04
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
@@ -177,7 +198,7 @@ for ii,ep in enumerate(eps):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 # com
-plt.savefig(os.path.join(savedst, 'farreward_cell_prop_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'allreward_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 
 #%%
@@ -194,9 +215,9 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Far reward-centric cell proportion-shuffle')
+ax.set_ylabel('Reward-centric cell proportion')
 
-plt.savefig(os.path.join(savedst, 'farreward_cell_prop-shuffle_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'allreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
 
 #%% 
@@ -238,29 +259,30 @@ plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'),
 
 #%%
 # compare to persistent cells
-tau_all_postrew = [2.5081012042756297,
- 1.3564559842969026,
- 3.067144722017443,
- 4.017594663159857,
- 2.307820130958938,
- 1.814554708027948,
- 1.9844914154882163,
- 1.7613987163758171,
- 2.403541822072123]
+tau_all_postrew = [2.3945452847380753,
+ 1.2715792413414906,
+ 2.80344386166323,
+ 3.4292618526769596,
+ 1.1694569158784902,
+ 2.260117900095717,
+ 1.6581020410143807,
+ 1.6247022808660903,
+ 1.5364510638834197,
+ 1.9311296922887673]
 
-tau_all_prerew =[1.6056888447006052,
- 1.7426458455678147,
- 5.050873750828834,
- 2.2320785654220607,
- 1.8576189935003193,
- 1.386477229747204,
- 1.6253067659011684,
- 1.4999119163136394,
- 2.5827747398002434]
-
+tau_all_prerew = [1.612888245641297,
+ 1.441306440702924,
+ 4.4010311203040535,
+ 1.4264369902283522,
+ 1.1067958504033675,
+ 1.3433893804786057,
+ 1.1098115538940039,
+ 1.4081993860602793,
+ 1.2795305457369521,
+ 1.8312094423839418]
 df = pd.DataFrame()
 df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Far-reward']*len(tau_all),
+df['cell_type'] =np.concatenate([['All reward-centric']*len(tau_all),
                                 ['Post-reward']*len(tau_all_postrew),
                                 ['Pre-reward']*len(tau_all_prerew)])
 # number of epochs vs. reward cell prop incl combinations    
@@ -288,12 +310,13 @@ kruskal_result = stats.kruskal(*grouped)
 print(f"Kruskal-Wallis H-statistic: {kruskal_result.statistic}, p-value: {kruskal_result.pvalue}")
 
 # Perform Dunn's test for pairwise comparisons and apply Bonferroni correction
-dunn_result = posthoc_dunn(df, val_col='tau', group_col='cell_type',p_adjust='bonferroni')
+dunn_result = posthoc_dunn(df, val_col='tau', group_col='cell_type', 
+        p_adjust='bonferroni')
 # Annotate the plot
 # Annotate the plot
 def add_stat_annotation(ax, x1, x2, y, adjusted_p):
-        h = 0.2  # height offset
-        line_offset = 0.1  # offset of the horizontal line
+        h = 0.1  # height offset
+        line_offset = 0.3  # offset of the horizontal line
         # Draw horizontal line
         ax.plot([x1, x1, x2, x2], [y, y + line_offset, y + line_offset, y], lw=1.5, c='k')
         # Determine significance level
@@ -307,13 +330,13 @@ def add_stat_annotation(ax, x1, x2, y, adjusted_p):
                 significance = 'ns'  # Not significant
         # Combine significance level and p-value in the annotation
         text = f'{significance}\n(p={adjusted_p:.3g})'
-        line_offset2=.5
+        line_offset2=.3
         # Add p-value text
         ax.text((x1 + x2) * 0.5, y + line_offset2, text, ha='center', va='bottom', color='k',
-                fontsize=14)
+                fontsize=10)
 
 # Example usage of add_stat_annotation with group annotations and asterisks
-y_max = df['tau'].max()-5  # maximum y value of the plot
+y_max = df['tau'].max()  # maximum y value of the plot
 y_range = df['tau'].max() - df['tau'].min()  # range of y values
 
 cell_types = df['cell_type'].unique()
@@ -326,7 +349,7 @@ for i, group1 in enumerate(cell_types):
                         x2 = list(cell_types).index(group2)
                         y = y_max + (i + j+3) * y_range * .1  # adjust y position
                         print(i,y)
-                        add_stat_annotation(ax, x1, x2, y+i+j, adjusted_p)
+                        add_stat_annotation(ax, x1, x2, y, adjusted_p)
 
 plt.savefig(os.path.join(savedst, 'decay_rewardcell.svg'), 
         bbox_inches='tight')

@@ -37,8 +37,8 @@ condrewloc['Day'] = condrewloc['Day'].astype(int)
 condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values]
 src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
-animals = ['e243']
-days_all = [[45,46,51,52,55,56,57,62,63,64,65]]
+animals = ['e242']
+days_all = [[45,46,51,52,53,54,55]]
 opto_cond = 'Opto' # experiment condition
 rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
