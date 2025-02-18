@@ -367,8 +367,6 @@ ax.spines['right'].set_visible(False)
 fig.tight_layout()
 # plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
 
-
-
 #%%
 # all planes
 fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,

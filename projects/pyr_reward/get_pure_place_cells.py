@@ -92,22 +92,16 @@ for ii in range(len(conddf)):
                 Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
                 pc_bool = np.sum(pcs,axis=0)>=1
                 Fc3 = Fc3[:,((skew>2)&pc_bool)]
-
         bin_size=3 # cm
         # get abs dist tuning 
         tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size)
         # get cells that maintain their coms across at least 2 epochs
-        place_window = 10 # cm converted to rad                
+        place_window = 30 # cm converted to rad                
         perm = list(combinations(range(len(coms_correct_abs)), 2))     
         com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
-            perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
-    rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_farrew[ii])>0]
-    com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
-    print(f'Far-reward cells total: {[len(xx) for xx in com_goal_farrew]}')
-
         # get cells across all epochs that meet crit
         pcs = np.unique(np.concatenate(compc))
         pcs_all = intersect_arrays(*compc)
