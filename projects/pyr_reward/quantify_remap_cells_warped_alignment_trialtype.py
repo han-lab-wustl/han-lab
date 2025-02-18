@@ -45,7 +45,6 @@ lasttr=8 # last trials
 bins=90
 dists = []
 
-# cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
@@ -178,7 +177,7 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('Reward-centric cell proportion (warped)')
 eps = [2,3,4]
 y = 0.35
 pshift = 0.04
@@ -198,7 +197,7 @@ for ii,ep in enumerate(eps):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 # com
-plt.savefig(os.path.join(savedst, 'allreward_cell_prop_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'allreward_warp_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 
 #%%
@@ -215,9 +214,9 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('Reward-centric cell proportion (warped)')
 
-plt.savefig(os.path.join(savedst, 'allreward_cell_prop-shuffle_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'allreward_warp_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
 
 #%% 

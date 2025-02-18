@@ -155,7 +155,7 @@ for ii,animal in enumerate(animals):
                     window_size, sampling_rate=31.25*1.5)
         
         vel_probe_near_reward = vel_probe.interpolate(method='linear').ffill().bfill().values[int(rewloc)-30:int(rewloc+(.5*rewsize))]
-        # lick selectivity last 8 trials
+        # lick selectivity last correct 8 trials
         lasttr = 8
         mask = np.array([xx in str_trials[-lasttr:] for xx in trialnum])
         lick_selectivity_success = get_lick_selectivity(ypos[mask], 

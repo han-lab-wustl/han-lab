@@ -198,7 +198,7 @@ for nuc in nuclei:
         if pln==3:
             if len(drug_dff)>0: deep_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
             deep_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
-        elif ((pln==2) | (pln==1)):
+        elif (pln==2):
             if len(drug_dff)>0: sup_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
             sup_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
     

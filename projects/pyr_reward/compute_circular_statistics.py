@@ -48,6 +48,7 @@ lasttr=8 # last trials
 bins=90
 coms_mean_rewrel = []
 coms_mean_abs = []
+coms_mean_warp = []
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -57,15 +58,16 @@ for ii in range(len(conddf)):
                 if animal=='e145' or animal=='e139': pln=2 
                 else: pln=0
                 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-                meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,tc_mean,com_mean_rewrel,\
-                tcs_abs_mean,com_abs_mean=get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
+                meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,meanangles_warped,rvals_warped,\
+                tc_mean,com_mean_rewrel,tcs_abs_mean,com_abs_mean,tcs_warped_mean,com_warped_mean=get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
                         radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
                         goal_cell_null,pvals,total_cells,
                         num_iterations=1000)
-                meanangles_all.append([meanangles_abs,meanangles_rad])
-                rvals_all.append([rvals_abs,rvals_rad])
+                meanangles_all.append([meanangles_abs,meanangles_rad,meanangles_warped])
+                rvals_all.append([rvals_abs,rvals_rad,rvals_warped])
                 coms_mean_rewrel.append(com_mean_rewrel)
                 coms_mean_abs.append(com_abs_mean)
+                coms_mean_warp.append(com_warped_mean)
 
 pdf.close()
 #%%
@@ -76,10 +78,15 @@ dfc = dfc[((dfc.animals!='e217')) & (dfc.optoep<2)]
 df = pd.DataFrame()
 df['com_mean_rewardrel'] = np.concatenate(coms_mean_rewrel) # add pi to align with place map?
 df['com_mean_abs'] = np.concatenate(coms_mean_abs)
+df['com_mean_warp'] = np.concatenate(coms_mean_warp)
 df['meanangles_abs'] = np.concatenate([xx[0] for xx in meanangles_all])
 df['meanangles_rewardrel'] = np.concatenate([xx[1] for xx in meanangles_all])
+df['meanangles_warp'] = np.concatenate([xx[2] for xx in meanangles_all])
+
 df['rval_abs'] = np.concatenate([xx[0] for xx in rvals_all])
 df['rval_rewardrel'] = np.concatenate([xx[1] for xx in rvals_all])
+df['rval_warp'] = np.concatenate([xx[2] for xx in rvals_all])
+
 df['animal'] = np.concatenate([[xx]*len(coms_mean_rewrel[ii]) for ii,xx in enumerate(dfc.animals.values)])
 df['days'] = np.concatenate([[xx]*len(coms_mean_rewrel[ii]) for ii,xx in enumerate(dfc.days.values)])
 
@@ -94,9 +101,9 @@ sns.kdeplot(x='com_mean_rewardrel', y='rval_rewardrel', data=df, cmap="Purples",
 ax.axvline(0, color='k', linestyle='--')
 ax.axvline(-np.pi/4, color='r', linestyle='--')
 ax.axvline(np.pi/4, color='r', linestyle='--')
-ax.set_xlabel("Reward-relative distance")
+ax.set_xlabel("Circular reward-relative distance")
 ax.set_ylabel("r value")
-ax.set_title(f"Reward-relative map")
+ax.set_title(f"Circular reward-relative map")
 plt.show()
 
 fig, ax = plt.subplots(figsize=(6,5))
@@ -107,6 +114,61 @@ plt.xlabel("Allocentric distance")
 ax.set_ylabel("r value")
 plt.title(f"Place map")
 plt.show()
+
+fig, ax = plt.subplots(figsize=(6,5))
+sns.kdeplot(x='com_mean_warp', y='rval_warp', data=df,cmap="RdPu", fill=True, thresh=0)
+ax.axvline(0, color='k', linestyle='--')
+ax.axvline(270, color='k', linestyle='--')
+plt.xlabel("Reward-warped distance")
+ax.set_ylabel("r value")
+plt.title(f"Reward-warped map")
+plt.show()
+#%%
+# r value - reward vs. place
+fig, ax = plt.subplots(figsize=(6,5))
+# sns.scatterplot(x='rval_abs', y='rval_rewardrel', data=df,alpha=0.1)
+
+fig, ax = plt.subplots(figsize=(6,5))
+sns.kdeplot(x='rval_abs', y='rval_rewardrel', data=df,cmap='Blues',fill=True, thresh=0)
+ax.set_ylabel('r value, Reward-centric')
+ax.set_xlabel('r value, Place-centric')
+animals=df.animal.unique()
+# animals=['e200', 'e189']
+
+for animal in animals:  
+        fig, ax = plt.subplots(figsize=(6,5))     
+        sns.kdeplot(x='rval_abs', y='rval_rewardrel', data=df[df.animal==animal],cmap='Blues',fill=True, thresh=0)
+        ax.set_ylabel('r value, Reward-centric')
+        ax.set_xlabel('r value, Place-centric')
+        ax.set_title(f"{animal}")
+        plt.show()
+
+#%%
+# Create a scatterplot
+track_length=270
+animals=df.animal.unique()
+# animals=['e200', 'e189']
+for animal in animals:  
+        fig, ax = plt.subplots(figsize=(6,5))       
+        sns.scatterplot(x='com_mean_warp', y='rval_warp', data=df[df.animal==animal], 
+                alpha=.05)
+        ax.axvline(0, color='k', linestyle='--')
+        ax.set_xlabel("Reward-warped distance")
+        ax.set_ylabel("r value")
+        ax.set_title(f"{animal}, Reward-warped map")
+        plt.show()
+
+        # fig, ax = plt.subplots(figsize=(6,5))
+        # sns.scatterplot(x='com_mean_abs', y='rval_abs', data=df[df.animal==animal],
+        #         alpha=0.7)
+        # ax.axvline(0, color='k', linestyle='--')
+        # ax.axvline(track_length, color='k', linestyle='--')
+        # plt.xlabel("Allocentric distance")
+        # ax.set_ylabel("r value")
+        # plt.title(f"{animal}, Place map")
+        # plt.show()
+
+
 #%%
 for animal in df.animal.unique():
         # Create a 2D density plot

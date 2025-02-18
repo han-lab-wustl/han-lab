@@ -10,10 +10,10 @@
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
 
-an = 'e139';
+an = 'z14';
 % an = 'e190';%an='e189';
 % individual day analysis 
-dys = [1 2 3 5 6 7 8 10];
+dys = [7];
 % dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
 % dys = [9 10 37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
 % dys = [2 3 4 5 6 7 8 9 11 12 13	14	15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
@@ -27,7 +27,7 @@ dys = [1 2 3 5 6 7 8 10];
 src = 'X:\vipcre'; % folder where fall is
 % src = 'Z:\sstcre_imaging';
 savedst = 'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\figure_data'; % where to save ppt of figures
-src = 'Y:\analysis\fmats';
+% src = 'Y:\analysis\fmats';
 pptx    = exportToPPTX('', ... % saves all figures to ppt
     'Dimensions',[12 6], ...
     'Title','tuning curves', ...
@@ -37,8 +37,8 @@ pptx    = exportToPPTX('', ... % saves all figures to ppt
 
 for dy=dys % for loop per day
     clearvars -except dys an cc dy src savedst pptx
-    % pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
-    pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
+    pth = dir(fullfile(src, an, string(dy), '**\*Fall.mat'));
+    % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane2*', an, dy)));
     if length(pth)>1 % if multi plane imaging, grab the combined f file
         pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
     end    
@@ -115,10 +115,10 @@ for dy=dys % for loop per day
         % get place cells only
         pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
         pc = logical(iscell(:,1))';
-        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
-        fc3_pc = Fc3(:,(pc & ~bordercells)); % remove border cells
+        % [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
+        fc3_pc = Fc3(:,(pc));% & ~bordercells)); % remove border cells
         % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-        dff_pc = dFF(:,(pc & ~bordercells)); % remove border cells
+        dff_pc = dFF(:,(pc));% & ~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
         nbins = track_length/bin_size;
 

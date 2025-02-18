@@ -4,10 +4,11 @@ generate circular statistics
 """
 
 import scipy, numpy as np
-from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones
+from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones,\
+    normalize_values
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
-    consecutive_stretch,make_tuning_curves_radians_trial_by_trial, make_tuning_curves
+    consecutive_stretch,make_tuning_curves_radians_trial_by_trial, make_tuning_curves,make_tuning_curves_warped
 from itertools import combinations, chain
 
 def compute_circular_stats(tuning_curve, positions, track_length):
@@ -102,13 +103,20 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     bin_size=track_length_rad/bins 
     rz = get_rewzones(rewlocs,1/scalingf)       
     # get average success rate
-    rates = []
+    rates = []; norm_pos = []
     for ep in range(len(eps)-1):
         eprng = range(eps[ep],eps[ep+1])
+        pos = normalize_values(ybinned[eprng], rewlocs[ep]-rewsize/2, rewlocs[ep]+rewsize/2, 
+                track_length)
+        # values are a list of positions
+        # b is the reward start location
+        # c is the reward end location
         success, fail, str_trials, ftr_trials, ttr, \
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
+        norm_pos.append(pos)
     rate=np.nanmean(np.array(rates))
+    norm_pos=np.concatenate(norm_pos)
     
     # added to get anatomical info
     # takes time
@@ -133,8 +141,18 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
         Fc3,trialnum,rewards,forwardvel,
         rewsize,bin_size)
+    # binsize = 2/90 bc track is essentially size 2 (-1 to 1)
+    tcs_correct_abs_warped, coms_correct_abs_warped = make_tuning_curves_warped(eps,rewlocs,
+            norm_pos,Fc3,trialnum,
+            rewards,forwardvel,rewsize,2/bins,lasttr=8,bins=90,
+            velocity_filter=False)
+    # norm to -1 to 1
+    coms_correct_abs_warped = np.array([com-1 for com in coms_correct_abs_warped])
+
     tcs_abs_mean = np.nanmean(tcs_correct_abs,axis=0)
     com_abs_mean = np.nanmean(coms_correct_abs,axis=0)
+    tcs_warped_mean = np.nanmean(tcs_correct_abs_warped,axis=0)
+    com_warped_mean = np.nanmean(coms_correct_abs_warped,axis=0)
     # tc mean across epochs    
     tc_mean = np.nanmean(tcs_correct,axis=0)
     # first get goal cells
@@ -175,6 +193,14 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
         tc = tcs_abs_mean[cll,:]
         mean_ang, r = compute_circular_stats(tc, ypos_binned, track_length)
         meanangles_abs.append(mean_ang); rvals_abs.append(r)
+    # warped ref
+    warped_binned = np.linspace(-1, 1, bins)
+    meanangles_warped = []; rvals_warped = []
+    for cll in range(tcs_warped_mean.shape[0]):
+        tc = tcs_warped_mean[cll,:]
+        mean_ang, r = compute_circular_stats(tc, warped_binned, 2) # track length of 2
+        meanangles_warped.append(mean_ang); rvals_warped.append(r)
+
     # # Create a 2D density plot
     # fig, ax = plt.subplots(figsize=(6,5))
     # sns.kdeplot(x=com_mean_rewrel+np.pi, y=rvals_rad, cmap="Purples", fill=True, thresh=0)
@@ -192,5 +218,5 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     # ax.set_ylabel("r value")
     # plt.title("Place map")
     # plt.show()
-    return meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,tc_mean,com_mean_rewrel,\
-        tcs_abs_mean,com_abs_mean
+    return meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,meanangles_warped,rvals_warped,\
+        tc_mean,com_mean_rewrel,tcs_abs_mean,com_abs_mean,tcs_warped_mean,com_warped_mean

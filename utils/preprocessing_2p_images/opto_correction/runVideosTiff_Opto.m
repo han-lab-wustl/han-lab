@@ -4,9 +4,9 @@
 % directories
 
 clear all; close all;
-days=[10 16 20 21 22]; 
+days=[57 58]; 
 % src = "X:\lc_chr2_grabda\e278";
-src = "Z:\E231";
+src = "Y:\halo_grabda\e242";
 lenVid=3000;
 threshold = 0.4; % a tunable parameter to find stims, set at 0.4 for chr2 data 
 crop_etl = 1; % 1 if cropping etl, put 1, may want to leave if signal is low for motion corr
