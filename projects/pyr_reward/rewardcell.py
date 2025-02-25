@@ -632,8 +632,8 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
             for ep in range(len(coms_correct)):
                 ax = axes[i]
                 ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                if len(tcs_fail)>0:
-                        ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
+                # if len(tcs_fail)>0:
+                #         ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
                 ax.axvline((bins/2), color='k')
                 ax.set_title(f'cell # {gc}')
                 ax.spines[['top','right']].set_visible(False)

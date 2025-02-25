@@ -6,32 +6,153 @@ updated aug 2024
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math,  matplotlib as mpl, matplotlib.backends.backend_pdf
-from placecell import get_pyr_metrics_opto, get_dff_opto
-mpl.rcParams['svg.fonttype'] = 'none'; mpl.rcParams["xtick.major.size"] = 8; mpl.rcParams["ytick.major.size"] = 8
+from placecell import get_pyr_metrics_opto, get_dff_opto, get_rewzones, consecutive_stretch
+mpl.rcParams['svg.fonttype'] = 'none'
+mpl.rcParams["xtick.major.size"] = 8 
+mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype
+from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 #%% - re-run dct making
 dcts = []
+threshold = 5
+track_length = 270
 for dd,day in enumerate(conddf.days.values):
     # define threshold to detect activation/inactivation
     if dd%10==0: print(f'{dd}/{len(conddf)}')
-    threshold = 5
-    pc = False
-    dct = get_pyr_metrics_opto(conddf, dd, day, 
-                threshold=threshold, pc=pc)
+    dct = {}
+    animal = conddf.animals.values[dd]
+    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'tuning_curves_early_trials',\
+        'tuning_curves_late_trials', 'coms_early_trials', 'trialnum', 'rewards', 'VR', 'ybinned','iscell',
+        'licks', 'forwardvel', 'bordercells'])
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+        rewsize = 10
+    rewards = fall['rewards'][0]; lick = fall['licks'][0]
+    ybinned = fall['ybinned'][0]; forwardvel=fall['forwardvel'][0]
+    trialnum = fall['trialnum'][0]
+    coms = fall['coms'][0]
+    coms_early = fall['coms_early_trials'][0]
+    tcs_early = fall['tuning_curves_early_trials'][0]
+    tcs_late = fall['tuning_curves_late_trials'][0]
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    eptest = conddf.optoep.values[dd]    
+    eps = np.where(changeRewLoc>0)[0]
+    rewlocs = changeRewLoc[eps]*1.5
+    rewzones = get_rewzones(rewlocs, 1.5)
+    fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+    Fc3 = fall_fc3['Fc3']
+    dFF = fall_fc3['dFF']
+    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~fall['bordercells'][0].astype(bool))]
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~fall['bordercells'][0].astype(bool))]
+    # skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+    # Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+    eps = np.append(eps, len(changeRewLoc)) 
+    # # exclude last ep if too little trials
+    # lastrials = np.unique(trialnum[eps[(len(eps)-2)]:eps[(len(eps)-1)]])[-1]
+    # if lastrials<8:
+    #     eps = eps[:-1]
+    if conddf.optoep.values[dd]<2: 
+        eptest = random.randint(2,3)      
+        if len(eps)<4: eptest = 2 # if no 3 epochs
+    comp = [eptest-2,eptest-1] # eps to compare    
+    bin_size = 3    
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
+                    trialnum, track_length) # get radian coordinates
+
+    tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[0]]]))
+    tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[1]]]))
+    tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
+    tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))    
+    # replace nan coms
+    # peak = np.nanmax(tc1_late,axis=1)
+    # coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
+    # peak = np.nanmax(tc2_late,axis=1)
+    # coms2_max = np.array([np.where(tc2_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])    
+    coms1 = np.hstack(coms[comp[0]])
+    coms2 = np.hstack(coms[comp[1]])
+    coms1_early = np.hstack(coms_early[comp[0]])
+    coms2_early = np.hstack(coms_early[comp[1]])
+    tuning_curve1=tc1_late[:, :int(rewlocs[comp[0]]/bin_size)]
+    tuning_curve2=tc2_late[:, :int(rewlocs[comp[1]]/bin_size)]
+    # Calculate the AUC across bins for each cell in each condition
+    auc_tc1 = []; auc_tc2 = []
+    for cll in range(tuning_curve1.shape[0]):
+        transients = consecutive_stretch(np.where(tuning_curve1[cll,:]>0)[0])
+        transients = [xx for xx in transients if len(xx)>0]
+        auc_tc1.append(np.nanmean([np.trapz(tuning_curve1[cll,tr],dx=bin_size) for tr in transients]))
+    for cll in range(tuning_curve2.shape[0]):
+        transients = consecutive_stretch(np.where(tuning_curve2[cll,:]>0)[0])
+        transients = [xx for xx in transients if len(xx)>0]
+        auc_tc2.append(np.nanmean([np.trapz(tuning_curve2[cll,tr],dx=bin_size) for tr in transients]))
+    mean_activity1 = np.array(auc_tc1)
+    mean_activity2 = np.array(auc_tc2)
+    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        rewards,forwardvel,rewsize,bin_size)          
+
+    # Find the difference in mean activity between conditions
+    activity_diff = mean_activity1 - mean_activity2
+    dct['comp'] = comp
+    dct['learning_tc1'] = [tc1_early, tc1_late]
+    dct['learning_tc2'] = [tc2_early, tc2_late]
+    dct['tcs_radian_alignment'] = tcs_correct
+    dct['coms_radian_alignment'] = coms_correct
+    dct['rewzones'] = rewzones
+    dct['coms1'] = coms1
+    dct['coms2'] = coms2
+    # dct['frac_place_cells_tc1'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>bin_size) & (coms1<=(track_length/bin_size))])
+    # dct['frac_place_cells_tc2'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>bin_size) & (coms2<=(track_length/bin_size))])
+    dct['frac_place_cells_tc1_late_trials'] = sum((coms1>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1[(coms1>=bin_size)])
+    dct['frac_place_cells_tc2_late_trials'] = sum((coms2>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2[(coms2>=bin_size)])
+    dct['frac_place_cells_tc1_early_trials'] = sum((coms1_early>(rewlocs[comp[0]]-5-(track_length*.2))) & (coms1_early<(rewlocs[comp[0]])+5+(track_length*.2)))/len(coms1_early[(coms1_early>=bin_size)])
+    dct['frac_place_cells_tc2_early_trials'] = sum((coms2_early>(rewlocs[comp[1]]-5-(track_length*.2))) & (coms2_early<(rewlocs[comp[1]])+5+(track_length*.2)))/len(coms2_early[(coms2_early>=bin_size)])
+    dct['rewlocs'] = rewlocs
+    dct['activity_diff']=activity_diff
     dcts.append(dct)
 # save pickle of dcts
 # saved new version for r21 2/25/25
-with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
-    pickle.dump(dcts, fp)   
+# with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
+#     pickle.dump(dcts, fp)   
     
 #%%
 # get inactivated cells distribution
+diffs_nonopto = []; diffs_opto = []; animals_nonopto = []; days_nonopto = []
+animals_opto = []; days_opto = []
+for ii,dct in enumerate(dcts):
+    if conddf.optoep.values[ii]<2:
+        diff_nonopto = dct['activity_diff']
+        diffs_nonopto.append(diff_nonopto)
+        animals_nonopto.append(conddf.animals.values[ii])
+        days_nonopto.append(conddf.days.values[ii])
+    else:
+        diff_opto = dct['activity_diff']
+        diffs_opto.append(diff_opto)
+        animals_opto.append(conddf.animals.values[ii])
+        days_opto.append(conddf.days.values[ii])
 
-d
+
+#%%
+df = pd.DataFrame()
+df['diffs'] = np.concatenate([np.concatenate(diffs_nonopto),np.concatenate(diffs_opto)])
+df['condition'] = np.concatenate([['no_stim']*len(np.concatenate(diffs_nonopto)),
+                                ['stim']*len(np.concatenate(diffs_opto))])
+df['animal'] = np.concatenate([np.concatenate([[animals_nonopto[ii]]*len(diffs_nonopto[ii]) for ii in range(len(animals_nonopto))]),
+                    np.concatenate([[animals_opto[ii]]*len(diffs_opto[ii]) for ii in range(len(animals_opto))])])
+
+
+#%%
+fig, ax = plt.subplots()
+sns.histplot(x='diffs',hue='condition',data=df[df.animal=='e218'],bins=250,fill=False,linewidth=3)
+# ax.set_ylim([0, 1000])
+ax.set_xlim([-20, 40])
 #%%
 # open previously saved dcts
 # with open(r"Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle

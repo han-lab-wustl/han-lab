@@ -49,6 +49,7 @@ bins=90
 coms_mean_rewrel = []
 coms_mean_abs = []
 coms_mean_warp = []
+tcs = []
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -59,7 +60,8 @@ for ii in range(len(conddf)):
                 else: pln=0
                 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
                 meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,meanangles_warped,rvals_warped,\
-                tc_mean,com_mean_rewrel,tcs_abs_mean,com_abs_mean,tcs_warped_mean,com_warped_mean=get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
+                tc_mean,com_mean_rewrel,tcs_abs_mean,com_abs_mean,tcs_warped_mean,com_warped_mean,\
+                        tcs_correct,tcs_correct_abs=get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
                         radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
                         goal_cell_null,pvals,total_cells,
                         num_iterations=1000)
@@ -68,6 +70,7 @@ for ii in range(len(conddf)):
                 coms_mean_rewrel.append(com_mean_rewrel)
                 coms_mean_abs.append(com_abs_mean)
                 coms_mean_warp.append(com_warped_mean)
+                tcs.append([tcs_correct,tcs_correct_abs])
 
 pdf.close()
 #%%
@@ -82,6 +85,8 @@ df['com_mean_warp'] = np.concatenate(coms_mean_warp)
 df['meanangles_abs'] = np.concatenate([xx[0] for xx in meanangles_all])
 df['meanangles_rewardrel'] = np.concatenate([xx[1] for xx in meanangles_all])
 df['meanangles_warp'] = np.concatenate([xx[2] for xx in meanangles_all])
+# df['tc_abs'] = [xx[0] for xx in tcs]
+# df['tc_rewrel'] = [xx[1] for xx in tcs]
 
 df['rval_abs'] = np.concatenate([xx[0] for xx in rvals_all])
 df['rval_rewardrel'] = np.concatenate([xx[1] for xx in rvals_all])
@@ -90,9 +95,9 @@ df['rval_warp'] = np.concatenate([xx[2] for xx in rvals_all])
 df['animal'] = np.concatenate([[xx]*len(coms_mean_rewrel[ii]) for ii,xx in enumerate(dfc.animals.values)])
 df['days'] = np.concatenate([[xx]*len(coms_mean_rewrel[ii]) for ii,xx in enumerate(dfc.days.values)])
 
-df.to_csv(r'C:\Users\Han\Desktop\circular_stats.csv')
+df.to_csv(r'C:\Users\Han\Desktop\circular_stats_active_all_ep_thres02.csv')
 #%%
-df = pd.read_csv(r'C:\Users\Han\Desktop\circular_stats.csv')
+# df = pd.read_csv(r'C:\Users\Han\Desktop\circular_stats.csv')
 
 # Create a 2D density plot
 fig, ax = plt.subplots(figsize=(6,5))
@@ -118,30 +123,86 @@ plt.show()
 fig, ax = plt.subplots(figsize=(6,5))
 sns.kdeplot(x='com_mean_warp', y='rval_warp', data=df,cmap="RdPu", fill=True, thresh=0)
 ax.axvline(0, color='k', linestyle='--')
-ax.axvline(270, color='k', linestyle='--')
 plt.xlabel("Reward-warped distance")
 ax.set_ylabel("r value")
 plt.title(f"Reward-warped map")
 plt.show()
 #%%
 # r value - reward vs. place
-fig, ax = plt.subplots(figsize=(6,5))
 # sns.scatterplot(x='rval_abs', y='rval_rewardrel', data=df,alpha=0.1)
 
 fig, ax = plt.subplots(figsize=(6,5))
-sns.kdeplot(x='rval_abs', y='rval_rewardrel', data=df,cmap='Blues',fill=True, thresh=0)
+sns.kdeplot(x='rval_rewardrel', y='rval_abs', data=df,cmap='Blues',fill=True, thresh=0)
 ax.set_ylabel('r value, Reward-centric')
 ax.set_xlabel('r value, Place-centric')
 animals=df.animal.unique()
-# animals=['e200', 'e189']
 
-for animal in animals:  
-        fig, ax = plt.subplots(figsize=(6,5))     
-        sns.kdeplot(x='rval_abs', y='rval_rewardrel', data=df[df.animal==animal],cmap='Blues',fill=True, thresh=0)
-        ax.set_ylabel('r value, Reward-centric')
-        ax.set_xlabel('r value, Place-centric')
-        ax.set_title(f"{animal}")
-        plt.show()
+fig, ax = plt.subplots(figsize=(6,5))
+sns.scatterplot(x='rval_rewardrel', y='rval_abs', data=df[(df.animal!='e216') & (df.animal!='e218')],
+        alpha=0.2)
+ax.set_ylabel('r value, Reward-centric')
+ax.set_xlabel('r value, Place-centric')
+animals=df.animal.unique()
+
+# reward vs. place specific cell coms
+fig, ax = plt.subplots(figsize=(6,5))
+dfplt = df[(df. animal!='e216') & (df.animal!='e218') & (df.rval_abs<0.5)]
+sns.scatterplot(x='rval_rewardrel', y='com_mean_rewardrel', data=dfplt,
+        alpha=0.2)
+ax.set_ylabel('r value, Reward-centric')
+ax.set_xlabel('r value, Place-centric')
+#%%
+# get tuning curves of high reward, low place cells and vice versa
+epochs = 4
+fig1, axes1 = plt.subplots(nrows=1, ncols=epochs, sharex=True)
+fig2, axes2 = plt.subplots(nrows=1, ncols=epochs, sharex=True)
+fig3, axes3 = plt.subplots(nrows=1, ncols=epochs, sharex=True)
+for ep in range(epochs):
+        try:
+                tc_rewc = np.vstack([(xx[0][ep,:,:]) for xx in tcs if len(xx[0])>=(ep+1)])
+                tc_abs = np.vstack([(xx[1][ep,:,:]) for xx in tcs if len(xx[1])>=(ep+1)])
+                r_abs = np.concatenate([xx[0] for ii,xx in enumerate(rvals_all) if len(tcs[ii][0])>=(ep+1)])
+                r_rew = np.concatenate([xx[1] for ii,xx in enumerate(rvals_all) if len(tcs[ii][0])>=(ep+1)])
+                ind = np.where((r_rew>0.9) & (r_abs<0.6))[0]
+                tcs_rew = tc_rewc[ind]
+
+                pc_ind = np.where((r_rew<0.6) & (r_abs>0.9))[0]
+                tcs_pc = tc_abs[pc_ind]
+
+                # in_btw_ind = np.where((df.rval_abs.values>0.7)
+                #                 & (df.rval_rewardrel.values>0.4) & (df.rval_rewardrel.values<0.7))[0]
+                # tcs_inbtw = tc_abs[in_btw_ind]
+                highplacehighrew = np.where((r_abs>0.8)& (r_rew>0.9))[0]
+                tcs_highplacehighrew = tc_abs[highplacehighrew]
+                com_abs = np.concatenate([xx for ii,xx in enumerate(coms_mean_abs) if len(tcs[ii][0])>=(ep+1)])
+                com_r=np.concatenate([xx for ii,xx in enumerate(coms_mean_rewrel) if len(tcs[ii][0])>=(ep+1)])
+                axes1[ep].imshow(tcs_pc[np.argsort(com_abs[pc_ind])])
+                # plt.plot(np.nanmean(tcs_pc,axis=0))
+                axes2[ep].imshow(tcs_rew[np.argsort(com_r[ind])])
+                # plt.plot(np.nanmean(tcs_rew,axis=0))
+                # plt.imshow(tcs_inbtw[np.argsort(df.com_mean_abs.values[in_btw_ind])])
+                # plt.show()
+                # plt.plot(np.nanmean(tcs_inbtw,axis=0))
+                axes3[ep].imshow(tcs_highplacehighrew[np.argsort(com_abs[highplacehighrew])])
+                # plt.plot(np.nanmean(tcs_highplacehighrew,axis=0))
+        except Exception as e:
+                print(e)
+fig1.suptitle('High place, low reward')
+fig2.suptitle('High reward, low place')
+fig3.suptitle('High place, high reward')
+
+#%%
+animals=df.animal.unique()
+# animals=['e186']
+# for animal in animals:  
+#         fig, ax = plt.subplots(figsize=(6,5))     
+#         sns.scatterplot(x='rval_abs', y='rval_rewardrel', 
+#                         data=df[df.animal==animal],alpha=0.1)
+#         # sns.kdeplot(x='rval_abs', y='rval_rewardrel', data=df[df.animal==animal],cmap='Blues',fill=True, thresh=0)
+#         ax.set_ylabel('r value, Reward-centric')
+#         ax.set_xlabel('r value, Place-centric')
+#         ax.set_title(f"{animal}")
+#         plt.show()
 
 #%%
 # Create a scatterplot

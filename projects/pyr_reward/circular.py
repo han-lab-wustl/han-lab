@@ -4,11 +4,12 @@ generate circular statistics
 """
 
 import scipy, numpy as np
-from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones,\
+from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew,get_rewzones,\
     normalize_values
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
-    consecutive_stretch,make_tuning_curves_radians_trial_by_trial, make_tuning_curves,make_tuning_curves_warped
+    consecutive_stretch,make_tuning_curves_radians_trial_by_trial,make_tuning_curves,\
+        make_tuning_curves_warped
 from itertools import combinations, chain
 
 def compute_circular_stats(tuning_curve, positions, track_length):
@@ -118,8 +119,6 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     rate=np.nanmean(np.array(rates))
     norm_pos=np.concatenate(norm_pos)
     
-    # added to get anatomical info
-    # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
     Fc3 = fall_fc3['Fc3']
     dFF = fall_fc3['dFF']
@@ -146,15 +145,21 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
             norm_pos,Fc3,trialnum,
             rewards,forwardvel,rewsize,2/bins,lasttr=8,bins=90,
             velocity_filter=False)
+    # check to see if there is activity in all 3 epochs
+    clls_to_keep=[]
+    maxthres=.2
+    for ep in range(len(tcs_correct)):
+        act = np.nanmax(tcs_correct[ep],axis=1)
+        clls_to_keep.append(np.where(act>maxthres)[0])
+    clls_to_keep=intersect_arrays(*clls_to_keep)
     # norm to -1 to 1
     coms_correct_abs_warped = np.array([com-1 for com in coms_correct_abs_warped])
-
-    tcs_abs_mean = np.nanmean(tcs_correct_abs,axis=0)
-    com_abs_mean = np.nanmean(coms_correct_abs,axis=0)
-    tcs_warped_mean = np.nanmean(tcs_correct_abs_warped,axis=0)
-    com_warped_mean = np.nanmean(coms_correct_abs_warped,axis=0)
+    tcs_abs_mean = np.nansum(tcs_correct_abs[:,clls_to_keep,:],axis=0)
+    com_abs_mean = np.nanmean(coms_correct_abs[:,clls_to_keep],axis=0)
+    tcs_warped_mean = np.nansum(tcs_correct_abs_warped[:,clls_to_keep,:],axis=0)
+    com_warped_mean = np.nanmean(coms_correct_abs_warped[:,clls_to_keep],axis=0)
     # tc mean across epochs    
-    tc_mean = np.nanmean(tcs_correct,axis=0)
+    tc_mean = np.nansum(tcs_correct[:,clls_to_keep,:],axis=0)
     # first get goal cells
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
@@ -174,11 +179,11 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
             # print(com1_rel,com2_rel,com_diff)
             if ((abs(com1_rel - np.pi) < epsilon) and 
             (abs(com2_rel + np.pi) < epsilon)):
-                    com_loop_w_in_window.append(cll)
+                com_loop_w_in_window.append(cll)
     # get abs value instead
     coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
     #average after looping
-    com_mean_rewrel = np.nanmean(coms_rewrel,axis=0)    
+    com_mean_rewrel = np.nanmean(coms_rewrel[:,clls_to_keep],axis=0)    
     rad_binned = np.linspace(0, 2*np.pi, bins)
     # compute circular statistics
     meanangles_rad = []; rvals_rad = []
@@ -201,22 +206,6 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
         mean_ang, r = compute_circular_stats(tc, warped_binned, 2) # track length of 2
         meanangles_warped.append(mean_ang); rvals_warped.append(r)
 
-    # # Create a 2D density plot
-    # fig, ax = plt.subplots(figsize=(6,5))
-    # sns.kdeplot(x=com_mean_rewrel+np.pi, y=rvals_rad, cmap="Purples", fill=True, thresh=0)
-    # ax.axvline(np.pi, color='k', linestyle='--')
-    # ax.set_xlabel("Reward-relative distance")
-    # ax.set_ylabel("r value")
-    # ax.set_title("Reward-relative map")
-    # plt.show()
-
-    # fig, ax = plt.subplots(figsize=(6,5))
-    # sns.kdeplot(x=com_abs_mean, y=rvals_abs, cmap="Blues", fill=True, thresh=0)
-    # ax.axvline(0, color='k', linestyle='--')
-    # ax.axvline(2*np.pi, color='k', linestyle='--')
-    # plt.xlabel("Allocentric distance")
-    # ax.set_ylabel("r value")
-    # plt.title("Place map")
-    # plt.show()
     return meanangles_abs,rvals_abs,meanangles_rad,rvals_rad,meanangles_warped,rvals_warped,\
-        tc_mean,com_mean_rewrel,tcs_abs_mean,com_abs_mean,tcs_warped_mean,com_warped_mean
+        tc_mean,com_mean_rewrel,tcs_abs_mean,com_abs_mean,tcs_warped_mean,com_warped_mean,\
+        tcs_correct[:,clls_to_keep,:],tcs_correct_abs[:,clls_to_keep,:]

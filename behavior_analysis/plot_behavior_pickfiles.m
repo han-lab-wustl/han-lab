@@ -40,7 +40,7 @@ for day=1:length(filename)
     fig = figure('Renderer', 'painters');    
     ypos = mouse.VR.ypos*(gainf);
     velocity = mouse.VR.ROE(2:end)*-0.013./diff(mouse.VR.time);
-    scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on; 
+    plot(ypos, 'Color', grayColor); hold on; 
     plot(find(mouse.VR.lick),ypos(find(mouse.VR.lick)), ...
         'k.', 'MarkerSize',8) 
     for mm = 1:length(eps)-1 %the rectangle indicating the reward location, overlaps the probe trials referring to the previous reward location

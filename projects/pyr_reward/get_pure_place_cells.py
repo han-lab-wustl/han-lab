@@ -98,7 +98,7 @@ for ii in range(len(conddf)):
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size)
         # get cells that maintain their coms across at least 2 epochs
-        place_window = 30 # cm converted to rad                
+        place_window = 10 # cm converted to rad                
         perm = list(combinations(range(len(coms_correct_abs)), 2))     
         com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
