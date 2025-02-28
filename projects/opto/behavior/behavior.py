@@ -358,7 +358,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     mask = np.array([xx in ttr[:firsttr] for xx in trialnum_])
     window_size = 10
     lick_rate_opto = calculate_lick_rate(licks_[mask][(ybinned_<rewloc)[mask]], window_size, sampling_rate=fs)
-    # lick selectivity - only success
+    # lick selectivity - only success 
     lasttr = 5
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
     # optional - fails
@@ -370,7 +370,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     lick_prob_opto = [lick_probability_opto[:int(rewloc-rewsize)], lick_probability_opto[int(rewloc-rewsize-10):int(rewloc+20)], \
                     lick_probability_opto[int(rewloc+20):]]
     vel_opto = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc]) # pre-reward
-    
+    com_opto = np.nanmean(ybinned_[mask][licks_[mask].astype(bool)])-(rewloc-(rewsize/2))
     # previous ep
     eprng = range(eps[eptotest-1], eps[eptotest])
     trialnum_ = trialnum[eprng]
@@ -401,12 +401,13 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     lick_prob_prev = [lick_probability_prev[:int(rewloc-rewsize-20)], 
                     lick_probability_prev[int(rewloc-rewsize-20):int(rewloc+20)], \
                     lick_probability_prev[int(rewloc+20):]]
+    com_prev = np.nanmean(ybinned_[mask][licks_[mask].astype(bool)])-(rewloc-(rewsize/2))
     # Return a dictionary or multiple dictionaries containing your results
     vel_prev = get_mean_velocity_per_ep(forwardvel_[ybinned_<rewloc])
     return rate_opto, rate_prev, lick_prob_opto, \
     lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev, \
     vel_opto, vel_prev, lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev, \
-    lick_rate_opto, lick_rate_prev
+    lick_rate_opto, lick_rate_prev, com_opto, com_prev
 
 
 def get_success_failure_trials(trialnum, reward):

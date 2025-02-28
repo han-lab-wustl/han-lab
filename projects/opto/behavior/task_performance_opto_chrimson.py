@@ -14,7 +14,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from behavior import get_success_failure_trials,\
 get_performance, get_rewzones
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
@@ -67,31 +67,31 @@ for dd,day in enumerate(conddf.days.values):
 # plot performance 
 s = 12 # pontsize
 dcts_opto = np.array(dcts)
-df = conddf
-df['rates_diff'] = [np.diff(dct['rates'])[0] for dct in dcts]
-df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
-df['velocity'] = [dct['velocity'][0] for dct in dcts]
+df=pd.DataFrame()
+df['rates'] = np.concatenate([dct['rates'] for dct in dcts])
 # com opto
-df['com'] = [dct['com'][1] for dct in dcts]
-df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts]
-df['rewzone_transition'] = [tuple(dct['rewzones']) for dct in dcts]
-df['opto'] = conddf.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
+df['com'] = np.concatenate([dct['com'] for dct in dcts])
+df['lick_selectivity']=np.concatenate([[np.nanmean(dct['lick_selectivity'][0]),np.nanmean(dct['lick_selectivity'][1])] for dct in dcts])
+df['opto'] = np.repeat(conddf.optoep.values>1,2)
+df['condition'] = np.repeat(['vip' if xx=='vip_ex' else 'ctrl' for xx in conddf.in_type.values],2)
+df['epoch']= np.concatenate([['previous_epoch', 'stim_epoch']*len(dcts)])
+df['animals'] = np.repeat(conddf.animals.values,2)
+df['optoep'] = np.repeat(conddf.optoep.values,2)
 # plot rates vip vs. ctl led off and on
 df = df[(df.animals!='e189')&(df.animals!='z9')]
 df=df[(df.optoep.values>1)]
-bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
-fig,ax = plt.subplots(figsize=(2,5))
-sns.barplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
+bigdf_plot = df.groupby(['animals', 'epoch', 'opto', 'condition']).mean(numeric_only=True)
+fig,ax = plt.subplots(figsize=(5,5))
+sns.barplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
     palette={'ctrl': "slategray", 'vip': "red"},                
             errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
+sns.stripplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
             palette={'ctrl': 'slategray','vip': "red"},                
             s=s,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Performance (LEDoff-LEDon)')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
+ax.set_ylabel(f'Performance')
+ax.set_xticks([0,1], labels=['LEDoff', 'LEDon'])
 ax.set_xlabel('')
 x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
 x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
@@ -154,7 +154,7 @@ elif pval < 0.01:
 elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
-plt.savefig(os.path.join(savedst, 'lick_selectivity.svg'),  bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'lick_selectivity.svg'),  bbox_inches='tight')
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 #%%
 # lick com by rewzone
@@ -164,7 +164,7 @@ df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
 df['velocity'] = [dct['velocity'][0] for dct in dcts]
 # com opto
 df['com'] = [dct['com'][1] for dct in dcts]
-df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts]
+df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts])
 df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
 df['rewzone_transition'] = [f'reward_zone {(tuple([int(xx) for xx in dct["rewzones"]]))}' for dct in dcts]

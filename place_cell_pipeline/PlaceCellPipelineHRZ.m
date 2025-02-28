@@ -10,10 +10,10 @@
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
 
-an = 'z14';
+an = 'e217';
 % an = 'e190';%an='e189';
 % individual day analysis 
-dys = [13];
+dys = [10];
 % dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
 % dys = [9 10 37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
 % dys = [2 3 4 5 6 7 8 9 11 12 13	14	15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
@@ -115,11 +115,15 @@ for dy=dys % for loop per day
         % get place cells only
         pcs = reshape(cell2mat(putative_pcs), [length(putative_pcs{1}), length(putative_pcs)]);
         pc = logical(iscell(:,1))';
-        % [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
-        fc3_pc = Fc3(:,(pc));% & ~bordercells)); % remove border cells
+        [~,bordercells] = remove_border_cells_all_cells(stat, Fc3);        
+        % fc3_pc = Fc3(:,(pc) & (~bordercells)); % remove border cells
         % fc3_pc = fc3_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
-        dff_pc = dFF(:,(pc));% & ~bordercells)); % remove border cells
+        % dff_pc = dFF(:,(pc) & (~bordercells)); % remove border cells
         % dff_pc = dff_pc(:, any(pcs,2)); % apply place cell filter, if a cell is considered a place cell in any ep!!
+        % all iscells if low number of cells
+        fc3_pc = Fc3(:,(pc));% & ~bordercells)); % remove border cells
+        dff_pc = dFF(:,(pc));% & ~bordercells)); % remove border cells
+
         nbins = track_length/bin_size;
 
         % late trials
@@ -240,39 +244,39 @@ fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum',an)));
 
 %%
 % early vs. late tuning curves
-fig = figure('Renderer', 'painters', 'Position', [10 10 1800 1100]);
-epoch = 1;
-for ep=1:2:2*(length(eps)-1)
-    subplot(1,2*(length(eps)-1),ep)
-    plt = tuning_curves_early_trials{epoch};
-    % sort all by ep 1
-    [~,sorted_idx] = sort(coms{1});
-    imagesc(normalize(plt(sorted_idx,:),2));
-    hold on;
-    % plot rectangle of rew loc
-    % everything divided by 3 (bins of 3cm)
-    rectangle('position',[ceil(rewlocs(epoch)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-        rew_zone/bin_size size(plt,1)], ... 
-        'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-    title(sprintf('epoch %i, early', epoch))
-    xticks([0:2*bin_size:ceil(track_length/bin_size)])
-    xticklabels([0:2*bin_size*bin_size:track_length])
-
-    hold off
-    subplot(1,2*(length(eps)-1),ep+1)
-    plt = tuning_curves{epoch};
-    % sort all by ep 1
-    imagesc(normalize(plt(sorted_idx,:),2));
-    hold on;
-    % plot rectangle of rew loc
-    % everything divided by 3 (bins of 3cm)
-    rectangle('position',[ceil(rewlocs(epoch)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-        rew_zone/bin_size size(plt,1)], ... 
-        'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-    xticks([0:2*bin_size:ceil(track_length/bin_size)])
-    xticklabels([0:2*bin_size*bin_size:track_length])
-    title(sprintf('epoch %i', epoch))
-    hold off
-    epoch=epoch+1;
-end
-sgtitle(sprintf(['animal %s, day %i'], an, dy))
+% fig = figure('Renderer', 'painters', 'Position', [10 10 1800 1100]);
+% epoch = 1;
+% for ep=1:2:2*(length(eps)-1)
+%     subplot(1,2*(length(eps)-1),ep)
+%     plt = tuning_curves_early_trials{epoch};
+%     % sort all by ep 1
+%     [~,sorted_idx] = sort(coms{1});
+%     imagesc(normalize(plt(sorted_idx,:),2));
+%     hold on;
+%     % plot rectangle of rew loc
+%     % everything divided by 3 (bins of 3cm)
+%     rectangle('position',[ceil(rewlocs(epoch)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
+%         rew_zone/bin_size size(plt,1)], ... 
+%         'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
+%     title(sprintf('epoch %i, early', epoch))
+%     xticks([0:2*bin_size:ceil(track_length/bin_size)])
+%     xticklabels([0:2*bin_size*bin_size:track_length])
+% 
+%     hold off
+%     subplot(1,2*(length(eps)-1),ep+1)
+%     plt = tuning_curves{epoch};
+%     % sort all by ep 1
+%     imagesc(normalize(plt(sorted_idx,:),2));
+%     hold on;
+%     % plot rectangle of rew loc
+%     % everything divided by 3 (bins of 3cm)
+%     rectangle('position',[ceil(rewlocs(epoch)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
+%         rew_zone/bin_size size(plt,1)], ... 
+%         'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
+%     xticks([0:2*bin_size:ceil(track_length/bin_size)])
+%     xticklabels([0:2*bin_size*bin_size:track_length])
+%     title(sprintf('epoch %i', epoch))
+%     hold off
+%     epoch=epoch+1;
+% end
+% sgtitle(sprintf(['animal %s, day %i'], an, dy))

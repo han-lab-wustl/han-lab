@@ -85,7 +85,7 @@ end
 
 clear all;
 mouse_name = "e217";
-days = [10];
+days = [11];
 % days = [55:75];
 % src = "Z:\sstcre_imaging";
 src = "X:\vipcre";
