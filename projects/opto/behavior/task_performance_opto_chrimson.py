@@ -93,12 +93,12 @@ ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Performance')
 ax.set_xticks([0,1], labels=['LEDoff', 'LEDon'])
 ax.set_xlabel('')
-x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
-x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
+x1 = df.loc[((df.condition=='vip')&(df.opto==True)), 'rates'].values
+x2 = df.loc[((df.condition=='ctrl')&(df.opto==True)), 'rates'].values
 t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46
-ii=0.5; y=.05; pshift=.07
+ii=1.5; y=.8; pshift=.07
 if pval < 0.001:
         ax.text(ii, y, "***", ha='center', fontsize=fs)
 elif pval < 0.01:
@@ -106,11 +106,16 @@ elif pval < 0.01:
 elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+#%%
+from statsmodels.stats import power as smp
 # Step 1: Calculate the means and standard deviations
-mean1 = np.mean(group1)
-mean2 = np.mean(group2)
-std1 = np.std(group1, ddof=1)
-std2 = np.std(group2, ddof=1)
+# hypothetical b/c no behavior diff yet
+# suppose rz of 5cm
+group1=x1; group2=x2
+mean1 = .9#np.mean(group1)
+mean2 = .7#np.mean(group2)
+std1 = .15#np.std(group1, ddof=1)
+std2 = .16#np.std(group2, ddof=1)
 # Step 2: Calculate pooled standard deviation
 n1, n2 = len(group1), len(group2)
 pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
@@ -164,7 +169,7 @@ df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
 df['velocity'] = [dct['velocity'][0] for dct in dcts]
 # com opto
 df['com'] = [dct['com'][1] for dct in dcts]
-df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts])
+df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts]
 df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
 df['rewzone_transition'] = [f'reward_zone {(tuple([int(xx) for xx in dct["rewzones"]]))}' for dct in dcts]

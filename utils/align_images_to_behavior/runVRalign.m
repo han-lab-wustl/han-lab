@@ -27,7 +27,7 @@ disp(savepthfmat)
 %%
 clear all;
 mouse_name = "e242";
-days = [45];
+days = [61,62,63];
 src = 'Y:\halo_grabda';
 
 for day=days

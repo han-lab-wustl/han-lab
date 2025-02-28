@@ -18,15 +18,14 @@ mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 plt.rc('font', size=20)          # controls default text sizes
-
 plt.close('all')
 # save to pdf
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - halo_grab.csv", index_col = None)
 src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
-days_all = [[44,45,48,49,52,53,54,55,59,61,62,65,66,67,68],
-            [44,45,46,47,52,53,54,55,57,59,60],
-            [45,46,49,50,54,55,56,59,60,61,62,63,66,67,68,69]]#,[29,30],[36,37]]
+days_all = [[44,45,48,49,52,53,54,55,59,61,62,65,66,67,68,69,70,71,72],
+            [44,45,46,47,52,53,54,55,57,59,60,61,62,63],
+            [46,49,50,54,55,56,59,60,61,62,63,66,67,68,69,71,72,73]]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -212,7 +211,7 @@ df['animal'] = list(itertools.chain(*[[xx]*len(days_all[ii]) for ii,xx in enumer
 lds = [[condrewloc.loc[((condrewloc.Day==dy)&(condrewloc.Animal==animals[ii])), 'learning_day'].values[0] for dy in dys] 
     for ii,dys in enumerate(days_all)]
 df['learning_day'] = list(itertools.chain(*lds))
-df['opto_day_before'] = [True if xx==True else False for xx in list(itertools.chain(*optodays_before_per_an))]
+df['opto_day_before'] = [True if xx=='TRUE' else False for xx in list(itertools.chain(*optodays_before_per_an))]
 df['opto'] = [True if xx=='TRUE' else False for xx in list(itertools.chain(*optodays_per_an))]
 df['lick_selectivity_near_rewardloc_mean'] = [np.nanmean(xx[0]) for xx in near_reward_per_day]
 df['velocity_near_rewardloc_mean'] = [np.nanmean(xx[1]) for xx in near_reward_per_day]
@@ -393,7 +392,6 @@ ax.get_legend().set_visible(False)
 ax.spines[['top','right']].set_visible(False)
 # plt.savefig(os.path.join(dst, 'performance_success_rate.svg'), bbox_inches='tight')
 #%%
-
 # velocity
 dfld = df#[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 plt.figure(figsize=(2.2,5))
@@ -432,5 +430,3 @@ ax.set_title(f'persession pval = {pvals1:.4f}\n\
 # x1 = df.loc[df.opto_day_before==True, 'vel_failed_odd'].values
 # x2 = df.loc[df.opto_day_before==False, 'vel_failed_odd'].values
 # scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-# %%
- 
