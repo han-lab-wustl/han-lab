@@ -38,8 +38,8 @@ total_cells = []
 epoch_perm = []
 radian_alignment = {}
 cm_window = 20
-
 # iterate through all animals
+# for ii in range(7):
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
@@ -86,28 +86,25 @@ for ii in range(len(conddf)):
         bin_size=track_length_rad/bins        
         
         if f'{animal}_{day:03d}' in radian_alignment_saved.keys():
-            k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
+                k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
+                print(k)
+                tcs_correct, coms_correct, tcs_fail, coms_fail, \
+                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
         else:# remake tuning curves relative to reward        
         # takes time
-            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-            Fc3 = fall_fc3['Fc3']
-            dFF = fall_fc3['dFF']
-            if 'bordercells' in fall.keys():
-                    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-                    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            else:
-                    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-                    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-            # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # skew_mask = skew_filter>2
-            Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-            # 9/19/24
-            # find correct trials within each epoch!!!!
-            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size)         
+                fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+                Fc3 = fall_fc3['Fc3']
+                dFF = fall_fc3['dFF']
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+                dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+                skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+                # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+                # skew_mask = skew_filter>2
+                Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+                # 9/19/24
+                # find correct trials within each epoch!!!!
+                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                rewards,forwardvel,rewsize,bin_size)         
         # only get opto vs. ctrl epoch comparisons
         tcs_correct = tcs_correct[[eptest-2, eptest-1]] 
         coms_correct = coms_correct[[eptest-2, eptest-1]] 
@@ -186,9 +183,9 @@ for ii in range(len(conddf)):
         radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
                         com_goal,goal_cell_shuf_ps_av]
 pdf.close()
-# save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
+# # save pickle of dcts
+# with open(saveddataset, "wb") as fp:   #Pickling
+#         pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=18)          # controls default text sizes
 # plot goal cells across epochs
@@ -222,7 +219,7 @@ df_plt = df
 sns.stripplot(x='condition', y='goal_cell_prop',
         hue='opto',data=df_plt,
         palette={'no_stim': "slategray", 'stim': "darkgoldenrod"},
-        s=s, dodge=True)
+        s=s, dodge=True,alpha=.5)
 sns.barplot(x='condition', y='goal_cell_prop',hue='opto',
         data=df_plt,
         palette={'no_stim': "slategray", 'stim': "darkgoldenrod"},
@@ -251,7 +248,6 @@ elif pval < 0.05:
 ax.text(ii-0.5, y+pshift, f'nonopto vs. opto chrimson\np={pval:.3g}',fontsize=12,rotation=45)
 
 # control vs. chrimson
-
 rewprop = df_plt.loc[((df_plt.condition=='vip')&(df_plt.opto=='stim')), 'goal_cell_prop']
 shufprop = df_plt.loc[((df_plt.condition=='ctrl')&(df_plt.opto=='stim')), 'goal_cell_prop']
 t,pval = scipy.stats.ranksums(rewprop, shufprop)
@@ -265,7 +261,7 @@ elif pval < 0.01:
 elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'ctrl vs. chrimson\np={pval:.3g}',fontsize=12,rotation=45)
-
+fig.suptitle('n=session')
 plt.savefig(os.path.join(savedst, 'reward_cell_prop_ctrlvopto_chrimson.svg'),bbox_inches='tight')
 
 #%%    

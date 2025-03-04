@@ -1623,8 +1623,8 @@ def get_tracking_vars(params_pth):
     # to remove skew cells
     dFF = fall['dFF']
     suite2pind = np.arange(fall['iscell'][:,0].shape[0])
-    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-    suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+    suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool))]
     # we need to find cells to map back to suite2p indexes
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     suite2pind_remain = suite2pind_remain[skew>2]

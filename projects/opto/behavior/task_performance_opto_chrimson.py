@@ -78,15 +78,16 @@ df['epoch']= np.concatenate([['previous_epoch', 'stim_epoch']*len(dcts)])
 df['animals'] = np.repeat(conddf.animals.values,2)
 df['optoep'] = np.repeat(conddf.optoep.values,2)
 # plot rates vip vs. ctl led off and on
-df = df[(df.animals!='e189')&(df.animals!='z9')]
+# df = df[(df.animals!='e189')&(df.animals!='z9')]
 df=df[(df.optoep.values>1)]
 bigdf_plot = df.groupby(['animals', 'epoch', 'opto', 'condition']).mean(numeric_only=True)
+bigdf_plot = df # do not sum by animals
 fig,ax = plt.subplots(figsize=(5,5))
 sns.barplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
-    palette={'ctrl': "slategray", 'vip': "red"},                
+    palette={'ctrl': "slategray", 'vip': "darkgoldenrod"},                
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
-            palette={'ctrl': 'slategray','vip': "red"},                
+            palette={'ctrl': 'slategray','vip': "darkgoldenrod"},                
             s=s,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
@@ -134,21 +135,23 @@ print(f"Required sample size per group: {sample_size:.2f}")
 s=14
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 fig,ax = plt.subplots(figsize=(2,5))
+bigdf_plot = bigdf_plot[bigdf_plot.epoch=='stim_epoch'] # led on only
+bigdf_plot = bigdf_plot.sort_values(by='condition')
 sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
-    palette={'ctrl': "slategray", 'vip': "red"},                
+    palette={'ctrl': "slategray", 'vip': "darkgoldenrod"},                
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
-            palette={'ctrl': 'slategray','vip': "red"},                
+            palette={'ctrl': 'slategray','vip': "darkgoldenrod"},                
             s=s,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Lick Selectivity, last 5 trials (LEDon)')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
+ax.set_xticks([0,1], labels=['Control', 'VIP\nExcitation'])
 ax.set_xlabel('')
-
-x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'lick_selectivity'].values
-x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'lick_selectivity'].values
-t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+# bigdf_plot=bigdf_plot.reset_index()
+x1 = bigdf_plot.loc[((bigdf_plot.condition=='vip')&(bigdf_plot.opto==True)), 'lick_selectivity'].values
+x2 = bigdf_plot.loc[((bigdf_plot.condition=='ctrl')&(bigdf_plot.opto==True)), 'lick_selectivity'].values
+t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46
 ii=0.5; y=1; pshift=.2

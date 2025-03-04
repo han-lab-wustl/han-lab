@@ -24,15 +24,12 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian_position, \
     get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices, get_reward_cells_that_are_tracked
-
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-
-animals = ['e218','e216','e217','e201','e186','e189',
+animals = ['e218','e216','e217','e201','e186',
         'e190', 'e145', 'z8', 'z9']
-
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-radian_tuning_dct = r'Z:\\saved_datasets\\radian_tuning_curves_reward_cell_bytrialtype_nopto_window030.p'
+radian_tuning_dct = r'Z:\\saved_datasets\\radian_tuning_curves_rewardcentric_all.p'
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 celltrackpth = r'Y:\analysis\celltrack'
@@ -70,7 +67,7 @@ for animal in animals:
             params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
             dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
                 rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
-            goal_window = 30*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
+            goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
             tcs_correct, coms_correct, tcs_fail, coms_fail, \
                 com_goal, goal_cell_shuf_ps_per_comp_av,\
                 goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{dds[ii]:03d}']            
@@ -105,8 +102,11 @@ dct = {}; dct['rew_cells_coms_tracked'] = [trackeddct]
 rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
 with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
     pickle.dump(dct, fp) 
-#
 #%%
+rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
+with open(rew_cells_tracked_dct, "rb") as fp: #unpickle
+        rew_cells_tracked_dct = pickle.load(fp)
+        
 # get number of tracked rew cells across days (vs. shuf cells)
 plt.rc('font', size=24)
 animals = ['e218','e216','e201',

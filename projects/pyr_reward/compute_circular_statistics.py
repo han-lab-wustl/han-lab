@@ -97,7 +97,7 @@ df['days'] = np.concatenate([[xx]*len(coms_mean_rewrel[ii]) for ii,xx in enumera
 
 df.to_csv(r'C:\Users\Han\Desktop\circular_stats_active_all_ep_thres02.csv')
 #%%
-# df = pd.read_csv(r'C:\Users\Han\Desktop\circular_stats.csv')
+# df = pd.read_csv(r'C:\Users\Han\Desktop\circular_stats_active_all_ep_thres02.csv')
 
 # Create a 2D density plot
 fig, ax = plt.subplots(figsize=(6,5))
@@ -127,6 +127,44 @@ plt.xlabel("Reward-warped distance")
 ax.set_ylabel("r value")
 plt.title(f"Reward-warped map")
 plt.show()
+
+#%%
+# even out sessions
+
+animals=df.animal.unique()
+session_nums = [[ii for ii,xx in enumerate(df.loc[df.animal==animal,'days'].unique())] for animal in animals]
+days_unique =  [[xx for ii,xx in enumerate(df.loc[df.animal==animal,'days'].unique())] for animal in animals]
+session_all = []
+for kk,animal in enumerate(animals):
+        session_an = []
+        for ii,xx in enumerate(df.loc[df.animal==animal, 'days'].values):
+                ind = np.where(xx==days_unique[kk])[0][0]
+                session_an.append(session_nums[kk][ind])
+        session_all.append(session_an) 
+df['session_num']=np.concatenate(session_all)
+
+df = df[df.session_num<10]
+cmap=sns.color_palette()
+
+for animal in df.animal.unique():
+        # Create a 2D density plot
+        fig, ax = plt.subplots(figsize=(6,5))
+        sns.scatterplot(x='com_mean_rewardrel', y='rval_rewardrel', hue='days', data=df[df.animal==animal],alpha=0.5)
+        ax.axvline(0, color='k', linestyle='--')
+        ax.set_xlabel("Reward-relative distance")
+        ax.set_ylabel("r value")
+        ax.set_title(f"{animal}, Reward-relative map")
+        plt.show()
+
+        fig, ax = plt.subplots(figsize=(6,5))
+        sns.scatterplot(x='com_mean_abs', y='rval_abs', hue='days',  data=df[df.animal==animal],alpha=.5)
+        ax.axvline(0, color='k', linestyle='--')
+        ax.axvline(270, color='k', linestyle='--')
+        plt.xlabel("Allocentric distance")
+        ax.set_ylabel("r value")
+        plt.title(f"{animal}, Place map")
+        plt.show()
+        
 #%%
 # r value - reward vs. place
 # sns.scatterplot(x='rval_abs', y='rval_rewardrel', data=df,alpha=0.1)
@@ -207,134 +245,56 @@ animals=df.animal.unique()
 #%%
 # Create a scatterplot
 track_length=270
-animals=df.animal.unique()
 # animals=['e200', 'e189']
-for animal in animals:  
-        fig, ax = plt.subplots(figsize=(6,5))       
-        sns.scatterplot(x='com_mean_warp', y='rval_warp', data=df[df.animal==animal], 
-                alpha=.05)
-        ax.axvline(0, color='k', linestyle='--')
-        ax.set_xlabel("Reward-warped distance")
-        ax.set_ylabel("r value")
-        ax.set_title(f"{animal}, Reward-warped map")
-        plt.show()
+# for animal in animals:  
+#         # sns.scatterplot(x='rval_rewardrel', y='rval_abs', hue='days',data=df[df.animal==animal], 
+#         #         alpha=.5)
+#         # # ax.axvline(0, color='k', linestyle='--')
+#         # ax.set_ylabel('r value, Reward-centric')
+#         # ax.set_xlabel('r value, Place-centric')
+#         # ax.set_title(f"{animal}")
+#         # plt.show()
+#         # rvals per day
+#         fig, ax = plt.subplots(figsize=(6,5))       
+#         sns.stripplot(x='session_num', y='rval_rewardrel', hue='session_num',data=df[df.animal==animal], 
+#                 alpha=.5)
+#         sns.boxplot(x='session_num', y='rval_rewardrel',data=df[df.animal==animal],fill=False)
 
-        # fig, ax = plt.subplots(figsize=(6,5))
-        # sns.scatterplot(x='com_mean_abs', y='rval_abs', data=df[df.animal==animal],
-        #         alpha=0.7)
-        # ax.axvline(0, color='k', linestyle='--')
-        # ax.axvline(track_length, color='k', linestyle='--')
-        # plt.xlabel("Allocentric distance")
-        # ax.set_ylabel("r value")
-        # plt.title(f"{animal}, Place map")
-        # plt.show()
-
-
-#%%
-for animal in df.animal.unique():
-        # Create a 2D density plot
-        fig, ax = plt.subplots(figsize=(6,5))
-        sns.kdeplot(x='com_mean_rewardrel', y='rval_rewardrel', data=df[df.animal==animal], cmap="Purples", 
-                fill=True, thresh=0)
-        ax.axvline(0, color='k', linestyle='--')
-        ax.set_xlabel("Reward-relative distance")
-        ax.set_ylabel("r value")
-        ax.set_title(f"{animal}, Reward-relative map")
-        plt.show()
-
-        fig, ax = plt.subplots(figsize=(6,5))
-        sns.kdeplot(x='com_mean_abs', y='rval_abs', data=df[df.animal==animal],cmap="Blues", fill=True, thresh=0)
-        ax.axvline(0, color='k', linestyle='--')
-        ax.axvline(270, color='k', linestyle='--')
-        plt.xlabel("Allocentric distance")
-        ax.set_ylabel("r value")
-        plt.title(f"{animal}, Place map")
-        plt.show()
-#%%
-# proportion of cells that have r > .8
-thres=.99
-rewrel_consistent_all = []
-for animal in df.animal.unique():
-        dfan=df[df.animal==animal]
-        days = dfan.days.unique()
-        rewrel_consistent_=[]
-        for day in days:
-                dfandy = dfan[dfan.days==day]
-                rewrel_consistent = len(dfandy['com_mean_rewardrel'][dfandy['rval_rewardrel']>thres])/len(dfandy['com_mean_rewardrel'])
-                com_rewrel_consistent = np.nanmean(dfandy['com_mean_rewardrel'][dfandy['rval_rewardrel']>thres].values)
-
-                rewrel_consistent_.append([rewrel_consistent,com_rewrel_consistent])
-        rewrel_consistent_all.append([np.nanmean(np.array([xx[0] for xx in rewrel_consistent_])),
-                np.nanmean(np.array([xx[1] for xx in rewrel_consistent_]))])
-
-abs_consistent_all = []
-for animal in df.animal.unique():
-        dfan=df[df.animal==animal]
-        days = dfan.days.unique()
-        abs_consistent_=[]
-        for day in days:
-                dfandy = dfan[dfan.days==day]
-                rewrel_consistent = len(dfandy['com_mean_abs'][dfandy['rval_abs']>thres])/len(dfandy['com_mean_abs'])
-                com_rewrel_consistent = np.nanmean(dfandy['com_mean_abs'][dfandy['rval_abs']>thres].values)
-
-                abs_consistent_.append([rewrel_consistent,com_rewrel_consistent])
-        abs_consistent_all.append([np.nanmean(np.array([xx[0] for xx in abs_consistent_])),np.nanmean(np.array([xx[1] for xx in abs_consistent_]))])
+#         # ax.axvline(0, color='k', linestyle='--')
+#         ax.set_ylabel('r value, Reward-centric')
+#         ax.set_xlabel('Recording day')
+#         ax.set_title(f"{animal}")
+#         plt.show()
+df = df[(df.animal!='e189')&(df.animal!='e190')&(df.animal!='e200')&(df.animal!='e139')&(df.animal!='e186')]
+fig, ax = plt.subplots(figsize=(14,5))       
+sns.stripplot(x='session_num', y='rval_abs', hue='animal',data=df, 
+        alpha=.5,dodge=True)
+# sns.barplot(x='session_num', y='rval_rewardrel',hue='animal',data=df,fill=False)
+sns.lineplot(x='session_num', y='rval_abs',hue='animal',data=df)
+# ax.axvline(0, color='k', linestyle='--')
+ax.set_ylabel('r value, Reward-centric')
+ax.set_xlabel('Recording day')
+ax.set_xlim([-0.5,4.5])
+plt.show()
 
 #%%
-dfp = pd.DataFrame()
-dfp['proportion'] = np.concatenate([[xx[0] for xx in rewrel_consistent_all], [xx[0] for xx in abs_consistent_all]])
-dfp['alignment_type'] = np.concatenate([['reward-centric']*len([xx[0] for xx in rewrel_consistent_all]), ['allocentric']*len([xx[0] for xx in abs_consistent_all])])
-dfp['mean_com'] = np.concatenate([[xx[1] for xx in rewrel_consistent_all], [xx[1] for xx in abs_consistent_all]])
-dfp = dfp[dfp.proportion>0]
-fig, ax = plt.subplots(figsize=(2.2,5))
-sns.stripplot(x='alignment_type', y='proportion',data=dfp,color='k',s=10,alpha=.7)
-sns.barplot(x='alignment_type', y='proportion',data=dfp,color='k',fill=False)
-ax.spines[['top','right']].set_visible(False)
-
-x1 = dfp.loc[dfp.alignment_type=='reward-centric', 'proportion']
-x2 = dfp.loc[dfp.alignment_type=='allocentric', 'proportion']
-t,pval = scipy.stats.ranksums(x1,x2)
-fig, ax = plt.subplots(figsize=(2.2,5))
-sns.stripplot(x='alignment_type', y='mean_com',data=dfp,color='k',s=10,alpha=.7)
-sns.barplot(x='alignment_type', y='mean_com',data=dfp,color='k',fill=False)
+# separate by com  (near vs. far reward)
+# sns.barplot(x='session_num', y='rval_rewardrel',hue='animal',data=df,fill=False)
+# fig, ax = plt.subplots(figsize=(14,5))       
+bigplt = df[(abs(df.com_mean_rewardrel)<(np.pi/4)) & (df.session_num<5)]
+bigplt = df[(abs(df.com_mean_rewardrel)<(np.pi/4))]
+# bigplt = df[((df.com_mean_rewardrel)<(np.pi/4)) & (df.com_mean_rewardrel>0) & (df.session_num<5)]
+sns.lmplot(x='session_num', y='rval_rewardrel',hue='animal',x_jitter=.5,
+        data=bigplt,scatter_kws={'alpha':.2},
+        height=5, aspect=2)
+for ii,animal in enumerate(bigplt.animal.unique()):
+        testdf=bigplt[bigplt.animal==animal]
+        r, p = scipy.stats.pearsonr(testdf['rval_rewardrel'], testdf['session_num'])
+        print(f'{animal}, r: {r:.3f}, p-value: {p:.10f}\n')
+# ax.axvline(0, color='k', linestyle='--')
+ax.set_ylabel('r value, Reward-centric')
+ax.set_xlabel('Recording day')
+# ax.set_xlim([-0.5,4.5])
+plt.show()
 
 #%%
-# polar plot per session
-def plot_polar_mean_angle(mean_angle, R, ax1, ax2, com):
-        """
-        Plots a polar plot with the mean firing angle and resultant vector length (R).
-
-        Parameters:
-        - mean_angle: Circular mean in radians.
-        - R: Resultant vector length (0 to 1, representing concentration).
-        """
-        ax=ax1
-        # Plot the mean angle as a vector
-        ax.arrow(mean_angle, 0, 0, R, 
-                head_width=0.1, head_length=0.1, fc='r', ec='r', linewidth=2)
-        # Compute text position slightly beyond the arrow tip
-        text_x = mean_angle
-        text_y = R + 0.2  # Offset the text slightly outside the arrow tip
-
-        # Add text next to the arrow
-        ax.text(text_x, text_y, f"{com:.1f}", color='red', fontsize=12, 
-                ha='center', va='bottom', fontweight='bold')
-
-        # Set radial limits and labels
-        ax.set_ylim(0, 1)  # Since R ranges from 0 to 1
-        ax.set_yticklabels([])  # Hide radial labels
-        ax.set_title("Polar Plot of Mean Angle and R")
-
-        # Convert radians to degrees for readable angle labels
-        ax.set_xticks(np.linspace(0, 2*np.pi, 8))  # 8 Major Ticks
-        ax.set_xticklabels([f"{int(np.degrees(a))}°" for a in np.linspace(0, 2*np.pi, 8)])
-
-
-# Example values
-mean_angle = df['meanangles_rewardrel'].values[:30]  # -45 degrees
-R = df['rval_rewardrel'].values[:30]  # High concentration
-coms = df['com_mean_abs'].values[:30]
-fig, ax1 = plt.subplots(subplot_kw={'projection': 'polar'})
-
-for ii,ma in enumerate(mean_angle):
-        plot_polar_mean_angle(ma, R[ii], ax1, ax2, coms[ii])
