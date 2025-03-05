@@ -19,7 +19,7 @@ from itertools import combinations, chain
 from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
-    consecutive_stretch,make_tuning_curves,make_tuning_curves_warped
+    consecutive_stretch,make_tuning_curves,make_tuning_curves_warped,make_tuning_curves_trial_by_trial
 from projects.opto.behavior.behavior import get_success_failure_trials
 from collections import Counter
 
@@ -1189,6 +1189,119 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     return radian_alignment,rate,p_value,total_cells,goal_cell_iind,\
         goal_cell_prop,num_epochs,goal_cell_null,epoch_perm,pvals
 
+def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
+                    goal_cm_window, pdf):
+    """
+    changed on 2/6/25 to make it more consistent with splitting the different
+    subpopulations
+    """
+    print(params_pth)
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+            'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'licks','stat', 'timedFF'])
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0] / scalingf        
+    except:
+        rewsize = 10
+    ybinned = fall['ybinned'][0] / scalingf
+    track_length = 180 / scalingf    
+    forwardvel = fall['forwardvel'][0]    
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    trialnum = fall['trialnum'][0]
+    rewards = fall['rewards'][0]
+    lick = fall['licks'][0]
+    
+    if animal == 'e145':
+        ybinned = ybinned[:-1]
+        forwardvel = forwardvel[:-1]
+        changeRewLoc = changeRewLoc[:-1]
+        trialnum = trialnum[:-1]
+        rewards = rewards[:-1]
+        lick = lick[:-1]
+    
+    # set vars
+    eps = np.where(changeRewLoc > 0)[0]
+    rewlocs = changeRewLoc[eps] / scalingf
+    eps = np.append(eps, len(changeRewLoc))
+    bins = 90
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize, rewlocs,
+                                                    trialnum, track_length)  # get radian coordinates
+    track_length_rad = track_length * (2 * np.pi / track_length)
+    bin_size = track_length_rad / bins 
+    rz = get_rewzones(rewlocs, 1 / scalingf)       
+
+    # get average success rate
+    rates = []
+    for ep in range(len(eps) - 1):
+        eprng = range(eps[ep], eps[ep + 1])
+        success, fail, str_trials, ftr_trials, ttr, total_trials = get_success_failure_trials(
+            trialnum[eprng], rewards[eprng])
+        rates.append(success / total_trials)
+    rate = np.nanmean(np.array(rates))
+    
+    # added to get anatomical info
+    fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+    Fc3 = fall_fc3['Fc3']
+    dFF = fall_fc3['dFF']
+    Fc3 = Fc3[:, ((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
+    dFF = dFF[:, ((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
+    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+    Fc3 = Fc3[:, skew > 2]  # only keep cells with skew greater than 2
+    
+    # circularly aligned
+    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(
+        eps, rewlocs, ybinned, rad, Fc3, trialnum, rewards, forwardvel, rewsize, bin_size)          
+    
+    # allocentric ref
+    bin_size = track_length / bins 
+    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum,
+                                                            rewards, forwardvel, rewsize, bin_size)
+
+    # change to relative value 
+    coms_rewrel = np.array([com - np.pi for com in coms_correct])
+    perm = list(combinations(range(len(coms_correct)), 2)) 
+    rz_perm = [(int(rz[p[0]]), int(rz[p[1]])) for p in perm]   
+    
+    # Define a small window around pi (e.g., epsilon)
+    epsilon = .7  # 20 cm
+    # Find COMs near pi and shift to -pi
+    com_loop_w_in_window = []
+    for pi, p in enumerate(perm):
+        for cll in range(coms_rewrel.shape[1]):
+            com1_rel = coms_rewrel[p[0], cll]
+            com2_rel = coms_rewrel[p[1], cll]
+            if (abs(com1_rel - np.pi) < epsilon) and (abs(com2_rel + np.pi) < epsilon):
+                com_loop_w_in_window.append(cll)
+    
+    # get abs value instead
+    coms_rewrel[:, com_loop_w_in_window] = abs(coms_rewrel[:, com_loop_w_in_window])
+    pc_bool = fall['putative_pcs'][0][0][0]
+    pc_bool = pc_bool[skew > 2]  # remember that pc bool removes bordercells
+    # add them back into the matrix as just pc_bool=0
+    df = pd.DataFrame()
+    df['reward_relative_circular_com'] = np.concatenate(coms_rewrel)
+    df['allocentric_com'] = np.concatenate(coms_correct_abs)
+    df['reward_location'] = np.concatenate([[rewlocs[ii]] * len(coms_rewrel[ii]) for ii in range(len(rewlocs))])
+    df['epoch'] = np.concatenate([[ii + 1] * len(comr) for ii, comr in enumerate(coms_rewrel)])
+    df['animal'] = [animal] * len(df)
+    df['recording_day'] = [day] * len(df)
+    df['spatially_tuned'] = np.concatenate([pc_bool] * len(coms_rewrel))
+    
+    # get average activity in tuning curve 
+    df['mean_tuning_curve'] = np.concatenate(np.nanmean(tcs_correct, axis=2))
+    df['max_tuning_curve'] = np.concatenate(np.nanmax(tcs_correct, axis=2))
+    
+    # get trial by trial tuning
+    trialstates, licks, tcs, coms = make_tuning_curves_trial_by_trial(eps, rewlocs, lick, ybinned, rad, Fc3,
+                                                trialnum, rewards, forwardvel, rewsize, bin_size)
+    # amplitude greater than 0.1
+    trialsactive = np.array([[[xx > 0.1 for xx in cll] for cll in np.nanmax(tcs[ep], axis=2)] for ep in range(len(tcs))])
+    df['percent_trials_active'] = np.concatenate([[np.nansum(xx) / len(xx) for xx in ep] for ep in trialsactive])
+    
+    return df
+
 def acc_corr_cells(forwardvel, timedFF, pln, dFF, eps):
     acccells_per_ep = []
     for ep in range(len(eps)-1):
@@ -1969,3 +2082,5 @@ def per_trial_dff(reward_cell_type,ii,params_pth,radian_alignment_saved,
     return trial_dff,trialstates,com_goal,com_goal_subset,goal_cells,\
             epoch_perm
 
+
+# %%
