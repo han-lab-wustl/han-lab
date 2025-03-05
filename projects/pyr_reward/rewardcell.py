@@ -1279,11 +1279,20 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     coms_rewrel[:, com_loop_w_in_window] = abs(coms_rewrel[:, com_loop_w_in_window])
     pc_bool = fall['putative_pcs'][0][0][0]
     pc_bool = pc_bool[skew > 2]  # remember that pc bool removes bordercells
+    # make sure dims are same
+    if coms_correct_abs.shape[0]!=coms_rewrel.shape[0]:
+        if coms_correct_abs.shape[0]>coms_rewrel.shape[0]:
+            coms_correct_abs=coms_correct_abs[:coms_rewrel.shape[0],:]
+            tcs_correct_abs=tcs_correct_abs[:coms_rewrel.shape[0],:,:]
+        else:
+            if coms_rewrel.shape[0]>coms_correct_abs.shape[0]:
+                coms_rewrel=coms_rewrel[:coms_correct_abs.shape[0],:]
+                tcs_correct=tcs_correct[:coms_correct_abs.shape[0],:,:]
     # add them back into the matrix as just pc_bool=0
     df = pd.DataFrame()
     df['reward_relative_circular_com'] = np.concatenate(coms_rewrel)
     df['allocentric_com'] = np.concatenate(coms_correct_abs)
-    df['reward_location'] = np.concatenate([[rewlocs[ii]] * len(coms_rewrel[ii]) for ii in range(len(rewlocs))])
+    df['reward_location'] = np.concatenate([[rewlocs[ii]] * len(coms_rewrel[ii]) for ii in range(len(coms_rewrel))])
     df['epoch'] = np.concatenate([[ii + 1] * len(comr) for ii, comr in enumerate(coms_rewrel)])
     df['animal'] = [animal] * len(df)
     df['recording_day'] = [day] * len(df)
@@ -1298,7 +1307,7 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
                                                 trialnum, rewards, forwardvel, rewsize, bin_size)
     # amplitude greater than 0.1
     trialsactive = np.array([[[xx > 0.1 for xx in cll] for cll in np.nanmax(tcs[ep], axis=2)] for ep in range(len(tcs))])
-    df['percent_trials_active'] = np.concatenate([[np.nansum(xx) / len(xx) for xx in ep] for ep in trialsactive])
+    df['percent_trials_active'] = np.concatenate([[np.nansum(xx) / len(xx) for xx in ep] for ep in trialsactive[:coms_rewrel.shape[0]]])
     
     return df
 
