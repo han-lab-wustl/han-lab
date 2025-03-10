@@ -7,6 +7,9 @@ multiple epochs and days
 1) get day 1 reward cells
 2) get the next 2 days of reward cells
 3) get proportion of cells that are reward cells across all the epochs
+3/10/25
+split up day 1 into epochs
+use or function (if a cell is a reward cell for 3/5 epochs for eg., keep it)
 """
 #%%
 
@@ -79,6 +82,7 @@ for animal in animals:
             iind_goal_cells_all_per_day.append(iind_goal_cells_all)
     # per day cells
     per_day_goal_cells = [intersect_arrays(*xx) for xx in iind_goal_cells_all_per_day]
+    # split per ep
     # test per day + epoch 1 from next day, n so on...
     per_day_nextday_ep1=[]
     for ii,xx in enumerate(iind_goal_cells_all_per_day[:-1]):
@@ -162,7 +166,7 @@ for animal in animals:
 
 
     # get number of cells in each comparison
-    per_day_goal_cells_num = [len(xx) for xx in per_day_goal_cells]
+    per_day_goal_cells_num = [[len(xx) for xx in yy] for yy in iind_goal_cells_all_per_day] # incl all epochs
     per_day_nextday_ep1_num = [len(xx) for xx in per_day_nextday_ep1]
     per_day_nextday_ep2_num = [len(xx) for xx in per_day_nextday_ep2]
     per_day_nextday_ep3_num = [len(xx) for xx in per_day_nextday_ep3]

@@ -268,7 +268,7 @@ sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean',
                 palette={False: "slategray", True: "crimson"},
                 s=15,ax=ax)
 ax.set_ylabel('Memory lick selectivity')
-ax.set_xlabel('LED on day before?')
+ax.set_xlabel('LED on day before?', fontsize=18)
 
 ans = dfagg.index.get_level_values('animal').unique().values
 for i in range(len(ans)):
@@ -279,8 +279,9 @@ for i in range(len(ans)):
 ax.get_legend().set_visible(False)
 
 ax.spines[['top','right']].set_visible(False)
-plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
+plt.title(f'Few Rewards, Stim @ Reward Zone\npersession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
 # fig.tight_layout()
+
 plt.savefig(os.path.join(dst, 'fewrewmostlystim_memory_lick_selectivity_halo.svg'), bbox_inches='tight')
 
 #%%
