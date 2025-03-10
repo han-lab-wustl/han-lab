@@ -8,6 +8,9 @@ subset of cells
 idea 2: find reward relative cells on the last day (or per week, or per 5 days)
 and see what their activity was like on previous days
 
+feb 2025
+fix bugs!! extra days tracked?
+3/6/25 fixed
 """
 #%%
 
@@ -27,13 +30,12 @@ from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian
     get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices, get_reward_cells_that_are_tracked
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-
 animals = ['e218','e216','e217','e201','e186','e189',
         'e190', 'e145', 'z8', 'z9']
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 goal_window_cm=20 # to search for rew cells
-radian_tuning_dct = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_20cm_window.p'
+radian_tuning_dct = rf'Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p'
 with open(radian_tuning_dct, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 celltrackpth = r'Y:\analysis\celltrack'
@@ -82,7 +84,28 @@ for animal in animals:
                                         k=k[0]
                                         tcs_correct, coms_correct, tcs_fail, coms_fail,\
                                                 com_goal, goal_cell_shuf_ps_per_comp_av,\
-                                                        goal_cell_shuf_ps_av,pdist = radian_alignment_saved[k]            
+                                                        goal_cell_shuf_ps_av = radian_alignment_saved[k]  
+                                        coms_rewrel = np.array([com-np.pi for com in coms_correct])
+                                        perm = list(combinations(range(len(coms_correct)), 2)) 
+                                        # account for cells that move to the end/front
+                                        # Define a small window around pi (e.g., epsilon)
+                                        epsilon = .7 # 20 cm
+                                        # Find COMs near pi and shift to -pi
+                                        com_loop_w_in_window = []
+                                        for pi,p in enumerate(perm):
+                                                for cll in range(coms_rewrel.shape[1]):
+                                                        com1_rel = coms_rewrel[p[0],cll]
+                                                        com2_rel = coms_rewrel[p[1],cll]
+                                                        # print(com1_rel,com2_rel,com_diff)
+                                                        if ((abs(com1_rel - np.pi) < epsilon) and 
+                                                        (abs(com2_rel + np.pi) < epsilon)):
+                                                                com_loop_w_in_window.append(cll)
+                                        # get abs value instead
+                                        coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])          
+                                        # upperbound = np.pi/4
+                                        # com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                                        #         xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
+                                        #         xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
                                         total_eligible_cells.append(coms_correct.shape[1])  
                                         assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
                                         # get goal cells across all epochs        
@@ -96,9 +119,10 @@ for animal in animals:
                                                         tridx = np.where(tracked_lut[day]==c)[0]
                                                         if len(tridx)>0:
                                                                 goal_tracked_idx.append(tridx[0])
-                                                        tracked[goal_tracked_idx] += 1
-                                                        # get mean com across epochs
-                                                        com_tracked[ii,goal_tracked_idx] = np.nanmean(coms_correct[:, goal_cells[jj]])
+                                                                # FIXED: so it only updates one cell
+                                                                tracked[tridx[0]] += 1
+                                                                # get mean com across epochs
+                                                                com_tracked[ii,tridx[0]] = np.nanmean(coms_correct[:, goal_cells[jj]])
                                                 # populate shuffles
                                                 goal_cells_shuf_s2pind, coms_rewrels=get_shuffled_goal_cell_indices(rewlocs, coms_correct,
                                                         goal_window,suite2pind_remain)
@@ -108,7 +132,8 @@ for animal in animals:
                                                                 tridx = np.where(tracked_lut[day]==c)[0]
                                                                 if len(tridx)>0:
                                                                         goal_tracked_idx.append(tridx[0])                
-                                                        tracked_shuf[sh, goal_tracked_idx] += 1
+                                                                        # FIXED: so it only updates one cell
+                                                                        tracked_shuf[sh, tridx[0]] += 1
                                 
                 trackeddct[animal] = [tracked, tracked_shuf, total_eligible_cells, com_tracked]
 
@@ -116,7 +141,7 @@ dct = {}; dct['rew_cells_coms_tracked'] = [trackeddct]
 # save pickle of dcts
 rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_postrew_cells.p"
 with open(rew_cells_tracked_dct, "wb") as fp:   #Pickling
-    pickle.dump(dct, fp) 
+        pickle.dump(dct, fp) 
 #
 #%%
 # get number of tracked rew cells across days (vs. shuf cells)
@@ -152,31 +177,33 @@ dfs_av = df
 df2 = pd.DataFrame()
 days_tracked = 5
 days = np.arange(1, days_tracked+1)
-tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day)/np.nanmean(trackeddct[an][2]) for an in animals] for day in range(1,days_tracked+1)]
-tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']>=day)/np.nanmean(trackeddct[an[:-5]][2]) \
+s=14
+tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day)/np.nansum(trackeddct[an][2]) for an in animals] for day in range(1,days_tracked+1)]
+tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']>=day)/np.nansum(trackeddct[an[:-5]][2]) \
         for an in df.animals_shuf.unique()] for day in range(1,days_tracked+1)]
-df2['num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse)
-df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse_shuf)
+df2['num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse)*100
+df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse_shuf)*100
 df2['animal'] = np.concatenate([animals]*len(days))
 df2['days_tracked'] = np.concatenate(np.concatenate([[[day]*len(animals)] for day in days]))
-fig,ax=plt.subplots(figsize=(3,6))
-sns.stripplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',s=12, color='k',ax=ax)
+fig,ax=plt.subplots(figsize=(5,6))
+sns.stripplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',s=s, color='k',ax=ax,
+        alpha=0.7 )
 sns.barplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',fill=False, color='k',ax=ax, errorbar='se')
-sns.lineplot(data=df2, # correct shift
-        x=df2.days_tracked.values-1, y='shuf_num_tracked_cells_per_mouse',
-        color='grey', label='shuffle',ax=ax)
+sns.barplot(data=df2, # correct shift
+        x='days_tracked', y='shuf_num_tracked_cells_per_mouse',
+        color='grey', label='shuffle',ax=ax,alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
 ax.set_xlabel('# of days tracked')
-ax.set_ylabel('% of cells')
-ax.set_title('Post-rew cells',pad=90)
+ax.set_ylabel('Total % of cells across all days tracked')
+ax.set_title('All reward cells',pad=100)
 eps = days
-y = .06
-pshift = .01
+y = 12
+pshift = 2
 fs=50
 pfs = 12
 for ii,ep in enumerate(eps):
         rewprop = df2.loc[(df2.days_tracked==ep), 'num_tracked_cells_per_mouse']
         shufprop = df2.loc[(df2.days_tracked==ep), 'shuf_num_tracked_cells_per_mouse']
-        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
@@ -188,7 +215,7 @@ for ii,ep in enumerate(eps):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=pfs,rotation=45)
 ax.legend(bbox_to_anchor=(1.3, .95))
 ax.spines[['top','right']].set_visible(False)
-plt.savefig(os.path.join(savedst, 'across_days_rew_cells.svg'), bbox_inches='tight', dpi=500)
+plt.savefig(os.path.join(savedst, 'across_days_allrew_cells.svg'), bbox_inches='tight', dpi=500)
 #%%# track the same cell that continues within this func class
 
 df3 = pd.DataFrame()

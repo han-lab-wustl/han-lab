@@ -1292,6 +1292,7 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     df = pd.DataFrame()
     df['reward_relative_circular_com'] = np.concatenate(coms_rewrel)
     df['allocentric_com'] = np.concatenate(coms_correct_abs)
+    df['cellid'] = np.concatenate([list(np.arange(len(coms_rewrel[0])))]*len(coms_rewrel))
     df['reward_location'] = np.concatenate([[rewlocs[ii]] * len(coms_rewrel[ii]) for ii in range(len(coms_rewrel))])
     df['epoch'] = np.concatenate([[ii + 1] * len(comr) for ii, comr in enumerate(coms_rewrel)])
     df['animal'] = [animal] * len(df)
@@ -1810,10 +1811,10 @@ def get_shuffled_goal_cell_indices(rewlocs, coms_correct, goal_window, suite2pin
         # get goal cells across all epochs
         com_goal = [np.where((comr<goal_window) & 
                 (comr>-goal_window))[0] for comr in com_remap]     
-        # (com near goal)
-        com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>0))] for com in com_goal if len(com)>0]
+        # # (com near goal)
+        # com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+        #     xx], axis=0)<=np.pi/4) & (np.nanmedian(coms_rewrel[:,
+        #     xx], axis=0)>0))] for com in com_goal if len(com)>0]
         goal_cells = intersect_arrays(*com_goal)
         if len(goal_cells)>0:
             goal_cells_s2p_ind = suite2pind_remain[goal_cells]

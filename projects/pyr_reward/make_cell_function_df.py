@@ -36,7 +36,7 @@ lasttr=8 #  last trials
 bins=90
 
 # iterate through all animals
-for ii in range(21,len(conddf)):
+for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
@@ -49,3 +49,5 @@ for ii in range(21,len(conddf)):
 
 # concat bigdf
 bigdf=pd.concat(dfs)
+
+ #%%

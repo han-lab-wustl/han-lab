@@ -38,7 +38,7 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 tracked_rew_cell_inds_all = {}
 trackeddct = {}
 #%%
-coms = {}
+per_day_goal_cells_all = []
 # defined vars
 maxep = 5
 shuffles = 1000
@@ -169,129 +169,64 @@ for animal in animals:
     per_day_next2day_ep1_num = [len(xx) for xx in per_day_next2day_ep1]
     per_day_next2day_ep2_num = [len(xx) for xx in per_day_next2day_ep2]
     per_day_next2day_ep3_num = [len(xx) for xx in per_day_next2day_ep3]
-    df = pd.DataFrame()
-    df['goal_cell_num'] = []
-
+    
+    per_day_goal_cells_all.append([per_day_goal_cells_num,per_day_nextday_ep1_num,
+                per_day_nextday_ep2_num,per_day_nextday_ep3_num,
+                per_day_next2day_ep1_num,per_day_next2day_ep2_num,per_day_next2day_ep3_num])
     
 #%%
-rew_cells_tracked_dct = r"Z:\saved_datasets\tracked_rew_cells.p"
-with open(rew_cells_tracked_dct, "rb") as fp: #unpickle
-        rew_cells_tracked_dct = pickle.load(fp)
-        
-# get number of tracked rew cells across days (vs. shuf cells)
-plt.rc('font', size=24)
-animals = ['e218','e216','e201',
-        'e186','e189','e145', 'z8', 'z9']
-df = pd.DataFrame()
-df['tracked_cells_num'] = np.concatenate([trackeddct[an][0][trackeddct[an][0]>0] for an in animals]).astype(int)
-df['tracked_cells_shuf_1'] = np.concatenate([trackeddct[an][1][random.randint(0,shuffles),trackeddct[an][0]>0] for an in animals]).astype(int)
-df['p_values_per_cell'] = np.concatenate([sum(trackeddct[an][1][:,(trackeddct[an][0]>0)]>trackeddct[an][0][trackeddct[an][0]>0])/shuffles for an in animals])
-df['animals'] = np.concatenate([[an]*len(trackeddct[an][0][trackeddct[an][0]>0]) for an in animals])
-df['animals_shuf'] = np.concatenate([[an+'_shuf']*len(trackeddct[an][0][trackeddct[an][0]>0]) for an in animals])
-#%%
-# average counts per animal
-fig,ax=plt.subplots(figsize=(3,6))
 
-df_plt = df[df.p_values_per_cell<0.05]
+df=pd.DataFrame()
+lut = ['1_day', '1_day_1_epoch', '1_day_2_epochs',
+    '1_day_3_epochs', '2_days_1_epoch', '2_days_2_epochs',
+    '2_days_3_epochs']
+biglst = []; bigann =[]; biganimal=[]
+for ii in range(len(per_day_goal_cells_all[0])):
+    biglst.append(np.concatenate([xx[ii] for xx in per_day_goal_cells_all]))
+    bigann.append(np.concatenate([[lut[ii]]*len(xx[ii]) for xx in per_day_goal_cells_all]))
+    biganimal.append(np.concatenate([[animals[jj]]*len(xx[ii]) for jj,xx in enumerate(per_day_goal_cells_all)]))
 
-sns.histplot(data=df[df.p_values_per_cell<0.05], x='tracked_cells_num', color='darkcyan',
-            bins=3, label = 'Reward-distance cells')
-sns.histplot(data=df[(df.p_values_per_cell<0.05) & 
-        (df['tracked_cells_shuf_1']>=1)], x='tracked_cells_shuf_1',  color='dimgray',
-        bins=3,alpha=0.5, label='shuffle')
-ax.legend(bbox_to_anchor=(1.001, 1.001))
-
-dfs_av = df
-# reorganize
-df2 = pd.DataFrame()
-days = [1,2,3]
-tracked_cells_per_day_per_mouse = [[sum(df.loc[df.animals==an, 'tracked_cells_num']==day) for an in animals] for day in range(1,4)]
-tracked_cells_per_day_per_mouse_shuf = [[sum(df.loc[df.animals_shuf==an, 'tracked_cells_shuf_1']==day) for an in df.animals_shuf.unique()] for day in range(1,4)]
-df2['num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse)
-df2['shuf_num_tracked_cells_per_mouse'] = np.concatenate(tracked_cells_per_day_per_mouse_shuf)
-df2['animal'] = np.concatenate([animals]*len(days))
-df2['days_tracked'] = np.concatenate(np.concatenate([[[day]*len(animals)] for day in days]))
-fig,ax=plt.subplots(figsize=(3,6))
-sns.stripplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',s=8, color='k',ax=ax)
-sns.barplot(data=df2, x='days_tracked', y='num_tracked_cells_per_mouse',fill=False, color='k',ax=ax, errorbar='se')
-sns.lineplot(data=df2, # correct shift
-        x=df2.days_tracked.values-1, y='shuf_num_tracked_cells_per_mouse',
-        color='grey', label='shuffle',ax=ax)
-
-ax.set_xlabel('# of days tracked')
-ax.set_ylabel('# of reward-distance cells')
-eps = [1,2,3]
-y = 180
-pshift = 30
-fs=50
-pfs = 12
-for ii,ep in enumerate(eps):
-        rewprop = df2.loc[(df2.days_tracked==ep), 'num_tracked_cells_per_mouse']
-        shufprop = df2.loc[(df2.days_tracked==ep), 'shuf_num_tracked_cells_per_mouse']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=pfs)
-
-ax.spines[['top','right']].set_visible(False)
-plt.savefig(os.path.join(savedst, 'across_days_rew_cells.svg'), bbox_inches='tight', dpi=500)
-#%%
-fig,ax=plt.subplots(figsize=(7,8))
-sns.barplot(data=df[df.p_values_per_cell<0.05], y='tracked_cells_num', x='animals',
-            hue='animals',palette='hls', errorbar='se')
-sns.barplot(data=df[df.p_values_per_cell<0.05], x='animals_shuf', y='tracked_cells_shuf_1', alpha=0.5, 
-            hue='animals_shuf', palette='Greys', errorbar='se')
-
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-ax.spines[['top','right']].set_visible(False)
-ax.set_xticks(ax.get_xticks())
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+df['reward_cell_count']=np.concatenate(biglst)
+df['epoch_type']=np.concatenate(bigann)
+df['animal']=np.concatenate(biganimal)
 
 #%%
-# average by animal
-dfs_av = df.groupby(['animals']).mean(numeric_only=True)
-# reorganize
-df2 = pd.DataFrame()
-df2['tracked_cells_num'] = np.concatenate([dfs_av.tracked_cells_num.values,dfs_av.tracked_cells_shuf_1.values])
-df2['condition'] = np.concatenate([['real']*len(dfs_av.tracked_cells_num.values),['shuffle']*len(dfs_av.tracked_cells_shuf_1.values)])
-fig,ax=plt.subplots(figsize=(2,5))
-sns.stripplot(data=df2, y='tracked_cells_num', x='condition',s=8, color='k')
+plt.rc('font', size=16) 
+fig, ax = plt.subplots(figsize=(12,9))
+sns.stripplot(x='epoch_type',y='reward_cell_count',hue='animal',data=df, dodge=True)
+sns.barplot(x='epoch_type',y='reward_cell_count',hue='animal',data=df)
+ax.tick_params(axis='x', rotation=45)
+#%%
+s=12
+sumdf = df.groupby(['animal','epoch_type']).mean(numeric_only=True)
+sumdf = sumdf.sort_index(axis=1)
+sumdf=sumdf.reset_index()
+fig, ax = plt.subplots(figsize=(6,5))
+sns.stripplot(x='epoch_type',y='reward_cell_count',data=sumdf, dodge=True,color='k',
+        s=s)
+sns.barplot(x='epoch_type',y='reward_cell_count',data=sumdf, fill=False,color='k')
+ax.tick_params(axis='x', rotation=45)
+# make lines
+ans = sumdf.animal.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x='epoch_type', y='reward_cell_count', 
+    data=sumdf[sumdf.animal==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
 ax.spines[['top','right']].set_visible(False)
-sns.barplot(data=df2, y='tracked_cells_num', x='condition',fill=False, color='k',
-            errorbar='se')
 
-num_cells = dfs_av.tracked_cells_num.values
-num_cells_ctrl = dfs_av.tracked_cells_shuf_1.values
-t,pval = scipy.stats.ttest_rel(num_cells,num_cells_ctrl)
-# test if cells are tracked > 1 day
-t2, pval2 = scipy.stats.ttest_1samp(num_cells,1)
-y = 1.7
-pshift = 0.2
-fs=36
-ii = 0.5
-# statistical annotation        
-if pval < 0.001:
-        plt.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        plt.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        plt.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii, y+pshift, f'p={pval:.3g}',fontsize=10)
-y = 1.5
-pshift = 0.2
-fs=36
-ii = 0
-# statistical annotation        
-if pval2 < 0.001:
-        plt.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval2 < 0.01:
-        plt.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval2 < 0.05:
-        plt.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii, y+pshift, f'p={pval2:.3g}',fontsize=10)
+# only show ectra epochs
+#%%
+s=12
+sumdf=sumdf[sumdf.epoch_type!='1_day']
+fig, ax = plt.subplots(figsize=(6,5))
+sns.stripplot(x='epoch_type',y='reward_cell_count',data=sumdf, dodge=True,color='k',
+        s=s)
+sns.barplot(x='epoch_type',y='reward_cell_count',data=sumdf, fill=False,color='k')
+ax.tick_params(axis='x', rotation=45)
+# make lines
+ans = sumdf.animal.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x='epoch_type', y='reward_cell_count', 
+    data=sumdf[sumdf.animal==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
+ax.spines[['top','right']].set_visible(False)
