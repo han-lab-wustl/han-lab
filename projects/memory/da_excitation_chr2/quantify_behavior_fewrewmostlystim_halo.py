@@ -231,7 +231,6 @@ df['licks_during_failed_trials_stim_odd/even'] = df['lick_selectivity_during_sti
 df['licks_selectivity_last8trials'] = [np.nanmean(xx[11]) for xx in near_reward_per_day]
 df['lickrate_probes'] = [np.nanmean(xx[12]) for xx in near_reward_per_day]
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
-# df = df[df.learning_day==2]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 
 dfagg = df#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 

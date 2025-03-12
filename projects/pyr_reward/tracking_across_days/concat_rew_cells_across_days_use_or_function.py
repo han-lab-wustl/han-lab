@@ -28,7 +28,7 @@ from projects.pyr_reward.rewardcell import get_days_from_cellreg_log_file, find_
     get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices, get_reward_cells_that_are_tracked
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-animals = ['e218','e216','e217','e201','e186',
+animals = ['e218','e216','e201','e186',
         'e190', 'e145', 'z8', 'z9']
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 radian_tuning_dct = r'Z:\\saved_datasets\\radian_tuning_curves_rewardcentric_all.p'
@@ -46,6 +46,7 @@ per_day_goal_cells_all = []
 maxep = 5
 shuffles = 1000
 # redo across days analysis but init array per animal
+coms_per_an = []
 for animal in animals:
     # all rec days
     dys = conddf.loc[conddf.animals==animal, 'days'].values
@@ -54,34 +55,48 @@ for animal in animals:
     # init 
     iind_goal_cells_all_per_day=[]
     perm_per_day = []
+    coms = []
     for ii, day in enumerate(dys[:4]): # iterate per day
-        if animal!='e217' and conddf.optoep.values[dds[ii]]==-1:
-            if animal=='e145': pln=2
-            else: pln=0
-            # get lut
-            tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
-            if ii==0:
-                # init with min 4 epochs
-                # ep x cells x days
-                # instead of filling w/ coms, fill w/ binary
-                tracked = np.zeros((tracked_lut.shape[0]))
-                tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
-            # get vars
-            params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-            dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
-                rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
-            goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
-            # find key
-            k = [k for k,v in radian_alignment_saved.items() if f'{animal}_{day:03d}' in k][0]
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-                com_goal, goal_cell_shuf_ps_per_comp_av,\
-                goal_cell_shuf_ps_av = radian_alignment_saved[k]     
-            perm = list(combinations(range(len(coms_correct)), 2))       
-            assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
-            # indices per epo
-            iind_goal_cells_all=[suite2pind_remain[xx] for xx in com_goal]
-            iind_goal_cells_all_per_day.append(iind_goal_cells_all)
-            perm_per_day.append(perm)
+        if animal=='e145': pln=2
+        else: pln=0
+        # get lut
+        tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
+        if ii==0:
+            # init with min 4 epochs
+            # ep x cells x days
+            # instead of filling w/ coms, fill w/ binary
+            tracked = np.zeros((tracked_lut.shape[0]))
+            tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
+        # get vars
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+        dFF, suite2pind_remain, VR, scalingf, rewsize, ybinned, forwardvel, changeRewLoc,\
+            rewards, eps, rewlocs, track_length = get_tracking_vars(params_pth)
+        goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
+        # find key
+        k = [k for k,v in radian_alignment_saved.items() if f'{animal}_{day:03d}' in k][0]
+        tcs_correct, coms_correct, tcs_fail, coms_fail, \
+            com_goal, goal_cell_shuf_ps_per_comp_av,\
+            goal_cell_shuf_ps_av = radian_alignment_saved[k]     
+        perm = list(combinations(range(len(coms_correct)), 2))       
+        assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
+        # indices per epoch
+        iind_goal_cells_all=[suite2pind_remain[xx] for xx in com_goal]
+        # get corresponding tracked cell iid
+        iind_goal_cells_all=[[np.where(tracked_lut[day]==xx)[0][0] if len(np.where(tracked_lut[day]==xx)[0])>0 else np.nan for xx in ep] for ep in iind_goal_cells_all]
+        iind_goal_cells_all_per_day.append(iind_goal_cells_all)
+        # also get coms
+        df = pd.DataFrame()
+        # average com across ep
+        coms_rewrel = [np.nanmedian(coms_correct[:,xx],axis=0) for xx in com_goal]
+        df['coms_rewrel']=np.concatenate(coms_rewrel)-np.pi
+        df['tracked_cell_id']= np.concatenate(iind_goal_cells_all)
+        df['epoch'] = np.concatenate([[f'{perm[ii]}']*len(coms_rewrel[ii]) for ii in range(len(coms_rewrel))])
+        df['animal']=[animal]*len(df)
+        df['day']=[day]*len(df)
+        coms.append(df)
+        perm_per_day.append(perm)
+    # collect coms
+    coms_per_an.append(coms)
     # per day cells
     per_day_goal_cells = [intersect_arrays(*xx) for xx in iind_goal_cells_all_per_day]
     # split per ep
@@ -176,13 +191,12 @@ for animal in animals:
     # save
     per_day_goal_cells_all.append([perm_per_day,iind_goal_cells_all_per_day,per_day_nextday_ep1,
                 per_day_nextday_ep2,per_day_nextday_ep3,
-                per_day_next2day_ep1,per_day_next2day_ep2,per_day_next2day_ep3])
+                per_day_next2day_ep1,per_day_next2day_ep2,per_day_next2day_ep3,
+                coms_per_an])
     
 #%%
-
 # get cell # per epoch
 # iind_goal_cells_all_per_day - epoch combinations per 4 days
-
 # between ep 1 and 2 or ep 2 and 3
 num_clls_per_2ep_per_an = []
 for xx in per_day_goal_cells_all: # per animal
@@ -195,6 +209,22 @@ for xx in per_day_goal_cells_all: # per animal
                     num_clls_per_2ep.append(ep2comp)
     num_clls_per_2ep_per_an.append(num_clls_per_2ep)
 num_clls_per_2ep_per_an=[np.nanmean(np.array(xx)) for xx in num_clls_per_2ep_per_an]
+
+# average com of 2 ep
+com_clls_per_2ep_per_an = []
+for kk,xx in enumerate(per_day_goal_cells_all): # per animal
+    com_clls_per_2ep=[]
+    for jj,yy in enumerate(xx[1]): # per day tracked; also keep track of perm
+        for ii,ep in enumerate(yy): # per epoch combiantion
+            if len(ep)>0:
+                if ((xx[0][jj][ii]==(0,1))|(xx[0][jj][ii]==(1,2))):
+                    ep2comp = len(ep) 
+                    coms_of_cells = np.nanmean([np.nanmedian(bigcom.loc[(bigcom.animal==animals[kk]) 
+                        & (bigcom.tracked_cell_id==iid), 'coms_rewrel'].values) for iid in ep])
+                    com_clls_per_2ep.append(coms_of_cells)
+    com_clls_per_2ep_per_an.append(com_clls_per_2ep)
+com_clls_per_2ep_per_an=[np.nanmean(np.array(xx)) for xx in com_clls_per_2ep_per_an]
+
 # between ep 1,2,3
 num_clls_per_3ep_per_an = []
 for xx in per_day_goal_cells_all: # per animal
@@ -237,31 +267,48 @@ num_clls_per_4ep_per_an=[np.nanmean(np.array(xx)) for xx in num_clls_per_4ep_per
 ind_to_test = [2,3,4,5,6,7] # check all epoch concatenated combinations
 # test epochs 3,4,5,6,7,8, etc...
 epochs_to_test = np.arange(3,13)
+# use the same logic to get the average com per epoch per animal?
+bigcom = pd.concat([pd.concat(xx) for xx in coms_per_an])
 
-across_days_num_clls_per_ep_per_an = []
+across_days_num_clls_per_ep_per_an = []; com_num_clls_per_ep_per_an=[]
 for ep in epochs_to_test:
-    across_days_num_clls_per_ep=[]
+    across_days_num_clls_per_ep=[]; com_num_clls_per_ep=[]
     for kk,xx in enumerate(per_day_goal_cells_all): # per animal
-        num_clls_per_ep=[]
+        num_clls_per_ep=[]; com_clls_per_ep = []
         for ind in ind_to_test: # get all concatenated days
             for jj,yy in enumerate(xx[ind]): # per day tracked; also keep track of perm                
                 comb=list(combinations(yy,ep))
                 if len(comb)>0:
+                    # the max of all the possible combinations
                     epcomp=np.nanmax(np.array([len(intersect_arrays(*zz)) for zz in comb]))
+                    # get cell identities and map to com
+                    cells=[intersect_arrays(*zz) for zz in comb]
+                    maxlen = np.nanmax(np.array([len(xx) for xx in cells]))
+                    maxcells = [xx for xx in cells if len(xx)==maxlen][0]
+                    # only get the longest list since that is what we're quantifying
+                    coms_of_cells = np.nanmean([np.nanmedian(bigcom.loc[(bigcom.animal==animals[kk]) 
+                        & (bigcom.tracked_cell_id==iid), 'coms_rewrel'].values) for iid in maxcells])
                     num_clls_per_ep.append(epcomp)
+                    com_clls_per_ep.append(coms_of_cells)
         across_days_num_clls_per_ep.append(num_clls_per_ep)
+        com_num_clls_per_ep.append(com_clls_per_ep)
     across_days_num_clls_per_ep_per_an.append(across_days_num_clls_per_ep)
+    com_num_clls_per_ep_per_an.append(com_num_clls_per_ep)
 
 # av per animal
 across_days_num_clls_per_ep_per_an=[[np.nanmean(np.array(yy)) for yy in xx] for xx in across_days_num_clls_per_ep_per_an]
+com_num_clls_per_ep_per_an=[[np.nanmean(np.array(yy)) for yy in xx] for xx in com_num_clls_per_ep_per_an]
+
 #%%
 df=pd.DataFrame()
 df['reward_cell_count']=np.concatenate(across_days_num_clls_per_ep_per_an)
+df['average_com']=np.concatenate(com_num_clls_per_ep_per_an)
 df['animal']=np.concatenate([animals]*len(across_days_num_clls_per_ep_per_an))
 df['epoch_number']=np.repeat([list(np.arange(3,13))],len(animals))
 # for per day additions
 df2=pd.DataFrame()
 df2['reward_cell_count']=num_clls_per_2ep_per_an
+df2['average_com']=com_clls_per_2ep_per_an
 df2['animal']=animals
 df2['epoch_number']=[2]*len(df2)
 df3=pd.DataFrame()
@@ -276,17 +323,32 @@ df4['epoch_number']=[4]*len(df4)
 df=pd.concat([df,df2,df3,df4])
 df=df.reset_index()
 plt.rc('font', size=16) 
-s=12
-df=df.groupby(['animal','epoch_number']).mean(numeric_only=True)
+s=10
+df=df.groupby(['animal','epoch_number']).max(numeric_only=True)
 df=df.reset_index()
-fig, ax = plt.subplots(figsize=(12,9))
+# only some epochs
+df=df[df.epoch_number<9]
+fig, ax = plt.subplots(figsize=(6,5))
 sns.stripplot(x='epoch_number',y='reward_cell_count',data=df, dodge=True, color='k',
-        s=s)
+    s=s,alpha=0.7)
 sns.barplot(x='epoch_number',y='reward_cell_count',data=df,fill=False,color='k')
 # make lines
 ans = df.animal.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df.epoch_number-2, y='reward_cell_count', 
+    data=df[df.animal==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
+ax.spines[['top','right']].set_visible(False)
+
+# plot com
+fig, ax = plt.subplots(figsize=(6,5))
+sns.stripplot(x='epoch_number',y='average_com',data=df, dodge=True, color='k',
+    s=s,alpha=0.7)
+sns.barplot(x='epoch_number',y='average_com',data=df,fill=False,color='k')
+# make lines
+ans = df.animal.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df.epoch_number-2, y='average_com', 
     data=df[df.animal==ans[i]],
     errorbar=None, color='dimgray', linewidth=2)
 ax.spines[['top','right']].set_visible(False)
@@ -298,9 +360,9 @@ for an in animals:
 
 dfplt = df[df.epoch_number>2]
 plt.rc('font', size=16) 
-fig, ax = plt.subplots(figsize=(8,9))
+fig, ax = plt.subplots(figsize=(6,5))
 sns.stripplot(x='epoch_number',y='reward_cell_count_norm',
-        data=dfplt, dodge=True, color='k',s=s)
+        data=dfplt, dodge=True, color='k',s=s,alpha=0.7)
 sns.barplot(x='epoch_number',y='reward_cell_count_norm',
         data=dfplt,fill=False,color='k')
 # make lines
