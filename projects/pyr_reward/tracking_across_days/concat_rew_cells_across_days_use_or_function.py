@@ -54,6 +54,7 @@ for animal in animals:
     dds = list(conddf[conddf.animals==animal].index)
     # init 
     iind_goal_cells_all_per_day=[]
+    suite2p_iind_goal_cells_all_per_day=[] # get suite2p indices per day
     perm_per_day = []
     coms = []
     for ii, day in enumerate(dys[:4]): # iterate per day
@@ -81,13 +82,14 @@ for animal in animals:
         assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
         # indices per epoch
         iind_goal_cells_all=[suite2pind_remain[xx] for xx in com_goal]
+        suite2p_iind_goal_cells_all_per_day.append(iind_goal_cells_all)
         # get corresponding tracked cell iid
         iind_goal_cells_all=[[np.where(tracked_lut[day]==xx)[0][0] if len(np.where(tracked_lut[day]==xx)[0])>0 else np.nan for xx in ep] for ep in iind_goal_cells_all]
         iind_goal_cells_all_per_day.append(iind_goal_cells_all)
         # also get coms
         df = pd.DataFrame()
         # average com across ep
-        coms_rewrel = [np.nanmedian(coms_correct[:,xx],axis=0) for xx in com_goal]
+        coms_rewrel = [np.nanmean(coms_correct[:,xx],axis=0) for xx in com_goal]
         df['coms_rewrel']=np.concatenate(coms_rewrel)-np.pi
         df['tracked_cell_id']= np.concatenate(iind_goal_cells_all)
         df['epoch'] = np.concatenate([[f'{perm[ii]}']*len(coms_rewrel[ii]) for ii in range(len(coms_rewrel))])
@@ -192,7 +194,7 @@ for animal in animals:
     per_day_goal_cells_all.append([perm_per_day,iind_goal_cells_all_per_day,per_day_nextday_ep1,
                 per_day_nextday_ep2,per_day_nextday_ep3,
                 per_day_next2day_ep1,per_day_next2day_ep2,per_day_next2day_ep3,
-                coms_per_an])
+                coms_per_an,suite2p_iind_goal_cells_all_per_day])
     
 #%%
 # get cell # per epoch
@@ -271,6 +273,7 @@ epochs_to_test = np.arange(3,13)
 bigcom = pd.concat([pd.concat(xx) for xx in coms_per_an])
 
 across_days_num_clls_per_ep_per_an = []; com_num_clls_per_ep_per_an=[]
+cells_that_persist = []
 for ep in epochs_to_test:
     across_days_num_clls_per_ep=[]; com_num_clls_per_ep=[]
     for kk,xx in enumerate(per_day_goal_cells_all): # per animal
@@ -285,6 +288,9 @@ for ep in epochs_to_test:
                     cells=[intersect_arrays(*zz) for zz in comb]
                     maxlen = np.nanmax(np.array([len(xx) for xx in cells]))
                     maxcells = [xx for xx in cells if len(xx)==maxlen][0]
+                    if ep>5: 
+                        cells_that_persist.append([ep, animals[kk], 
+                                    ind, jj, maxcells])
                     # only get the longest list since that is what we're quantifying
                     coms_of_cells = np.nanmean([np.nanmedian(bigcom.loc[(bigcom.animal==animals[kk]) 
                         & (bigcom.tracked_cell_id==iid), 'coms_rewrel'].values) for iid in maxcells])
@@ -299,6 +305,7 @@ for ep in epochs_to_test:
 across_days_num_clls_per_ep_per_an=[[np.nanmean(np.array(yy)) for yy in xx] for xx in across_days_num_clls_per_ep_per_an]
 com_num_clls_per_ep_per_an=[[np.nanmean(np.array(yy)) for yy in xx] for xx in com_num_clls_per_ep_per_an]
 
+# get tracked cell identities of those tracked across multiple epochs
 #%%
 df=pd.DataFrame()
 df['reward_cell_count']=np.concatenate(across_days_num_clls_per_ep_per_an)
