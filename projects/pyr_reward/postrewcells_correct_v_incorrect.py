@@ -88,14 +88,14 @@ sns.stripplot(x='trial_type', y='mean_tc', data=bigdf,dodge=True,color='k',
 sns.barplot(x='trial_type', y='mean_tc', data=bigdf, fill=False,color='k')
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Average $\Delta F/F$ of tuning curve')
+ax.set_ylabel('$\int$ tuning curve ($\Delta F/F$)')
 ax.set_xlabel('Trial type')
 cor = bigdf.loc[(bigdf.trial_type=='correct'), 'mean_tc']
 incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_tc']
 t,pval = scipy.stats.ttest_rel(cor,incor)
 # statistical annotation       
 ii=0.5
-y=.12
+y=10
 pshift=.01
 fs=30
 if pval < 0.001:

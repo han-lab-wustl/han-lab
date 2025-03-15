@@ -116,6 +116,9 @@ rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 #%%
 plt.rc('font', size=18)
 range_val,binsize=10, .1
+trials_dff_rstops=[]
+trials_dff_nrstops_wo_licks=[]
+trials_dff_nrstops_w_licks=[]
 for gc in goal_cell_iind:
     # TODO: make condensed
     _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
@@ -144,117 +147,7 @@ for gc in goal_cell_iind:
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
     _, meanrewrewstops, __, rewrewstops = perireward_binned_activity(fall['rewards'][0], rew_per_plane, 
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-
-
-    fig, axes = plt.subplots(nrows=4,sharex=True,figsize=(5,8))
-    ax=axes[0]
-    ax.plot(meanrstops,color='darkgoldenrod', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanrstops - scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
-    meanrstops + scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
-    alpha=0.5, color='darkgoldenrod'
-    )             
-    ax.plot(meannstops,color='slategray', label='unrewarded stops w/o licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meannstops - scipy.stats.sem(rewnstops, axis=1, nan_policy='omit'),
-    meannstops + scipy.stats.sem(rewnstops, axis=1, nan_policy='omit'),
-    alpha=0.5, color='slategray'
-    )         
-    ax.plot(meannlstops,color='yellowgreen', label='unrewarded stops w/ licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meannlstops - scipy.stats.sem(rewnlstops, axis=1, nan_policy='omit'),
-    meannlstops + scipy.stats.sem(rewnlstops, axis=1, nan_policy='omit'),
-    alpha=0.5, color='yellowgreen'
-    )                 
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.legend(bbox_to_anchor=(1.01, 1.01))
-    ax.set_ylabel('$\Delta$ F/F')
-    ax=axes[1]
-    ax.plot(meanvelrew,color='navy', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanvelrew - scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
-    meanvelrew + scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='navy'
-    )             
-    ax.plot(meanvelnonrewl,color='teal', label='unrewarded stops w licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanvelnonrewl - scipy.stats.sem(velnonrewl, axis=1, nan_policy='omit'),
-    meanvelnonrewl + scipy.stats.sem(velnonrewl, axis=1, nan_policy='omit'),
-    alpha=0.5, color='teal'
-    )                    
-    ax.plot(meanvelnonrew,color='k', label='unrewarded stops w/o licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanvelnonrew - scipy.stats.sem(velnonrew, axis=1, nan_policy='omit'),
-    meanvelnonrew + scipy.stats.sem(velnonrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='k'
-    )                    
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.set_ylabel('Velocity (cm/s)')
-    ax=axes[2]
-    # meanlickrew, __, lickrew
-    ax.plot(meanlickrew,alpha=0.5,color='navy', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanlickrew - scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
-    meanlickrew + scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='navy'
-    )             
-    # meanlicknonrewwl, __, licknonrewwl
-    ax.plot(meanlicknonrewwl,alpha=0.5,color='teal', label='unrewarded stops w licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanlicknonrewwl - scipy.stats.sem(licknonrewwl, axis=1, nan_policy='omit'),
-    meanlicknonrewwl + scipy.stats.sem(licknonrewwl, axis=1, nan_policy='omit'),
-    alpha=0.5, color='teal'
-    )                 
-    # meanlicknonrew, __, licknonrew   
-    ax.plot(meanlicknonrew,alpha=0.5,color='k', label='unrewarded stops w/o licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanlicknonrew - scipy.stats.sem(licknonrew, axis=1, nan_policy='omit'),
-    meanlicknonrew + scipy.stats.sem(licknonrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='k'
-    )                    
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.spines[['top', 'right']].set_visible(False)    
-    ax.set_ylabel('Licks binned')
-    ax=axes[3]
-    # meanlickrew, __, lickrew
-    ax.plot(meanrewrewstops,color='navy', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanrewrewstops - scipy.stats.sem(rewrewstops, axis=1, nan_policy='omit'),
-    meanrewrewstops + scipy.stats.sem(rewrewstops, axis=1, nan_policy='omit'),
-    alpha=0.5, color='navy'
-    )             
-    # meanlicknonrewwl, __, licknonrewwl
-    ax.plot(meanrewnonrewl,color='teal', label='unrewarded stops w licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanrewnonrewl - scipy.stats.sem(rewnonrewl, axis=1, nan_policy='omit'),
-    meanrewnonrewl + scipy.stats.sem(rewnonrewl, axis=1, nan_policy='omit'),
-    alpha=0.5, color='teal'
-    )                 
-    # meanlicknonrew, __, licknonrew   
-    ax.plot(meanrewnonrew,color='k', label='unrewarded stops w/o licks')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanrewnonrew - scipy.stats.sem(rewnonrew, axis=1, nan_policy='omit'),
-    meanrewnonrew + scipy.stats.sem(rewnonrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='k'
-    )                    
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1,20))
-    ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.set_xlabel('Time from stop (s)')
-    ax.set_ylabel('Rewards binned')
-    ax.legend(bbox_to_anchor=(1.01, 1.01))
-    fig.suptitle(f'cell # {gc}')
+    # save per cell
+    trials_dff_rstops.append(rewrstops)
+    trials_dff_nrstops_wo_licks.append(rewnstops)
+    trials_dff_nrstops_w_licks.append(rewnlstops)
