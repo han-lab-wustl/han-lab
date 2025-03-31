@@ -399,6 +399,7 @@ def extract_data_prerew(ii,params_pth,
         ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
         ax.set_xlabel('Radian position (centered start rew loc)')
         ax.set_ylabel('Fc3')
+        fig.suptitle(animal)
         fig.tight_layout()
         pdf.savefig(fig)
         plt.close(fig)
@@ -1190,7 +1191,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cell_prop,num_epochs,goal_cell_null,epoch_perm,pvals
 
 
-def reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
+def  reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
     goal_cell_null,pvals,total_cells,
     num_iterations=1000):
@@ -1257,13 +1258,6 @@ def reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         # find correct trials within each epoch!!!!
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size)          
-    # fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
-    # ops = fall_stat['ops']
-    # stat = fall_stat['stat']
-    # meanimg=np.squeeze(ops)[()]['meanImg']
-    # s2p_iind = np.arange(stat.shape[1])
-    # s2p_iind_filter = s2p_iind[(fall['iscell'][:,0]).astype(bool)]
-    # s2p_iind_filter = s2p_iind_filter[skew>2]
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -1341,7 +1335,7 @@ def reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     df['animal']=[animal]*len(df)
     df['day']=[day]*len(df)
     # get mean tuning curve correct vs. incorrect
-    return df
+    return df,tcs_correct[:,goal_cells],tcs_fail[:,goal_cells]
 
 def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
@@ -1470,7 +1464,7 @@ def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     df['animal']=[animal]*len(df)
     df['day']=[day]*len(df)
     # get mean tuning curve correct vs. incorrect
-    return df
+    return df,tcs_correct[:,goal_cells],tcs_fail[:,goal_cells]
 
 def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
                     goal_cm_window, pdf):

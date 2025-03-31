@@ -116,7 +116,7 @@ rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 #%%
 plt.rc('font', size=18)
 range_val,binsize=10, .1
-for gc in goal_cell_iind:
+for gc in goal_cell_iind[:3]:
     # TODO: make condensed
     _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
@@ -146,7 +146,7 @@ for gc in goal_cell_iind:
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 
 
-    fig, axes = plt.subplots(nrows=4,sharex=True,figsize=(5,8))
+    fig, axes = plt.subplots(nrows=4,sharex=True,figsize=(4,8))
     ax=axes[0]
     ax.plot(meanrstops,color='darkgoldenrod', label='rewarded stops')
     ax.fill_between(
@@ -172,6 +172,7 @@ for gc in goal_cell_iind:
     ax.spines[['top', 'right']].set_visible(False)
     ax.legend(bbox_to_anchor=(1.01, 1.01))
     ax.set_ylabel('$\Delta$ F/F')
+    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
     ax=axes[1]
     ax.plot(meanvelrew,color='navy', label='rewarded stops')
     ax.fill_between(
@@ -258,3 +259,5 @@ for gc in goal_cell_iind:
     ax.set_ylabel('Rewards binned')
     ax.legend(bbox_to_anchor=(1.01, 1.01))
     fig.suptitle(f'cell # {gc}')
+    
+    plt.savefig(os.path.join(savedst, 'postrew_traces_cell{gc}.svg'))

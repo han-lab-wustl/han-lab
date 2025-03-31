@@ -42,6 +42,8 @@ radian_alignment = {}
 lasttr=8 #  last trials
 bins=90
 saveto = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
+tcs_correct_all=[]
+tcs_fail_all=[]
 # iterate through all animals
 dfs = []
 for ii in range(len(conddf)):
@@ -51,12 +53,54 @@ for ii in range(len(conddf)):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        df=reward_act_nearrew(ii,params_pth,\
+        df,tcs_correct,tcs_fail=reward_act_nearrew(ii,params_pth,\
                 animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,
-                pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
+                pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,
+                pvals,
                 total_cells)
         dfs.append(df)
+        tcs_correct_all.append(tcs_correct)
+        tcs_fail_all.append(tcs_fail)
 pdf.close()
+
+#%%
+# get examples of correct vs. fail
+# take the first epoch and first cell?
+# per day per animal
+plt.rc('font', size=16) 
+tcs_correct = []
+for tcs_corr in tcs_correct_all:
+        if tcs_corr.shape[1]>0:
+                tc = tcs_corr[0,0,:]
+                tcs_correct.append(tc)
+tcs_fail = []
+for tcs_f in tcs_fail_all:
+        if tcs_f.shape[1]>0:
+                tc = tcs_f[0,0,:]
+                if np.sum(np.isnan(tc))==0:
+                        tcs_fail.append(tc)
+        
+fig, axes=plt.subplots(ncols=2,sharex=True)
+ax=axes[0]
+ax.imshow(np.vstack(tcs_correct)**.6,vmin=0,vmax=1.5)
+ax.axvline(45,color='w', linestyle='--')
+bins=90
+ax.set_xticks(np.arange(0,bins,30))
+ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
+ax.set_ylabel('Trials')
+ax.set_xlabel('Reward-relative distance ($\Theta$)')
+ax.set_title('Correct')
+ax=axes[1]
+im=ax.imshow(np.vstack(tcs_fail)**.6,vmin=0,vmax=1.5)
+ax.axvline(45,color='w', linestyle='--')
+ax.set_xticks(np.arange(0,bins,30))
+ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
+ax.set_title('Incorrect')
+
+cbar=fig.colorbar(im, ax=ax)
+cbar.ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
+
+plt.savefig(os.path.join(savedst, 'post_rew_correctvfail.svg'),bbox_inches='tight')
 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
@@ -81,18 +125,19 @@ ax.set_xlabel('')
 # average
 bigdf=bigdf.groupby(['animal', 'trial_type']).mean(numeric_only=True)
 bigdf=bigdf.reset_index()
-
+s=13
 fig,ax = plt.subplots(figsize=(2,5))
-sns.stripplot(x='trial_type', y='mean_tc', data=bigdf,dodge=True,color='k',
-            s=s,alpha=0.7)
-sns.barplot(x='trial_type', y='mean_tc', data=bigdf, fill=False,color='k')
+sns.stripplot(x='trial_type', y='mean_tc', hue='trial_type', data=bigdf,dodge=True,
+            s=s,alpha=0.7, palette={'correct':'seagreen', 'incorrect': 'firebrick'})
+sns.barplot(x='trial_type', y='mean_tc', hue='trial_type', data=bigdf, fill=False,
+            palette={'correct':'seagreen', 'incorrect': 'firebrick'})
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('$\int$ tuning curve ($\Delta F/F$)')
 ax.set_xlabel('Trial type')
 cor = bigdf.loc[(bigdf.trial_type=='correct'), 'mean_tc']
 incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_tc']
-t,pval = scipy.stats.ttest_rel(cor,incor)
+t,pval = scipy.stats.wilcoxon(cor,incor)
 # statistical annotation       
 ii=0.5
 y=10
@@ -106,4 +151,5 @@ elif pval < 0.05:
         plt.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
-ax.set_title('Post-reward cells',pad=40)
+ax.set_title('Post-reward cells',pad=30)
+plt.savefig(os.path.join(savedst, 'postrew_trial_type.svg'),bbox_inches='tight')

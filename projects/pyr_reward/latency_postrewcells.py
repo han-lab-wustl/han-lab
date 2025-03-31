@@ -39,7 +39,7 @@ for k,v in radian_alignment_saved.items():
     radian_alignment=radian_alignment_saved
     tcs_correct, coms_correct, tcs_fail, coms_fail,\
             com_goal, goal_cell_shuf_ps_per_comp_av,\
-                    goal_cell_shuf_ps_av,pdist=radian_alignment[k]
+                    goal_cell_shuf_ps_av=radian_alignment[k]
     track_length=270
     goal_window = goal_window_cm*(2*np.pi/track_length) 
     # change to relative value 
@@ -50,8 +50,9 @@ for k,v in radian_alignment_saved.items():
     # tuning curves that are close to each other across epochs
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
+    upperbound=np.pi/4
     com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
             xx], axis=0)>0))] for com in com_goal if len(com)>0]
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal)
@@ -229,6 +230,21 @@ ax.set_xlabel('Latency from reward (s)')
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
 plt.savefig(os.path.join(savedst, 'latency_postrew_hist.svg'))
+#%%
+# boxplot per animal
+dfagg = df.groupby(['animal','behavior']).mean(numeric_only=True)
+sns.stripplot(x='behavior',y='latency (s)',data=dfagg,s=13,alpha=0.7,
+        dodge=True, color='k')
+sns.boxplot(x='behavior',y='latency (s)',data=dfagg,fill=False,color='k')
+ax.axhline(0,color='k',linestyle='--')
+for an in dfagg.animal.unique():
+    dfan = dfagg[dfagg.animal==an]
+    for dy in dfan.day.unique():
+        dfdy = dfan[dfan.day==dy]
+        for celliid in dfdy.cellid.unique():
+            sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
+                alpha=0.1,color='gray')
+
 #%%
 plt.close('all')
 # per animal pair

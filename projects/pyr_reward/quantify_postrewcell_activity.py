@@ -39,7 +39,7 @@ for k,v in radian_alignment_saved.items():
     radian_alignment=radian_alignment_saved
     tcs_correct, coms_correct, tcs_fail, coms_fail,\
             com_goal, goal_cell_shuf_ps_per_comp_av,\
-                    goal_cell_shuf_ps_av,pdist=radian_alignment[k]
+                    goal_cell_shuf_ps_av=radian_alignment[k]
     track_length=270
     goal_window = goal_window_cm*(2*np.pi/track_length) 
     # change to relative value 
@@ -50,8 +50,9 @@ for k,v in radian_alignment_saved.items():
     # tuning curves that are close to each other across epochs
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
+    upperbound=np.pi/4
     com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=np.pi/2) & (np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
             xx], axis=0)>0))] for com in com_goal if len(com)>0]
     # get goal cells across all epochs        
     goal_cells = intersect_arrays(*com_goal)
@@ -91,13 +92,15 @@ for k,v in radian_alignment_saved.items():
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     timedFF=fall['timedFF'][0]
+    licks=fall['licks'][0]
     if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]        # set vars
-            timedFF=timedFF[:-1]
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]        # set vars
+        timedFF=timedFF[:-1]
+        licks=licks[:-1]
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     velocity = fall['forwardvel'][0]
     veldf = pd.DataFrame({'velocity': velocity})
@@ -111,18 +114,18 @@ for k,v in radian_alignment_saved.items():
     nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
     rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, 
                 pre_win_framesALL, post_win_framesALL,\
-            velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
+            velocity, (rewards==.5).astype(int), licks, 
             max_reward_stop=31.25*5)    
     # nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
     #         post_win_framesALL,velocity, fall['rewards'][0])
-    nonrew_stop_without_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+    nonrew_stop_without_lick_per_plane = np.zeros_like(changeRewLoc)
     nonrew_stop_without_lick_per_plane[nonrew_stop_without_lick.astype(int)] = 1
-    nonrew_stop_with_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+    nonrew_stop_with_lick_per_plane = np.zeros_like(changeRewLoc)
     nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
     movement_starts=mov_success_tmpts.astype(int)
-    rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+    rew_per_plane = np.zeros_like(changeRewLoc)
     rew_per_plane[rew_stop_with_lick.astype(int)] = 1
-    move_start = np.zeros_like(fall['changeRewLoc'][0])
+    move_start = np.zeros_like(changeRewLoc)
     move_start[movement_starts.astype(int)] = 1
     range_val=8;binsize=0.1
     # instead of latencies quantify dff
@@ -134,10 +137,10 @@ for k,v in radian_alignment_saved.items():
         # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
         #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
         _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            timedFF, trialnum, range_val,binsize)
         if np.nanmax(meanrew)>1: # only get highly active cells?
             _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            timedFF, trialnum, range_val,binsize)
             # quantify dff
             transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
             gc_latencies_rew.append(transient_around_rew)
@@ -183,8 +186,9 @@ ax.spines[['top','right']].set_visible(False)
 #%%
 
 fig,ax=plt.subplots(figsize=(2.2,5))
+s=13
 dfagg = df.groupby(['animal','behavior']).mean(numeric_only=True)
-sns.stripplot(x='behavior',y='dff',data=dfagg,s=8,alpha=0.7,
+sns.stripplot(x='behavior',y='dff',data=dfagg,s=s,alpha=0.7,
         dodge=True, color='k')
 sns.boxplot(x='behavior',y='dff',data=dfagg,fill=False,showfliers= False,color='k')
 dfagg=dfagg.reset_index()
@@ -194,7 +198,7 @@ for an in dfagg.animal.unique():
         dfdy = dfan[dfan.day==dy]
         for celliid in dfdy.cellid.unique():
             sns.lineplot(x='behavior',y='dff',data=dfdy[dfdy.cellid==celliid],
-                alpha=.7,color='gray')
+                alpha=.7,color='gray', linewidth=2)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
@@ -205,11 +209,12 @@ x2=dfagg.loc[dfagg.behavior=='Movement Start', 'dff'].values
 
 t,pval = scipy.stats.wilcoxon(x1,x2)
 
-y=1.7
+y=1.4
 fs=40
 i=.5
-ax.text(i, y, '**', ha='center', fontsize=fs)
-
+ax.text(i, y, f'**', ha='center', fontsize=fs)
+ax.text(i, y-0.04, f'p={pval}', ha='center', fontsize=10)
+plt.savefig(os.path.join(savedst, 'postrew_dff_reward_v_movement.svg'),bbox_inches='tight')
 #%%
 # histogram of latencies
 plt.rc('font', size=22) 
