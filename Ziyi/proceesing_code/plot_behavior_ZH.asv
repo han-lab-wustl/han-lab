@@ -1,0 +1,68 @@
+% Zahra
+% 250211 Ziyi change the location to put the legend and updated saving the file
+% part 
+% Analyze behavior of mouse in HRZ
+% Look at fraction of licks in normal vs. probe trials
+% Source: https://www.nature.com/articles/s41593-022-01050-4
+
+clear all;
+close all;
+
+mouse_name = "e245";
+day = 13;
+src = 'H:\';
+grayColor = [.7 .7 .7];
+ind = 1;
+
+file_path = 'H:\E245_13_Feb_2025_time(11_48_58).mat';
+% Load mouse data
+mouse = load(file_path);
+
+% Get success and fail trials
+[s, f, ~, ~, ~, tr] = get_success_failure_trials(mouse.VR.trialNum, mouse.VR.reward);
+success_prop{ind} = s/tr;
+fail_prop{ind} = f/tr;
+
+% Find epochs where reward location changes
+eps = find(mouse.VR.changeRewLoc>0);
+eps = [eps length(mouse.VR.changeRewLoc)]; 
+gainf = 1/mouse.VR.scalingFACTOR;
+rewloc = mouse.VR.changeRewLoc(mouse.VR.changeRewLoc>0) * gainf;
+rewsize = mouse.VR.settings.rewardZone * gainf;    
+
+% Prepare the figure
+fig = figure('Renderer', 'painters', 'Position', [100, 100, 800, 300]); % Specify figure size here
+ypos = mouse.VR.ypos * gainf;
+velocity = mouse.VR.ROE(2:end) * -0.013 ./ diff(mouse.VR.time);
+scatter(1:length(ypos), ypos, 2, 'filled', 'MarkerFaceColor', grayColor); hold on; 
+plot(find(mouse.VR.lick), ypos(find(mouse.VR.lick)), 'r.', 'MarkerSize', 5); 
+
+for mm = 1:length(eps) - 1
+    rectangle('Position', [eps(mm), rewloc(mm) - rewsize / 2, eps(mm + 1) - eps(mm), rewsize], ...
+              'EdgeColor', 'none', 'FaceColor', [0, 0.5, 0.5, 0.3]);
+end
+
+plot(find(mouse.VR.reward == 0.5), ypos(find(mouse.VR.reward == 0.5)), 'b*', 'MarkerSize', 5);
+ylabel("Track Position (cm)");
+xticks(0:10000:length(mouse.VR.time));
+xticklabels(floor(mouse.VR.time(1:10000:end) / 60));
+xlabel("Time (minutes)");
+ylim([0 270]);
+xlim([0 length(mouse.VR.reward)]);
+yticks(0:90:270);
+yticklabels(0:90:270);
+
+lgd = legend({'Position', 'Licks', 'Conditioned Stimulus'}, 'Location', 'southeast');
+set(lgd, 'Color', [1 1 1 0.6]); % Set the color to 'none' to make it transparent
+set(lgd, 'Box', 'off'); % Turn off the box surrounding the legend
+%legend({'Position', 'Licks', 'Conditioned Stimulus'});
+
+%text(0.01 * length(mouse.VR.reward), 250, ['File: ' file_path], 'FontSize', 8, 'Color', 'black', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+annotation(fig, 'textbox', [0.1, 0, 0.2, 0.05], 'String', [file_path], ...
+    'FontSize', 10, 'EdgeColor', 'none', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'Interpreter', 'none');
+
+% Save the figure to specified folder
+savefig_path = 'E:\Ziyi\results\halo_control_yfp\srz';
+filename = sprintf('%s_srz_day%d_behavior.png', mouse_name, day);
+saveas(fig, fullfile(savefig_path, filename));
+%close(fig);

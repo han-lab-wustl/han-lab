@@ -1,4 +1,4 @@
-<<<<<<<< HEAD:Ziyi/Visualization code/plot_behavior.m
+
 % Zahra
 % analyze behavior of mouse in HRZ
 % look at fraction of licks in normal vs. probe trials
@@ -15,7 +15,7 @@ clear all; close all
 
 mouse_name = "e228";
 days = [2]; % can be string or integer (has to be your folder names)
-src = 'E:\Ziyi\Data\250128_ZH\vr';
+%src = '';
 % src = '\\storage1.ris.wustl.edu\ebhan\Active\dzahra';
 grayColor = [.7 .7 .7];
 ind = 1;
@@ -25,7 +25,7 @@ ind = 1;
 %     daypth = dir(fullfile(src,"vr\*.mat")); % path to vr file per mouse   
 % %     daypth = dir(fullfile(src, mouse_name, string(day), "*time*.mat"));    
     % mouse = load(fullfile(daypth.folder,daypth.name)); 
-    mouse = load('H:\E245_23_Jan_2025_time(15_02_33).mat')
+    mouse = load('H:\E245_07_Feb_2025_time(11_54_51)')
     %mouse = load('E:\Ziyi\Data\241226_ZH\vr\E245_21_Jan_2025_time(15_06_25).mat');
     % get success and fail trials
     [s,f,str, ftr, ttr, tr] = get_success_failure_trials(mouse.VR.trialNum, mouse.VR.reward);
@@ -84,7 +84,7 @@ ind = 1;
 % plot(2,x,'ok')
 % xticklabels(["Fails" "Successes"])
 % ylabel("Proportion of trials")
-========
+
 % Zahra
 % analyze behavior of mouse in HRZ
 % look at fraction of licks in normal vs. probe trials
@@ -167,4 +167,3 @@ fl = pptx.save(fullfile(savedst,'behavior'));
 % plot(2,x,'ok')
 % xticklabels(["Fails" "Successes"])
 % ylabel("Proportion of trials")
->>>>>>>> main:behavior_analysis/plot_behavior_pickfiles.m

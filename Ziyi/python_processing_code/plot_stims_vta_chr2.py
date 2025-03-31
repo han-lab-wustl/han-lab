@@ -18,19 +18,20 @@ mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
+import numpy as np
 #from projects.memory.dopamine import get_rewzones
 
 # plt.rc('font', size=12)          # controls default text sizes
 #%%
 plt.close('all')
 
-src = r'\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\VTA_mice_copy'
+src = r'E:\Ziyi\Data\VTA_mice'
 range_val = 5; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
 #savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
-conddf = pd.read_csv(r"C:\Users\HanLab\\Downloads\data_organization - chr2_vta_grabda3m.csv") # day vs. condition LUT
+conddf = pd.read_csv(r"C:\Users\HanLab\\Downloads\Book2.csv") # day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
@@ -65,7 +66,7 @@ for ii,animal in enumerate(animals):
             dff = np.hstack(params['params'][0][0][row][0][0])/np.nanmean(np.hstack(params['params'][0][0][row][0][0]))#/np.hstack(params['params'][0][0][9])            
             # plot mean img
             ax=axes[0,pln]
-            ax.imshow(params['params'][0][0][0],cmap='Greys_r')
+            ax.imshow(params['params'][0][0][0],cmap='Greys_r') # mean image in row 0
             ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
             ax.axis('off')
             ax.set_title(f'{animal}, day {day}, {planelut[pln]}')
@@ -78,17 +79,19 @@ for ii,animal in enumerate(animals):
             
             dffdf = pd.DataFrame({'dff': dff})
             dff = np.hstack(dffdf.rolling(4).mean().values)
+            
+            '''
             # get off plane stim
             offpln=pln+1 if pln<3 else pln-1
-            #startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
+            startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
             # min_iind = [min(xx) for xx in startofstims if len(xx)>0]
             # threshold for length of stims
             # designed to catch when you acc put >1 frame stim in scanbox
-            #min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            min_iind = [min(xx) for xx in startofstims if len(xx)>0]
             # if animal=='e277' and str(condition)=='nan' and planenum=='plane3':
             #     min_iind = [min(xx)+2 for xx in startofstims if len(xx)>0]
 
-            min_iind = find_start_points(stims[offpln::4])
+            #min_iind = find_start_points(stims[offpln::4])
             # # remove rewarded stims
             cs=params['solenoid2'][0]
             # # cs within 50 frames of start of stim - remove
@@ -96,6 +99,25 @@ for ii,animal in enumerate(animals):
             unrewstimidx = [idx for idx in min_iind if sum(cs[idx-framelim:idx+framelim])==0]            
             startofstims = np.zeros_like(dff)
             startofstims[unrewstimidx]=1
+            '''
+            '''
+            offpln=pln+1 if pln<3 else pln-1
+            #offpln=pln+3 if pln>1 else pln-1
+            #startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
+            #min_iind = [min(xx) for xx in startofstims if len(xx)>0]
+            min_iind = find_start_points(stims[offpln::4])
+            startofstims = np.zeros_like(dff)
+            startofstims[min_iind]=1
+            '''
+            min_iind = find_start_points(stims[pln-1::4])
+            startofstims = np.zeros_like(dff)
+            startofstims[min_iind]=1
+
+
+
+
+
+
             # # get on plane stim for red laser
             # offpln=pln
             # ss = consecutive_stretch(np.where(stims[offpln::4])[0])
@@ -151,7 +173,16 @@ for ii,animal in enumerate(animals):
             fig.tight_layout()        
 
         day_date_dff[f'{animal}_{day}_{condition}'] = plndff
-
+'''
+    def find_start_points(data):
+        # Check if the first element is 1
+        starts = [0] if data[0] == 1 else []
+        # Find the indices where data changes from 0 to 1
+        changes = np.where(np.diff(data) == 1)[0]
+        # Since np.diff reduces the length by 1, add 1 to each index to get the actual start points
+        starts.extend(changes + 1)
+        return starts
+'''
 #%%
 # plot deep vs. superficial
 # plot control vs. drug
@@ -410,11 +441,3 @@ ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
 ax.set_title('n=3 animals',pad=50,fontsize=14)
 plt.savefig(os.path.join(savedst, 'vta_stim_ttest_per_animal.svg'),bbox_inches='tight')
 
-def find_start_points(data):
-    # Check if the first element is 1
-    starts = [0] if data[0] == 1 else []
-    # Find the indices where data changes from 0 to 1
-    changes = np.where(np.diff(data) == 1)[0]
-    # Since np.diff reduces the length by 1, add 1 to each index to get the actual start points
-    starts.extend(changes + 1)
-    return starts

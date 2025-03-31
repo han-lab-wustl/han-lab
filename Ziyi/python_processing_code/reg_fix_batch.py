@@ -29,4 +29,4 @@ for srcpth in root_directories:
         for i, fl in enumerate(fls):
             new_name = os.path.join(pth, f'file{order[i]:06d}.tif')
             os.rename(fl, new_name)
-            # print(new_name)  # Uncomment to print the new file paths
+            print(new_name)  # Uncomment to print the new file paths
