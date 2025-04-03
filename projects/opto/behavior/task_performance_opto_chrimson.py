@@ -82,7 +82,7 @@ df['optoep'] = np.repeat(conddf.optoep.values,2)
 df=df[(df.optoep.values>1)]
 bigdf_plot = df.groupby(['animals', 'epoch', 'opto', 'condition']).mean(numeric_only=True)
 bigdf_plot = df # do not sum by animals
-fig,ax = plt.subplots(figsize=(5,5))
+fig,ax = plt.subplots(figsize=(4,5))
 sns.barplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
     palette={'ctrl': "slategray", 'vip': "darkgoldenrod"},                
             errorbar='se', fill=False,ax=ax)

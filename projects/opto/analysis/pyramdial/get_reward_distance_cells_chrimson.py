@@ -2,7 +2,6 @@
 feb 2025
 vip chrimson excitation
 """
-
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math
@@ -19,7 +18,7 @@ from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtyp
 from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson_onlyz14.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_chrimson_rewardcells.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -89,8 +88,8 @@ for ii in range(len(conddf)):
         if f'{animal}_{day:03d}' in radian_alignment_saved.keys():
                 k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
                 print(k)
-                tcs_correct, coms_correct, tcs_fail, coms_fail, \
-                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
+                tcs_correct, coms_correct, tcs_fail, coms_fail,\
+                        com_goal,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
         else:# remake tuning curves relative to reward        
         # takes time
                 fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -99,9 +98,8 @@ for ii in range(len(conddf)):
                 Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
                 dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
                 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-                # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-                # skew_mask = skew_filter>2
-                Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+                # if animal!='z14' and animal!='e200' and animal!='e189':
+                Fc3 = Fc3[:, skew>1] # only keep cells with skew greateer than 2
                 # 9/19/24
                 # find correct trials within each epoch!!!!
                 tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
@@ -113,15 +111,15 @@ for ii in range(len(conddf)):
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         perm = [(eptest-2, eptest-1)]    
-        print(eptest, perm)
+        # print(eptest, perm)
         com_remap = np.array((coms_rewrel[1]-coms_rewrel[0]))        
         com_goal = [ii for ii,comr in enumerate(com_remap) if (comr<goal_window) & (comr>-goal_window) ]
         dist_to_rew.append(coms_rewrel)
         # get goal cells across all epochs        
         goal_cells = com_goal
         # get per comparison
-        
-        goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
+        goal_cell_iind.append(goal_cells)
+        goal_cell_p=len(goal_cells)/len(coms_correct[0])
         epoch_perm.append(perm)
         goal_cell_prop.append(goal_cell_p)
         # do not plot cell profiles
@@ -147,13 +145,14 @@ for ii in range(len(conddf)):
             ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
             ax.set_xlabel('Radian position (centered start rew loc)')
             ax.set_ylabel('Fc3')
+            fig.suptitle(f'{animal}, day {day}')
             fig.tight_layout()
             # plt.show()
             pdf.savefig(fig)
             plt.close(fig)
 
         # get shuffled iterations
-        num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
+        num_iterations = 5000; shuffled_dist = np.zeros((num_iterations))
         # max of 5 epochs = 10 perms
         goal_cell_shuf_ps = []
         for i in range(num_iterations):
@@ -179,14 +178,15 @@ for ii in range(len(conddf)):
         goal_cell_null.append(goal_cell_shuf_ps_av)
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         pvals.append(p_value); 
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value}')
+        print(f'\n\n {animal}, day {day}: significant goal cells proportion p-value: {p_value}\n\
+                total cells: {len(coms_correct[0])}')
         total_cells.append(len(coms_correct[0]))
         radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
                         com_goal,goal_cell_shuf_ps_av]
 pdf.close()
 # # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#         pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+        pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=18)          # controls default text sizes
 # plot goal cells across epochs
@@ -236,7 +236,8 @@ ax.set_ylabel('Reward-centric cell proportion')
 df_plt = df_plt.reset_index()
 rewprop = df_plt.loc[((df_plt.condition=='vip')&(df_plt.opto=='stim')), 'goal_cell_prop']
 shufprop = df_plt.loc[((df_plt.condition=='vip')&(df_plt.opto=='no_stim')), 'goal_cell_prop']
-t,pval = scipy.stats.ranksums(rewprop, shufprop)
+t,pval = scipy.stats.ttest_ind(rewprop, shufprop)
+
 # statistical annotation    
 fs=46
 ii=0; y=.5; pshift=.05

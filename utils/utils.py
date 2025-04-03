@@ -367,6 +367,8 @@ def movesbx(src, dst, fls, fldkeyword='ZD'):
         it looks for the folder structure based on this. Defaults to 'ZD'.
     """
     for fl in fls:
+        # take days and join paths
+        fl = os.path.join(src,str(fl))
         try:
             imgfl = [xx for xx in listdir(fl) if fldkeyword in xx][0]
             sbxfl = [xx for xx in listdir(imgfl) if ".sbx" in xx][0]
@@ -415,3 +417,9 @@ if __name__ == "__main__":
         # 'e278', 'e279', 'e280']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])
+        
+    # e.g.
+    src=r'X:\vipcre'
+    dst=r'Y:\analysis\fmats'
+    animal='z14'
+    # copyfmats(src,dst,animal,days=[28,29],combined=True)

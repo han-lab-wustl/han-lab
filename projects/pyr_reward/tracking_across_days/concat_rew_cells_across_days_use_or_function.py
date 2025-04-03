@@ -18,8 +18,8 @@ import pickle, seaborn as sns, random, math, os, matplotlib as mpl
 from collections import Counter
 from itertools import combinations, chain
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
@@ -200,6 +200,8 @@ for animal in animals:
 # get cell # per epoch
 # iind_goal_cells_all_per_day - epoch combinations per 4 days
 # between ep 1 and 2 or ep 2 and 3
+bigcom = pd.concat([pd.concat(xx) for xx in coms_per_an])
+
 num_clls_per_2ep_per_an = []
 for xx in per_day_goal_cells_all: # per animal
     num_clls_per_2ep=[]
@@ -329,7 +331,7 @@ df4['epoch_number']=[4]*len(df4)
 
 df=pd.concat([df,df2,df3,df4])
 df=df.reset_index()
-plt.rc('font', size=16) 
+plt.rc('font', size=20) 
 s=10
 df=df.groupby(['animal','epoch_number']).max(numeric_only=True)
 df=df.reset_index()
@@ -346,19 +348,27 @@ for i in range(len(ans)):
     data=df[df.animal==ans[i]],
     errorbar=None, color='dimgray', linewidth=2)
 ax.spines[['top','right']].set_visible(False)
-
+ax.set_ylabel('Reward cell count')
+ax.set_xlabel('# reward loc. switches')
+plt.savefig(os.path.join(savedst, 'reward_cell_count_over_many_ep.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'reward_cell_count_over_many_ep.png'), bbox_inches='tight',dpi=500)
 # plot com
+dfplt = df[df.animal!='e216']
 fig, ax = plt.subplots(figsize=(6,5))
-sns.stripplot(x='epoch_number',y='average_com',data=df, dodge=True, color='k',
+sns.stripplot(x='epoch_number',y='average_com',data=dfplt, dodge=True, color='k',
     s=s,alpha=0.7)
-sns.barplot(x='epoch_number',y='average_com',data=df,fill=False,color='k')
+sns.barplot(x='epoch_number',y='average_com',data=dfplt,fill=False,color='k')
 # make lines
-ans = df.animal.unique()
+ans = dfplt.animal.unique()
 for i in range(len(ans)):
-    ax = sns.lineplot(x=df.epoch_number-2, y='average_com', 
-    data=df[df.animal==ans[i]],
+    ax = sns.lineplot(x=dfplt.epoch_number-2, y='average_com', 
+    data=dfplt[dfplt.animal==ans[i]],
     errorbar=None, color='dimgray', linewidth=2)
 ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Average COM of cell')
+ax.set_xlabel('# reward loc. switches')
+plt.savefig(os.path.join(savedst, 'com_over_many_ep.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'com_over_many_ep.png'), bbox_inches='tight',dpi=500)
 
 #%%
 # normalize to max (2 epochs) for each animal?
