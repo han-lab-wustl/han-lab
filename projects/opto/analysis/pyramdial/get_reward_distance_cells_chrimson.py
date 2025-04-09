@@ -11,7 +11,7 @@ import matplotlib.backends.backend_pdf, matplotlib as mpl
 
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
-mpl.rcParams["ytick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10 
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
@@ -99,7 +99,7 @@ for ii in range(len(conddf)):
                 dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
                 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
                 # if animal!='z14' and animal!='e200' and animal!='e189':
-                Fc3 = Fc3[:, skew>1] # only keep cells with skew greateer than 2
+                Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
                 # 9/19/24
                 # find correct trials within each epoch!!!!
                 tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,

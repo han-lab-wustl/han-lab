@@ -156,8 +156,11 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     coms_correct_abs_warped = np.array([com-1 for com in coms_correct_abs_warped])
     tcs_abs_mean = np.nansum(tcs_correct_abs[:,clls_to_keep,:],axis=0)
     com_abs_mean = np.nanmean(coms_correct_abs[:,clls_to_keep],axis=0)
+    # keep all cells
+    com_abs_mean=coms_correct_abs[:,clls_to_keep]
     tcs_warped_mean = np.nansum(tcs_correct_abs_warped[:,clls_to_keep,:],axis=0)
     com_warped_mean = np.nanmean(coms_correct_abs_warped[:,clls_to_keep],axis=0)
+    com_warped_mean=coms_correct_abs_warped[:,clls_to_keep]
     # tc mean across epochs    
     tc_mean = np.nansum(tcs_correct[:,clls_to_keep,:],axis=0)
     # first get goal cells
@@ -183,7 +186,8 @@ def get_circular_data(ii,params_pth,animal,day,bins,radian_alignment,
     # get abs value instead
     coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
     #average after looping
-    com_mean_rewrel = np.nanmean(coms_rewrel[:,clls_to_keep],axis=0)    
+    com_mean_rewrel = np.nanmean(coms_rewrel[:,clls_to_keep],axis=0)   
+    com_mean_rewrel=coms_rewrel[:,clls_to_keep] 
     rad_binned = np.linspace(0, 2*np.pi, bins)
     # compute circular statistics
     meanangles_rad = []; rvals_rad = []

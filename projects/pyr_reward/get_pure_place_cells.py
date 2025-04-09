@@ -1,8 +1,8 @@
 
 """
 zahra
-july 2024
-quantify reward-relative cells
+april 2025
+get place cells and plot com histogram
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -43,7 +43,7 @@ place_cell_null=[]
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217'):
+    if (animal!='e217') and (conddf.optoep.values==-1):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"

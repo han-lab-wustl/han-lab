@@ -407,3 +407,69 @@ for i in range(len(ans)):
     data=dfplt[dfplt.animal==ans[i]],
     errorbar=None, color='dimgray', linewidth=2)
 ax.spines[['top','right']].set_visible(False)
+
+#%%
+# example
+#print
+from projects.pyr_reward.rewardcell import create_mask_from_coordinates
+import cv2
+bigcom[(bigcom.animal=='e201')]
+cellnm=1386
+
+bigcom[(bigcom.animal=='e201') & (bigcom.tracked_cell_id==cellnm)]
+tracked_lut, days= get_tracked_lut(celltrackpth,'e201',pln)
+animal='e201'
+days = [50,51,52]
+e201_eg = tracked_lut[days].iloc[cellnm]
+cmap = ['k','yellow']  # Choose your preferred colormap
+cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", cmap)
+# Convert to RGBA and set alpha = 0 for the lowest value
+cmap_with_alpha = cmap(np.linspace(0, 1, 256))  # Get 256 colors from colormap
+cmap_with_alpha[0, -1] = 0  # Set alpha=0 for the lowest value (index 0)
+# Create a new colormap with the adjusted alpha
+transparent_cmap = matplotlib.colors.ListedColormap(cmap_with_alpha)
+fig,axes = plt.subplots(ncols=len(days),nrows=2, figsize=(12,6),
+        gridspec_kw={'height_ratios': [3,1]})
+for ii,day in enumerate(days):
+    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+    fall = scipy.io.loadmat(params_pth, variable_names=['stat', 'ops', 'dFF'])
+    stat = fall['stat'][0]
+    # dtype=[('ypix', 'O'), ('xpix', 'O'), ('lam', 'O'), ('med', 'O'), 
+    # ('footprint', 'O'), ('mrs', 'O'), ('mrs0', 'O'), ('compact', 'O'), 
+    # ('solidity', 'O'), ('npix', 'O'), ('npix_soma', 'O'), 
+    # ('soma_crop', 'O'), ('overlap', 'O'), ('radius', 'O'), 
+    # ('aspect_ratio', 'O'), ('npix_norm_no_crop', 'O'), ('npix_norm', 'O'), 
+    # ('skew', 'O'), ('std', 'O'), ('neuropil_mask', 'O')])
+    celln = e201_eg[day]
+    stat_cll = stat[celln]
+    img = fall['ops']['meanImg'][0][0]
+    ypix = stat_cll['ypix'][0][0][0]
+    xpix = stat_cll['xpix'][0][0][0]
+    dFF = fall['dFF']
+    pad = 80  # how much to zoom out from the edges
+    ymin, ymax = max(0, ypix.min() - pad), min(img.shape[0], ypix.max() + pad)
+    xmin, xmax = max(0, xpix.min() - pad), min(img.shape[1], xpix.max() + pad)
+    coords = np.column_stack((xpix, ypix))  
+    mask,cmask,center=create_mask_from_coordinates(coords, 
+            img.shape)                
+    img_crop = img[ymin:ymax, xmin:xmax]
+    mask_crop =cmask[ymin:ymax, xmin:xmax]
+    axes[0,ii].imshow(img_crop, cmap='gray')
+    axes[0,ii].imshow(mask_crop,cmap=transparent_cmap,vmin=1)
+    axes[0,ii].axis('off')
+    axes[1,ii].plot(dFF[:,celln],color='darkgoldenrod')
+    axes[1,ii].set_ylabel('$\Delta$ F/F')
+    axes[1,ii].set_xlabel('Time (min)')
+    ax=axes[1,ii]
+    # Get x-axis tick locations from the axes
+    xticks = ax.get_xticks()
+    # Only use the first and last ticks, scaled by 31.25
+    xtick_locs = [xticks[1], xticks[-2]]
+    xtick_labels = [f"{xticks[1]/31.25:.2f}", f"{(xticks[-2]/31.25/60):.2f}"]
+    # Set the ticks and labels
+    ax.set_xticks(xtick_locs)
+    ax.set_xticklabels(xtick_labels)
+    ax.spines[['top','right']].set_visible(False)
+    axes[0,ii].set_title(f'Session {ii+1}')
+fig.suptitle(f'Tracked reward cell, animal {animal}')
+plt.savefig(os.path.join(savedst, f'tracked_rew_cell_eg_cell{cellnm}.svg'),bbox_inches='tight')
