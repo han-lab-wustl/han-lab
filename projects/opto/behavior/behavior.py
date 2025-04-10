@@ -124,8 +124,6 @@ def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
         
     return lick_selectivity_per_trial
 
-    
-    return lick_selectivity_per_trial
 
 def get_behavior_tuning_curve(ybinned, beh, bins=270):
     """

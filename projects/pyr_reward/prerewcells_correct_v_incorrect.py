@@ -103,7 +103,42 @@ cbar=fig.colorbar(im, ax=ax)
 cbar.ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
 
 plt.savefig(os.path.join(savedst, 'pre_rew_correctvfail.svg'),bbox_inches='tight')
+#%%
+# mean 
+fig, axes=plt.subplots(figsize=(8,2.5),ncols=2,sharey=True,sharex=True)
+ax=axes[0]
+m = np.nanmean(np.vstack(tcs_correct),axis=0)
+ax.plot(m, color='seagreen')
+ax.fill_between(
+range(0, np.vstack(tcs_correct).shape[1]),
+m - scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit'),
+m + scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit'),
+alpha=0.5, color='seagreen'
+)             
+ax.axvline(45,color='k', linestyle='--')
+ax.spines[['top','right']].set_visible(False)
+ax.set_title('Correct')
+ax.set_ylabel('$\Delta$ F/F')
 
+bins=90
+ax=axes[1]
+m = np.nanmean(np.vstack(tcs_fail),axis=0)
+ax.plot(m, color='firebrick')
+ax.fill_between(
+range(0, np.vstack(tcs_fail).shape[1]),
+m - scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit'),
+m + scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit'),
+alpha=0.5, color='firebrick'
+)             
+ax.axvline(45,color='k', linestyle='--')
+ax.set_xticks(np.arange(0,bins,30))
+ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
+
+ax.spines[['top','right']].set_visible(False)
+
+ax.set_xlabel('Reward-relative distance ($\Theta$)')
+ax.set_title('Incorrect')
+plt.savefig(os.path.join(savedst, 'pre_rew_correctvfail_mean.svg'),bbox_inches='tight')
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 bigdf=pd.concat(dfs)

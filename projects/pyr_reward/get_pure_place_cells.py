@@ -43,7 +43,7 @@ place_cell_null=[]
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') and (conddf.optoep.values==-1):
+    if (animal!='e217') and (conddf.optoep.values[ii]==-1):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -98,7 +98,7 @@ for ii in range(len(conddf)):
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size)
         # get cells that maintain their coms across at least 2 epochs
-        place_window = 10 # cm converted to rad                
+        place_window = 20 # cm converted to rad                
         perm = list(combinations(range(len(coms_correct_abs)), 2))     
         com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
@@ -263,11 +263,14 @@ for ep in eps:
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-
+#%%
 df_plt2 = pd.concat([df_permsav2,df_plt])
-# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+df_plt2['place_cell_prop']=df_plt2['place_cell_prop']*100
+df_plt2['place_cell_prop_shuffle']=df_plt2['place_cell_prop_shuffle']*100
+df_plt2=df_plt2.reset_index()
+df_plt2=df_plt2[df_plt2.animals!='e189']
 # number of epochs vs. reward cell prop incl combinations    
 fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
@@ -279,17 +282,28 @@ sns.barplot(x='num_epochs', y='place_cell_prop',
         fill=False,ax=ax, color='k', errorbar='se')
 ax = sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', 
-        y='place_cell_prop_shuffle',color='grey', 
-        label='shuffle',alpha=0.7)
+        y='place_cell_prop_shuffle',color='gray', 
+        label='shuffle',alpha=0.5)
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
+# make lines
+
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='place_cell_prop', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2,alpha=0.7)
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('% Place cell')
+ax.set_xlabel('# reward loc. switches')
 
 eps = [2,3,4]
-y = 0.19
+y = 30
+pshift=4
 fs=36
 for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'place_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'place_cell_prop_shuffle']
+        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop']
+        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop_shuffle']
         t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
@@ -299,9 +313,11 @@ for ii,ep in enumerate(eps):
                 plt.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+.03, f'p={pval:.3g}', rotation=45,fontsize=12)
+        ax.text(ii, y+pshift, f'p={pval:.3g}', rotation=45,fontsize=12)
 
 plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.svg'), 
+        bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.png'), 
         bbox_inches='tight')
 #%%
 
@@ -328,38 +344,3 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 plt.savefig(os.path.join(savedst, 'place_cell_nearrew_prop_per_an.svg'), 
         bbox_inches='tight')
-#%%
-
-# as a function of session/day
-df_plt = df.groupby(['animals','session_num','num_epochs']).mean(numeric_only=True)
-df_permsav2 = df_perms.groupby(['animals', 'session_num','num_epochs']).mean(numeric_only=True)
-# compare to shuffle
-df_plt2 = pd.concat([df_permsav2,df_plt])
-# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
-df_plt2 = df_plt2[(df_plt2.index.get_level_values('num_epochs')==2) & (df_plt2.index.get_level_values('animals')!='e200')]
-df_plt2 = df_plt2.groupby(['animals', 'session_num','num_epochs']).mean(numeric_only=True)
-# number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(7,5))
-# av across mice
-sns.stripplot(x='session_num', y='place_cell_prop',hue='animals',
-        data=df_plt2,s=10,alpha=0.7)
-sns.barplot(x='session_num', y='place_cell_prop',color='darkslateblue',
-        data=df_plt2,fill=False,ax=ax, errorbar='se')
-ax.set_xlim([-.5,9.5])
-# ax = sns.lineplot(data=df_plt2, # correct shift
-#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
-#         label='shuffle')
-ax.spines[['top','right']].set_visible(False)
-# ax.legend().set_visible(False)
-ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
-ax.set_xlabel('# of sessions')
-ax.set_ylabel('Reward-distance cell proportion')
-df_reset = df_plt2.reset_index()
-sns.regplot(x='session_num', y='place_cell_prop',
-        data=df_reset, scatter=False, color='k')
-r, p = scipy.stats.pearsonr(df_reset['session_num'], 
-        df_reset['place_cell_prop'])
-ax = plt.gca()
-ax.text(.5, .8, 'r={:.3f}, p={:.3g}'.format(r, p),
-        transform=ax.transAxes)
-ax.set_title('2 epoch combinations')

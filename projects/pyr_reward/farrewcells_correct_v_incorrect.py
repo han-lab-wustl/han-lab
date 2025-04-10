@@ -18,7 +18,7 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,reward_act_nearrew
+from rewardcell import get_radian_position,reward_act_farrew, get_rewzones
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -82,15 +82,23 @@ for tcs_f in tcs_fail_all:
         
 fig, axes=plt.subplots(ncols=2,sharex=True)
 ax=axes[0]
-ax.imshow(np.vstack(tcs_correct)**.6,vmin=0,vmax=1.5)
+# sort by peak location
+alltcs = np.vstack(tcs_correct)
+peak = np.argmax(alltcs,axis=1)
+alltcs = alltcs[np.argsort(peak)]
+ax.imshow(alltcs**.6,vmin=0,vmax=1.5)
 ax.axvline(45,color='w', linestyle='--')
 bins=90
 ax.set_xticks(np.arange(0,bins,30))
 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
-ax.set_ylabel('Trials')
+ax.set_ylabel('Epochs')
 ax.set_xlabel('Reward-relative distance ($\Theta$)')
-ax.set_title('Correct')
+ax.set_title('Far-reward cells\nCorrect')
 ax=axes[1]
+alltcs = np.vstack(tcs_fail)
+peak = np.argmax(alltcs,axis=1)
+alltcs = alltcs[np.argsort(peak)]
+
 im=ax.imshow(np.vstack(tcs_fail)**.6,vmin=0,vmax=1.5)
 ax.axvline(45,color='w', linestyle='--')
 ax.set_xticks(np.arange(0,bins,30))
@@ -100,7 +108,43 @@ ax.set_title('Incorrect')
 cbar=fig.colorbar(im, ax=ax)
 cbar.ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
 
-plt.savefig(os.path.join(savedst, 'post_rew_correctvfail.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'far_rew_correctvfail.svg'),bbox_inches='tight')
+#%%
+# mean 
+fig, axes=plt.subplots(figsize=(8,2.5),ncols=2,sharey=True,sharex=True)
+ax=axes[0]
+m = np.nanmean(np.vstack(tcs_correct),axis=0)
+ax.plot(m, color='seagreen')
+ax.fill_between(
+range(0, np.vstack(tcs_correct).shape[1]),
+m - scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit'),
+m + scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit'),
+alpha=0.5, color='seagreen'
+)             
+ax.axvline(45,color='k', linestyle='--')
+ax.spines[['top','right']].set_visible(False)
+ax.set_title('Correct')
+ax.set_ylabel('$\Delta$ F/F')
+
+bins=90
+ax=axes[1]
+m = np.nanmean(np.vstack(tcs_fail),axis=0)
+ax.plot(m, color='firebrick')
+ax.fill_between(
+range(0, np.vstack(tcs_fail).shape[1]),
+m - scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit'),
+m + scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit'),
+alpha=0.5, color='firebrick'
+)             
+ax.axvline(45,color='k', linestyle='--')
+ax.set_xticks(np.arange(0,bins,30))
+ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
+
+ax.spines[['top','right']].set_visible(False)
+
+ax.set_xlabel('Reward-relative distance ($\Theta$)')
+ax.set_title('Incorrect')
+plt.savefig(os.path.join(savedst, 'far_rew_correctvfail_mean.svg'),bbox_inches='tight')
 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
@@ -151,5 +195,5 @@ elif pval < 0.05:
         plt.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
-ax.set_title('Post-reward cells',pad=50)
-plt.savefig(os.path.join(savedst, 'postrew_trial_type.svg'),bbox_inches='tight')
+ax.set_title('Far-reward cells',pad=30)
+plt.savefig(os.path.join(savedst, 'farrew_trial_type.svg'),bbox_inches='tight')
