@@ -22,7 +22,7 @@ from rewardcell import get_radian_position,reward_act_prerew
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'near_rew.pdf')
+savepth = os.path.join(savedst, 'pre_rew.pdf')
 #%%
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -141,7 +141,7 @@ incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_tc']
 t,pval = scipy.stats.ttest_rel(cor,incor)
 # statistical annotation       
 ii=0.5
-y=10
+y=6
 pshift=.01
 fs=30
 if pval < 0.001:
@@ -152,5 +152,5 @@ elif pval < 0.05:
         plt.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
-ax.set_title('Pre-reward cells',pad=40)
+ax.set_title('Pre-reward cells',pad=20)
 plt.savefig(os.path.join(savedst, 'prerew_trial_type.svg'),bbox_inches='tight')

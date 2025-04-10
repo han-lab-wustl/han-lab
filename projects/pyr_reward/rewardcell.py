@@ -1321,9 +1321,10 @@ def  reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:
         goal_cells=[]
     # integral
-    correct = scipy.integrate.trapz(tcs_correct[:,goal_cells],axis=2)
+    # get tc after rew
+    correct = scipy.integrate.trapz(tcs_correct[:,goal_cells, int(bins/2):],axis=2)
     # epoch (x) x cells (y)
-    incorrect = scipy.integrate.trapz(tcs_fail[:,goal_cells],axis=2)
+    incorrect = scipy.integrate.trapz(tcs_fail[:,goal_cells, int(bins/2):],axis=2)
     df=pd.DataFrame()
     df['mean_tc'] = np.concatenate([np.concatenate(correct), 
                         np.concatenate(incorrect)])
@@ -1450,9 +1451,9 @@ def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
 
     assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
-    correct = scipy.integrate.trapz(tcs_correct[:,goal_cells],axis=2)
+    correct = scipy.integrate.trapz(tcs_correct[:,goal_cells,:int(bins/2)],axis=2)
     # epoch (x) x cells (y)
-    incorrect = scipy.integrate.trapz(tcs_fail[:,goal_cells],axis=2)
+    incorrect = scipy.integrate.trapz(tcs_fail[:,goal_cells,:int(bins/2)],axis=2)
     df=pd.DataFrame()
     df['mean_tc'] = np.concatenate([np.concatenate(correct), 
                         np.concatenate(incorrect)])

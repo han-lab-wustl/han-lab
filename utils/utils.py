@@ -422,4 +422,4 @@ if __name__ == "__main__":
     src=r'X:\vipcre'
     dst=r'Y:\analysis\fmats'
     animal='z14'
-    # copyfmats(src,dst,animal,days=[28,29],combined=True)
+    # copyfmats(src,dst,animal,days=[32],combined=True)

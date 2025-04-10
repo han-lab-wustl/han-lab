@@ -18,7 +18,7 @@ from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtyp
 from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson_onlyz14.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_chrimson_rewardcells.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -99,7 +99,7 @@ for ii in range(len(conddf)):
                 dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
                 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
                 # if animal!='z14' and animal!='e200' and animal!='e189':
-                Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+                Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
                 # 9/19/24
                 # find correct trials within each epoch!!!!
                 tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
@@ -152,7 +152,7 @@ for ii in range(len(conddf)):
             plt.close(fig)
 
         # get shuffled iterations
-        num_iterations = 5000; shuffled_dist = np.zeros((num_iterations))
+        num_iterations = 10000; shuffled_dist = np.zeros((num_iterations))
         # max of 5 epochs = 10 perms
         goal_cell_shuf_ps = []
         for i in range(num_iterations):

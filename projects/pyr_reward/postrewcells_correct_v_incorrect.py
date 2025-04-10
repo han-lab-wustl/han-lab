@@ -2,8 +2,8 @@
 #%%
 """
 zahra
-july 2024
-quantify reward-relative cells near reward
+2025
+dff by trial type
 """
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd, os
 import pickle, seaborn as sns, random, math
@@ -140,7 +140,7 @@ incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_tc']
 t,pval = scipy.stats.wilcoxon(cor,incor)
 # statistical annotation       
 ii=0.5
-y=10
+y=8
 pshift=.01
 fs=30
 if pval < 0.001:
@@ -151,5 +151,5 @@ elif pval < 0.05:
         plt.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
-ax.set_title('Post-reward cells',pad=30)
+ax.set_title('Post-reward cells',pad=50)
 plt.savefig(os.path.join(savedst, 'postrew_trial_type.svg'),bbox_inches='tight')

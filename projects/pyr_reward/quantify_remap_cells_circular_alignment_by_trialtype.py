@@ -63,8 +63,8 @@ for ii in range(len(conddf)):
 
 pdf.close()
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#         pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -162,6 +162,10 @@ df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+df_plt2=df_plt2.reset_index()
+df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
+df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
+
 # number of epochs vs. reward cell prop incl combinations    
 fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
@@ -170,10 +174,6 @@ sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-# ax = sns.lineplot(data=df_plt2, # correct shift
-#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
-#         y='goal_cell_prop_shuffle',color='grey', 
-#         label='shuffle')
 # bar plot of shuffle instead
 ax = sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
@@ -182,14 +182,21 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('% Reward cells')
+# make lines
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7)
+
 eps = [2,3,4]
-y = 0.35
-pshift = 0.04
+y = 35
+pshift = 4
 fs=36
 for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
+        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
+        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
         t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
@@ -208,7 +215,17 @@ plt.savefig(os.path.join(savedst, 'allreward_cell_prop_per_an.svg'),
 #%%
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
-df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
+df_plt3 = df_plt2.groupby(['num_epochs']).mean(numeric_only=True)
+df_plt3=df_plt3.reset_index()
+# subtract by average across animals?
+sub = []
+for ii,xx in df_plt2.iterrows():
+        ep = xx.num_epochs
+        sub.append(xx.goal_cell_prop-df_plt3.loc[df_plt3.num_epochs==ep, 'goal_cell_prop_shuffle'].values[0])
+        
+df_plt2['goal_cell_prop_sub_shuffle']=sub
+# vs. average within animal
+df_plt2['goal_cell_prop_sub_shuffle']=df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
 fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
@@ -216,10 +233,16 @@ sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('% Reward cells-shuffle')
+# ax.set_ylim([0, 37])
+# make lines
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7)
 
 plt.savefig(os.path.join(savedst, 'allreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
