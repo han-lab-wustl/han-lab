@@ -1590,7 +1590,7 @@ def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     return df,tcs_correct[:,goal_cells],tcs_fail[:,goal_cells]
 
 def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
-                    goal_cm_window, pdf):
+                    goal_cm_window, pdf, pln):
     """
     changed on 2/6/25 to make it more consistent with splitting the different
     subpopulations
@@ -1648,6 +1648,10 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     Fc3 = Fc3[:, ((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
     dFF = dFF[:, ((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+    # important for mapping tracked ids
+    suite2pind = np.arange(fall['iscell'][:,0].shape[0])
+    suite2pind_remain = suite2pind[((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
+    suite2pind_remain = suite2pind_remain[skew>2]
     Fc3 = Fc3[:, skew > 2]  # only keep cells with skew greater than 2
     
     # circularly aligned
@@ -1658,6 +1662,7 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     bin_size = track_length / bins 
     tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum,
                                                             rewards, forwardvel, rewsize, bin_size)
+    assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
 
     # change to relative value 
     coms_rewrel = np.array([com - np.pi for com in coms_correct])
@@ -1688,11 +1693,19 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
             if coms_rewrel.shape[0]>coms_correct_abs.shape[0]:
                 coms_rewrel=coms_rewrel[:coms_correct_abs.shape[0],:]
                 tcs_correct=tcs_correct[:coms_correct_abs.shape[0],:,:]
+    celltrackpth = r'Y:\analysis\celltrack'
+    tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
+    try:
+        tracked_ind=tracked_lut[day][suite2pind_remain].values
+    except:
+        tracked_ind=np.ones_like(suite2pind_remain)*np.nan
     # add them back into the matrix as just pc_bool=0
     df = pd.DataFrame()
     df['reward_relative_circular_com'] = np.concatenate(coms_rewrel)
     df['allocentric_com'] = np.concatenate(coms_correct_abs)
     df['cellid'] = np.concatenate([list(np.arange(len(coms_rewrel[0])))]*len(coms_rewrel))
+    df['tracked_cellid'] = np.concatenate([tracked_ind]*len(coms_rewrel))
+
     df['reward_location'] = np.concatenate([[rewlocs[ii]] * len(coms_rewrel[ii]) for ii in range(len(coms_rewrel))])
     df['epoch'] = np.concatenate([[ii + 1] * len(comr) for ii, comr in enumerate(coms_rewrel)])
     df['animal'] = [animal] * len(df)

@@ -90,6 +90,8 @@ sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.o
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
+# %%
+
 #%%
 # number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(5,5))
@@ -167,28 +169,29 @@ df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
 df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
 
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,axes = plt.subplots(figsize=(7,5),ncols=2,sharex=True)
+ax=axes[0]
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7)
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
 # bar plot of shuffle instead
 ax = sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('% Reward cells')
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
-    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
+    sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7)
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+ax.set_xlabel('')
+ax.set_ylabel('Reward cell % ')
 
 eps = [2,3,4]
 y = 35
@@ -201,18 +204,13 @@ for ii,ep in enumerate(eps):
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
         elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
-# com
-plt.savefig(os.path.join(savedst, 'allreward_cell_prop_per_an.svg'), 
-        bbox_inches='tight')
-
-#%%
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt3 = df_plt2.groupby(['num_epochs']).mean(numeric_only=True)
@@ -226,16 +224,14 @@ for ii,xx in df_plt2.iterrows():
 df_plt2['goal_cell_prop_sub_shuffle']=sub
 # vs. average within animal
 df_plt2['goal_cell_prop_sub_shuffle']=df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
-fig,ax = plt.subplots(figsize=(3,5))
-# av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
-        data=df_plt2,s=10,alpha=0.7)
+ax=axes[1]# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
+        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
 ax.spines[['top','right']].set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('% Reward cells-shuffle')
+ax.set_title('Reward cell %-shuffle',pad=30)
 # ax.set_ylim([0, 37])
 # make lines
 ans = df_plt2.animals.unique()
@@ -243,9 +239,13 @@ for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=2, alpha=0.7)
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('')
 
 plt.savefig(os.path.join(savedst, 'allreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
+
+# %%
 
 #%% 
 # find tau/decay
@@ -286,34 +286,45 @@ plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'),
 
 #%%
 # compare to persistent cells
-tau_all_postrew = [2.3945452847380753,
- 1.2715792413414906,
- 2.80344386166323,
- 3.4292618526769596,
- 1.1694569158784902,
- 2.260117900095717,
- 1.6581020410143807,
- 1.6247022808660903,
- 1.5364510638834197,
- 1.9311296922887673]
+# update 4/2025
+tau_all_postrew = [2.5081168786034933,
+ 1.3564561230467351,
+ 3.0671032418758015,
+ 4.017597265387631,
+ 2.3078200458166926,
+ 1.8145255870633359,
+ 1.984487454178516,
+ 1.7613990073225456,
+ 2.403551967154805]
 
-tau_all_prerew = [1.612888245641297,
- 1.441306440702924,
- 4.4010311203040535,
- 1.4264369902283522,
- 1.1067958504033675,
- 1.3433893804786057,
- 1.1098115538940039,
- 1.4081993860602793,
- 1.2795305457369521,
- 1.8312094423839418]
+tau_all_prerew = [1.6056852781898152,
+ 1.7426547058653128,
+ 5.050858718153399,
+ 2.232073306218803,
+ 1.8576190002867705,
+ 1.3864728768701835,
+ 1.625307404014778,
+ 1.4999125584369446,
+ 2.582780680128669]
+
+# far-rew
+tau_all = [2.183529654475635,
+ 0.961886659848639,
+ 2.2134162659990504,
+ 1.2219296535268964,
+ 1.3926480137219104,
+ 1.6022989819683344,
+ 0.7151980176873289,
+ 0.68769195222226,
+ 1.0519264731199247]
+
 df = pd.DataFrame()
-df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['All reward-centric']*len(tau_all),
-                                ['Post-reward']*len(tau_all_postrew),
-                                ['Pre-reward']*len(tau_all_prerew)])
+df['tau'] = np.concatenate([tau_all_prerew,tau_all_postrew,tau_all])
+df['cell_type'] =np.concatenate([['Pre-reward']*len(tau_all_prerew),
+                                 ['Post-reward']*len(tau_all_postrew),
+                                 ['Far-reward']*len(tau_all)])
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,ax = plt.subplots(figsize=(2.5,5))
 # av across mice
 sns.stripplot(x='cell_type', y='tau',color='k',
         data=df,s=10,alpha=0.7)

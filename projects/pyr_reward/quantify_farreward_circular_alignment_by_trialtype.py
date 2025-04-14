@@ -137,11 +137,14 @@ df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189')]
 df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
+df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,axes = plt.subplots(ncols=2,figsize=(7,5))
+ax=axes[0]
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7)
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -150,17 +153,16 @@ sns.barplot(x='num_epochs', y='goal_cell_prop',
 #         y='goal_cell_prop_shuffle',color='grey', 
 #         label='shuffle')
 # bar plot of shuffle instead
-ax = sns.barplot(data=df_plt2, # correct shift
+sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Far reward-centric cell proportion')
+ax.set_ylabel('Far reward-centric cell %')
 eps = [2,3,4]
-y = 0.07
-pshift = 0.01
+y = 28
+pshift = 1
 fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
@@ -169,32 +171,44 @@ for ii,ep in enumerate(eps):
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
         elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
-
-# com
-plt.savefig(os.path.join(savedst, 'farreward_cell_prop_per_an.svg'), 
-        bbox_inches='tight')
-
-#%%
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+# make lines
+df_plt2=df_plt2.reset_index()
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+ax.set_title('Far reward cells',pad=30)
+ax.set_ylim([0,30])
+ax=axes[1]
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
-fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
-        data=df_plt2,s=10,alpha=0.7)
+sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
+        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
+# make lines
+df_plt2=df_plt2.reset_index()
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Far reward-centric cell proportion-shuffle')
+ax.set_ylabel('')
+ax.set_title('Far reward cell %-shuffle',pad=30)
+ax.set_ylim([-1,8])
 
 plt.savefig(os.path.join(savedst, 'farreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')

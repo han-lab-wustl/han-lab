@@ -19,7 +19,7 @@ from projects.opto.behavior.behavior import get_success_failure_trials, get_lick
 from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
@@ -32,6 +32,7 @@ bins=90
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 rates_perm_all=[]
 ls_perm_all=[]
+perms=[]
 
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
@@ -113,6 +114,46 @@ for ii in range(len(conddf)):
         ls_perm = [np.nanmean([ls[p[0]],ls[p[1]]]) for p in perm]
         rates_perm_all.append(rates_perm)
         ls_perm_all.append(ls_perm)
+        perms.append(perm)
+#%%
+# plot goal cells across epochs
+plt.rc('font', size=20)
+df = conddf.copy()
+df = df[((df.animals!='e217')) & (df.optoep<2)]
+df['num_epochs'] = [max(max(xx))+1 for xx in perms]
+df['rates'] = [np.nanmean(xx)*100 for xx in rates_perm_all]
+df['lick_selectivity'] = [np.nanmean(xx) for xx in ls_perm_all]
+# add epoch combinations
+df2=df.copy()
+df2['rates'] = [np.nanmean(xx)*100 for xx in rates_perm_all]
+df['lick_selectivity'] = [np.nanmean(xx) for xx in ls_perm_all]
+df2['num_epochs'] = [2]*len(df2)
+df=pd.concat([df,df2])
 
+# number of epochs vs. rates    
+fig,ax = plt.subplots(figsize=(3,5))
+df_plt=df[df.num_epochs<5]
+# av across mice
+df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
+sns.stripplot(x='num_epochs', y='rates',color='k',
+        data=df_plt,alpha=0.7,
+        s=10)
+sns.barplot(x='num_epochs', y='rates',
+        data=df_plt,
+        fill=False,ax=ax, color='k', errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('% Correct trials')
+ax.set_xlabel('# of reward loc. switches')
 
-
+plt.savefig(os.path.join(savedst, 'p_correct_trials.svg'))
+fig,ax = plt.subplots(figsize=(3,5))
+sns.stripplot(x='num_epochs', y='lick_selectivity',color='k',
+        data=df_plt,alpha=0.7,
+        s=10)
+sns.barplot(x='num_epochs', y='lick_selectivity',
+        data=df_plt,
+        fill=False,ax=ax, color='k', errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Lick selectivity, last 8 trials')
+ax.set_xlabel('# of reward loc. switches')
+plt.savefig(os.path.join(savedst, 'lick_selectivity.svg'))

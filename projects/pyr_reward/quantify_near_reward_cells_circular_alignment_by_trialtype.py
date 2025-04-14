@@ -110,20 +110,20 @@ for ep in eps:
     
 # include all comparisons 
 df_perms = pd.DataFrame()
-# epcomp= [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
 goal_cell_perm = [xx[0] for xx in goal_cell_prop]
 goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
-# df_perms['epoch_comparison']=
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-# df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+# hack!!
+df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)[:len(df_perms)]
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
 df_perms['session_num'] = np.concatenate(df_perm_days)
 
-df_perms = df_perms[df_perms.animals!='e189']
-# skipped fro now because it wasn't working
-# df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
+# take a mean of all epoch comparisons
+df_perms['num_epochs'] = [2]*len(df_perms)
+df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+df_permsav2=df_permsav2.reset_index()
 
 # fig,ax = plt.subplots(figsize=(7,5))
 # sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
@@ -146,73 +146,82 @@ df_perms = df_perms[df_perms.animals!='e189']
 #     shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
 #     t,pval = scipy.stats.ranksums(rewprop, shufprop)
 #     print(f'{ep} epochs, pval: {pval}')
-
-# take a mean of all epoch comparisons
-df_perms['num_epochs'] = [2]*len(df_perms)
-df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-
+df_plt=df_plt.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[(df_plt2.index.get_level_values('animals')!='e189') & (df_plt2.index.get_level_values('animals')!='e200')]
-df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+df_plt2=df_plt2.reset_index()
+df_plt2 = df_plt2[(df_plt2.animals!='e189') & (df_plt2.animals!='e200')]
+df_plt2 = df_plt2[df_plt2.num_epochs<5]
+df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
+df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,axes = plt.subplots(figsize=(7,5),ncols=2)
+ax=axes[0]
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
         data=df_plt2,
-        s=10,alpha=0.7)
+        s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-# ax = sns.lineplot(data=df_plt2, # correct shift
-#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
-#         label='shuffle')
 # bar plot of shuffle instead
 ax = sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None)
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Post reward cell proportion')
 eps = [2,3,4]
-y = 0.10
-pshift=.015
+y = 28
+pshift=.15
 fs=36
 for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
+        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
+        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
         t,pval = scipy.stats.ttest_rel(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
         print(f'{ep} epochs, pval: {pval}')
         # statistical annotation        
         if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
         elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
-ax.set_title('Post-reward cells',pad=80)
-plt.savefig(os.path.join(savedst, 'postrew_cell_prop_per_an.svg'), 
-        bbox_inches='tight')
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        # ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
+ax.set_title('Post-reward cells',pad=30)
 df_plt2=df_plt2.reset_index()
+# make lines
+df_plt2=df_plt2.reset_index()
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+ax.set_ylim([0,30])
+ax.set_xlabel('')
+ax.set_ylabel('Post-reward cell %')
 
-#%%
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
-fig,ax = plt.subplots(figsize=(3,5))
-# av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='k',
-        data=df_plt2,s=10,alpha=0.7)
+ax=axes[1]# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
+        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
 
 ax.spines[['top','right']].set_visible(False)
+# make lines
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Post-reward-centric cell proportion')
+ax.set_ylabel('')
+ax.set_ylim([-1,8])
+ax.set_title('Post-reward cell %-shuffle',pad=30)
 
 plt.savefig(os.path.join(savedst, 'postreward_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
@@ -240,6 +249,29 @@ for an in df_plt2.animals.unique():
         except:
                 print(an)
 
+#%%
+# subtracted from shuffle
+# WEIRD RESULTS
+from scipy.optimize import curve_fit
+# Define the exponential decay function
+def exponential_decay(t, A, tau):
+    return A * np.exp(-t / tau)
+tau_all = []
+for an in df_plt2.animals.unique():
+        try:
+                # Initial guesses for the optimization
+                initial_guess = [10, 4]  # Amplitude guess and tau guess
+                y = df_plt2[df_plt2.animals==an]
+                t=np.array([2,3,4])
+                # Fit the model to the data using curve_fit
+                params, params_covariance = curve_fit(exponential_decay, t, y.goal_cell_prop_sub_shuffle.values, p0=initial_guess)
+                # Extract the fitted parameters
+                A_fit, tau_fit = params
+                tau_all.append(tau_fit)
+                # Generate the fitted curve using the optimized parameters
+                y_fit = exponential_decay(t, A_fit, tau_fit)
+        except:
+                print(an)
 
 #%%
 # as a function of session/day

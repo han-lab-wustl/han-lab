@@ -27,7 +27,7 @@ savepth = os.path.join(savedst, 'cell_charac.pdf')
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p'
-with open(saveddataset, "rb") as fp: #unpickle
+with open(saveddataset, "rb") as fp: #unpickle 
     radian_alignment_saved = pickle.load(fp)
 radian_alignment_saved = {} # overwrite
 dfs = []
@@ -44,10 +44,11 @@ for ii in range(len(conddf)):
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         df=extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
-                    goal_cm_window, pdf)
+                    goal_cm_window, pdf, pln)
         dfs.append(df)
 
 # concat bigdf
 bigdf=pd.concat(dfs)
 
  #%%
+ bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal.csv',index=None)
