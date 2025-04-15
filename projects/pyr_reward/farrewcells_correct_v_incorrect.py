@@ -66,21 +66,27 @@ pdf.close()
 #%%
 # get examples of correct vs. fail
 # take the first epoch and first cell?
+# v take all cells
 # per day per animal
+
 plt.rc('font', size=16) 
 tcs_correct = []
 for tcs_corr in tcs_correct_all:
         if tcs_corr.shape[1]>0:
-                tc = tcs_corr[0,0,:]
+                # all cells
+                tc= np.vstack(tcs_corr[0,:,:])
+                # tc = tcs_corr[0,0,:]
                 tcs_correct.append(tc)
 tcs_fail = []
 for tcs_f in tcs_fail_all:
         if tcs_f.shape[1]>0:
-                tc = tcs_f[0,0,:]
+                # tc = tcs_f[0,0,:]
+                # all cells
+                tc= np.vstack(tcs_f[0,:,:])
                 if np.sum(np.isnan(tc))==0:
                         tcs_fail.append(tc)
         
-fig, axes=plt.subplots(ncols=2,sharex=True)
+fig, axes=plt.subplots(ncols=2,sharex=True,figsize=(6,25))
 ax=axes[0]
 # sort by peak location
 alltcs = np.vstack(tcs_correct)
@@ -108,7 +114,7 @@ ax.set_title('Incorrect')
 cbar=fig.colorbar(im, ax=ax)
 cbar.ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
 
-plt.savefig(os.path.join(savedst, 'far_rew_correctvfail.svg'),bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'far_rew_correctvfail.svg'),bbox_inches='tight')
 #%%
 # mean 
 fig, axes=plt.subplots(figsize=(8,2.5),ncols=2,sharey=True,sharex=True)
@@ -144,7 +150,7 @@ ax.spines[['top','right']].set_visible(False)
 
 ax.set_xlabel('Reward-relative distance ($\Theta$)')
 ax.set_title('Incorrect')
-plt.savefig(os.path.join(savedst, 'far_rew_correctvfail_mean.svg'),bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'far_rew_correctvfail_mean.svg'),bbox_inches='tight')
 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
@@ -196,4 +202,4 @@ elif pval < 0.05:
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
 ax.set_title('Far-reward cells',pad=30)
-plt.savefig(os.path.join(savedst, 'farrew_trial_type.svg'),bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'farrew_trial_type.svg'),bbox_inches='tight')

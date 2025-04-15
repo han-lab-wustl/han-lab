@@ -66,21 +66,28 @@ pdf.close()
 #%%
 # get examples of correct vs. fail
 # take the first epoch and first cell?
+# v take all cells
 # per day per animal
+
 plt.rc('font', size=16) 
 tcs_correct = []
 for tcs_corr in tcs_correct_all:
         if tcs_corr.shape[1]>0:
-                tc = tcs_corr[0,0,:]
+                # all cells
+                tc= np.vstack(tcs_corr[0,:,:])
+                # tc = tcs_corr[0,0,:]
                 tcs_correct.append(tc)
 tcs_fail = []
 for tcs_f in tcs_fail_all:
         if tcs_f.shape[1]>0:
-                tc = tcs_f[0,0,:]
+                # tc = tcs_f[0,0,:]
+                # all cells
+                tc= np.vstack(tcs_f[0,:,:])
                 if np.sum(np.isnan(tc))==0:
                         tcs_fail.append(tc)
         
-fig, axes=plt.subplots(ncols=2,sharex=True)
+fig, axes=plt.subplots(ncols=2,sharex=True,figsize=(6,25))
+
 ax=axes[0]
 ax.imshow(np.vstack(tcs_correct)**.6,vmin=0,vmax=1.5)
 ax.axvline(45,color='w', linestyle='--')
@@ -89,18 +96,17 @@ ax.set_xticks(np.arange(0,bins,30))
 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
 ax.set_ylabel('Trials')
 ax.set_xlabel('Reward-relative distance ($\Theta$)')
-ax.set_title('Correct')
+ax.set_title('Post-reward cells\nCorrect')
 ax=axes[1]
 im=ax.imshow(np.vstack(tcs_fail)**.6,vmin=0,vmax=1.5)
 ax.axvline(45,color='w', linestyle='--')
 ax.set_xticks(np.arange(0,bins,30))
 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
 ax.set_title('Incorrect')
-
 cbar=fig.colorbar(im, ax=ax)
 cbar.ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
 
-plt.savefig(os.path.join(savedst, 'post_rew_correctvfail.svg'),bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'post_rew_correctvfail.svg'),bbox_inches='tight')
 #%%
 
 # mean 
