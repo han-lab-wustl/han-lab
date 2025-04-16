@@ -46,9 +46,9 @@ for ii in range(len(conddf)):
         df=extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
                     goal_cm_window, pdf, pln)
         dfs.append(df)
-
+#%%
 # concat bigdf
 bigdf=pd.concat(dfs)
-
- #%%
- bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal.csv',index=None)
+bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal.csv',index=None)
+#%%
+bigdf[(bigdf.animal=='e201')&(bigdf.tracked_cellid==2)] 

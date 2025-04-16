@@ -242,7 +242,7 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
     tcs_fail (numpy.ndarray): Tuning curves for failed trials. Shape is (epochs, cells, bins).
     coms_fail (numpy.ndarray): Center of mass (COM) for failed trials. Shape is (epochs, cells).
     """ 
-    rates = []; 
+    failed_trialnm = []; rates=[]
     # initialize
     tcs_fail = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
     tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
@@ -256,6 +256,15 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
         relpos = rad[eprng]        
         success, fail, strials, ftrials, ttr, \
             total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        # in between failed trials only!!!!! 4/2025
+        if len(strials)>0:
+            failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
+            failed_inbtw=np.array(ftrials)[failed_inbtw>0]
+        else: # for cases where an epoch was started but not enough trials
+            failed_inbtw=np.array(ftrials)
+        failed_trialnm.append(failed_inbtw)
+        # trials going into tuning curve
+        print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
         rates.append(success/total_trials)
         F_all = Fc3[eprng,:]            
         # simpler metric to get moving time
@@ -276,9 +285,12 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
                 tcs_correct[ep, :,:] = tc
                 coms_correct[ep, :] = com
             # failed trials
-            if len(ftrials)>0:
-                mask = [True if xx in ftrials else False for xx in trialnum[eprng][moving_middle]]
+            # UPDATE 4/16/25
+            # only take last 8 failed trials?
+            if len(failed_inbtw)>0:
+                mask = [True if xx in failed_inbtw[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
                 F = F_all[mask,:]
+                # print(f'Fluorescence array size:\n{F.shape}\n')
                 relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
                 com = calc_COM_EH(tc,bin_size)

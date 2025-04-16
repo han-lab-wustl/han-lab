@@ -1519,13 +1519,11 @@ def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-    if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-        tcs_correct, coms_correct, tcs_fail, coms_fail, \
-        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-    else:# remake tuning curves relative to reward        
-        # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+    # remake tuning curves relative to reward        
+    # 9/19/24
+    # find correct trials within each epoch!!!!
+    # remove fails that are not in between correct trials
+    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size)          
     
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
@@ -1696,7 +1694,8 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     celltrackpth = r'Y:\analysis\celltrack'
     tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
     try:
-        tracked_ind=tracked_lut[day][suite2pind_remain].values
+        # change to index!!!! get tracked cell index not s2p index again
+        tracked_ind=tracked_lut[day][suite2pind_remain].index.values
     except:
         tracked_ind=np.ones_like(suite2pind_remain)*np.nan
     # add them back into the matrix as just pc_bool=0
