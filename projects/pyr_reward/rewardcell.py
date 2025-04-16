@@ -19,7 +19,8 @@ from itertools import combinations, chain
 from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
-    consecutive_stretch,make_tuning_curves,make_tuning_curves_warped,make_tuning_curves_trial_by_trial
+    consecutive_stretch,make_tuning_curves,make_tuning_curves_warped,make_tuning_curves_trial_by_trial,\
+        make_tuning_curves_radians_by_trialtype_behavior
 from projects.opto.behavior.behavior import get_success_failure_trials
 from collections import Counter
 
@@ -1586,6 +1587,58 @@ def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     df['day']=[day]*len(df)
     # get mean tuning curve correct vs. incorrect
     return df,tcs_correct[:,goal_cells],tcs_fail[:,goal_cells]
+
+def licks_by_trialtype(params_pth, animal,bins=90):
+    """
+    changed on 2/6/25 to make it more consistent with splitting the different
+    subpopulations
+    """
+    print(params_pth)
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'licks','stat', 'timedFF'])
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+        rewsize = 10
+    ybinned = fall['ybinned'][0]/scalingf
+    track_length=180/scalingf    
+    forwardvel = fall['forwardvel'][0]    
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    trialnum=fall['trialnum'][0]
+    rewards = fall['rewards'][0]
+    lick = fall['licks'][0]
+    if animal=='e145':
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
+        lick=lick[:-1]
+    # set vars
+    eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+    lasttr=8 # last trials
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
+                    trialnum, track_length) # get radian coordinates
+    track_length_rad = track_length*(2*np.pi/track_length)
+    bin_size=track_length_rad/bins 
+    rz = get_rewzones(rewlocs,1/scalingf)       
+    # get average success rate
+    rates = []
+    for ep in range(len(eps)-1):
+        eprng = range(eps[ep],eps[ep+1])
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+    rate=np.nanmean(np.array(rates))
+    
+    tcs_correct, tcs_fail = make_tuning_curves_radians_by_trialtype_behavior(eps,rewlocs,ybinned,rad,
+        lick,trialnum,rewards,forwardvel,rewsize,bin_size)          
+    
+    # get mean tuning curve correct vs. incorrect
+    return tcs_correct,tcs_fail
 
 def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
                     goal_cm_window, pdf, pln):
