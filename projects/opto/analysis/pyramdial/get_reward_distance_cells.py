@@ -122,7 +122,6 @@ for ii in range(len(conddf)):
         # get goal cells across all epochs        
         goal_cells = com_goal
         # get per comparison
-        
         goal_cell_iind.append(goal_cells);goal_cell_p=len(goal_cells)/len(coms_correct[0])
         epoch_perm.append(perm)
         goal_cell_prop.append(goal_cell_p)

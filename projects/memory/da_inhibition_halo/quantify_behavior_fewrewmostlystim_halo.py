@@ -36,8 +36,9 @@ dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # days_all = [[28,29,31,33,34,35,36],
 #     [70,71,72,73,74,75,76,77,78]]
 # days to quantify for stim @ reward with limited rew eligible
-days_all = [[72,73,74,75,76,77,78,79,80,81],
-            [64,65,66,67,68,69,70,71,72,73],[73,74,75,76,77,78,79,80,81,82]]
+days_all = [[72,73,74,75,76,77,78,79,80,81,82],
+            [64,65,66,67,68,69,70,71,72,73,74,75],
+            [73,74,75,76,77,78,79,80,81,82,83,84]]
 mem_cond = 'Opto_memory_day'
 opto_cond = 'Opto'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}

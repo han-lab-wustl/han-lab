@@ -14,7 +14,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from behavior import get_success_failure_trials,\
 get_performance, get_rewzones
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson_onlyz14.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 # days = np.arange(2,21)
 # optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
@@ -79,23 +79,24 @@ df['animals'] = np.repeat(conddf.animals.values,2)
 df['optoep'] = np.repeat(conddf.optoep.values,2)
 # plot rates vip vs. ctl led off and on
 # df = df[(df.animals!='e189')&(df.animals!='z9')]
-df=df[(df.optoep.values>1)]
+# df=df[(df.optoep.values>1)]
 bigdf_plot = df.groupby(['animals', 'epoch', 'opto', 'condition']).mean(numeric_only=True)
 bigdf_plot = df # do not sum by animals
-fig,ax = plt.subplots(figsize=(4,5))
-sns.barplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
-    palette={'ctrl': "slategray", 'vip': "darkgoldenrod"},                
+fig,ax = plt.subplots(figsize=(3,5))
+sns.barplot(x="epoch", y="rates",hue='opto', data=bigdf_plot,
+    # palette={'ctrl': "slategray", 'vip': "darkgoldenrod"},                
             errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="epoch", y="rates",hue='condition', data=bigdf_plot,
-            palette={'ctrl': 'slategray','vip': "darkgoldenrod"},                
+sns.stripplot(x="epoch", y="rates",hue='opto', data=bigdf_plot,
+            # palette={'ctrl': 'slategray','vip': "darkgoldenrod"},                
             s=s,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Performance')
 ax.set_xticks([0,1], labels=['LEDoff', 'LEDon'])
 ax.set_xlabel('')
-x1 = df.loc[((df.condition=='vip')&(df.opto==True)), 'rates'].values
-x2 = df.loc[((df.condition=='ctrl')&(df.opto==True)), 'rates'].values
+x1 = df.loc[((df.condition=='vip')&(df.epoch=='previous_epoch')), 'rates'].values
+x2 = df.loc[((df.condition=='vip')&(df.epoch=='stim_epoch')), 'rates'].values
+# x2 = df.loc[((df.condition=='ctrl')&(df.opto==True)), 'rates'].values
 t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46

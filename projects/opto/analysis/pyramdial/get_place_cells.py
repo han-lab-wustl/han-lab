@@ -94,65 +94,67 @@ for ii in range(len(conddf)):
         Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
         # if no cells pass these crit
         if Fc3.shape[1]==0:
-            Fc3 = fall_fc3['Fc3']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # to avoid issues with e217?
-            pc_bool = np.sum(pcs,axis=0)>=1
-            Fc3 = Fc3[:,((skew>2)&pc_bool)]
+                Fc3 = fall_fc3['Fc3']
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+                # to avoid issues with e217?
+                pc_bool = np.sum(pcs,axis=0)>=1
+                Fc3 = Fc3[:,((skew>2)&pc_bool)]
         if Fc3.shape[1]>0:
-            # get abs dist tuning 
-            tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
-                    Fc3,trialnum,rewards,forwardvel,
-                    rewsize,bin_size)
-            # get cells that maintain their coms across at least 2 epochs
-            perm = list(combinations(range(len(coms_correct_abs)), 2))     
-            com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
-            compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
-            # get cells across all epochs that meet crit
-            pcs = np.unique(np.concatenate(compc))
-            pcs_all = intersect_arrays(*compc)
-            # get per comparison
-            pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
-            pc_ind.append(pcs_all);pc_p=len(pcs_all)/len(coms_correct_abs[0])
-            epoch_perm.append(perm)
-            pc_prop.append([pcs_p_per_comparison,pc_p])
-            num_epochs.append(len(coms_correct_abs))
+                # get abs dist tuning 
+                tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+                        Fc3,trialnum,rewards,forwardvel,
+                        rewsize,bin_size) # last 5 trials
+                # get cells that maintain their coms b/wn previous and opto ep
+                perm = [(eptest-2, eptest-1)]   
+                if perm[0][1]<len(coms_correct_abs): # make sure tested epoch has enough trials
+                        print(eptest, perm)            
+                        com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
+                        compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+                        # get cells across OPTO VS. CONTROL EPOCHS
+                        pcs = np.unique(np.concatenate(compc))
+                        pcs_all = pcs
+                        # get per comparison
+                        pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
+                        pc_ind.append(pcs_all);pc_p=len(pcs_all)/len(coms_correct_abs[0])
+                        epoch_perm.append(perm)
+                        pc_prop.append([pcs_p_per_comparison,pc_p])
+                        num_epochs.append(len(coms_correct_abs))
 
-            # get shuffled iterations
-            shuffled_dist = np.zeros((num_iterations))
-            # max of 5 epochs = 10 perms
-            place_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan
-            place_cell_shuf_ps = []
-            for i in range(num_iterations):
-                # shuffle locations
-                shufs = [list(range(coms_correct_abs[ii].shape[0])) for ii in range(1, len(coms_correct_abs))]
-                [random.shuffle(shuf) for shuf in shufs]
-                # first com is as ep 1, others are shuffled cell identities
-                com_shufs = np.zeros_like(coms_correct_abs); com_shufs[0,:] = coms_correct_abs[0]
-                com_shufs[1:1+len(shufs),:] = [coms_correct_abs[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-                # get cells that maintain their coms across at least 2 epochs
-                perm = list(combinations(range(len(com_shufs)), 2))     
-                com_per_ep = np.array([(com_shufs[perm[jj][0]]-com_shufs[perm[jj][1]]) for jj in range(len(perm))])        
-                compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
-                # get cells across all epochs that meet crit
-                pcs = np.unique(np.concatenate(compc))
-                pcs_all = intersect_arrays(*compc)
-                # get per comparison
-                pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
-                shuffled_dist[i] = len(pcs_all)/len(coms_correct_abs[0])
-                place_cell_shuf_p=len(pcs_all)/len(com_shufs[0])
-                place_cell_shuf_ps.append(place_cell_shuf_p)
-                place_cell_shuf_ps_per_comp[i, :len(pcs_p_per_comparison)] = pcs_p_per_comparison
-            # save median of goal cell shuffle
-            place_cell_shuf_ps_per_comp_av = np.nanmedian(place_cell_shuf_ps_per_comp,axis=0)        
-            place_cell_shuf_ps_av = np.nanmedian(np.array(place_cell_shuf_ps)[1])
-            place_cell_null.append([place_cell_shuf_ps_per_comp_av,place_cell_shuf_ps_av])
-            p_value = sum(shuffled_dist>pc_p)/num_iterations
-            print(f'{animal}, day {day}: significant place cells proportion p-value: {p_value}')
-            pvals.append(p_value);     
-            total_cells.append(len(coms_correct_abs[0]))
-            datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs, 
-                    pcs_all, place_cell_shuf_ps_per_comp_av, place_cell_shuf_ps_av]
+                        # get shuffled iterations
+                        shuffled_dist = np.zeros((num_iterations))
+                        # max of 5 epochs = 10 perms
+                        place_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan
+                        place_cell_shuf_ps = []
+                        for i in range(num_iterations):
+                                # shuffle locations
+                                shufs = [list(range(coms_correct_abs[ii].shape[0])) for ii in range(1, len(coms_correct_abs))]
+                                [random.shuffle(shuf) for shuf in shufs]
+                                # first com is as ep 1, others are shuffled cell identities
+                                com_shufs = np.zeros_like(coms_correct_abs); com_shufs[0,:] = coms_correct_abs[0]
+                                com_shufs[1:1+len(shufs),:] = [coms_correct_abs[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+                                # get cells that maintain their coms across at least 2 epochs
+                                perm = list(combinations(range(len(com_shufs)), 2))     
+                                com_per_ep = np.array([(com_shufs[perm[jj][0]]-com_shufs[perm[jj][1]]) for jj in range(len(perm))])        
+                                compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+                                # get cells across all epochs that meet crit
+                                pcs = np.unique(np.concatenate(compc))
+                                pcs_all = intersect_arrays(*compc)
+                                # get per comparison
+                                pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
+                                shuffled_dist[i] = len(pcs_all)/len(coms_correct_abs[0])
+                                place_cell_shuf_p=len(pcs_all)/len(com_shufs[0])
+                                place_cell_shuf_ps.append(place_cell_shuf_p)
+                                place_cell_shuf_ps_per_comp[i, :len(pcs_p_per_comparison)] = pcs_p_per_comparison
+                        # save median of goal cell shuffle
+                        place_cell_shuf_ps_per_comp_av = np.nanmedian(place_cell_shuf_ps_per_comp,axis=0)        
+                        place_cell_shuf_ps_av = np.nanmedian(np.array(place_cell_shuf_ps)[1])
+                        place_cell_null.append([place_cell_shuf_ps_per_comp_av,place_cell_shuf_ps_av])
+                        p_value = sum(shuffled_dist>pc_p)/num_iterations
+                        print(f'{animal}, day {day}: significant place cells proportion p-value: {p_value}')
+                        pvals.append(p_value);     
+                        total_cells.append(len(coms_correct_abs[0]))
+                        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs, 
+                                pcs_all, place_cell_shuf_ps_per_comp_av, place_cell_shuf_ps_av]
 pdf.close()
 
 #%%

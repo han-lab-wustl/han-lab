@@ -514,7 +514,7 @@ def make_tuning_curves_warped(eps,rewlocs,ybinned,Fc3,trialnum,
     return tcs_correct, coms_correct
 
 def make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,eptrials=3,
             velocity_filter=False):
     rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
     # remake tuning curves relative to reward        
@@ -533,7 +533,7 @@ def make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,
             moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
         F = F[moving_middle,:]
         relpos = np.array(relpos)[moving_middle]
-        if len(ttr)>lasttr: # only if ep has more than x trials
+        if len(ttr)>eptrials: # only if ep has more than x trials
             # last 8 trials            
             mask = [True if xx in ttr[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
             F = F[mask,:]
