@@ -1588,6 +1588,133 @@ def reward_act_prerew(ii,params_pth,animal,day,bins,radian_alignment,
     # get mean tuning curve correct vs. incorrect
     return df,tcs_correct[:,goal_cells],tcs_fail[:,goal_cells]
 
+def reward_act_allrew(ii,params_pth,animal,day,bins,radian_alignment,
+    radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
+    goal_cell_null,pvals,total_cells,
+    num_iterations=1000):
+    """
+    changed on 2/6/25 to make it more consistent with splitting the different
+    subpopulations
+    """
+    print(params_pth)
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'licks','stat', 'timedFF'])
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+        rewsize = 10
+    ybinned = fall['ybinned'][0]/scalingf
+    track_length=180/scalingf    
+    forwardvel = fall['forwardvel'][0]    
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    trialnum=fall['trialnum'][0]
+    rewards = fall['rewards'][0]
+    lick = fall['licks'][0]
+    if animal=='e145':
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
+        lick=lick[:-1]
+    # set vars
+    eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+    lasttr=8 # last trials
+    bins=90
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
+                    trialnum, track_length) # get radian coordinates
+    track_length_rad = track_length*(2*np.pi/track_length)
+    bin_size=track_length_rad/bins 
+    rz = get_rewzones(rewlocs,1/scalingf)       
+    # get average success rate
+    rates = []
+    for ep in range(len(eps)-1):
+        eprng = range(eps[ep],eps[ep+1])
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+    rate=np.nanmean(np.array(rates))
+    
+    # added to get anatomical info
+    # takes time
+    fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+    Fc3 = fall_fc3['Fc3']
+    dFF = fall_fc3['dFF']
+    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+    Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+    # remake tuning curves relative to reward        
+    # 9/19/24
+    # find correct trials within each epoch!!!!
+    # remove fails that are not in between correct trials
+    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        rewards,forwardvel,rewsize,bin_size)          
+    
+    goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
+    # change to relative value 
+    coms_rewrel = np.array([com-np.pi for com in coms_correct])
+    perm = list(combinations(range(len(coms_correct)), 2)) 
+    rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
+    # if 4 ep
+    # account for cells that move to the end/front
+    # Define a small window around pi (e.g., epsilon)
+    epsilon = .7 # 20 cm
+    # Find COMs near pi and shift to -pi
+    com_loop_w_in_window = []
+    for pi,p in enumerate(perm):
+        for cll in range(coms_rewrel.shape[1]):
+            com1_rel = coms_rewrel[p[0],cll]
+            com2_rel = coms_rewrel[p[1],cll]
+            # print(com1_rel,com2_rel,com_diff)
+            if ((abs(com1_rel - np.pi) < epsilon) and 
+            (abs(com2_rel + np.pi) < epsilon)):
+                    com_loop_w_in_window.append(cll)
+    # get abs value instead
+    coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+    com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+    com_goal_postrew = com_goal # ALL REW CELLS
+    # [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+    #     xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
+    #     xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal]
+    #only get perms with non zero cells
+    perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
+    rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
+    com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+
+    print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}')
+    assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
+    epoch_perm.append([perm,rz_perm]) 
+    # get goal cells across all epochs   
+    if len(com_goal_postrew)>0:
+        goal_cells = intersect_arrays(*com_goal_postrew); 
+    else:
+        goal_cells=[]
+    def cosine_sim_ignore_nan(a, b):
+        # Mask where both vectors have valid (non-NaN) values
+        mask = ~np.isnan(a) & ~np.isnan(b)
+        if np.sum(mask) == 0:
+            return np.nan  # No overlapping data to compare
+        a_masked = a[mask]
+        b_masked = b[mask]
+        numerator = np.dot(a_masked, b_masked)
+        denominator = np.linalg.norm(a_masked) * np.linalg.norm(b_masked)
+        return numerator / denominator if denominator != 0 else np.nan
+
+
+    assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
+    epoch_perm.append([perm,rz_perm]) 
+    cs = [[cosine_sim_ignore_nan(tcs_correct[i,j],tcs_fail[i,j])
+        for i in range(tcs_correct.shape[0])] for j in goal_cells]
+    cs=np.array(cs).T # ep x cells
+    # get mean tuning curve correct vs. incorrect
+    return tcs_correct[:,goal_cells],tcs_fail[:,goal_cells],coms_rewrel[:,goal_cells],cs
+
+
 def licks_by_trialtype(params_pth, animal,bins=90):
     """
     changed on 2/6/25 to make it more consistent with splitting the different

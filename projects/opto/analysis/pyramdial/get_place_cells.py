@@ -134,11 +134,12 @@ for ii in range(len(conddf)):
                                 com_shufs[1:1+len(shufs),:] = [coms_correct_abs[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
                                 # get cells that maintain their coms across at least 2 epochs
                                 perm = list(combinations(range(len(com_shufs)), 2))     
+                                perm = [(eptest-2, eptest-1)]    
                                 com_per_ep = np.array([(com_shufs[perm[jj][0]]-com_shufs[perm[jj][1]]) for jj in range(len(perm))])        
                                 compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
                                 # get cells across all epochs that meet crit
                                 pcs = np.unique(np.concatenate(compc))
-                                pcs_all = intersect_arrays(*compc)
+                                pcs_all = pcs#intersect_arrays(*compc)
                                 # get per comparison
                                 pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
                                 shuffled_dist[i] = len(pcs_all)/len(coms_correct_abs[0])
