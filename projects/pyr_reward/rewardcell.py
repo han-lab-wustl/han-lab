@@ -13,7 +13,7 @@ correct trials
 """
 #%%
 
-import numpy as np, random, re, os, scipy, pandas as pd, sys, cv2
+import numpy as np, random, re, os, scipy, pandas as pd, sys, cv2, ot
 import matplotlib.pyplot as plt, matplotlib
 from itertools import combinations, chain
 from scipy.spatial import distance
@@ -23,6 +23,53 @@ from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_ra
         make_tuning_curves_radians_by_trialtype_behavior, make_tuning_curves_probes
 from projects.opto.behavior.behavior import get_success_failure_trials
 from collections import Counter
+
+def cosine_sim_ignore_nan(a, b):
+    # Mask where both vectors have valid (non-NaN) values
+    mask = ~np.isnan(a) & ~np.isnan(b)
+    if np.sum(mask) == 0:
+        return np.nan  # No overlapping data to compare
+    a_masked = a[mask]
+    b_masked = b[mask]
+    numerator = np.dot(a_masked, b_masked)
+    denominator = np.linalg.norm(a_masked) * np.linalg.norm(b_masked)
+    return numerator / denominator if denominator != 0 else np.nan
+
+def WessersteinDist(distribution1, distribution2):
+    """
+    Computes the 1D Wasserstein (Earth Mover's) distance between two discrete probability distributions.
+
+    Parameters:
+        distribution1 (np.ndarray): First 1D distribution (non-negative, not necessarily normalized).
+        distribution2 (np.ndarray): Second 1D distribution (same length as distribution1).
+
+    Returns:
+        float: The Wasserstein distance between the two distributions,
+               or np.nan if either distribution is invalid (sum <= 0).
+    """
+    if np.nansum(distribution1) <= 0 or np.nansum(distribution2) <= 0:
+        return np.nan
+    else:
+        # Normalize distributions
+        distribution1 = distribution1 / np.nansum(distribution1)
+        distribution2 = distribution2 / np.nansum(distribution2)
+        # Force exact same sum (to prevent assertion error in ot.emd)
+        mean_sum = (np.sum(distribution1) + np.sum(distribution2)) / 2
+        distribution1 *= mean_sum
+        distribution2 *= mean_sum
+        # Define support (assumes distributions are on the same 1D support)
+        n = len(distribution1)
+        x = np.arange(n, dtype=np.float64).reshape((n, 1))
+        # Compute ground distance matrix
+        M = ot.dist(x, x, metric='euclidean')
+        M /= M.max()  # optional normalization
+        # Compute optimal transport plan
+        transport_plan = ot.emd(distribution1, distribution2, M)
+        # Compute Wasserstein distance
+        distance = np.sum(transport_plan * M)
+
+        return distance
+
 
 def nan_helper(y):
     """Helper to handle indices and logical indices of NaNs.
@@ -1694,21 +1741,10 @@ def reward_act_allrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-    def cosine_sim_ignore_nan(a, b):
-        # Mask where both vectors have valid (non-NaN) values
-        mask = ~np.isnan(a) & ~np.isnan(b)
-        if np.sum(mask) == 0:
-            return np.nan  # No overlapping data to compare
-        a_masked = a[mask]
-        b_masked = b[mask]
-        numerator = np.dot(a_masked, b_masked)
-        denominator = np.linalg.norm(a_masked) * np.linalg.norm(b_masked)
-        return numerator / denominator if denominator != 0 else np.nan
-
 
     assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
-    cs = [[cosine_sim_ignore_nan(tcs_correct[i,j],tcs_fail[i,j])
+    cs = [[WessersteinDist(tcs_correct[i,j],tcs_fail[i,j])
         for i in range(tcs_correct.shape[0])] for j in goal_cells]
     cs=np.array(cs).T # ep x cells
     # get mean tuning curve correct vs. incorrect
@@ -1781,7 +1817,7 @@ def reward_act_v_probes_allrew(ii,params_pth,animal,day,bins,radian_alignment,
         rewards,forwardvel,rewsize,bin_size)          
     # vs. probe 1 tc
     tcs_probe, coms_probe = make_tuning_curves_probes(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size, probe=[0])
+            rewards,forwardvel,rewsize,bin_size, probe=[0,1])
     # compare tc to the probe in the next epoch (based on how trialnum is structred)
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
@@ -1823,22 +1859,11 @@ def reward_act_v_probes_allrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-    def cosine_sim_ignore_nan(a, b):
-        # Mask where both vectors have valid (non-NaN) values
-        mask = ~np.isnan(a) & ~np.isnan(b)
-        if np.sum(mask) == 0:
-            return np.nan  # No overlapping data to compare
-        a_masked = a[mask]
-        b_masked = b[mask]
-        numerator = np.dot(a_masked, b_masked)
-        denominator = np.linalg.norm(a_masked) * np.linalg.norm(b_masked)
-        return numerator / denominator if denominator != 0 else np.nan
-
 
     assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
     # compare to probe in next ep!
-    cs = [[cosine_sim_ignore_nan(tcs_correct[i,j],tcs_probe[i+1,j])
+    cs = [[WessersteinDist(tcs_correct[i,j],tcs_probe[i+1,j])
         for i in range(tcs_correct.shape[0]-1)] for j in goal_cells]
     cs=np.array(cs).T # ep x cells
     # get mean tuning curve correct vs. incorrect 

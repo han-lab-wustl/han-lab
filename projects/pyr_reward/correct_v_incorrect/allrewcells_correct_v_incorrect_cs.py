@@ -4,6 +4,7 @@
 zahra
 april 2025
 cosine similarity of correct vs incorrect tuning curves
+vs wesserstein distance
 all rew cells 
 vs. com
 """
@@ -19,7 +20,7 @@ mpl.rcParams["ytick.major.size"]=10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,reward_act_allrew
+from projects.pyr_reward.rewardcell import get_radian_position,reward_act_allrew
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -28,7 +29,7 @@ savepth = os.path.join(savedst, 'rew.pdf')
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p'
-with open(saveddataset, "rb") as fp: #unpickle
+with open(saveddataset, "rb") as fp: #unpickle 
     radian_alignment_saved = pickle.load(fp)
 # radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
@@ -83,13 +84,14 @@ ax.spines[['top','right']].set_visible(False)
 # com vs. cs
 # 2 ep
 eps = [0,1,2]
+metric = 'Wessenstein distance'
 fig,ax = plt.subplots()
 for ep in eps:
     cs = np.concatenate([xx[ep] for xx in css if len(xx)>ep])
     com = np.concatenate([xx[ep] for xx in coms if len(xx)>ep])
     ax.scatter(cs,com,alpha=0.3)
     ax.set_ylabel('COM per epoch')
-    ax.set_xlabel('Cosine similarity')
+    ax.set_xlabel(metric)
     ax.set_title('Correct vs. incorrect tuning curves')
     ax.legend()
 
@@ -101,7 +103,7 @@ com = np.concatenate([np.nanmean(xx,axis=0) for xx in coms if xx.shape[0]>0])
 fig,ax = plt.subplots()
 ax.scatter(cs,com,alpha=0.3)
 ax.set_ylabel('COM (average of epochs)')
-ax.set_xlabel('Cosine similarity')
+ax.set_xlabel(metric)
 ax.set_title('Correct vs. incorrect tuning curves')
 ax.legend()
 
@@ -177,7 +179,7 @@ for i, (grp1, grp2) in enumerate(pairs):
     elif pval < 0.05:
         ax.text(ii, y + 0.003, "*", ha='center', fontsize=fs)
 ax.set_xlabel('')
-ax.set_ylabel('Cosine similarity')
+ax.set_ylabel(metric)
 ax.set_title('Correct vs. incorrect tuning curves')
 
 plt.tight_layout()

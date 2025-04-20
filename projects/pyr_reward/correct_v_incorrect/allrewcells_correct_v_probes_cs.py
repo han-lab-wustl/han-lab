@@ -4,6 +4,7 @@
 zahra
 april 2025
 cosine similarity of correct vs incorrect tuning curves
+or wesserstein dist
 all rew cells 
 vs. com
 """
@@ -175,7 +176,7 @@ for i, (grp1, grp2) in enumerate(pairs):
     elif pval < 0.01:
         ax.text(ii, y + 0.002, "**", ha='center', fontsize=fs)
     elif pval < 0.05:
-        ax.text(ii, y + 0.003, "*", ha='center', fontsize=fs)
+        ax.text(ii, y + 0.002, "*", ha='center', fontsize=fs)
 ax.set_xlabel('')
 ax.set_ylabel('Cosine similarity')
 ax.set_title('Correct vs. incorrect tuning curves')
