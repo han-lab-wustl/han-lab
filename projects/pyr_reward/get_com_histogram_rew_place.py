@@ -32,6 +32,7 @@ lasttr=8 # last trials
 bins=90
 coms_mean_rewrel = []
 coms_mean_abs = []
+com_spatial_tuned_all=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -44,7 +45,8 @@ for ii in range(len(conddf)):
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat', 'licks'])
+            'stat', 'licks', 'putative_pcs'])
+        putative_pcs=np.vstack(fall['putative_pcs'][0])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         try:
@@ -111,7 +113,7 @@ for ii in range(len(conddf)):
         tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
             Fc3,trialnum,rewards,forwardvel,
             rewsize,bin_size)
-        coms_rewrel_abs = [xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)]
+        coms_rewrel_abs = np.array([xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)])
         # just get ep 1
         goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
@@ -155,34 +157,71 @@ for ii in range(len(conddf)):
         # get cells across all epochs that meet crit
         pcs = np.unique(np.concatenate(compc))
         pcs_all = intersect_arrays(*compc)
-        
         # get mean com for rew vs place
-        coms_rewrel_abs = np.array([xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)])
         pc_com_mean = np.nanmean(coms_rewrel_abs[:, pcs_all],axis=0)
         rew_com_mean = np.nanmean(coms_rewrel_abs[:, goal_cells],axis=0)
         coms_mean_rewrel.append(rew_com_mean)
         coms_mean_abs.append(pc_com_mean)
 
+        ######## OTHER SPATIAL TUNED CELLS
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        # boolean with border cells bc thats how spatial info shuffle is done
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
+        # skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+        # get tc again
+        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        Fc3,trialnum,rewards,forwardvel,
+        rewsize,bin_size)
+        coms_rewrel_abs = np.array([xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)])
+        # get com of cell in spatial tuned ep
+        coms_spatial_tuned = []        
+        for cll in range(putative_pcs.shape[1]):
+            ep_st = np.where(putative_pcs[:,cll])[0]
+            try:
+                coms_spatial_tuned.append(coms_rewrel_abs[ep_st, cll])
+            except Exception as e:
+                print(e)
+        coms_spatial_tuned=np.concatenate(coms_spatial_tuned)
+        # add spatially tuned cells
+        com_spatial_tuned_all.append(coms_spatial_tuned)
+
 
 #%%
 # plot com distributions
 plt.rc('font', size=24) 
-fig,axes = plt.subplots(ncols = 3,nrows = 1,figsize=(18,5),sharex=True)
+fig,axes = plt.subplots(ncols = 4,nrows = 1,figsize=(18,4),sharex=True,sharey=True)
 ax=axes[0]
-ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue')
+vmin=0
+vmax = .01
+ax.hist(np.concatenate(com_spatial_tuned_all),density=True,color='slategray')
 ax.set_ylabel('Density of COM')
+ax.set_title(f'Spatially tuned cells\n n={len(np.concatenate(com_spatial_tuned_all))} cells')
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylim([vmin,vmax])
+ax=axes[1]
+ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue')
 ax.set_title(f'Reward cells\n n={len(np.concatenate(coms_mean_rewrel))} cells')
 ax.spines[['top','right']].set_visible(False)
-ax=axes[1]
+ax.set_ylim([vmin,vmax])
+ax=axes[2]
 ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo')
 ax.set_title(f'Place cells\n n={len(np.concatenate(coms_mean_abs))} cells')
 ax.spines[['top','right']].set_visible(False)
-ax=axes[2]
-ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue',alpha=0.6,
+ax.set_ylim([vmin,vmax])
+ax=axes[3]
+alpha=0.4
+ax.hist(np.concatenate(com_spatial_tuned_all),density=True,
+        color='slategray',alpha=alpha,
+        label='Spatially tuned cells')
+ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue',alpha=alpha,
         label='Reward cells')
-ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo',alpha=0.6,
+ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo',alpha=alpha,
         label='Place cells')
 ax.set_xlabel('Center-of-mass (COM)-rew. loc.(cm)')
+ax.set_ylim([vmin,vmax])
 ax.legend()
 ax.spines[['top','right']].set_visible(False)
 savedst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures"

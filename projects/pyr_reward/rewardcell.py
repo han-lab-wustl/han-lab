@@ -778,12 +778,12 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     rewards = fall['rewards'][0]
     lick = fall['licks'][0]
     if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]
-            lick=lick[:-1]
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
+        lick=lick[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -796,10 +796,10 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     # get average success rate
     rates = []
     for ep in range(len(eps)-1):
-            eprng = range(eps[ep],eps[ep+1])
-            success, fail, str_trials, ftr_trials, ttr, \
-            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-            rates.append(success/total_trials)
+        eprng = range(eps[ep],eps[ep+1])
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
     
     # added to get anatomical info
@@ -845,7 +845,8 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}\n')
     # com away from rew
     #only get perms with non zero cells
-    lowerbound = np.pi/4
+    # changed 4/21/25 with new far rew analysis?
+    lowerbound = np.pi/3.5
     com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
         xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
     perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
@@ -1329,8 +1330,8 @@ def reward_act_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    #only get perms with non zero cells
-    lowerbound = np.pi/4
+    #only get perms with non zero cells    
+    lowerbound = np.pi/3 # updated 4/21/25
     com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
         xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
     perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]

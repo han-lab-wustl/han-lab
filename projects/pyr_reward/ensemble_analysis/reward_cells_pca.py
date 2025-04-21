@@ -31,6 +31,10 @@ with open(saveddataset, "rb") as fp: #unpickle
 # initialize var
 # radian_alignment_saved = {} # overwrite
 tcs_rew = []
+goal_cells_all = []
+bins = 90
+goal_window_cm=20
+epoch_perm=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -148,6 +152,8 @@ for ii in range(len(conddf)):
                 tcs.append(tcs_)
         # cells that are considered rew cells across 2 epochs
         tcs_rew.append(np.hstack(tcs))
+        # get indices
+        goal_cells_all.append([com_goal, goal_cells])
         # mean of epochs
         # tcs = np.nanmean(tcs, axis=0)
         # pca = PCA(n_components=4)
@@ -174,16 +180,23 @@ for ii in range(len(conddf)):
 # collect tcs 
 plt.rc('font', size=16) 
 # just 1st epoch
-ep=1
+ep=0
 tcs_all = np.vstack([xx[ep] for xx in tcs_rew if len(xx)>ep])
 tuning_curves_clean = tcs_all[~np.isnan(tcs_all).any(axis=1)]
-
+# get num epochs per session
+num_epochs = [np.nanmax(np.ravel(xx[0]))+1 for xx in epoch_perm]
+# TODO
+iind_2ep_per_session = [np.concatenate(xx[0]) for xx in goal_cells_all]
+iind_2ep = np.hstack(iind_2ep_per_session)
+iind_2ep = iind_2ep[~np.isnan(tcs_all).any(axis=1)]
+iind_allep_per_session = [xx[1] for xx in goal_cells_all]
 pca = PCA(n_components=7)
 tuning_pca = pca.fit_transform(tuning_curves_clean) 
 
 #%%
 inertia = []
-K = range(1, 20)
+K = range(1, 50)
+from sklearn.cluster import KMeans
 
 for k in K:
     kmeans = KMeans(n_clusters=k, random_state=0, n_init='auto')
@@ -206,7 +219,7 @@ plt.show()
 
 #%%
 from sklearn.cluster import KMeans
-k =9  # Try a few values!
+k =13  # Try a few values!
 kmeans = KMeans(n_clusters=k, random_state=0)
 cluster_labels = kmeans.fit_predict(tuning_pca)
 fig, ax = plt.subplots(figsize=(6, 5))
@@ -234,6 +247,7 @@ for i in range(k):
         m = np.nanmean(tuning_curves_clean[cluster_labels==i],axis=0)
         tc = tuning_curves_clean[cluster_labels==i]
         ax.plot(m)
+        
         ax.fill_between(
         range(0, bins),
         m - scipy.stats.sem(tc, axis=0, nan_policy='omit'),
@@ -274,8 +288,108 @@ cbar_ax = fig.add_axes([0.96, 0.15, 0.015, 0.7])  # [left, bottom, width, height
 fig.colorbar(im, cax=cbar_ax, label='$(\Delta F/F)^{0.7}$')
 
 #%%
+# map back onto com ind
+valid_mask = ~np.isnan(tcs_all).any(axis=1)
+iind_2ep = np.hstack([np.array(x).flatten() for x in iind_2ep_per_session])
+iind_2ep_clean = iind_2ep[valid_mask]
+# get number of cells per session (after NaN filtering)
+session_lengths = [len(np.array(xx).flatten()) for xx in iind_2ep_per_session]
+session_lengths_clean = [np.sum(valid_mask[start:start+length])
+                         for start, length in zip(np.cumsum([0]+session_lengths[:-1]), session_lengths)]
+
+# split by session
+cluster_labels_by_session = np.split(cluster_labels, np.cumsum(session_lengths_clean)[:-1])
+iind_2ep_clean_by_session = np.split(iind_2ep_clean, np.cumsum(session_lengths_clean)[:-1])
+allep_cluster = [cluster_labels_by_session[ii][np.where(np.isin(iind_2ep_clean_by_session[ii],gc))[0]] for ii, gc in enumerate(iind_allep_per_session)]
+# count number of cells in each cluster that are dedicated rew cells
+# Combine all values
+all_values = np.concatenate(allep_cluster)
+#%%
+# Unique values and counts
+counts = [np.unique(xx, return_counts=True) for xx in allep_cluster]
+total_cells = [len(xx) for xx in allep_cluster]
+percents = [xx[1]/total_cells[ii] for ii,xx in enumerate(counts)]
+clusters = [xx[0] for ii,xx in enumerate(counts)]
+
+df = pd.DataFrame()
+df['percent_dedicated_cells'] = np.concatenate(percents)
+df['percent_dedicated_cells']=df['percent_dedicated_cells']*100
+df['cluster'] = np.concatenate(clusters)
+df['num_epochs'] = np.concatenate([[xx]*len(percents[ii]) for ii,xx in enumerate(num_epochs)])
+df=df[df.num_epochs<5]
+# df=df[df.cluster>0]
+fig,ax = plt.subplots(figsize=(15,4))
+sns.stripplot(x='cluster',y='percent_dedicated_cells',hue='num_epochs',data=df,dodge=True,
+        palette='colorblind')
+sns.barplot(x='cluster',y='percent_dedicated_cells',hue='num_epochs',data=df,
+        palette='colorblind',fill=False)
+ax.set_ylim([0,30])
+#%%
+# Find clusters where max(num_epochs) == 2
+eps = [2,3,4]
+for ep in eps:
+        cluster_max_epochs = df.groupby('cluster')['num_epochs'].max()
+        clusters_max_2 = cluster_max_epochs[cluster_max_epochs == ep].index.tolist()
+
+        # Set up plot grid
+        n = len(clusters_max_2)
+        ncols = int(np.ceil(np.sqrt(n)))
+        fig, axes = plt.subplots(nrows=ncols, ncols=ncols, figsize=(ncols*3, ncols*3), squeeze=False)
+        axes = axes.flatten()
+
+        # Plot tuning curves
+        for i, clust in enumerate(clusters_max_2):
+                ax = axes[i]
+                mask = cluster_labels == clust
+                tc = tuning_curves_clean[mask]
+                m = np.nanmean(tc, axis=0)
+                sem = scipy.stats.sem(tc, axis=0, nan_policy='omit')
+                
+                ax.plot(m, label=f'Cluster {clust}')
+                ax.fill_between(range(tc.shape[1]), m - sem, m + sem, alpha=0.3)
+                ax.axvline(tc.shape[1] // 2, linestyle='--', color='k')
+                ax.set_title(f'Cluster {clust}\n(n={tc.shape[0]})')
+                ax.set_xlabel('Reward-relative bin')
+                ax.set_ylabel('Avg ΔF/F')
+                ax.spines[['top', 'right']].set_visible(False)
+
+        # Hide unused subplots
+        for j in range(i+1, len(axes)):
+                axes[j].axis('off')
+        fig.suptitle(f'Max epoch: {ep}')
+        fig.tight_layout()
+        plt.show()
+        
+        fig, axes = plt.subplots(nrows=ncols, ncols=ncols, figsize=(ncols*3, ncols*3), squeeze=False)
+        axes = axes.flatten()
+
+        vmin = np.nanmin(tuning_curves_clean**0.7)
+        vmax = np.nanmax(tuning_curves_clean**0.7)
+
+        for i, clust in enumerate(clusters_max_2):
+                ax = axes[i]
+                mask = cluster_labels == clust
+                tc = tuning_curves_clean[mask]
+                im = ax.imshow(tc**0.5, aspect='auto', cmap='viridis', vmin=vmin, vmax=vmax)
+                ax.axvline(tc.shape[1] // 2, linestyle='--', color='w')
+                ax.set_title(f'Cluster {clust}\n(n={tc.shape[0]})')
+                ax.set_xlabel('Reward-relative bin')
+                ax.set_ylabel('Cells')
+
+        for j in range(i+1, len(axes)):
+                axes[j].axis('off')
+
+        fig.tight_layout()
+        fig.subplots_adjust(right=0.92)
+        cbar_ax = fig.add_axes([0.94, 0.15, 0.015, 0.7])
+        fig.colorbar(im, cax=cbar_ax, label='$(\Delta F/F)^{0.7}$')
+        plt.show()
+
+
+
+#%%
 # eg cluster
-i = 1
+i = 0
 fig,ax = plt.subplots(figsize=(6,20))
 x1,x2=1000,3000
 m = .3
@@ -284,7 +398,7 @@ tc = tuning_curves_clean[cluster_labels==i]
 peak_bins = np.argmax(tc, axis=1)
 sort_idx = np.argsort(peak_bins)
 ax.imshow(tc[sort_idx]**m,aspect='auto')       
-ax.imshow(tc**m,aspect='auto')       
+# ax.imshow(tc**m,aspect='auto')       
 
 if i==k-1: ax.set_xlabel('Reward-relative distance ($\Theta$)')
 if i==0: ax.set_ylabel('Average $\Delta F/F$')

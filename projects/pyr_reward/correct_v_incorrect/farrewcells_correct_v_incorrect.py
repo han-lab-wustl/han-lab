@@ -16,13 +16,13 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,reward_act_farrew, get_rewzones
+from projects.pyr_reward.rewardcell import get_radian_position,reward_act_farrew, get_rewzones
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'near_rew.pdf')
+savepth = os.path.join(savedst, 'far_rew.pdf')
 #%%
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -109,7 +109,10 @@ for animal in np.unique(animals):
                                height_ratios=[3.5,1])
         axes=axes.flatten()
         ax=axes[0]
-        ax.imshow(np.vstack(tcs_correct)**.6,vmin=0,vmax=1.5)
+        tc = np.vstack(tcs_correct)
+        peak_bins = np.argmax(tc, axis=1)
+        sort_idx = np.argsort(peak_bins)
+        ax.imshow(tc[sort_idx]**.6,vmin=0,vmax=1.5)
         ax.axvline(45,color='w', linestyle='--')
         bins=90
         ax.set_xticks(np.arange(0,bins,30))
@@ -119,6 +122,10 @@ for animal in np.unique(animals):
         ax.set_title(f'{animal}\nFar-reward cells\nCorrect')
         try: # if no fails
                 ax=axes[1]
+                tc = np.vstack(tcs_fail)
+                peak_bins = np.argmax(tc, axis=1)
+                sort_idx = np.argsort(peak_bins)
+                ax.imshow(tc[sort_idx]**.6,vmin=0,vmax=1.5)
                 im=ax.imshow(np.vstack(tcs_fail)**.6,vmin=0,vmax=1.5)
                 ax.axvline(45,color='w', linestyle='--')
                 ax.set_xticks(np.arange(0,bins,30))
@@ -204,8 +211,8 @@ for i in range(len(ans)):
 
 # statistical annotation       
 ii=0.5
-y=.4
-pshift=.04
+y=.9
+pshift=y/10
 fs=30
 if pval < 0.001:
         plt.text(ii, y, "***", ha='center', fontsize=fs)
