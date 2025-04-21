@@ -43,5 +43,6 @@ for animal in animals:
     if animal=='e145': pln=2
     else: pln=0    
     tracked_lut, days= get_tracked_lut(celltrackpth,animal,pln)
-    tracked_lut.to_csv(os.path.join(savedst, animal, '.csv'), index=None)
+    tracked_lut.index.name = 'tracked_cell_index'
+    tracked_lut.to_csv(os.path.join(savedst, animal+'.csv'))
 # %%

@@ -18,7 +18,7 @@ from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtyp
 from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_behavior_chrimson_onlyz14.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_chrimson_rewardcells.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
