@@ -87,7 +87,7 @@ sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.o
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
-#%%
+
 # number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(5,5))
 df_plt = df
@@ -114,7 +114,7 @@ for ep in eps:
     shufprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop_shuffle']
     t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
     print(f'{ep} epochs, pval: {pval}')
-#%%    
+    
 # include all comparisons 
 df_perms = pd.DataFrame()
 goal_cell_perm = [xx[0] for xx in goal_cell_prop]
@@ -210,8 +210,8 @@ ax.set_ylabel('')
 ax.set_title('Far reward cell %-shuffle',pad=30)
 ax.set_ylim([-1,8])
 
-plt.savefig(os.path.join(savedst, 'farreward_cell_prop-shuffle_per_an.svg'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'farreward_cell_prop-shuffle_per_an.svg'), 
+        # bbox_inches='tight')
 
 #%% 
 # find tau/decay
