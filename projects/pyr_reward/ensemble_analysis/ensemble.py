@@ -8,6 +8,40 @@ from sklearn.cluster import KMeans
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
+from sklearn.metrics.pairwise import euclidean_distances
+def elbow_method(ica_components, max_clusters=10):
+    """
+    Applies the elbow method to determine the optimal number of clusters (assemblies) for KMeans.
+    
+    Parameters:
+    - ica_components (np.ndarray): ICA components (neurons x time_bins)
+    - max_clusters (int): Maximum number of clusters to test
+    
+    Returns:
+    - optimal_n_clusters (int): Optimal number of clusters based on the elbow method
+    """
+    wcss = []  # List to store WCSS for each number of clusters
+    
+    # Iterate over the range of clusters to calculate WCSS
+    for n_clusters in range(1, max_clusters + 1):
+        kmeans = KMeans(n_clusters=n_clusters)
+        kmeans.fit(ica_components.T)  # Fit KMeans on the transposed ICA components
+        wcss.append(kmeans.inertia_)  # Inertia is the WCSS
+    
+    # Plot the WCSS to visualize the elbow
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(1, max_clusters + 1), wcss, marker='o', linestyle='-', color='b')
+    plt.title('Elbow Method for Optimal Number of Clusters')
+    plt.xlabel('Number of Clusters')
+    plt.ylabel('WCSS (Within-Cluster Sum of Squares)')
+    plt.show()
+    
+    # Determine the elbow point (optimal number of clusters)
+    # This is a heuristic based on the "elbow" in the curve
+    optimal_n_clusters = np.diff(wcss).argmin() + 2  # +2 because np.diff reduces the length by 1
+    return optimal_n_clusters
+
+
 def get_cells_by_assembly(labels):
     """
     Groups cell indices by their assigned assembly labels.
@@ -25,44 +59,29 @@ def get_cells_by_assembly(labels):
         assembly_cells[label].append(idx)
     return assembly_cells
 
-def cluster_neurons_from_ica(ica_components, n_assemblies=None, plot=True):
+def cluster_neurons_from_ica(ica_components):
     """
-    Clusters neurons based on ICA components (assembly patterns).
+    Clusters neurons based on ICA components using KMeans with optimal number of clusters
+    determined by the elbow method.
     
     Parameters:
-    - ica_components (np.ndarray): ICA components, shape (n_components, n_neurons)
-    - n_assemblies (int): Number of clusters (assemblies). If None, use n_components.
-    - plot (bool): Whether to plot the cluster assignments
+    - ica_components (np.ndarray): ICA components (neurons x time_bins)
     
     Returns:
-    - labels (np.ndarray): Array of assembly membership for each neuron
+    - labels (np.ndarray): Cluster labels for each neuron
     """
-    # Transpose to get neuron x features (components)
-    neuron_features = np.abs(ica_components.T)
+    # Apply the elbow method to find the optimal number of clusters
+    n_assemblies = elbow_method(ica_components, max_clusters=10)
+    print(f"Optimal number of assemblies (clusters) detected: {n_assemblies}")
+    
+    # Fit KMeans with the optimal number of clusters
+    kmeans = KMeans(n_clusters=n_assemblies)
+    kmeans.fit(ica_components.T)  # Transpose if necessary to have neurons as features
+    
+    return kmeans.labels_
 
-    if n_assemblies is None:
-        n_assemblies = ica_components.shape[0]
 
-    kmeans = KMeans(n_clusters=n_assemblies, n_init=10, random_state=0)
-    labels = kmeans.fit_predict(neuron_features)
 
-    if plot:
-        import matplotlib.pyplot as plt
-        from sklearn.decomposition import PCA
-
-        pca = PCA(n_components=2)
-        reduced = pca.fit_transform(neuron_features)
-
-        plt.figure(figsize=(6, 5))
-        scatter = plt.scatter(reduced[:, 0], reduced[:, 1], c=labels, cmap='tab10')
-        plt.title("Neuron Clusters Based on ICA Components")
-        plt.xlabel("PC 1")
-        plt.ylabel("PC 2")
-        plt.colorbar(scatter, label='Assembly ID')
-        plt.tight_layout()
-        plt.show()
-
-    return labels
 def detect_assemblies_with_ica(spike_matrix, zscore=True, plot=False):
     """
     Detect cell assemblies using PCA + ICA with MP-based estimation of number of assemblies.

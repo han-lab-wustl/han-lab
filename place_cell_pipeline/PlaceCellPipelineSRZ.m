@@ -10,10 +10,10 @@
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
 
-an = 'z17';
+an = 'z14';
 % an = 'e190';%an='e189';
 % individual day analysis 
-dys = [2];
+dys = [40];
 % dys = [20	21	22	23	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57]; % e218
 % dys = [9 10 37 38	39	40	41	42	43	44	45	46	47	48	49	50	51	52	53	54	55	56	57 58	59	60	61	62	63	66]; % e216
 % dys = [2 3 4 5 6 7 8 9 11 12 13 14 15	16	17	18	19	20	21	22	23	24	26	27	28	29	30	31	32	34	37	39	40	41	44	46	47]; %e217
@@ -136,74 +136,7 @@ for dy=dys % for loop per day
         fprintf('********calculated tuning curves!********\n')
 %     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END OF CHECKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % do per ep comparison
-    %% step 3 - compare epochs
-    comparisons = nchoosek(1:sum(cellfun(@(x) ~isempty(x),tuning_curves)),2);
-    rewloccomp = zeros(size(comparisons,1),2); rewzonecomp = zeros(size(comparisons,1),2);
-    set(gca,'FontName','Arial')  % Set it to arail
-    for i=1:size(comparisons,1)
-        comparison = comparisons(i,:);
-        if exist('ep_comp_pval', 'var') == 1 % if pvals already calculated
-            pvals  = ep_comp_pval(:,3);
-            p = pvals(i);
-        else
-            [p,h,s,~,~] = do_tuning_curve_ranksum_test(tuning_curves{comparison(1)}, ...
-                tuning_curves{comparison(2)});
-            pvals(i) = p;
-        end
-        disp(p)        
-        slideId = pptx.addSlide();
-        fprintf('Added slide %d\n',slideId);
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 1%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        fig = figure('Renderer', 'painters');
-        subplot(1,2,1)
-        plt = tuning_curves{comparison(1)};
-        [~,sorted_idx] = sort(coms{comparison(1)}); % sorts first tuning curve rel to another
-        imagesc(normalize(plt(sorted_idx,:),2));
-        % plot rectangle of rew loc
-        % everything divided by 3 (bins of 3cm)
-        rectangle('position',[ceil(rewlocs(comparison(1))/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-            rew_zone/bin_size size(plt,1)], ... 
-            'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        xticks([0:bin_size:ceil(track_length/bin_size)])
-        xticklabels([0:bin_size*bin_size:track_length])
-        title(sprintf('epoch %i', comparison(1)))
-        hold on;
-        subplot(1,2,2)
-        plt = tuning_curves{comparison(2)};
-        imagesc(normalize(plt(sorted_idx,:),2));
-        % plot rectangle of rew loc
-        % everything divided by 3 (bins of 3cm)
-        rectangle('position',[ceil(rewlocs(comparison(2))/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-            rew_zone/bin_size size(plt,1)], ... 
-            'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-        xticks([0:bin_size:ceil(track_length/bin_size)])
-        xticklabels([0:bin_size*bin_size:track_length])
-        title(sprintf('epoch %i', comparison(2)))
-        sgtitle(sprintf(['animal %s, day %i \n' ...
-            'ep%i vs ep%i: ranksum = %d'], an, dy, comparison(1), comparison(2),...
-            p))
-        pptx.addPicture(fig);
-        close(fig)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 2%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        slideId = pptx.addSlide();
-        fprintf('Added slide %d\n',slideId);
-        fig = figure('Renderer', 'painters');
-        plot(coms{comparison(1)}, coms{comparison(2)}, 'ko'); hold on;
-        xline(rewlocs(comparison(1)), 'r', 'LineWidth', 3);
-        yline(rewlocs(comparison(2)), 'r', 'LineWidth', 3)
-        plot([0:track_length],[0:track_length], 'k', 'LineWidth',2)
-        xlim([0 track_length]); ylim([0 track_length])
-        xlabel(sprintf('ep%i', comparison(1)));
-        ylabel((sprintf('ep%i', comparison(2))))
-        title(sprintf(['COM (median) \n ' ...
-            'animal %s, day %i,' ...
-            'comparison: ep%i vs ep%i'], an, dy, comparison(1), comparison(2)))
-        pptx.addPicture(fig);
-        close(fig)
-        rewloccomp(i,:) = [rewlocs(comparison(1)) rewlocs(comparison(2))]';
-        rewzonecomp(i,:) = [rewzonenum(comparison(1)) rewzonenum(comparison(2))]';
-    end    
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%fig 3%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% step 4 - make summary fig for epoch comparisons
     slideId = pptx.addSlide();
@@ -232,74 +165,6 @@ for dy=dys % for loop per day
     % close(fig)
     tuning_curves_late_trials = tuning_curves;
     % also append fall with tables    
-    ep_comp_pval = array2table([comparisons pvals' rewloccomp rewzonecomp], ...
-        'VariableNames', {'ep_comparison1', 'ep_comparison2', 'cs_ranksum_pval', 'rewloc1', ...
-        'rewloc2', 'rewzone_ep1', 'rewzone_ep2'});
-    save(fullfile(pth.folder,pth.name), 'ep_comp_pval', 'coms','tuning_curves_early_trials', ...
+    save(fullfile(pth.folder,pth.name), 'coms','tuning_curves_early_trials', ...
         'tuning_curves_late_trials', 'coms_early_trials', '-append')
 end
-
-% save ppt
-fl = pptx.save(fullfile(savedst,sprintf('%s_tuning_curves_w_ranksum',an)));
-
-%%
-% epoch resorted
-
-fig = figure('Renderer', 'painters', 'Position', [10 10 1050 800]);
-for ep=1:length(eps)-1
-    subplot(1,length(eps)-1,ep)
-    plt = tuning_curves{ep};
-    % sort all by ep 1
-    [~,sorted_idx] = sort(coms{ep});
-    imagesc(normalize(plt(sorted_idx,:),2));
-    hold on;
-    % plot rectangle of rew loc
-    % everything divided by 3 (bins of 3cm)
-    rectangle('position',[ceil(rewlocs(ep)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-        rew_zone/bin_size size(plt,1)], ... 
-        'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-    xticks([0:bin_size:ceil(track_length/bin_size)])
-    xticklabels([0:bin_size*bin_size:track_length])
-    title(sprintf('epoch %i', ep))
-end
-sgtitle(sprintf(['animal %s, day %i'], an, dy))
-
-
-%%
-% early vs. late tuning curves
-% fig = figure('Renderer', 'painters', 'Position', [10 10 1800 1100]);
-% epoch = 1;
-% for ep=1:2:2*(length(eps)-1)
-%     subplot(1,2*(length(eps)-1),ep)
-%     plt = tuning_curves_early_trials{epoch};
-%     % sort all by ep 1
-%     [~,sorted_idx] = sort(coms{1});
-%     imagesc(normalize(plt(sorted_idx,:),2));
-%     hold on;
-%     % plot rectangle of rew loc
-%     % everything divided by 3 (bins of 3cm)
-%     rectangle('position',[ceil(rewlocs(epoch)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-%         rew_zone/bin_size size(plt,1)], ... 
-%         'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-%     title(sprintf('epoch %i, early', epoch))
-%     xticks([0:2*bin_size:ceil(track_length/bin_size)])
-%     xticklabels([0:2*bin_size*bin_size:track_length])
-% 
-%     hold off
-%     subplot(1,2*(length(eps)-1),ep+1)
-%     plt = tuning_curves{epoch};
-%     % sort all by ep 1
-%     imagesc(normalize(plt(sorted_idx,:),2));
-%     hold on;
-%     % plot rectangle of rew loc
-%     % everything divided by 3 (bins of 3cm)
-%     rectangle('position',[ceil(rewlocs(epoch)/bin_size)-ceil((rew_zone/bin_size)/2) 0 ...
-%         rew_zone/bin_size size(plt,1)], ... 
-%         'EdgeColor',[0 0 0 0],'FaceColor',[1 1 1 0.5])
-%     xticks([0:2*bin_size:ceil(track_length/bin_size)])
-%     xticklabels([0:2*bin_size*bin_size:track_length])
-%     title(sprintf('epoch %i', epoch))
-%     hold off
-%     epoch=epoch+1;
-% end
-% sgtitle(sprintf(['animal %s, day %i'], an, dy))
