@@ -31,7 +31,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
 # initialize var
-# radian_alignment_saved = {} # overwri       te
+# radian_alignment_saved = {} # overwrite
 tcs_rew = []
 goal_cells_all = []
 bins = 90
@@ -139,7 +139,8 @@ for ii in range(len(conddf)):
             goal_all = np.unique(np.concatenate(com_goal_postrew))
             from ensemble import detect_assemblies_with_ica,cluster_neurons_from_ica,\
             get_cells_by_assembly
-            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[:,goal_all].T)
+            # just use ep 1
+            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1],goal_all].T)
             print(f"{n} assemblies detected")
             labels = cluster_neurons_from_ica(patterns)
             assembly_cells = get_cells_by_assembly(labels)
@@ -149,6 +150,10 @@ for ii in range(len(conddf)):
             for assembly_id, cells in sorted_assemblies:
                 if len(cells) < 3:
                     continue  # skip small assemblies
+                # minimum peak of cell in ensemble must be > 
+                peak = np.nanmin(np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1))
+                if peak < .05: # remove low firing cells?
+                    continue
                 cell_ids = set(goal_all[cells])
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
@@ -159,17 +164,16 @@ for ii in range(len(conddf)):
                 center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
                 com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in activity]
                 com_com_asm = com_per_cell - center_of_mass
-                if np.nanmean(com_com_asm) < np.pi / 4:
-                    fig, ax = plt.subplots()
-                    ax.plot(np.nanmean(tcs_correct[:, goal_all[cells], :], axis=0).T)
-                    ax.plot(tcs_correct[0, goal_all[cells], :].T)
-                    ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
-                    fig.tight_layout()
-                    pdf.savefig(fig)
-                    plt.close(fig)
-
-                    # Save time courses
-                    assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
+                # if np.nanmean(com_com_asm) < (np.pi / 4):
+                fig, ax = plt.subplots()
+                ax.plot(tcs_correct[0, goal_all[cells], :].T)
+                ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
+                fig.tight_layout()
+                pdf.savefig(fig)
+                plt.show()
+                # plt.close(fig)
+                # Save time courses
+                assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
         except Exception as e:
             print(e)
         # print the ones that pass the thresholds
@@ -186,7 +190,7 @@ from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
 # look through all the assemblies
 df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
-an_plt = 'e190' # 1 eg animal
+an_plt = 'z9' # 1 eg animal
 cs_all = []; num_epochs = []
 plt.close('all')
 plot = False
@@ -209,9 +213,6 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     ax.imshow(tcs[np.argsort(com_per_cell)]**.4,aspect='auto')
                     ax.set_title(f'epoch {kk+1}')
                     ax.axvline(bins/2, color='w', linestyle='--')
-                # fig.suptitle(f'Cosine similar b/wn epochs: \n\
-                #     Epoch combinations: {perm}\n\
-                #         CS: {np.round(cs,2)}, average: {np.nanmean(cs)}')
                 fig.suptitle(f'{df.iloc[ii].animals}, {df.iloc[ii].days} \n\
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
         cs_all.append(cs_per_ep)
@@ -230,6 +231,7 @@ df = df[(df.animals!='e217') & (df.optoep.values<2)]
 df['num_epochs'] = num_epochs
 # df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
 df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all]
+df['cosine_sim_across_ep'] = [np.nanmin(xx) if len(xx)>0 else np.nan for xx in cs_all]
 df = pd.concat([df,df2])
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
 dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
@@ -262,10 +264,9 @@ reject, corrected_pvals, _, _ = multipletests(raw_pvals, method='bonferroni')
 s=10
 plt.figure(figsize=(3,5))
 ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, errorbar='se',
-                 fill=False, color='k')
+            fill=False, color='k')
 sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, color='k', jitter=True,
-              s=s,alpha=0.7)
-
+            s=s,alpha=0.7)
 # Annotate
 fs = 30
 pshift = 0.05

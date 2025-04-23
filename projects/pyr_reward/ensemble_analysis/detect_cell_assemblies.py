@@ -31,7 +31,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
 # initialize var
-# radian_alignment_saved = {} # overwri       te
+# radian_alignment_saved = {} # overwrite
 tcs_rew = []
 goal_cells_all = []
 bins = 90
@@ -149,29 +149,28 @@ for ii in range(len(conddf)):
             for assembly_id, cells in sorted_assemblies:
                 if len(cells) < 3:
                     continue  # skip small assemblies
+                peak = np.nanmax(np.nanmean(tcs_correct[0, goal_all[cells], :],axis=0))
+                if peak < .1: # remove low firing cells?
+                    continue
                 cell_ids = set(goal_all[cells])
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
                 used_cells.update(cell_ids)  # mark cells as used
                 time_bins = np.arange(90)
-                activity = tcs_correct[0, goal_all[cells], :]
-                
+                activity = tcs_correct[0, goal_all[cells], :]                
                 # Calculate center of mass
                 center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
                 com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in activity]
                 com_com_asm = com_per_cell - center_of_mass
-
-                if np.nanmean(com_com_asm) < np.pi / 4:
-                    fig, ax = plt.subplots()
-                    ax.plot(np.nanmean(tcs_correct[:, goal_all[cells], :], axis=0).T)
-                    ax.plot(tcs_correct[0, goal_all[cells], :].T)
-                    ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
-                    fig.tight_layout()
-                    pdf.savefig(fig)
-                    plt.close(fig)
-
-                    # Save time courses
-                    assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
+                # if np.nanmean(com_com_asm) < np.pi / 4:
+                fig, ax = plt.subplots()
+                ax.plot(tcs_correct[0, goal_all[cells], :].T)
+                ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
+                fig.tight_layout()
+                pdf.savefig(fig)
+                plt.close(fig)
+                # Save time courses
+                assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
         except Exception as e:
             print(e)
         # print the ones that pass the thresholds
@@ -226,12 +225,12 @@ df2 = pd.DataFrame()
 df2['cosine_sim_across_ep'] = np.hstack([np.concatenate(xx) if len(xx)>0 else np.nan for xx in cs_all])
 df2['animals'] = np.concatenate([[df.iloc[ii].animals]*len(np.concatenate(xx)) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all)])
 df2['num_epochs'] =[2]*len(df2)
-#%%
+
 df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
 df['num_epochs'] = num_epochs
 df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all]
+df['cosine_sim_across_ep'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in cs_all]
 df = pd.concat([df,df2])
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
 dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
