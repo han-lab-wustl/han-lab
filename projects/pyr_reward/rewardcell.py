@@ -1749,6 +1749,9 @@ def reward_act_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cells = intersect_arrays(*com_goal_farrew); 
     else:
         goal_cells=[]
+    # get far reward cells in any ep
+    # CHANGE: 4/24/25
+    goal_cells = np.unique(np.concatenate(com_goal_farrew))
     # integral
     # get tc 
     correct = scipy.integrate.trapz(tcs_correct[:,goal_cells, :],axis=2)

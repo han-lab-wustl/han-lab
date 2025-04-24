@@ -280,13 +280,17 @@ df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
 df['cell_type'] =np.concatenate([['Far post-reward']*len(tau_all),
                                 ['Post-reward']*len(tau_all_postrew),
                                 ['Pre-reward']*len(tau_all_prerew)])
+order = ['Pre-reward', 'Post-reward', 'Far pre-reward','Far post-reward']
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,ax = plt.subplots(figsize=(3.5,5))
 # av across mice
 sns.stripplot(x='cell_type', y='tau',color='k',
-        data=df,s=10,alpha=0.7)
+        data=df,s=10,alpha=0.7,
+        order=order,
+)
 sns.barplot(x='cell_type', y='tau',
-        data=df, fill=False,ax=ax, color='k', errorbar='se')
+        data=df, fill=False,ax=ax, color='k', errorbar='se',
+        order=order)
 ax.spines[['top','right']].set_visible(False)
 ax.legend().set_visible(False)
 ax.set_ylabel(f'Decay over epochs ($\\tau$)')
