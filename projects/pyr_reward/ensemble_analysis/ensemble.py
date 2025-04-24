@@ -81,7 +81,6 @@ def cluster_neurons_from_ica(ica_components):
     return kmeans.labels_
 
 
-
 def detect_assemblies_with_ica(spike_matrix, zscore=True, plot=False):
     """
     Detect cell assemblies using PCA + ICA with MP-based estimation of number of assemblies.

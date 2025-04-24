@@ -17,12 +17,12 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_farrew
+from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_pre_farrew
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'far_rew.pdf')
+savepth = os.path.join(savedst, 'pre_far_rew.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
@@ -54,14 +54,14 @@ for ii in range(len(conddf)):
                 else: pln=0
                 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
                 radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
-                        goal_cell_null,epoch_perm,pvals=extract_data_farrew(ii,params_pth,\
+                        goal_cell_null,epoch_perm,pvals=extract_data_pre_farrew(ii,params_pth,\
                         animal,day,bins,radian_alignment,radian_alignment_saved,goal_window_cm,
                         pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
                         total_cells)
 pdf.close()
-# save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
+# # save pickle of dcts
+# with open(saveddataset, "wb") as fp:   #Pickling
+#         pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -162,7 +162,7 @@ sns.barplot(data=df_plt2, # correct shift
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
-ax.set_ylabel('Far reward-centric cell %')
+ax.set_ylabel('Far reward cell %')
 eps = [2,3,4]
 y = 28
 pshift = 1
@@ -186,7 +186,8 @@ for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
-ax.set_title('Far reward cells',pad=30)
+ax.set_title('Far pre-reward cells',pad=30)
+ax.set_xlabel('')
 ax.set_ylim([0,30])
 ax=axes[1]
 # subtract from shuffle
@@ -209,11 +210,11 @@ for i in range(len(ans)):
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
-ax.set_title('Far reward cell %-shuffle',pad=30)
+ax.set_title('Far pre-reward cell %-shuffle',pad=30)
 ax.set_ylim([-1,8])
 
-# plt.savefig(os.path.join(savedst, 'farreward_cell_prop-shuffle_per_an.svg'), 
-        # bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'pre_farreward_cell_prop-shuffle_per_an.svg'), 
+        bbox_inches='tight')
 
 #%% 
 # find tau/decay
@@ -249,8 +250,8 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Reward-centric cell proportion')
-plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'), 
+#         bbox_inches='tight')
 
 #%%
 # compare to persistent cells
@@ -274,6 +275,10 @@ tau_all_prerew =[1.6056888447006052,
  1.4999119163136394,
  2.5827747398002434]
 
+tau_far_pre = tau_all
+tau_far_post = [
+    
+]
 df = pd.DataFrame()
 df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
 df['cell_type'] =np.concatenate([['Far-reward']*len(tau_all),

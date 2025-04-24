@@ -17,12 +17,12 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_farrew
+from rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_post_farrew
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'far_rew.pdf')
+savepth = os.path.join(savedst, 'post_far_rew.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
@@ -54,14 +54,14 @@ for ii in range(len(conddf)):
                 else: pln=0
                 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
                 radian_alignment,rate,p_value,total_cells,goal_cell_iind,goal_cell_prop,num_epochs,\
-                        goal_cell_null,epoch_perm,pvals=extract_data_farrew(ii,params_pth,\
+                        goal_cell_null,epoch_perm,pvals=extract_data_post_farrew(ii,params_pth,\
                         animal,day,bins,radian_alignment,radian_alignment_saved,goal_window_cm,
                         pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,pvals,
                         total_cells)
 pdf.close()
 # save pickle of dcts
-with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
+# with open(saveddataset, "wb") as fp:   #Pickling
+#         pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -162,7 +162,7 @@ sns.barplot(data=df_plt2, # correct shift
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
-ax.set_ylabel('Far reward-centric cell %')
+ax.set_ylabel('Far reward cell %')
 eps = [2,3,4]
 y = 28
 pshift = 1
@@ -186,7 +186,8 @@ for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
-ax.set_title('Far reward cells',pad=30)
+ax.set_title('Far post-reward cells',pad=30)
+ax.set_xlabel('')
 ax.set_ylim([0,30])
 ax=axes[1]
 # subtract from shuffle
@@ -209,11 +210,11 @@ for i in range(len(ans)):
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
-ax.set_title('Far reward cell %-shuffle',pad=30)
+ax.set_title('Far post-reward cell %-shuffle',pad=30)
 ax.set_ylim([-1,8])
 
-# plt.savefig(os.path.join(savedst, 'farreward_cell_prop-shuffle_per_an.svg'), 
-        # bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'post_farreward_cell_prop-shuffle_per_an.svg'), 
+        bbox_inches='tight')
 
 #%% 
 # find tau/decay
@@ -249,8 +250,8 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('Reward-centric cell proportion')
-plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'), 
+#         bbox_inches='tight')
 
 #%%
 # compare to persistent cells
@@ -276,7 +277,7 @@ tau_all_prerew =[1.6056888447006052,
 
 df = pd.DataFrame()
 df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Far-reward']*len(tau_all),
+df['cell_type'] =np.concatenate([['Far post-reward']*len(tau_all),
                                 ['Post-reward']*len(tau_all_postrew),
                                 ['Pre-reward']*len(tau_all_prerew)])
 # number of epochs vs. reward cell prop incl combinations    
@@ -297,53 +298,48 @@ from scikit_posthocs import posthoc_dunn
 from statsmodels.stats.multitest import multipletests
 
 df = df.reset_index()
+# Get unique groups
+groups = df['cell_type'].unique()
 
-# Perform Kruskal-Wallis test
-grouped = [df[df['cell_type'] == group]['tau'] for group in df['cell_type'].unique()]
-kruskal_result = stats.kruskal(*grouped)
-print(f"Kruskal-Wallis H-statistic: {kruskal_result.statistic}, p-value: {kruskal_result.pvalue}")
+# Generate all pairwise combinations
+comparisons = list(combinations(groups, 2))
 
-# Perform Dunn's test for pairwise comparisons and apply Bonferroni correction
-dunn_result = posthoc_dunn(df, val_col='tau', group_col='cell_type',p_adjust='bonferroni')
-# Annotate the plot
-# Annotate the plot
-def add_stat_annotation(ax, x1, x2, y, adjusted_p):
-        h = 0.2  # height offset
-        line_offset = 0.1  # offset of the horizontal line
-        # Draw horizontal line
-        ax.plot([x1, x1, x2, x2], [y, y + line_offset, y + line_offset, y], lw=1.5, c='k')
-        # Determine significance level
-        if adjusted_p < 0.001:
-                significance = '***'
-        elif adjusted_p < 0.01:
-                significance = '**'
-        elif adjusted_p < 0.05:
-                significance = '*'
-        else:
-                significance = 'ns'  # Not significant
-        # Combine significance level and p-value in the annotation
-        text = f'{significance}\n(p={adjusted_p:.3g})'
-        line_offset2=.5
-        # Add p-value text
-        ax.text((x1 + x2) * 0.5, y + line_offset2, text, ha='center', va='bottom', color='k',
-                fontsize=14)
+# Perform t-tests
+p_values = []
+for group1, group2 in comparisons:
+    data1 = df[df['cell_type'] == group1]['tau']
+    data2 = df[df['cell_type'] == group2]['tau']
+    stat, p = scipy.stats.ranksums(data1, data2)
+    p_values.append(p)
 
-# Example usage of add_stat_annotation with group annotations and asterisks
-y_max = df['tau'].max()-5  # maximum y value of the plot
-y_range = df['tau'].max() - df['tau'].min()  # range of y values
+# Apply Bonferroni correction
+adjusted = multipletests(p_values, method='bonferroni')
+adjusted_p_values = adjusted[1]
+# Define y-position for annotations
+y_max = df['tau'].max()
+y_offset = y_max * 0.1  # adjust as needed
+fs=40
+pshift=1.5
+# Add annotations
+for i, (group1, group2) in enumerate(comparisons):
+    x1 = list(groups).index(group1)
+    x2 = list(groups).index(group2)
+    y = y_max + y_offset * (i + 1)
+    p_val = adjusted_p_values[i]
+    if p_val < 0.001:
+        significance = '***'
+    elif p_val < 0.01:
+        significance = '**'
+    elif p_val < 0.05:
+        significance = '*'
+    else:
+        significance = ''
+    ax.plot([x1, x1, x2, x2], [y, y + 0.01, y + 0.01, y], lw=1.5, c='k')
+    ax.text((x1 + x2)/2, y-.5, significance, ha='center', va='bottom', color='k',
+            fontsize=fs)
+    ax.text((x1 + x2) / 1.5, y + 0.015 + pshift, f'p={p_val:.2g}', ha='center', rotation=45, fontsize=12)
 
-cell_types = df['cell_type'].unique()
-for i, group1 in enumerate(cell_types):
-        for j, group2 in enumerate(cell_types):
-                if i < j:
-                        p_value = dunn_result.loc[group1, group2]
-                        adjusted_p = p_value  # Already Bonferroni-adjusted
-                        x1 = list(cell_types).index(group1)
-                        x2 = list(cell_types).index(group2)
-                        y = y_max + (i + j+3) * y_range * .1  # adjust y position
-                        print(i,y)
-                        add_stat_annotation(ax, x1, x2, y+i+j, adjusted_p)
-
+ax.set_title('Ranksum and bonferroni')
 plt.savefig(os.path.join(savedst, 'decay_rewardcell.svg'), 
         bbox_inches='tight')
 

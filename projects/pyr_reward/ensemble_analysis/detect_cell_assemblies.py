@@ -100,8 +100,8 @@ for ii in range(len(conddf)):
         #     tcs_correct, coms_correct, tcs_fail, coms_fail, \
         #     com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         # else:# remake tuning curves relative to reward        
-            # 9/19/24
-            # find correct trials within each epoch!!!!
+        # 9/19/24
+        # find correct trials within each epoch!!!!
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size)          
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
@@ -139,7 +139,8 @@ for ii in range(len(conddf)):
             goal_all = np.unique(np.concatenate(com_goal_postrew))
             from ensemble import detect_assemblies_with_ica,cluster_neurons_from_ica,\
             get_cells_by_assembly
-            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[:,goal_all].T)
+            # just use ep 1
+            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1],goal_all].T)
             print(f"{n} assemblies detected")
             labels = cluster_neurons_from_ica(patterns)
             assembly_cells = get_cells_by_assembly(labels)
@@ -149,8 +150,9 @@ for ii in range(len(conddf)):
             for assembly_id, cells in sorted_assemblies:
                 if len(cells) < 3:
                     continue  # skip small assemblies
-                peak = np.nanmax(np.nanmean(tcs_correct[0, goal_all[cells], :],axis=0))
-                if peak < .1: # remove low firing cells?
+                # minimum peak of cell in ensemble must be > 
+                peak = np.nanmin(np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1))
+                if peak < .05: # remove low firing cells?
                     continue
                 cell_ids = set(goal_all[cells])
                 if not cell_ids.isdisjoint(used_cells):
@@ -162,13 +164,14 @@ for ii in range(len(conddf)):
                 center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
                 com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in activity]
                 com_com_asm = com_per_cell - center_of_mass
-                # if np.nanmean(com_com_asm) < np.pi / 4:
+                # if np.nanmean(com_com_asm) < (np.pi / 4):
                 fig, ax = plt.subplots()
                 ax.plot(tcs_correct[0, goal_all[cells], :].T)
                 ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
                 fig.tight_layout()
                 pdf.savefig(fig)
-                plt.close(fig)
+                plt.show()
+                # plt.close(fig)
                 # Save time courses
                 assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
         except Exception as e:
@@ -243,7 +246,8 @@ from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
 from statsmodels.stats.multitest import multipletests
 
-
+# temp
+df_clean = df_clean[(df_clean.animals!='e139') & (df_clean.animals!='e200') & (df_clean.animals!='e190')]
 # Pairwise comparisons (Bonferroni)
 unique_groups = sorted(df_clean['num_epochs'].unique())
 group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_across_ep'] for group in unique_groups}
@@ -251,7 +255,7 @@ group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_acros
 comparisons = list(combinations(unique_groups, 2))
 raw_pvals = []
 for g1, g2 in comparisons:
-    _, pval = scipy.stats.ttest_ind(group_data[g1], group_data[g2])
+    _, pval = scipy.stats.wilcoxon(group_data[g1], group_data[g2])
     raw_pvals.append(pval)
 
 # Bonferroni correction
@@ -290,3 +294,6 @@ for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reje
 ax.set_title('Post-reward ensembles', pad=50)
 plt.tight_layout()
 plt.show()
+ax.spines[['top','right']].set_visible(False)
+
+df_clean.to_csv(r'Z:\condition_df\postrew_ensemble.csv', index=None)

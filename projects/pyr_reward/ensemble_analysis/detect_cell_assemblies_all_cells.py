@@ -16,7 +16,7 @@ mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, make_tuning_curves
 from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric,\
     get_radian_position_first_lick_after_rew, get_rewzones
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -26,7 +26,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'pre_rew_assemblies.pdf')
+savepth = os.path.join(savedst, 'post_rew_assemblies.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
@@ -96,51 +96,21 @@ for ii in range(len(conddf)):
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        # if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-        #     tcs_correct, coms_correct, tcs_fail, coms_fail, \
-        #     com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-        # else:# remake tuning curves relative to reward        
-            # 9/19/24
-            # find correct trials within each epoch!!!!
+        # find correct trials within each epoch!!!!
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
-        goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
-        # change to relative value 
-        coms_rewrel = np.array([com-np.pi for com in coms_correct])
-        perm = list(combinations(range(len(coms_correct)), 2)) 
-        rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
-        # if 4 ep
-        # account for cells that move to the end/front
-        # Define a small window around pi (e.g., epsilon)
-        epsilon = .7 # 20 cm
-        # Find COMs near pi and shift to -pi
-        com_loop_w_in_window = []
-        for pi,p in enumerate(perm):
-            for cll in range(coms_rewrel.shape[1]):
-                com1_rel = coms_rewrel[p[0],cll]
-                com2_rel = coms_rewrel[p[1],cll]
-                # print(com1_rel,com2_rel,com_diff)
-                if ((abs(com1_rel - np.pi) < epsilon) and 
-                (abs(com2_rel + np.pi) < epsilon)):
-                        com_loop_w_in_window.append(cll)
-        # get abs value instead
-        coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        # all cells before 0
-        com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<0)] if len(com)>0 else [] for com in com_goal]
-        #only get perms with non zero cells
-        perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
-        rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
-        com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+        rewards,forwardvel,rewsize,bin_size)   
+        # allocentric ref
+        bin_size=track_length/bins 
+        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+            Fc3,trialnum,rewards,forwardvel,
+            rewsize,bin_size)       
+        # try on all neurons
         assembly_cells_all = {}
         try: # if enough neurons
-            goal_all = np.unique(np.concatenate(com_goal_postrew))
             from ensemble import detect_assemblies_with_ica,cluster_neurons_from_ica,\
             get_cells_by_assembly
             # just use ep 1
-            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1],goal_all].T)
+            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1]].T)
             print(f"{n} assemblies detected")
             labels = cluster_neurons_from_ica(patterns)
             assembly_cells = get_cells_by_assembly(labels)
@@ -151,29 +121,32 @@ for ii in range(len(conddf)):
                 if len(cells) < 3:
                     continue  # skip small assemblies
                 # minimum peak of cell in ensemble must be > 
-                peak = np.nanmin(np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1))
-                if peak < .05: # remove low firing cells?
-                    continue
-                cell_ids = set(goal_all[cells])
+                peak = np.nanmax(tcs_correct[0, cells, :],axis=1)
+                if sum(peak < .05)>0: # remove low firing cells?
+                    # remove cell from list
+                    cells = np.array(cells)[peak>.05]
+                    # continue
+                cell_ids = set(cells)
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
                 used_cells.update(cell_ids)  # mark cells as used
                 time_bins = np.arange(90)
-                activity = tcs_correct[0, goal_all[cells], :]                
+                activity = tcs_correct[0, cells, :]                
                 # Calculate center of mass
                 center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
                 com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in activity]
                 com_com_asm = com_per_cell - center_of_mass
                 # if np.nanmean(com_com_asm) < (np.pi / 4):
                 fig, ax = plt.subplots()
-                ax.plot(tcs_correct[0, goal_all[cells], :].T)
+                ax.plot(tcs_correct[0, cells, :].T)
                 ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
                 fig.tight_layout()
                 pdf.savefig(fig)
                 plt.show()
                 # plt.close(fig)
                 # Save time courses
-                assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
+                assembly_cells_all[f'assembly {assembly_id}'] = [tcs_correct[:, cells, :],
+                                                                 tcs_correct_abs[:, cells, :]]
         except Exception as e:
             print(e)
         # print the ones that pass the thresholds
@@ -190,7 +163,7 @@ from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
 # look through all the assemblies
 df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
-an_plt = 'z9' # 1 eg animal
+an_plt = 'e190' # 1 eg animal
 cs_all = []; num_epochs = []
 plt.close('all')
 plot = False
@@ -213,13 +186,16 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     ax.imshow(tcs[np.argsort(com_per_cell)]**.4,aspect='auto')
                     ax.set_title(f'epoch {kk+1}')
                     ax.axvline(bins/2, color='w', linestyle='--')
+                # fig.suptitle(f'Cosine similar b/wn epochs: \n\
+                #     Epoch combinations: {perm}\n\
+                #         CS: {np.round(cs,2)}, average: {np.nanmean(cs)}')
                 fig.suptitle(f'{df.iloc[ii].animals}, {df.iloc[ii].days} \n\
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
         cs_all.append(cs_per_ep)
         num_epochs.append(len(asm))
             # plt.figure()
             # plt.plot(tcs[np.argsort(com_per_cell)].T)
-# %%# %%
+# %%
 # add 2 ep combinaitions as 2 ep
 df2 = pd.DataFrame()
 df2['cosine_sim_across_ep'] = np.hstack([np.concatenate(xx) if len(xx)>0 else np.nan for xx in cs_all])
@@ -229,24 +205,22 @@ df2['num_epochs'] =[2]*len(df2)
 df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
 df['num_epochs'] = num_epochs
-# df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.nanmin(xx) if len(xx)>0 else np.nan for xx in cs_all]
+df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
+df['cosine_sim_across_ep'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in cs_all]
 df = pd.concat([df,df2])
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
 dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 dfan = dfan.reset_index()
 dfan = dfan[dfan.num_epochs<5]
 df_clean = dfan
-# temp
-df_clean = df_clean[(df_clean.animals!='e139') & (df_clean.animals!='e200') & (df_clean.animals!='e190')]
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
 from statsmodels.stats.multitest import multipletests
 
-
+# temp
+df_clean = df_clean[(df_clean.animals!='e139') & (df_clean.animals!='e200') & (df_clean.animals!='e190')]
 # Pairwise comparisons (Bonferroni)
 unique_groups = sorted(df_clean['num_epochs'].unique())
 group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_across_ep'] for group in unique_groups}
@@ -264,9 +238,10 @@ reject, corrected_pvals, _, _ = multipletests(raw_pvals, method='bonferroni')
 s=10
 plt.figure(figsize=(3,5))
 ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, errorbar='se',
-            fill=False, color='k')
+                 fill=False, color='k')
 sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, color='k', jitter=True,
-            s=s,alpha=0.7)
+              s=s,alpha=0.7)
+
 # Annotate
 fs = 30
 pshift = 0.05
@@ -289,87 +264,9 @@ for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reje
     ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
     ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
 
-ax.set_title('Pre-reward ensembles', pad=50)
+ax.set_title('Post-reward ensembles', pad=50)
 plt.tight_layout()
 plt.show()
-#%%
-plt.rc('font', size=16)
-# compare to post rew
-df_post = pd.read_csv(r'Z:\condition_df\postrew_ensemble.csv')
-df_post['cell_type'] = ['Post-reward']*len(df_post)
-df_pre = df_clean
-df_pre['cell_type'] = ['Pre-reward']*len(df_pre)
-s=7
-df_all = pd.concat([df_pre, df_post])
-plt.figure(figsize=(4,4))
-ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, errorbar='se',
-            fill=False, palette = 'dark')
-sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, dodge=True,
-            s=s,alpha=0.7,palette = 'dark')
-
-
-# make lines
-df_all = df_all.reset_index()
 ax.spines[['top','right']].set_visible(False)
 
-# Plot individual lines per animal with x-axis offset
-offset = {'Pre-reward': -0.2, 'Post-reward': 0.2}
-for animal in df_all.animals.unique():
-    for cell_type in ['Pre-reward', 'Post-reward']:
-        df_sub = df_all[(df_all.animals == animal) & (df_all.cell_type == cell_type)]
-        if df_sub.empty:
-            continue
-        x_vals = df_sub.num_epochs + offset[cell_type]
-        ax.plot(x_vals-2, df_sub.cosine_sim_across_ep, color=sns.color_palette('dark')[['Pre-reward', 'Post-reward'].index(cell_type)],
-                alpha=0.3, linewidth=2)
-# Get unique epochs
-epochs = sorted(df_all.num_epochs.unique())
-ymax = .6
-y_offsets = [ymax + (i * 0.03) for i in range(len(epochs))]
-
-fs = 40  # font size for stars
-pshift = 0.08  # p-value label offset
-
-for i, epoch in enumerate(epochs):
-    data_epoch = df_all[df_all.num_epochs == epoch]
-    pre_vals = data_epoch[data_epoch.cell_type == 'Pre-reward']['cosine_sim_across_ep'].dropna()
-    post_vals = data_epoch[data_epoch.cell_type == 'Post-reward']['cosine_sim_across_ep'].dropna()
-    
-    # t-test
-    stat, pval = scipy.stats.ttest_rel(pre_vals, post_vals)
-
-    # Plot annotation
-    x = i
-    y = y_offsets[i]
-    if pval < 0.001:
-        ax.text(x, y, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
-        ax.text(x, y, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
-        ax.text(x, y, "*", ha='center', fontsize=fs)
-
-    # Show p-value (optional)
-    ax.text(x, y + pshift, f'p={pval:.2g}', ha='center', fontsize=12, rotation=45)
-    
-    # pre-reward comp
-for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reject)):
-    x1, x2 = int(g1)-2, int(g2)-2
-    y = max_y + 0.05 * (i + 1)
-    ax.plot([x1, x1, x2, x2], [y, y+0.01, y+0.01, y], lw=1.5, c='k')
-
-    if pval < 0.001:
-        star = '***'
-    elif pval < 0.01:
-        star = '**'
-    elif pval < 0.05:
-        star = '*'
-    else: star=''
-
-    ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
-    ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
-
-ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), title='Cell Type')
-ax.set_ylabel('Mean ensemble cosine similarity')
-ax.set_xlabel('# of reward loc. switches')
-
-plt.savefig(os.path.join(savedst, 'ensemble_cosine_sim_pre_v_post.svg'))
+df_clean.to_csv(r'Z:\condition_df\postrew_ensemble.csv', index=None)
