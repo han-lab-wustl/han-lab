@@ -125,7 +125,6 @@ df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animal
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
 df_perms['session_num'] = np.concatenate(df_perm_days)
-
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
@@ -140,7 +139,7 @@ df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
-df_plt2 = df_plt2[df_plt2.animals!='e139']
+# df_plt2 = df_plt2[df_plt2.animals!='z9']
 
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(ncols=2,figsize=(7,5))
@@ -168,17 +167,17 @@ y = 28
 pshift = 1
 fs=36
 for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                ax.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                ax.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                ax.text(ii, y, "*", ha='center', fontsize=fs)
+    rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
+    shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
+    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+    print(f'{ep} epochs, pval: {pval}')
+    # statistical annotation        
+    if pval < 0.001:
+            ax.text(ii, y, "***", ha='center', fontsize=fs)
+    elif pval < 0.01:
+            ax.text(ii, y, "**", ha='center', fontsize=fs)
+    elif pval < 0.05:
+            ax.text(ii, y, "*", ha='center', fontsize=fs)
         # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 # make lines
 ans = df_plt2.animals.unique()

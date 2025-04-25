@@ -275,9 +275,21 @@ tau_all_prerew =[1.6056888447006052,
  1.4999119163136394,
  2.5827747398002434]
 
+# not > shuffle lol
+tau_far_prerew = [1.6849461455869947,
+ 0.3593246565418688,
+ 1.26719951539498,
+ 0.6347168116394608,
+ 0.735269843464658,
+ 1.0729934865806332,
+ 0.6829821514321549,
+ 0.7800329951225865,
+ 0.8197247675728667]
+
 df = pd.DataFrame()
-df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Far post-reward']*len(tau_all),
+df['tau'] = np.concatenate([tau_far_prerew,tau_all,tau_all_postrew,tau_all_prerew])
+df['cell_type'] =np.concatenate([['Far pre-reward']*len(tau_far_prerew),
+                                ['Far post-reward']*len(tau_all),
                                 ['Post-reward']*len(tau_all_postrew),
                                 ['Pre-reward']*len(tau_all_prerew)])
 order = ['Pre-reward', 'Post-reward', 'Far pre-reward','Far post-reward']

@@ -1645,10 +1645,9 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cell_prop,num_epochs,goal_cell_null,epoch_perm,pvals
 
 
-def reward_act_farrew(ii,params_pth,animal,day,bins,radian_alignment,
+def reward_act_farrew(ii,cell_type,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
-    goal_cell_null,pvals,total_cells,
-    num_iterations=1000):
+    goal_cell_null,pvals,total_cells):
     """
     changed on 2/6/25 to make it more consistent with splitting the different
     subpopulations
@@ -1736,22 +1735,27 @@ def reward_act_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     #only get perms with non zero cells    
-    lowerbound = np.pi/3 # updated 4/21/25
-    com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
+    if cell_type=='pre':
+        lowerbound = -np.pi/4 # updated 4/21/25
+        com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
+            xx], axis=0)<=lowerbound))] if len(com)>0 else [] for com in com_goal]
+    elif cell_type=='post':
+        lowerbound = np.pi/4 # updated 4/21/25
+        com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
+            xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
     perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
     rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_farrew[ii])>0]
     com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
     print(f'Far-reward cells total: {[len(xx) for xx in com_goal_farrew]}')
     epoch_perm.append([perm,rz_perm]) 
     # get goal cells across all epochs        
-    if len(com_goal_farrew)>0:
-        goal_cells = intersect_arrays(*com_goal_farrew); 
-    else:
-        goal_cells=[]
     # get far reward cells in any ep
     # CHANGE: 4/24/25
-    goal_cells = np.unique(np.concatenate(com_goal_farrew))
+    if len(com_goal_farrew)>0:
+        goal_cells = intersect_arrays(*com_goal_farrew); 
+        goal_cells = np.unique(np.concatenate(com_goal_farrew))
+    else:
+        goal_cells=[]    
     # integral
     # get tc 
     correct = scipy.integrate.trapz(tcs_correct[:,goal_cells, :],axis=2)

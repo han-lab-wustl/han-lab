@@ -22,7 +22,7 @@ from projects.pyr_reward.rewardcell import get_radian_position,reward_act_farrew
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'far_rew.pdf')
+savepth = os.path.join(savedst, 'pre_far_rew.pdf')
 #%%
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -44,6 +44,7 @@ bins=90
 saveto =saveddataset
 tcs_correct_all=[]
 tcs_fail_all=[]
+cell_type='pre'
 # iterate through all animals
 dfs = []
 for ii in range(len(conddf)):
@@ -53,7 +54,7 @@ for ii in range(len(conddf)):
                 if animal=='e145' or animal=='e139': pln=2 
                 else: pln=0
                 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-                df,tcs_correct,tcs_fail=reward_act_farrew(ii,params_pth,\
+                df,tcs_correct,tcs_fail=reward_act_farrew(ii,cell_type,params_pth,\
                         animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,
                         pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,
                         pvals,

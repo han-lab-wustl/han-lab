@@ -43,7 +43,7 @@ assembly_cells_all_an=[]
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+    if (animal!='e217') & (conddf.optoep.values[ii]<2): 
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -163,7 +163,7 @@ from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
 # look through all the assemblies
 df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
-an_plt = 'e190' # 1 eg animal
+an_plt = 'z9' # 1 eg animal
 cs_all = []; num_epochs = []
 plt.close('all')
 plot = False
@@ -173,43 +173,55 @@ for ii,ass in enumerate(assembly_cells_all_an):
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
         for jj,asm in enumerate(ass_all):
-            perm = list(combinations(range(len(asm)), 2)) 
-            # consecutive ep only
-            perm = [p for p in perm if p[0]-p[1]==-1]
-            cs = [cosine_sim_ignore_nan(asm[p[0]], asm[p[1]]) for p in perm]
-            cs_per_ep.append(cs)
-            if plot:
-                fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5))
-                for kk,tcs in enumerate(asm):
-                    ax = axes[kk]
-                    if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
-                    ax.imshow(tcs[np.argsort(com_per_cell)]**.4,aspect='auto')
-                    ax.set_title(f'epoch {kk+1}')
-                    ax.axvline(bins/2, color='w', linestyle='--')
-                # fig.suptitle(f'Cosine similar b/wn epochs: \n\
-                #     Epoch combinations: {perm}\n\
-                #         CS: {np.round(cs,2)}, average: {np.nanmean(cs)}')
-                fig.suptitle(f'{df.iloc[ii].animals}, {df.iloc[ii].days} \n\
-                    Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
-        cs_all.append(cs_per_ep)
-        num_epochs.append(len(asm))
+            # asm = asm[0] # reward rel vs. place rel
+            cs_map =[]; ne_map =[]
+            for cllmap in asm:
+                perm = list(combinations(range(len(cllmap)), 2)) 
+                # consecutive ep only
+                perm = [p for p in perm if p[0]-p[1]==-1]
+                cs = [cosine_sim_ignore_nan(cllmap[p[0]], cllmap[p[1]]) for p in perm]
+                cs_map.append(cs)
+                if plot:
+                    fig,axes = plt.subplots(ncols = len(cllmap), figsize=(14,5))
+                    for kk,tcs in enumerate(cllmap):
+                        ax = axes[kk]
+                        if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                        ax.imshow(tcs[np.argsort(com_per_cell)]**.4,aspect='auto')
+                        ax.set_title(f'epoch {kk+1}')
+                        ax.axvline(bins/2, color='w', linestyle='--')
+                    fig.suptitle(f'{df.iloc[ii].animals}, {df.iloc[ii].days} \n\
+                        Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
+        cs_all.append(cs_map)
+        num_epochs.append(len(asm[0]))
             # plt.figure()
             # plt.plot(tcs[np.argsort(com_per_cell)].T)
 # %%
 # add 2 ep combinaitions as 2 ep
-df2 = pd.DataFrame()
-df2['cosine_sim_across_ep'] = np.hstack([np.concatenate(xx) if len(xx)>0 else np.nan for xx in cs_all])
-df2['animals'] = np.concatenate([[df.iloc[ii].animals]*len(np.concatenate(xx)) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all)])
-df2['num_epochs'] =[2]*len(df2)
+categories = ['reward_relative_map', 'place_map']
+dfs = []
+for c,cat in enumerate(categories):
+    df2 = pd.DataFrame()
+    df2['cosine_sim_across_ep'] = np.concatenate([xx[c] if len(xx)>0 else np.nan for xx in cs_all])
+    df2['map'] = [cat]*len(df2)
+    df2['animals'] = np.concatenate([[df.iloc[ii].animals]*len(xx[c]) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all)])
+    df2['num_epochs'] =[2]*len(df2)
+    dfs.append(df2)
 
-df = conddf.copy()
-df = df[(df.animals!='e217') & (df.optoep.values<2)]
-df['num_epochs'] = num_epochs
-df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in cs_all]
-df = pd.concat([df,df2])
+    df = conddf.copy()
+    df = df[(df.animals!='e217') & (df.optoep.values<2)]
+    df['num_epochs'] = num_epochs
+    df['map'] = [cat]*len(df)
+    df['cosine_sim_across_ep'] = [np.nanmean(xx[c]) if len(xx)>0 else np.nan for xx in cs_all]
+    dfs.append(df)
+
+df = pd.concat(dfs)
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
-dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+
+x = np.concatenate([xx[0] for xx in cs_all])
+y = np.concatenate([xx[1] for xx in cs_all])
+plt.scatter(x,y)
+
+dfan = df.groupby(['animals', 'num_epochs', 'map']).mean(numeric_only=True)
 dfan = dfan.reset_index()
 dfan = dfan[dfan.num_epochs<5]
 df_clean = dfan
@@ -221,6 +233,16 @@ from statsmodels.stats.multitest import multipletests
 
 # temp
 df_clean = df_clean[(df_clean.animals!='e139') & (df_clean.animals!='e200') & (df_clean.animals!='e190')]
+
+# Plot
+s=10
+fig,a=plt.subplots(figsize=(3,5))
+ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', hue='map',data=df_clean, errorbar='se',
+                 fill=False)
+sns.stripplot(x='num_epochs', y='cosine_sim_across_ep',hue='map', data=df_clean, dodge=True,
+              s=s,alpha=0.7)
+ax.set_title('All cells')
+#%%
 # Pairwise comparisons (Bonferroni)
 unique_groups = sorted(df_clean['num_epochs'].unique())
 group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_across_ep'] for group in unique_groups}
@@ -233,14 +255,6 @@ for g1, g2 in comparisons:
 
 # Bonferroni correction
 reject, corrected_pvals, _, _ = multipletests(raw_pvals, method='bonferroni')
-
-# Plot
-s=10
-plt.figure(figsize=(3,5))
-ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, errorbar='se',
-                 fill=False, color='k')
-sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, color='k', jitter=True,
-              s=s,alpha=0.7)
 
 # Annotate
 fs = 30
@@ -268,5 +282,3 @@ ax.set_title('Post-reward ensembles', pad=50)
 plt.tight_layout()
 plt.show()
 ax.spines[['top','right']].set_visible(False)
-
-df_clean.to_csv(r'Z:\condition_df\postrew_ensemble.csv', index=None)
