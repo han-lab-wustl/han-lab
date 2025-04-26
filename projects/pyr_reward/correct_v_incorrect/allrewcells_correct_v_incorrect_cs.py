@@ -45,7 +45,6 @@ lasttr=8 #  last trials
 bins=90
 saveto = saveddataset#rf'Z:\saved_datasets\radian_tuning_curves_prereward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
 # iterate through all animals
-
 tcs_correct_all=[]
 tcs_fail_all=[]
 coms = []
@@ -84,40 +83,60 @@ ax.spines[['top','right']].set_visible(False)
 # com vs. cs
 # 2 ep
 eps = [0,1,2]
-metric = 'Wessenstein distance'
-fig,ax = plt.subplots()
+metric = 'Cosine similarity'
+fig,axes = plt.subplots(nrows=2,sharex=True, sharey=True,figsize=(5,8))
+ax=axes[0]
+colors = ['slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 for ep in eps:
     cs = np.concatenate([xx[ep] for xx in css if len(xx)>ep])
     com = np.concatenate([xx[ep] for xx in coms if len(xx)>ep])
-    ax.scatter(cs,com,alpha=0.3)
-    ax.set_ylabel('COM per epoch')
-    ax.set_xlabel(metric)
-    ax.set_title('Correct vs. incorrect tuning curves')
+    ax.scatter(cs,com,alpha=0.2, label=f'Epoch {ep+1}',color=colors[ep])
+    ax.set_ylabel('Reward cell COM per epoch')    
+    ax.set_title('Correct vs. incorrect')
     ax.legend()
-
-    ax.spines[['top','right']].set_visible(False)
+#     ax.spines[['top','right']].set_visible(False)
 
 # average ep
 cs = np.concatenate([np.nanmean(xx,axis=0) for xx in css if xx.shape[0]>0])
 com = np.concatenate([np.nanmean(xx,axis=0) for xx in coms if xx.shape[0]>0])
-fig,ax = plt.subplots()
+ax=axes[1]
 ax.scatter(cs,com,alpha=0.3)
-ax.set_ylabel('COM (average of epochs)')
+ax.set_ylabel('Reward cell av. COM')
 ax.set_xlabel(metric)
-ax.set_title('Correct vs. incorrect tuning curves')
-ax.legend()
 
-ax.spines[['top','right']].set_visible(False)
+# ax.spines[['top','right']].set_visible(False)
+# plt.savefig(os.path.join(savedst, 'correct_v_incorrect_cs_scatterplot.svg'))
+#%%
+# kde plot
+df=pd.DataFrame()
+df['cs']=cs
+df['com']=com
+fig,axes = plt.subplots(nrows=2,sharex=True, sharey=True,figsize=(5,8))
+
+ax=axes[0]
+sns.scatterplot(x='cs',y='com',data=df,ax=ax,color='sienna',alpha=0.2)
+ax.set_title('Correct vs. incorrect')
+ax.set_ylabel('Reward cell av. COM')
+
+ax=axes[1]
+sns.kdeplot(x='cs',y='com',data=df,fill=True,ax=ax,color='sienna')
+ax.set_xlabel(metric)
+ax.set_ylabel('Reward cell av. COM')
+
+plt.savefig(os.path.join(savedst, 'correct_v_incorrect_cs_scatterplot.svg'))
+
 
 #%%
 # pre vs. post vs. far?
+plt.rc('font', size=16)
 df = pd.DataFrame()
 cdf = conddf.copy()
 cdf = cdf[(cdf.animals!='e217') & (cdf.optoep.values<2)]        
 
 df['cosine_similarity'] = cs
 bound = np.pi/4
-df['cell_type'] = ['Pre' if (xx<0 and xx>-bound) else 'Post' if(xx>0 and xx<bound) else 'Far' for xx in com]
+df['cell_type'] = ['Pre' if (xx<0 and xx>-bound) else 'Post' if(xx>0 and xx<bound) else 'Far pre' if (xx<-bound) else 'Far post' for xx in com]
+
 df['com'] = com
 
 test = []
@@ -127,14 +146,103 @@ for ii in range(len(css)):
 
 df['animal'] = np.concatenate(test)
 from itertools import combinations
+order = ['Pre', 'Post', 'Far pre', 'Far post']
+s=10
+df = df.groupby(['animal', 'cell_type']).mean(numeric_only=True)
+fig,ax = plt.subplots(figsize = (4,6))
+sns.boxplot(x='cell_type', y='cosine_similarity', data=df, fill=False, color='peru',
+        order=order,linewidth=2)
+sns.stripplot(x='cell_type', y='cosine_similarity', data=df, s=s, color='peru',alpha=0.7,
+        order=order)
+ax.spines[['top','right']].set_visible(False)
+df = df.reset_index()
 
-s=9
+# Kruskal-Wallis test
+groups = [df[df['cell_type'] == ct]['cosine_similarity'].dropna() for ct in ['Pre', 'Post', 'Far']]
+kw_stat, kw_p = scipy.stats.kruskal(*groups)
+print(f"Kruskal-Wallis H-statistic: {kw_stat:.3f}, p-value: {kw_p:.3e}")
+
+# Plot within-animal lines
+for animal in df['animal'].unique():
+    sns.lineplot(
+        x='cell_type', y='cosine_similarity',
+        data=df[df.animal == animal],
+        errorbar=None, color='dimgray', linewidth=2, alpha=0.5, ax=ax
+    )
+
+# --- Post hoc tests with Bonferroni correction ---
+cell_order = order
+pairs = list(combinations(cell_order, 2))
+raw_pvals = []
+
+# First, collect all raw p-values
+for grp1, grp2 in pairs:
+    data1 = df[df['cell_type'] == grp1]['cosine_similarity']
+    data2 = df[df['cell_type'] == grp2]['cosine_similarity']
+    stat, pval = scipy.stats.ranksums(data1, data2)  # ranksums = Wilcoxon rank-sum test
+    raw_pvals.append(pval)
+    print(f"{grp1} vs {grp2}: raw p = {pval:.3e}")
+    
+# Apply Bonferroni correction
+n_comparisons = len(pairs)
+corrected_pvals = [min(p * n_comparisons, 1.0) for p in raw_pvals]
+
+# Plot significance lines and stars
+y_offset = 0.05
+max_y = df['cosine_similarity'].max()
+fs = 24  # font size for stars
+
+for i, ((grp1, grp2), pval_corr) in enumerate(zip(pairs, corrected_pvals)):
+    x1, x2 = cell_order.index(grp1), cell_order.index(grp2)
+    y = max_y + (i - 1) * y_offset
+
+    # Draw connecting line
+    ax.plot([x1, x1, x2, x2], [y - y_offset/2, y, y, y - y_offset/2], lw=1.5, color='k')
+
+    # Add star annotation
+    ii = (x1 + x2) / 2
+    if pval_corr < 0.001:
+        ax.text(ii, y + 0.002, "***", ha='center', fontsize=fs)
+    elif pval_corr < 0.01:
+        ax.text(ii, y + 0.002, "**", ha='center', fontsize=fs)
+    elif pval_corr < 0.05:
+        ax.text(ii, y + 0.003, "*", ha='center', fontsize=fs)
+
+ax.set_xlabel('')
+ax.set_ylabel(metric)
+ax.set_title('Correct vs. incorrect')
+
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'correct_v_incorrect_cs.svg'))
+#%%
+# vs. pre v post averaged
+
+plt.rc('font', size=16)
+df = pd.DataFrame()
+cdf = conddf.copy()
+cdf = cdf[(cdf.animals!='e217') & (cdf.optoep.values<2)]        
+
+df['cosine_similarity'] = cs
+bound = np.pi/4
+df['cell_type'] = ['All Pre' if (xx<0) else 'All Post' for xx in com]
+
+df['com'] = com
+
+test = []
+for ii in range(len(css)):
+    if len(css[ii])>0:
+        test.append([cdf.animals.values[ii]]*len(np.nanmean(css[ii],axis=0)))
+
+df['animal'] = np.concatenate(test)
+from itertools import combinations
+order = ['All Pre', 'All Post']
+s=10
 df = df.groupby(['animal', 'cell_type']).mean(numeric_only=True)
 fig,ax = plt.subplots(figsize = (3,5))
 sns.boxplot(x='cell_type', y='cosine_similarity', data=df, fill=False, color='peru',
-        order=['Pre', 'Post', 'Far'])
+        order=order,linewidth=2)
 sns.stripplot(x='cell_type', y='cosine_similarity', data=df, s=s, color='peru',alpha=0.7,
-        order=['Pre', 'Post', 'Far'])
+        order=order)
 ax.spines[['top','right']].set_visible(False)
 df = df.reset_index()
 
@@ -151,41 +259,52 @@ for animal in df['animal'].unique():
         errorbar=None, color='dimgray', linewidth=2, alpha=0.7, ax=ax
     )
 
-# --- Post hoc t-tests and annotation ---
-cell_order = ['Pre', 'Post', 'Far']
+# --- Post hoc tests with Bonferroni correction ---
+cell_order = order
 pairs = list(combinations(cell_order, 2))
-y_offset = 0.05  # vertical spacing between annotation lines
+raw_pvals = []
+
+# First, collect all raw p-values
+for grp1, grp2 in pairs:
+    data1 = df[df['cell_type'] == grp1]['cosine_similarity']
+    data2 = df[df['cell_type'] == grp2]['cosine_similarity']
+    stat, pval = scipy.stats.ranksums(data1, data2)  # ranksums = Wilcoxon rank-sum test
+    raw_pvals.append(pval)
+    print(f"{grp1} vs {grp2}: raw p = {pval:.3e}")
+    
+# Apply Bonferroni correction
+n_comparisons = len(pairs)
+corrected_pvals = [min(p * n_comparisons, 1.0) for p in raw_pvals]
+
+# Plot significance lines and stars
+y_offset = 0.05
 max_y = df['cosine_similarity'].max()
 fs = 24  # font size for stars
 
-for i, (grp1, grp2) in enumerate(pairs):
-    data1 = df[df['cell_type'] == grp1]['cosine_similarity']
-    data2 = df[df['cell_type'] == grp2]['cosine_similarity']
-    stat, pval = scipy.stats.ranksums(data1, data2)  # paired t-test
-    print(f"{grp1} vs {grp2}: p = {pval:.3e}")
-    
+for i, ((grp1, grp2), pval_corr) in enumerate(zip(pairs, corrected_pvals)):
     x1, x2 = cell_order.index(grp1), cell_order.index(grp2)
-    y = max_y + (i-1) * y_offset
+    y = max_y + (i - 1) * y_offset
 
-    # Draw the line
+    # Draw connecting line
     ax.plot([x1, x1, x2, x2], [y - y_offset/2, y, y, y - y_offset/2], lw=1.5, color='k')
 
-    # Add star annotation based on p-value
+    # Add star annotation
     ii = (x1 + x2) / 2
-    if pval < 0.001:
+    if pval_corr < 0.001:
         ax.text(ii, y + 0.002, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
+    elif pval_corr < 0.01:
         ax.text(ii, y + 0.002, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
+    elif pval_corr < 0.05:
         ax.text(ii, y + 0.003, "*", ha='center', fontsize=fs)
+
 ax.set_xlabel('')
 ax.set_ylabel(metric)
-ax.set_title('Correct vs. incorrect tuning curves')
+ax.set_title('Correct vs. incorrect')
 
 plt.tight_layout()
 plt.show()
 #%%
-
+###################### NOT RELEVANT FOR THIS ######################
 # get examples of correct vs. fail
 # take the first epoch and first cell?
 # v take all cells

@@ -2138,9 +2138,6 @@ def reward_act_allrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     com_goal_postrew = com_goal # ALL REW CELLS
-    # [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-    #     xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
-    #     xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal]
     #only get perms with non zero cells
     perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
     rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
@@ -2154,10 +2151,9 @@ def reward_act_allrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-
     assert sum([len(xx) for xx in com_goal])>=sum([len(xx) for xx in com_goal_postrew])
     epoch_perm.append([perm,rz_perm]) 
-    cs = [[WessersteinDist(tcs_correct[i,j],tcs_fail[i,j])
+    cs = [[cosine_sim_ignore_nan(tcs_correct[i,j],tcs_fail[i,j])
         for i in range(tcs_correct.shape[0])] for j in goal_cells]
     cs=np.array(cs).T # ep x cells
     # get mean tuning curve correct vs. incorrect

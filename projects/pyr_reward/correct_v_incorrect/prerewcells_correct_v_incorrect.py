@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"]=10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,reward_act_prerew
+from projects.pyr_reward.rewardcell import get_radian_position,reward_act_prerew
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -68,104 +68,129 @@ pdf.close()
 # take the first epoch and first cell?
 # v take all cells
 # per day per animal
-animals =[xx for ii,xx in enumerate(conddf.animals.values) if (xx!='e217') & (conddf.optoep.values[ii]<2)]
 
-plt.rc('font', size=16) 
-dff_correct_per_an = []; dff_fail_per_an = [] # per cell, av epoch
-for animal in np.unique(animals):
-        dff_correct=[]; dff_fail=[]
-        tcs_correct = []
-        for ii,tcs_corr in enumerate(tcs_correct_all):
-                if animals[ii]==animal:
-                        if tcs_corr.shape[1]>0:
-                                # all cells
-                                # take average of epochs
-                                tc= np.vstack(np.nanmean(tcs_corr[:,:,:],axis=0))
-                                # tc = tcs_corr[0,0,:]
-                                tcs_correct.append(tc)
-                                # pre vs. post reward
-                                #pre
-                                # dff_correct.append(np.quantile(tc[:,int(bins/3):int(bins/2)],.9,axis=1))
-                                #posts
-                                dff_correct.append(np.quantile(tc[:,int(bins/2):],.9,axis=1))
+# v take all cells
+# per day per animal
+# settings
+plt.rc('font', size=24) 
+animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') & (conddf.optoep.values[ii] < 2)]
+animals_test = np.unique(animals)
+animals_test=['e201']
+# option to pick 'pre' or 'post' reward activity
+activity_window = 'post'  # options: 'pre' or 'post'
 
+dff_correct_per_an = []
+dff_fail_per_an = []
 
-        tcs_fail = []
-        for ii,tcs_f in enumerate(tcs_fail_all):
-                if animals[ii]==animal:
-                        if tcs_f.shape[1]>0:
-                                # tc = tcs_f[0,0,:]
-                                # all cells
-                                tc= np.vstack(np.nanmean(tcs_f[:,:,:],axis=0))
-                                if np.sum(np.isnan(tc))==0:
-                                        tcs_fail.append(tc)
-                                        # pre
-                                        # dff_fail.append(np.quantile(tc[:,int(bins/3):int(bins/2)],.9,axis=1))
-                                        # post
-                                        dff_fail.append(np.quantile(tc[:,int(bins/2):],.9,axis=1))
-        dff_correct_per_an.append(dff_correct)
-        dff_fail_per_an.append(dff_fail)
-        fig, axes=plt.subplots(ncols=2, nrows=2,sharex=True,figsize=(8,15), 
-                               height_ratios=[3.5,1])
-        axes=axes.flatten()
-        ax=axes[0]
-        ax.imshow(np.vstack(tcs_correct)**.6,vmin=0,vmax=1.5)
-        ax.axvline(45,color='w', linestyle='--')
-        bins=90
-        ax.set_xticks(np.arange(0,bins,30))
-        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
-        ax.set_ylabel('Epochs')
+for animal in animals_test:
+    dff_correct = []
+    dff_fail = []
+    tcs_correct = []
+    bins = 90
+
+    for ii, tcs_corr in enumerate(tcs_correct_all):
+        if animals[ii] == animal and tcs_corr.shape[1] > 0:
+            tc = np.vstack(np.nanmean(tcs_corr, axis=0))
+            tcs_correct.append(tc)
+            # choose pre or post reward
+            if activity_window == 'pre':
+                dff_correct.append(np.quantile(tc[:, int(bins/3):int(bins/2)], .9, axis=1))
+            else:
+                dff_correct.append(np.quantile(tc[:, int(bins/2):], .9, axis=1))
+
+    tcs_fail = []
+    for ii, tcs_f in enumerate(tcs_fail_all):
+        if animals[ii] == animal and tcs_f.shape[1] > 0:
+            tc = np.vstack(np.nanmean(tcs_f, axis=0))
+            tcs_fail.append(tc)
+            if np.sum(np.isnan(tc)) == 0:                
+                if activity_window == 'pre':
+                    dff_fail.append(np.quantile(tc[:, int(bins/3):int(bins/2)], .9, axis=1))
+                else:
+                    dff_fail.append(np.quantile(tc[:, int(bins/2):], .9, axis=1))
+
+    dff_correct_per_an.append(dff_correct)
+    dff_fail_per_an.append(dff_fail)
+
+    # plotting
+    fig, axes = plt.subplots(
+        ncols=3, nrows=2, figsize=(10, 12),
+        gridspec_kw={'height_ratios': [2, 1], 'width_ratios':[1, 1, 0.05]},
+        constrained_layout=True
+    )
+    axes = axes.flatten()
+
+    # --- Heatmaps
+    ax = axes[0]
+    tc = np.vstack(tcs_correct)
+    vmin = 0
+    vmax = np.nanquantile(tc, 0.99)  # 95th percentile
+    peak_bins = np.argmax(tc, axis=1)
+    sort_idx = np.argsort(peak_bins)
+    im = ax.imshow(tc[sort_idx]**.6, vmin=vmin, vmax=vmax, aspect='auto')
+    ax.axvline(bins//2, color='w', linestyle='--')
+    ax.set_xticks(np.arange(0, bins, 30))
+    ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi), 2), rotation=45)
+    ax.set_ylabel('Cells (sorted)')
+    ax.set_xlabel('Reward-relative distance ($\Theta$)')
+    ax.set_title(f'{animal}\nCorrect Trials')
+
+    try:
+        ax = axes[1]
+        tc = np.vstack(tcs_fail)
+        # sort by correct cells
+        im2 = ax.imshow(tc[sort_idx]**.6, vmin=vmin, vmax=vmax, aspect='auto')
+        ax.axvline(bins//2, color='w', linestyle='--')
+        ax.set_xticks(np.arange(0, bins, 30))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi), 2))
+        ax.set_title('Incorrect Trials')
+    except Exception as e:
+        print(f"No failed trials for {animal}: {e}")
+
+    # --- Colorbar
+    cbar_ax = axes[2]
+    fig.colorbar(im, cax=cbar_ax)
+    cbar_ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
+    cbar_ax.yaxis.set_label_position('left')
+    cbar_ax.yaxis.tick_left()
+    cbar.set_ticks([vmin, vmax])
+    cbar.set_ticklabels([f"{vmin:.2f}", f"{vmax:.2f}"])
+
+    # --- Mean traces
+    ax = axes[3]
+    m = np.nanmean(np.vstack(tcs_correct), axis=0)
+    vmin = 0
+    vmax = np.nanmax(m)+np.nanmax(m)/2  # 95th percentile
+    sem = scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit')
+    ax.plot(m, color='seagreen')
+    ax.fill_between(np.arange(m.size), m - sem, m + sem, color='seagreen', alpha=0.5)
+    ax.axvline(bins//2, color='k', linestyle='--')
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_ylabel('$\Delta$ F/F')
+    ax.set_ylim(vmin, vmax)
+    ax.set_title('Correct Mean')
+
+    try:
+        ax = axes[4]
+        m = np.nanmean(np.vstack(tcs_fail), axis=0)
+        sem = scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit')
+        ax.plot(m, color='firebrick')
+        ax.fill_between(np.arange(m.size), m - sem, m + sem, color='firebrick', alpha=0.5)
+        ax.axvline(bins//2, color='k', linestyle='--')
+        ax.set_xticks(np.arange(0, bins, 30))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi), 2))
+        ax.spines[['top', 'right']].set_visible(False)
         ax.set_xlabel('Reward-relative distance ($\Theta$)')
-        ax.set_title(f'{animal}\nPre-reward cells\nCorrect')
-        try: # if no fails
-                ax=axes[1]
-                im=ax.imshow(np.vstack(tcs_fail)**.6,vmin=0,vmax=1.5)
-                ax.axvline(45,color='w', linestyle='--')
-                ax.set_xticks(np.arange(0,bins,30))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
-                ax.set_title('Incorrect')
-        except Exception as e:
-                print(e)
-        cbar=fig.colorbar(im, ax=ax)
-        cbar.ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
-
-        # mean 
-        ax=axes[2]
-        m = np.nanmean(np.vstack(tcs_correct),axis=0)
-        ax.plot(m, color='seagreen')
-        ax.fill_between(
-        range(0, np.vstack(tcs_correct).shape[1]),
-        m - scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit'),
-        m + scipy.stats.sem(np.vstack(tcs_correct), axis=0, nan_policy='omit'),
-        alpha=0.5, color='seagreen'
-        )             
-        ax.axvline(45,color='k', linestyle='--')
-        ax.spines[['top','right']].set_visible(False)
-        ax.set_title('Correct')
         ax.set_ylabel('$\Delta$ F/F')
+        ax.set_ylim(vmin, vmax)
+        ax.set_title('Incorrect Mean')
+    except Exception as e:
+        print(f"No failed trials mean plot for {animal}: {e}")
 
-        bins=90
-        try:
-                ax=axes[3]
-                m = np.nanmean(np.vstack(tcs_fail),axis=0)
-                ax.plot(m, color='firebrick')
-                ax.fill_between(
-                range(0, np.vstack(tcs_fail).shape[1]),
-                m - scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit'),
-                m + scipy.stats.sem(np.vstack(tcs_fail), axis=0, nan_policy='omit'),
-                alpha=0.5, color='firebrick'
-                )             
-                ax.axvline(45,color='k', linestyle='--')
-                ax.set_xticks(np.arange(0,bins,30))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2),rotation=45)
+    axes[5].axis('off')  # turn off the last unused axis (bottom-right)
+    fig.suptitle('Far pre-reward cells')
+    plt.savefig(os.path.join(savedst, f'{animal}_pre_rew_correctvfail.svg'),bbox_inches='tight')
 
-                ax.spines[['top','right']].set_visible(False)
-
-                ax.set_xlabel('Reward-relative distance ($\Theta$)')
-                ax.set_title('Incorrect')
-        except Exception as e:
-                print(e)
-# plt.savefig(os.path.join(savedst, 'pre_rew_correctvfail_mean.svg'),bbox_inches='tight')
 #%%
 # recalculate tc
 animals_unique = np.unique(animals)

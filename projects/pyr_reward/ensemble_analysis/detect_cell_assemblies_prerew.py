@@ -151,9 +151,11 @@ for ii in range(len(conddf)):
                 if len(cells) < 3:
                     continue  # skip small assemblies
                 # minimum peak of cell in ensemble must be > 
-                peak = np.nanmin(np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1))
-                if peak < .05: # remove low firing cells?
-                    continue
+                peak = peak = np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1)
+                if sum(peak < .05)>0: # remove low firing cells?
+                    # remove cell from list
+                    cells = np.array(cells)[peak>.05]
+                    # continue
                 cell_ids = set(goal_all[cells])
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
@@ -259,7 +261,6 @@ for g1, g2 in comparisons:
 
 # Bonferroni correction
 reject, corrected_pvals, _, _ = multipletests(raw_pvals, method='bonferroni')
-
 # Plot
 s=10
 plt.figure(figsize=(3,5))
@@ -293,21 +294,20 @@ ax.set_title('Pre-reward ensembles', pad=50)
 plt.tight_layout()
 plt.show()
 #%%
-plt.rc('font', size=16)
+plt.rc('font', size=20)
 # compare to post rew
 df_post = pd.read_csv(r'Z:\condition_df\postrew_ensemble.csv')
 df_post['cell_type'] = ['Post-reward']*len(df_post)
 df_pre = df_clean
 df_pre['cell_type'] = ['Pre-reward']*len(df_pre)
-s=7
+# palette = seaborn Dark2
+s=10
 df_all = pd.concat([df_pre, df_post])
 plt.figure(figsize=(4,4))
 ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, errorbar='se',
-            fill=False, palette = 'dark')
+            fill=False, palette = 'Dark2')
 sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, dodge=True,
-            s=s,alpha=0.7,palette = 'dark')
-
-
+            s=s,alpha=0.7,palette = 'Dark2')
 # make lines
 df_all = df_all.reset_index()
 ax.spines[['top','right']].set_visible(False)
@@ -336,7 +336,7 @@ for i, epoch in enumerate(epochs):
     post_vals = data_epoch[data_epoch.cell_type == 'Post-reward']['cosine_sim_across_ep'].dropna()
     
     # t-test
-    stat, pval = scipy.stats.ttest_rel(pre_vals, post_vals)
+    stat, pval = scipy.stats.wilcoxon(pre_vals, post_vals)
 
     # Plot annotation
     x = i
