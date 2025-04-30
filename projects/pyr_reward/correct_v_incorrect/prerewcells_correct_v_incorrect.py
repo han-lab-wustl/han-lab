@@ -68,14 +68,11 @@ pdf.close()
 # take the first epoch and first cell?
 # v take all cells
 # per day per animal
-
-# v take all cells
-# per day per animal
 # settings
 plt.rc('font', size=24) 
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') & (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
-animals_test=['e201']
+# animals_test=['z9']
 # option to pick 'pre' or 'post' reward activity
 activity_window = 'post'  # options: 'pre' or 'post'
 
@@ -124,7 +121,7 @@ for animal in animals_test:
     ax = axes[0]
     tc = np.vstack(tcs_correct)
     vmin = 0
-    vmax = np.nanquantile(tc, 0.99)  # 95th percentile
+    vmax = np.nanquantile(tc, 0.999)  # 95th percentile
     peak_bins = np.argmax(tc, axis=1)
     sort_idx = np.argsort(peak_bins)
     im = ax.imshow(tc[sort_idx]**.6, vmin=vmin, vmax=vmax, aspect='auto')
@@ -149,7 +146,7 @@ for animal in animals_test:
 
     # --- Colorbar
     cbar_ax = axes[2]
-    fig.colorbar(im, cax=cbar_ax)
+    cbar = fig.colorbar(im, cax=cbar_ax)
     cbar_ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
     cbar_ax.yaxis.set_label_position('left')
     cbar_ax.yaxis.tick_left()
@@ -188,8 +185,8 @@ for animal in animals_test:
         print(f"No failed trials mean plot for {animal}: {e}")
 
     axes[5].axis('off')  # turn off the last unused axis (bottom-right)
-    fig.suptitle('Far pre-reward cells')
-    plt.savefig(os.path.join(savedst, f'{animal}_pre_rew_correctvfail.svg'),bbox_inches='tight')
+    fig.suptitle('Pre-reward cells')
+#     plt.savefig(os.path.join(savedst, f'{animal}_pre_rew_correctvfail.svg'),bbox_inches='tight')
 
 #%%
 # recalculate tc
@@ -215,7 +212,7 @@ sns.barplot(x='trial_type', y='mean_dff', data=bigdf,hue='trial_type',
         fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'})
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Post-reward mean tuning curve ($\Delta F/F$)')
+ax.set_ylabel('Post-reward mean $\Delta F/F$')
 ax.set_xlabel('Trial type')
 cor = bigdf.loc[(bigdf.trial_type=='correct'), 'mean_dff']
 incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_dff']

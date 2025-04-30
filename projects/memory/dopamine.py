@@ -411,7 +411,7 @@ def get_rewzones(rewlocs, gainf):
             rewzonenum[kk] = 1  # Reward zone 1
         elif 101 * gainf <= loc <= 120 * gainf:
             rewzonenum[kk] = 2  # Reward zone 2
-        elif loc >= 135 * gainf:
+        else:
             rewzonenum[kk] = 3  # Reward zone 3
             
     return rewzonenum

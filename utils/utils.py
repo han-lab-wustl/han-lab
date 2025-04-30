@@ -424,3 +424,4 @@ if __name__ == "__main__":
     dst=r'Y:\analysis\fmats'
     animal='z14'
     # copyfmats(src,dst,animal,days=[32],combined=True)
+    

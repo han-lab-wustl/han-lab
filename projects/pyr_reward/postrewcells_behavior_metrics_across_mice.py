@@ -32,11 +32,14 @@ with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 #%%
 # test
+# just one mouse as eg.
+an='201'
 radian_alignment=radian_alignment_saved
 dff_per_an_day_per_trial_type = {}
 for k,v in radian_alignment.items():
     iind=k    
     animal,day = k.split('_')[0],k.split('_')[1]  # Extracts '012'
+    # if animal==an:
     day=int(day)
     if animal=='e145' or animal=='e139': pln=2 
     else: pln=0
@@ -183,6 +186,7 @@ lick_rewstops_trials_per_an =[[[yy[2] for yy in v[0]] for k,v in dff_per_an_day_
 
 #%%
 # plot
+dst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 for an_eg in range(len(animals)):
     try:
         all_cells = []
@@ -303,32 +307,40 @@ for an_eg in range(len(animals)):
             for j in i: # sessions?
                 all_cells.append(j) # average across cells
         rewstops_trials_cells = np.hstack(all_cells)
+        def moving_average(x, window_size):
+            return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 
         # per animal average
         ax=axes[2]
         m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
+        sem = np.array([moving_average(s,window_size=5) for s in nrewstops_wo_licks_trials_cells])
+        m=moving_average(m, window_size=5)
         ax.plot(m,color='sienna',label=f'Unrewarded stops without licks')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
-            m - scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
-            m + scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
+            m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
+            m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             alpha=0.5,color='sienna'
             )                    
 
         m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)
+        sem = np.array([moving_average(s,window_size=5) for s in nrewstops_w_licks_trials_cells])
+        m=moving_average(m, window_size=5)
         ax.plot(m,color='navy',label='Unrewarded stops with licks')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
-            m - scipy.stats.sem(nrewstops_w_licks_trials_cells, axis=1, nan_policy='omit'),
-            m + scipy.stats.sem(nrewstops_w_licks_trials_cells, axis=1, nan_policy='omit'),
+            m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
+            m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             alpha=0.5,color='navy'
             )                    
         m=np.nanmean(rewstops_trials_cells,axis=1)
+        sem = np.array([moving_average(s,window_size=5) for s in rewstops_trials_cells])
+        m=moving_average(m, window_size=5)
         ax.plot(m,color='darkgreen',label='Rewarded stops')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
-            m - scipy.stats.sem(rewstops_trials_cells, axis=1, nan_policy='omit'),
-            m + scipy.stats.sem(rewstops_trials_cells, axis=1, nan_policy='omit'),
+            m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
+            m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             alpha=0.5,color='darkgreen'
             )                    
 
@@ -339,7 +351,7 @@ for an_eg in range(len(animals)):
         ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1,20))
         ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
         ax.legend()
-        
+        plt.savefig(os.path.join(dst, f'{animals[an_eg]}_postrew_stops.svg'),bbox_inches='tight')
     except:
         print(animals[an_eg])
 #%%
