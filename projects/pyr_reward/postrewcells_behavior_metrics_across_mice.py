@@ -30,10 +30,8 @@ goal_window_cm=20 # to search for rew cells
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-#%%
 # test
-# just one mouse as eg.
-an='201'
+# just one mouse as eg.?
 radian_alignment=radian_alignment_saved
 dff_per_an_day_per_trial_type = {}
 for k,v in radian_alignment.items():
@@ -187,6 +185,9 @@ lick_rewstops_trials_per_an =[[[yy[2] for yy in v[0]] for k,v in dff_per_an_day_
 #%%
 # plot
 dst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+def moving_average(x, window_size):
+    return np.convolve(x, np.ones(window_size)/window_size, mode='same')
+
 for an_eg in range(len(animals)):
     try:
         all_cells = []
@@ -307,8 +308,6 @@ for an_eg in range(len(animals)):
             for j in i: # sessions?
                 all_cells.append(j) # average across cells
         rewstops_trials_cells = np.hstack(all_cells)
-        def moving_average(x, window_size):
-            return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 
         # per animal average
         ax=axes[2]

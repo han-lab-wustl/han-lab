@@ -26,10 +26,8 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'pre_rew_assemblies.pdf')
+savepth = os.path.join(savedst, 'nonrew_assemblies.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-
-# %%
 
 #%%
 # initialize var
@@ -208,21 +206,24 @@ for ii in range(len(conddf)):
 pdf.close()
 
 # %%
-
-#%%
-from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
-from matplotlib import colors
-
 # look through all the assemblies
 df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
-an_plt = 'z9' # 1 eg animal
-an_day = 19
+df['p_cells_in_assemblies'] = p_rewcells_in_assemblies
+df['p_cells_in_assemblies'] = df['p_cells_in_assemblies'] *100
+ax = sns.histplot(x = 'p_cells_in_assemblies',data=df)
+
+from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
+from matplotlib import colors
+plt.rc('font', size=20) 
+# look through all the assemblies
+an_plt = 'e201' # 1 eg animal
+an_day = 52
 cs_all = []; num_epochs = []
 plt.close('all')
-plot = True
+plot = False
 for ii,ass in enumerate(assembly_cells_all_an):
-    if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
+    # if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
         print(f'{df.iloc[ii].animals}, {df.iloc[ii].days}')
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
@@ -240,18 +241,21 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     vmin = np.min(tcs)
                     vmax = np.max(tcs)
                     norm = colors.Normalize(vmin=vmin, vmax=vmax)
-                    if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                    if kk==0: 
+                        com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                        ax.set_ylabel('Reward cell ID #')
                     im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
                     ax.set_title(f'Epoch {kk+1}')
                     ax.axvline(bins/2, color='w', linestyle='--')
                 ax.set_xticks(np.arange(0,bins,30))
                 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
-                fig.suptitle(f'Pre-reward ensemble \n {df.iloc[ii].animals}, {df.iloc[ii].days} \n\
+                ax.set_xlabel('Reward-relative distance ($\Theta$)')
+                fig.suptitle(f'Non-reward ensemble \n {df.iloc[ii].animals}, {df.iloc[ii].days} \n\
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
                 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
                 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
-                if jj==0:
-                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_prerew_ensemble_eg.svg'),bbox_inches='tight')
+                if jj==2:
+                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_nonrew_ensemble_eg.svg'),bbox_inches='tight')
         cs_all.append(cs_per_ep)
         num_epochs.append(len(asm))
             # plt.figure()
@@ -263,8 +267,6 @@ df2['cosine_sim_across_ep'] = np.hstack([np.concatenate(xx) if len(xx)>0 else np
 df2['animals'] = np.concatenate([[df.iloc[ii].animals]*len(np.concatenate(xx)) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all)])
 df2['num_epochs'] =[2]*len(df2)
 
-df = conddf.copy()
-df = df[(df.animals!='e217') & (df.optoep.values<2)]
 df['num_epochs'] = num_epochs
 # df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
 df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all]
@@ -282,8 +284,6 @@ from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
 from statsmodels.stats.multitest import multipletests
-
-
 # Pairwise comparisons (Bonferroni)
 unique_groups = sorted(df_clean['num_epochs'].unique())
 group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_across_ep'] for group in unique_groups}
@@ -325,86 +325,7 @@ for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reje
     ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
     ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
 
-ax.set_title('Pre-reward ensembles', pad=50)
+ax.set_title('Non-reward ensembles', pad=50)
 plt.tight_layout()
 plt.show()
-#%%
-plt.rc('font', size=20)
-# compare to post rew
-df_post = pd.read_csv(r'Z:\condition_df\postrew_ensemble.csv')
-df_post['cell_type'] = ['Post-reward']*len(df_post)
-df_pre = df_clean
-df_pre['cell_type'] = ['Pre-reward']*len(df_pre)
-# palette = seaborn Dark2
-s=10
-df_all = pd.concat([df_pre, df_post])
-plt.figure(figsize=(4,6))
-ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, errorbar='se',
-            fill=False, palette = 'Dark2')
-sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, dodge=True,
-            s=s,alpha=0.7,palette = 'Dark2')
-# make lines
-df_all = df_all.reset_index()
-ax.spines[['top','right']].set_visible(False)
-
-# Plot individual lines per animal with x-axis offset
-offset = {'Pre-reward': -0.2, 'Post-reward': 0.2}
-for animal in df_all.animals.unique():
-    for cell_type in ['Pre-reward', 'Post-reward']:
-        df_sub = df_all[(df_all.animals == animal) & (df_all.cell_type == cell_type)]
-        if df_sub.empty:
-            continue
-        x_vals = df_sub.num_epochs + offset[cell_type]
-        ax.plot(x_vals-2, df_sub.cosine_sim_across_ep, color=sns.color_palette('dark')[['Pre-reward', 'Post-reward'].index(cell_type)],
-                alpha=0.3, linewidth=2)
-# Get unique epochs
-epochs = sorted(df_all.num_epochs.unique())
-ymax = .6
-y_offsets = [ymax + (i * 0.03) for i in range(len(epochs))]
-
-fs = 40  # font size for stars
-pshift = 0.08  # p-value label offset
-
-for i, epoch in enumerate(epochs):
-    data_epoch = df_all[df_all.num_epochs == epoch]
-    pre_vals = data_epoch[data_epoch.cell_type == 'Pre-reward']['cosine_sim_across_ep'].dropna()
-    post_vals = data_epoch[data_epoch.cell_type == 'Post-reward']['cosine_sim_across_ep'].dropna()
-    
-    # t-test
-    stat, pval = scipy.stats.ranksums(pre_vals, post_vals)
-
-    # Plot annotation
-    x = i
-    y = y_offsets[i]
-    if pval < 0.001:
-        ax.text(x, y, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
-        ax.text(x, y, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
-        ax.text(x, y, "*", ha='center', fontsize=fs)
-
-    # Show p-value (optional)
-    ax.text(x, y + pshift, f'p={pval:.2g}', ha='center', fontsize=12, rotation=45)
-    
-    # pre-reward comp
-for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reject)):
-    x1, x2 = int(g1)-2, int(g2)-2
-    y = max_y + 0.05 * (i + 1)
-    ax.plot([x1, x1, x2, x2], [y, y+0.01, y+0.01, y], lw=1.5, c='k')
-
-    if pval < 0.001:
-        star = '***'
-    elif pval < 0.01:
-        star = '**'
-    elif pval < 0.05:
-        star = '*'
-    else: star=''
-
-    ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
-    ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
-
-ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), title='Cell Type')
-ax.set_ylabel('Mean ensemble cosine similarity')
-ax.set_xlabel('# of reward loc. switches')
-
-plt.savefig(os.path.join(savedst, 'ensemble_cosine_sim_pre_v_post.svg'))
+df_clean.to_csv(r'Z:\condition_df\nonrew_ensemble.csv', index=None)
