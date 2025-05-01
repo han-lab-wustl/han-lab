@@ -38,7 +38,7 @@ epoch_perm=[]
 assembly_cells_all_an=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-ii=149
+ii=152
 
 day = conddf.days.values[ii]
 animal = conddf.animals.values[ii]
@@ -127,7 +127,7 @@ com_goal_postrew = com_goal
 perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
 rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
 com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
-plt.rc('font', size=16)
+plt.rc('font', size=20)
 #%%
 from matplotlib import colors
 tcs_correct_r = tcs_correct[:,np.unique(np.concatenate(com_goal))]
@@ -172,13 +172,24 @@ plt.savefig(os.path.join(savedst, 'tuning_curve_correct_v_incorrect_eg.svg'),bbo
 tcs_correct_r = tcs_correct[:,np.unique(np.concatenate(com_goal))]
 coms_correct_r = coms_correct[:,np.unique(np.concatenate(com_goal))]
 fig, axes = plt.subplots(ncols=len(tcs_correct),
-                    figsize=(10, 5),sharex=True, sharey=True)
+                    figsize=(12, 7),sharex=True, sharey=True)
+
 # Plot each subplot with shared normalization
-gamma = .4
 for kk, tcs in enumerate(tcs_correct_r):
     ax = axes[kk]
-    im = ax.imshow(tcs[np.argsort(coms_correct_r[0])] ** gamma, aspect='auto', norm=norm)
-    ax.set_title(f'Correct trials, Epoch {kk + 1}')
+    rows = np.argsort(coms_correct_r[0])
+    tc_sorted = tcs[rows]
+    # 2) per-row min–max normalization
+    #    subtract row min, divide by (row max − row min)
+    row_min = np.nanmin(tc_sorted,axis=1, keepdims=True)
+    row_max = np.nanmax(tc_sorted,axis=1, keepdims=True)
+    tc_norm = (tc_sorted - row_min) / (row_max - row_min)
+    nan_row_mask = np.isnan(tc_norm).any(axis=1)   # True for rows with at least one NaN
+    tc_norm[nan_row_mask, :] = 0
+    # 3) apply gamma
+    tc_norm_gamma = tc_norm
+    im = ax.imshow(tc_norm_gamma, aspect='auto')
+    ax.set_title(f'Epoch {kk + 1} \n\n Rew. Loc.= {np.round((rewlocs[kk]),1)} cm \n Correct trials')
     ax.axvline(bins / 2, color='w', linestyle='--')
     # draw line before and after rew at 'near' threshold
     line = (np.pi/4)/(2*np.pi/track_length)
@@ -193,7 +204,7 @@ for kk, tcs in enumerate(tcs_correct_r):
 ax.set_xticks(np.arange(0,bins,30))
 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
+fig.colorbar(im, cax=cbar_ax, label=f'Norm. $\Delta$ F/F')
 
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
 plt.savefig(os.path.join(savedst, 'tuning_curve_correct_eg.svg'),bbox_inches='tight')

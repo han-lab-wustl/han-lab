@@ -410,7 +410,7 @@ def compresssbx_move_to_archive(sbxsrc, dst, compress=True):
             print(f"\n*** no sbx in {fl}***")
     
 if __name__ == "__main__":
-    usb = r"G:\2023-2024_ZD_VR"
+    usb = r"G:\2023-2026_ZD_VR"
     drives = [r'Y:\halo_grabda',r'Y:\halo_grabda', r'X:\vipcre',
               r'X:\vipcre']#,
             # r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda']
@@ -424,4 +424,3 @@ if __name__ == "__main__":
     dst=r'Y:\analysis\fmats'
     animal='z14'
     # copyfmats(src,dst,animal,days=[32],combined=True)
-    

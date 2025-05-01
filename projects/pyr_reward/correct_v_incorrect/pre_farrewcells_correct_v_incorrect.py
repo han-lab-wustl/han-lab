@@ -76,9 +76,9 @@ pdf.close()
 plt.rc('font', size=24) 
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') & (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
-animals_test=['e201']
+# animals_test=['e201']
 # option to pick 'pre' or 'post' reward activity
-activity_window = 'post'  # options: 'pre' or 'post'
+activity_window = 'pre'  # options: 'pre' or 'post'
 
 dff_correct_per_an = []
 dff_fail_per_an = []
@@ -98,6 +98,7 @@ for animal in animals_test:
                 dff_correct.append(np.quantile(tc[:, int(bins/3):int(bins/2)], .9, axis=1))
             else:
                 dff_correct.append(np.quantile(tc[:, int(bins/2):], .9, axis=1))
+            # dff_correct.append(np.quantile(tc[:,:], .9, axis=1))
 
     tcs_fail = []
     for ii, tcs_f in enumerate(tcs_fail_all):
@@ -109,6 +110,7 @@ for animal in animals_test:
                     dff_fail.append(np.quantile(tc[:, int(bins/3):int(bins/2)], .9, axis=1))
                 else:
                     dff_fail.append(np.quantile(tc[:, int(bins/2):], .9, axis=1))
+                # dff_fail.append(np.quantile(tc[:, :], .9, axis=1))
 
     dff_correct_per_an.append(dff_correct)
     dff_fail_per_an.append(dff_fail)
@@ -150,7 +152,7 @@ for animal in animals_test:
 
     # --- Colorbar
     cbar_ax = axes[2]
-    fig.colorbar(im, cax=cbar_ax)
+    cbar = fig.colorbar(im, cax=cbar_ax)
     cbar_ax.set_ylabel('$\Delta$ F/F', rotation=270, labelpad=15)
     cbar_ax.yaxis.set_label_position('left')
     cbar_ax.yaxis.tick_left()
@@ -190,7 +192,7 @@ for animal in animals_test:
 
     axes[5].axis('off')  # turn off the last unused axis (bottom-right)
     fig.suptitle('Far pre-reward cells')
-    plt.savefig(os.path.join(savedst, f'{animal}_pre_rew_correctvfail.svg'),bbox_inches='tight')
+    # plt.savefig(os.path.join(savedst, f'{animal}_pre_rew_correctvfail.svg'),bbox_inches='tight')
 
 #%%
 # recalculate tc
@@ -240,6 +242,7 @@ elif pval < 0.05:
         plt.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
-ax.set_title('Far-reward cells',pad=50)
+ax.set_title('Far pre-reward cells',pad=50)
 
+df.to_csv(r'Z:\condition_df\farpre_trialtype.csv')
 # plt.savefig(os.path.join(savedst, 'farrew_trial_type.svg'),bbox_inches='tight')

@@ -72,7 +72,7 @@ pdf.close()
 plt.rc('font', size=24) 
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') & (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
-animals_test=['e201']
+# animals_test=['e201']
 # option to pick 'pre' or 'post' reward activity
 activity_window = 'post'  # options: 'pre' or 'post'
 
@@ -186,7 +186,7 @@ for animal in animals_test:
 
     axes[5].axis('off')  # turn off the last unused axis (bottom-right)
     fig.suptitle('Post-reward cells')
-    plt.savefig(os.path.join(savedst, f'{animal}_post_rew_correctvfail.svg'),bbox_inches='tight')
+    # plt.savefig(os.path.join(savedst, f'{animal}_post_rew_correctvfail.svg'),bbox_inches='tight')
 
 #%%
 
@@ -238,5 +238,6 @@ elif pval < 0.05:
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
 ax.set_title('Post-reward cells',pad=50)
+df.to_csv(r'Z:\condition_df\post_trialtype.csv')
 
-plt.savefig(os.path.join(savedst, 'postrew_trial_type.svg'),bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'postrew_trial_type.svg'),bbox_inches='tight')

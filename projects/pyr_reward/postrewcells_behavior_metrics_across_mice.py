@@ -218,7 +218,7 @@ for an_eg in range(len(animals)):
             m - scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
             m + scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
             alpha=0.5,color='sienna'
-            )                    
+            ) 
 
         m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)
         ax.plot(m,color='navy',label='Unrewarded stops with licks')
@@ -314,18 +314,18 @@ for an_eg in range(len(animals)):
         m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
         sem = np.array([moving_average(s,window_size=5) for s in nrewstops_wo_licks_trials_cells])
         m=moving_average(m, window_size=5)
-        ax.plot(m,color='sienna',label=f'Unrewarded stops without licks')
+        ax.plot(m,color='sienna',label=f'Unrewarded stops without licks\n {sem.shape[1]} trials')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             alpha=0.5,color='sienna'
-            )                    
+            )                 
 
         m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)
         sem = np.array([moving_average(s,window_size=5) for s in nrewstops_w_licks_trials_cells])
         m=moving_average(m, window_size=5)
-        ax.plot(m,color='navy',label='Unrewarded stops with licks')
+        ax.plot(m,color='navy',label=f'Unrewarded stops with licks\n {sem.shape[1]} trials')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
@@ -335,7 +335,7 @@ for an_eg in range(len(animals)):
         m=np.nanmean(rewstops_trials_cells,axis=1)
         sem = np.array([moving_average(s,window_size=5) for s in rewstops_trials_cells])
         m=moving_average(m, window_size=5)
-        ax.plot(m,color='darkgreen',label='Rewarded stops')
+        ax.plot(m,color='darkgreen',label=f'Rewarded stops\n{sem.shape[1]} trials')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),

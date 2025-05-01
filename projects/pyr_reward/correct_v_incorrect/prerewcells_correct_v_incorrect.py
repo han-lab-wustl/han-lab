@@ -74,7 +74,7 @@ animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') &
 animals_test = np.unique(animals)
 # animals_test=['z9']
 # option to pick 'pre' or 'post' reward activity
-activity_window = 'post'  # options: 'pre' or 'post'
+activity_window = 'pre'  # options: 'pre' or 'post'
 
 dff_correct_per_an = []
 dff_fail_per_an = []
@@ -199,92 +199,105 @@ df['trial_type']=np.concatenate([['correct']*len(correct),['incorrect']*len(inco
 ancorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_correct_per_an)])
 anincorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_fail_per_an)])
 df['animal'] = np.concatenate([ancorr, anincorr])
-bigdf=df
+df['cell_type'] = ['Pre']*len(df)
+df_post = pd.read_csv(r'Z:\condition_df\post_trialtype.csv')
+df_post['cell_type'] = ['Post']*len(df_post)
+df_farpost = pd.read_csv(r'Z:\condition_df\farpost_trialtype.csv')
+df_farpost['cell_type'] = ['Far post']*len(df_farpost)
+df_farpre = pd.read_csv(r'Z:\condition_df\farpre_trialtype.csv')
+df_farpre['cell_type'] = ['Far pre']*len(df_farpre)
+
+bigdf=pd.concat([df,df_post,df_farpost,df_farpre])
+cell_order = ['Pre', 'Post', 'Far pre', 'Far post']
+
 # average
-bigdf=bigdf.groupby(['animal', 'trial_type']).mean(numeric_only=True)
+bigdf=bigdf.groupby(['animal', 'trial_type', 'cell_type']).mean(numeric_only=True)
 bigdf=bigdf.reset_index()
 s=13
-fig,ax = plt.subplots(figsize=(2,5))
-sns.stripplot(x='trial_type', y='mean_dff', data=bigdf,hue='trial_type',
+fig,ax = plt.subplots(figsize=(6,5))
+sns.stripplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
         dodge=True,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
-        s=s,alpha=0.7)
-sns.barplot(x='trial_type', y='mean_dff', data=bigdf,hue='trial_type',
-        fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'})
+        s=s,alpha=0.7,    order=cell_order)
+sns.barplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
+        fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
+            order=cell_order)
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Post-reward mean $\Delta F/F$')
+ax.set_ylabel('Mean $\Delta F/F$ rel. to rew.')
 ax.set_xlabel('Trial type')
 cor = bigdf.loc[(bigdf.trial_type=='correct'), 'mean_dff']
 incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_dff']
 t,pval = scipy.stats.wilcoxon(cor,incor)
-ans = bigdf.animal.unique()
-for i in range(len(ans)):
-    ax = sns.lineplot(x='trial_type', y='mean_dff', 
-    data=bigdf[bigdf.animal==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
 
-# statistical annotation       
-ii=0.5
-y=.3
-pshift=.04
-fs=30
-if pval < 0.001:
-        plt.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        plt.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        plt.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
+# ans = bigdf.animal.unique()
+# for i in range(len(ans)):
+#     for j,tr in enumerate(np.unique(bigdf.cell_type.values)):
+#         testdf= bigdf[(bigdf.animal==ans[i]) & (bigdf.cell_type==tr)]
+#         ax = sns.lineplot(x='trial_type', y='mean_dff', 
+#         data=testdf,
+#         errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+import statsmodels.api as sm
+from statsmodels.stats.anova import AnovaRM
+from scipy.stats import ttest_rel
 
-ax.set_title('Pre-reward cells',pad=50)
-#%%
-########## weird results, recalc tuning curve diff as above ##########
-plt.rc('font', size=16)          # controls default text sizes
-bigdf=pd.concat(dfs)
+# 1) Two-way repeated measures ANOVA
+aov = AnovaRM(
+    data=bigdf,
+    depvar='mean_dff',
+    subject='animal',
+    within=['trial_type','cell_type']
+).fit()
+print(aov)    # F-stats and p-values for main effects and interaction
 
-# average
-bigdf=bigdf.groupby(['animal', 'epoch', 'trial_type']).mean(numeric_only=True)
-bigdf=bigdf.reset_index()
-# only < 4 epochs
-bigdf=bigdf[bigdf.epoch<4]
-# plot
-s=10
-fig,ax = plt.subplots(figsize=(5,5))
-sns.stripplot(x='trial_type', y='mean_tc', hue='epoch', data=bigdf,dodge=True,
-            s=s,alpha=0.5)
-sns.barplot(x='trial_type', y='mean_tc', hue='epoch', data=bigdf, fill=False)
+# 2) Post-hoc paired comparisons: correct vs incorrect within each cell_type
+posthoc = []
+for ct in cell_order:
+    sub = bigdf[bigdf['cell_type']==ct]
+    cor = sub[sub['trial_type']=='correct']['mean_dff']
+    inc = sub[sub['trial_type']=='incorrect']['mean_dff']
+    t, p_unc = ttest_rel(cor, inc)
+    posthoc.append({
+        'cell_type': ct,
+        't_stat':    t,
+        'p_uncorrected': p_unc
+    })
 
-ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Average $\Delta F/F$ of tuning curve')
-ax.set_xlabel('')
+posthoc = pd.DataFrame(posthoc)
+# Bonferroni
+posthoc['p_bonferroni'] = np.minimum(posthoc['p_uncorrected'] * len(posthoc), 1.0)
+print(posthoc)
+# map cell_type → x-position
+xpos = {ct: i for i, ct in enumerate(cell_order)}
+for _, row in posthoc.iterrows():
+    x = xpos[row['cell_type']]
+    y = bigdf[
+        (bigdf['cell_type']==row['cell_type'])
+    ]['mean_dff'].max() + 0.1  # just above the tallest bar
+    p = row['p_bonferroni']
+    stars = '***' if p<0.001 else '**' if p<0.01 else '*' if p<0.05 else ''
+    ax.text(x, y, stars, ha='center', va='bottom', fontsize=42)
+    if p>0.05:
+        ax.text(x, y, f'p={p:.2g}', ha='center', va='bottom', fontsize=12)
 
-# average
-bigdf=bigdf.groupby(['animal', 'trial_type']).mean(numeric_only=True)
-bigdf=bigdf.reset_index()
-s=13
-fig,ax = plt.subplots(figsize=(2,5))
-sns.stripplot(x='trial_type', y='mean_tc', data=bigdf,dodge=True,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
-            s=s,alpha=0.7)
-sns.barplot(x='trial_type', y='mean_tc', data=bigdf, fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'})
+# remove the old legend
+ax.legend_.remove()
+# get new handles & labels
+handles, labels = ax.get_legend_handles_labels()
+# place legend outside on the right
+ax.legend(handles, labels,
+          loc='upper left',
+          bbox_to_anchor=(1.02, 1),    # (x-offset, y-offset) in axes coords
+          borderaxespad=0.)            # remove padding
 
-ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('$\int$ tuning curve ($\Delta F/F$)')
-ax.set_xlabel('Trial type')
-cor = bigdf.loc[(bigdf.trial_type=='correct'), 'mean_tc']
-incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_tc']
-t,pval = scipy.stats.ttest_rel(cor,incor)
-# statistical annotation       
-ii=0.5
-y=6
-pshift=.01
-fs=30
-if pval < 0.001:
-        plt.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        plt.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        plt.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
+# Example interpretation (fill in with your numbers)
+# trial_type (Num DF = 1, Den DF = 9, F = 12.3, p = 0.006)
+# -- There is a significant main effect of trial type: across all cell types, mean ΔF/F is different on correct vs. incorrect trials.
 
-ax.set_title('Pre-reward cells',pad=20)
-# plt.savefig(os.path.join(savedst, 'prerew_trial_type.svg'),bbox_inches='tight')
+# cell_type (Num DF = 3, Den DF = 27, F = 8.7, p < 0.001)
+# -- There is a significant main effect of cell type: some cell types have higher overall ΔF/F than others, regardless of trial outcome.
+
+# trial_type × cell_type (Num DF = 3, Den DF = 27, F = 4.2, p = 0.014)
+# -- The interaction is significant: the difference between correct vs. incorrect ΔF/F depends on which cell type you look at.
+
+# Because the interaction is significant, you should then examine post-hoc tests (e.g., the paired comparisons you ran) to see for each cell type whether correct vs. incorrect is significant.
+plt.savefig(os.path.join(savedst, 'allcelltype_trialtype.svg'),bbox_inches='tight')
