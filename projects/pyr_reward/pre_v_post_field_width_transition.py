@@ -277,6 +277,7 @@ for ii in range(len(conddf)):
         ii=0
         plt.plot(tcs_correct[:,goal_all[ii],:].T)
         plt.title(f"{df.loc[df.cellid==goal_all[ii], 'width_cm'].values}")
+        plt.show()
         alldf.append(df)
         dfs.append(pd.concat(alldf))
 
