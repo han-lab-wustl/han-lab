@@ -2724,21 +2724,41 @@ def get_radian_position_first_lick_after_rew(eps, ybinned, licks, reward, rewsiz
     else:
         return np.array([])  # Return empty array if no valid trials
 
-def get_goal_cells(track_length,coms_correct,window=30):
-    goal_window = window*(2*np.pi/track_length) # cm converted to rad
+def get_goal_cells(goal_window, coms_correct, type = 'all'):    
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
-    perm = list(combinations(range(len(coms_correct)), 2))     
+    perm = list(combinations(range(len(coms_correct)), 2)) 
+    rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
+    # if 4 ep
+    # account for cells that move to the end/front
+    # Define a small window around pi (e.g., epsilon)
+    epsilon = .7 # 20 cm
+    # Find COMs near pi and shift to -pi
+    com_loop_w_in_window = []
+    for pi,p in enumerate(perm):
+        for cll in range(coms_rewrel.shape[1]):
+            com1_rel = coms_rewrel[p[0],cll]
+            com2_rel = coms_rewrel[p[1],cll]
+            # print(com1_rel,com2_rel,com_diff)
+            if ((abs(com1_rel - np.pi) < epsilon) and 
+            (abs(com2_rel + np.pi) < epsilon)):
+                    com_loop_w_in_window.append(cll)
+    # get abs value instead
+    coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    
+    # TODO: implement per cell type
+    # if cell_type=='all'
+    com_goal_postrew = com_goal
+    # elif cell_type=='pre':
+    # [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
+    #     xx], axis=0)<0)] if len(com)>0 else [] for com in com_goal]
     # get goal cells across all epochs        
-    goal_cells = intersect_arrays(*com_goal)
-    # get per comparison
-    goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
-    goal_cell_p=len(goal_cells)/len(coms_correct[0])        
-    
-    return goal_window, goal_cells, perm, goal_cells_p_per_comparison,goal_cell_p, coms_rewrel
+    if len(com_goal_postrew)>0:
+        goal_cells = intersect_arrays(*com_goal_postrew); 
+    else:
+        goal_cells=[]
+    return goal_cells, com_goal_postrew
 
 def goal_cell_shuffle(rewlocs, coms_correct, goal_window, num_iterations = 1000):
     # get shuffled iterations

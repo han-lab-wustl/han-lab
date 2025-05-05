@@ -16,9 +16,9 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
-from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype
 from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric,\
-    get_radian_position_first_lick_after_rew, get_rewzones
+    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -94,6 +94,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             velocity_filter=False):    
     rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
     rewlocs_w_dt = []; ybinned_dt = []
+    failed_trialnm = []; 
     # remake tuning curves relative to reward        
     for ep in range(len(eps)-1):
         eprng = np.arange(eps[ep],eps[ep+1])
@@ -150,29 +151,42 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 trial_ep)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
-        F = Fc3[eprng,:]            
+        # in between failed trials only!!!!! 4/2025
+        if len(strials)>0:
+            failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
+            failed_inbtw=np.array(ftrials)[failed_inbtw>0]
+        else: # for cases where an epoch was started but not enough trials
+            failed_inbtw=np.array(ftrials)
+        failed_trialnm.append(failed_inbtw)
+        # trials going into tuning curve
+        print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
+
+        F_all = Fc3[eprng,:]            
         # simpler metric to get moving time
         if velocity_filter==True:
             moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
         else:
             moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
-        F = F[moving_middle,:]
-        relpos = np.array(relpos)[moving_middle]
+        F_all = F_all[moving_middle,:]
+        relpos_all = np.array(relpos)[moving_middle]
         if len(ttr)>lasttr: # only if ep has more than x trials
             # last 8 correct trials
             if len(strials)>0:
                 mask = [True if xx in strials[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
-                F = F[mask,:]
-                relpos = relpos[mask]                
+                F = F_all[mask,:]
+                relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
                 com = calc_COM_EH(tc,bin_size)
                 tcs_correct.append(tc)
                 coms_correct.append(com)
-            # failed trials
-            elif len(ftrials)>0:
-                mask = [True if xx in ftrials else False for xx in trialnum[eprng][moving_middle]]
-                F = F[mask,:]
-                relpos = relpos[mask]                
+            # failed trials                        
+            # UPDATE 4/16/25
+            # only take last 8 failed trials?
+            if len(failed_inbtw)>0:
+                mask = [True if xx in failed_inbtw[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                # print(f'Fluorescence array size:\n{F.shape}\n')
+                relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
                 com = calc_COM_EH(tc,bin_size)
                 tcs_fail.append(tc)
@@ -186,14 +200,10 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
 #%%
 # initialize var
 # radian_alignment_saved = {} # overwrite
-tcs_rew = []
-goal_cells_all = []
-p_rewcells_in_assemblies=[]
-
+p_goal_cells=[]
+p_goal_cells_dt = []
 bins = 90
 goal_window_cm=20
-epoch_perm=[]
-assembly_cells_all_an=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -242,7 +252,9 @@ for ii in range(len(conddf)):
             total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
             rates.append(success/total_trials)
         rate=np.nanmean(np.array(rates))
-        
+        rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,
+                    trialnum, track_length) # get radian coordinates
+
         # added to get anatomical info
         # takes time
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -253,120 +265,43 @@ for ii in range(len(conddf)):
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         # tc w/ dark time
-        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct_dt, coms_correct_dt, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
             rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,bin_size,bins=120)
+        # normal tc
+        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        rewards,forwardvel,rewsize,bin_size)          
+
         #test
-        bins=120
-        ep = 2
-        min_rewloc = np.quantile(np.array(rewloc_dt[ep]),.01)
-        max_rewloc = np.quantile(np.array(rewloc_dt[ep]),.99)
-        av_ypos = np.nanmax(ybinned_dt[ep])
-        binsize_dt = av_ypos/bins
-        min_rewloc_tc = min_rewloc/binsize_dt
-        max_rewloc_tc = max_rewloc/binsize_dt
-        fig,ax = plt.subplots()
-        ax.imshow(tcs_correct[ep][np.argsort(coms_correct[ep])]**.5)
-        ax.axvline(min_rewloc_tc, color='w')
-        ax.axvline(max_rewloc_tc, color='w')
-        fig,ax = plt.subplots()
-        ax.plot(ybinned_dt[ep])
+        # bins=120
+        # fig,axes = plt.subplots(ncols=len(tcs_correct))
+        # for ep in range(len(tcs_correct)):
+        #     ax=axes[ep]
+        #     min_rewloc = np.quantile(np.array(rewloc_dt[ep]),.1)
+        #     max_rewloc = np.quantile(np.array(rewloc_dt[ep]),.9)
+        #     av_ypos = np.nanmax(ybinned_dt[ep])
+        #     binsize_dt = av_ypos/bins
+        #     min_rewloc_tc = min_rewloc/binsize_dt
+        #     max_rewloc_tc = max_rewloc/binsize_dt
+        #     ax.imshow(tcs_correct[ep][np.argsort(coms_correct[0])]**.5)
+        #     ax.axvline(bins/2, color='w',linestyle='--')
+        # # ax.axvline(max_rewloc_tc, color='w')
+        # fig,ax = plt.subplots()
+        # ax.plot(ybinned_dt[ep])
         
         ################################# NOT TESTED BELOW ######################################
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
-        # change to relative value 
-        coms_rewrel = np.array([com-np.pi for com in coms_correct])
-        perm = list(combinations(range(len(coms_correct)), 2)) 
-        rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
-        # if 4 ep
-        # account for cells that move to the end/front
-        # Define a small window around pi (e.g., epsilon)
-        epsilon = .7 # 20 cm
-        # Find COMs near pi and shift to -pi
-        com_loop_w_in_window = []
-        for pi,p in enumerate(perm):
-            for cll in range(coms_rewrel.shape[1]):
-                com1_rel = coms_rewrel[p[0],cll]
-                com2_rel = coms_rewrel[p[1],cll]
-                # print(com1_rel,com2_rel,com_diff)
-                if ((abs(com1_rel - np.pi) < epsilon) and 
-                (abs(com2_rel + np.pi) < epsilon)):
-                        com_loop_w_in_window.append(cll)
-        # get abs value instead
-        coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        # all cells before 0
-        com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<0)] if len(com)>0 else [] for com in com_goal]
-        # get goal cells across all epochs        
-        if len(com_goal_postrew)>0:
-            goal_cells = intersect_arrays(*com_goal_postrew); 
-        else:
-            goal_cells=[]
-
+        goal_cells, com_goal_postrew = get_goal_cells(goal_window, coms_correct, type = 'all')
+        goal_cells_dt, com_goal_postrew_dt = get_goal_cells(goal_window, coms_correct_dt, type = 'all')
         #only get perms with non zero cells
         perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
         rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
         com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
-        assembly_cells_all = {}
-        try: # if enough neurons
-            goal_all = np.unique(np.concatenate(com_goal_postrew))
-            from ensemble import detect_assemblies_with_ica,cluster_neurons_from_ica,\
-            get_cells_by_assembly
-            # just use ep 1
-            patterns, activities, labels, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1],goal_all].T)
-            print(f"{n} assemblies detected")
-            labels = cluster_neurons_from_ica(patterns)
-            assembly_cells = get_cells_by_assembly(labels)
-            # Sort assemblies by size (descending)
-            sorted_assemblies = sorted(assembly_cells.items(), key=lambda x: len(x[1]), reverse=True)
-            goal_unique_cells = [] # collect cells in assemblies
-            
-            used_cells = set()
-            for assembly_id, cells in sorted_assemblies:
-                if len(cells) < 3:
-                    continue  # skip small assemblies
-                # minimum peak of cell in ensemble must be > 
-                peak = np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1)
-                if sum(peak < .05)>0: # remove low firing cells?
-                    # remove cell from list
-                    cells = np.array(cells)[peak>.05]
-                    # continue
-                cell_ids = set(goal_all[cells])
-                if not cell_ids.isdisjoint(used_cells):
-                    continue  # skip if any cell already used in larger assembly
-                goal_unique_cells.append(goal_all[cells])
-                used_cells.update(cell_ids)  # mark cells as used
-                time_bins = np.arange(90)
-                activity = tcs_correct[0, goal_all[cells], :]                
-                # Calculate center of mass
-                center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
-                com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in activity]
-                com_com_asm = com_per_cell - center_of_mass
-                # if np.nanmean(com_com_asm) < (np.pi / 4):
-                fig, ax = plt.subplots()
-                ax.plot(tcs_correct[0, goal_all[cells], :].T)
-                ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
-                fig.tight_layout()
-                pdf.savefig(fig)
-                # plt.show()
-                plt.close(fig)
-                # Save time courses
-                assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
-        except Exception as e:
-            print(e)
-        gucells = np.unique(np.concatenate(goal_unique_cells))
-        dedicated_in_ensemble = [xx for xx in gucells if xx in goal_cells]
-        try:
-            pcells = len(dedicated_in_ensemble)/len(goal_cells)
-        except Exception as e:
-            pcells = np.nan
-        p_rewcells_in_assemblies.append(pcells)
-        print(f'% of cells in assemblies: {pcells*100}')
-        # print the ones that pass the thresholds
-        print(f'Total assemblies: {len(assembly_cells_all)}') 
-        assembly_cells_all_an.append(assembly_cells_all)
+        
+        p_goal_cells.append(len(goal_cells)/len(coms_correct[0]))
+        p_goal_cells_dt.append(len(goal_cells_dt)/len(coms_correct_dt[0]))
+        print(f'Goal cells w/o dt: {goal_cells}\n\
+            Goal cells w/ dt: {goal_cells_dt}')
 
 # Assembly activity is a time series that measures how active a particular 
 # neuronal ensemble (identified via PCA) is at each time point. It reflects 
