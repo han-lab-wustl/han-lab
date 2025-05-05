@@ -18,7 +18,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.memory.behavior import consecutive_stretch
 from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype
 from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric,\
-    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells
+    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -124,14 +124,9 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             dark_mask = ypos_trial == ypos_num
             dark_vel = vel_ep[trial_mask][dark_mask]
             dark_frames = np.sum(dark_mask)
-            
-            dark_time = time[eprng][trial_mask][dark_mask]
-            dark_dt_series = np.diff(dark_time, prepend=dark_time[0])  # time differences
-            dark_distance = np.cumsum(dark_vel * dark_dt_series)  # distance traveled frame-by-frame
-            dark_distance = dark_distance / scalingf  # convert to position
-            # dark_dt = time[eprng][trial_mask][dark_mask] 
-            # dark_distance = np.nanmean(dark_vel) * dark_dt
-            # dark_distance = (dark_distance-dark_distance[0])/scalingf # scale to gain            
+            dark_dt = time[eprng][trial_mask][dark_mask] 
+            dark_distance = np.nanmean(dark_vel) * dark_dt
+            dark_distance = (dark_distance-dark_distance[0])/scalingf # scale to gain            
             from scipy.ndimage import gaussian_filter1d
             dt_ind = np.where(ypos_trial==ypos_num)[0]
             ypos_trial_new = ypos_trial.copy()
@@ -158,6 +153,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
         # test
         # plt.plot(ypos_w_dt)
         # plt.plot(rewloc_bool*400)        
+        print(f'Binsize: {bin_size}')
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
                 reward_ep, rewsize, rewloc_per_trial,
                 trial_ep)
@@ -171,6 +167,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             failed_inbtw=np.array(ftrials)
         failed_trialnm.append(failed_inbtw)
         # trials going into tuning curve
+        print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
         F_all = Fc3[eprng,:]            
         # simpler metric to get moving time
         if velocity_filter==True:
@@ -209,9 +206,14 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
 #%%
 # initialize var
 # radian_alignment_saved = {} # overwrite
-data_dct={}
+p_goal_cells=[]
+p_goal_cells_dt = []
+goal_cells_iind=[]
+pvals = []
 bins = 90
 goal_window_cm=20
+datadct = {}
+goal_cell_null= []
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -276,122 +278,66 @@ for ii in range(len(conddf)):
         track_length_rad_dt = 475*(2*np.pi/track_length) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct_dt, coms_correct_dt, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+        tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
         # normal tc
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size)          
-
-        #test
-        # fig,axes = plt.subplots(ncols=len(tcs_correct_dt))
-        # for ep in range(len(tcs_correct_dt)):
-        #     ax=axes[ep]
-        #     ax.imshow(tcs_correct_dt[ep][np.argsort(coms_correct_dt[0])]**.3)
-        #     ax.axvline(bins_dt/2, color='w',linestyle='--')
-            
-        # fig,axes = plt.subplots(ncols=len(tcs_correct))
-        # for ep in range(len(tcs_correct)):
-        #     ax=axes[ep]
-        #     ax.imshow(tcs_correct[ep][np.argsort(coms_correct[0])]**.3)
-        #     ax.axvline(bins/2, color='w',linestyle='--')
         
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
         goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
         goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_dt, cell_type = 'all')
         #only get perms with non zero cells
         
-        p_goal_cells = len(goal_cells)/len(coms_correct[0])
-        p_goal_cells_dt = =len(goal_cells_dt)/len(coms_correct_dt[0])
-        goal_cells_iind = [goal_cells, goal_cells_dt]
-        # save!!!
-        data_dct[f'{animal}_{day:03d}_index{ii:03d}'] = [p_goal_cells,p_goal_cells_dt,
-                                goal_cells_iind]
+        p_goal_cells.append(len(goal_cells)/len(coms_correct[0]))
+        p_goal_cells_dt.append(len(goal_cells_dt)/len(coms_correct_dt[0]))
+        goal_cells_iind.append([goal_cells, goal_cells_dt])
         print(f'Goal cells w/o dt: {goal_cells}\n\
             Goal cells w/ dt: {goal_cells_dt}')
-        # plot separately
-        colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
-        if len(goal_cells)>0:
-            rows = int(np.ceil(np.sqrt(len(goal_cells))))
-            cols = int(np.ceil(len(goal_cells) / rows))
-            # scale fig based on num cells
-            fig, axes = plt.subplots(rows, cols, figsize=(rows*5,cols*5),sharex=True)
-            if len(goal_cells) > 1:
-                axes = axes.flatten()
-            else:
-                axes = [axes]
-            for i,gc in enumerate(goal_cells):            
-                for ep in range(len(coms_correct)):
-                    ax = axes[i]
-                    ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                    # if len(tcs_fail)>0:
-                    #         ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                    ax.axvline((bins/2), color='k')
-                    ax.set_title(f'cell # {gc}')
-                    ax.spines[['top','right']].set_visible(False)
-            ax.set_xticks(np.arange(0,bins+1,20))
-            ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
-            ax.set_xlabel('Radian position (centered start rew loc)')
-            ax.set_ylabel('Fc3')
-            # fig.tight_layout()
-            fig.suptitle(f'{animal}, {day}, goal cells w/o dt')
-            pdf.savefig(fig)
-            plt.show()
-            # plt.close(fig)
-        if len(goal_cells_dt)>0:
-            rows = int(np.ceil(np.sqrt(len(goal_cells_dt))))
-            cols = int(np.ceil(len(goal_cells_dt) / rows))
-            # scale fig based on num cells
-            fig, axes = plt.subplots(rows, cols, figsize=(rows*5,cols*5),sharex=True)
-            if len(goal_cells_dt) > 1:
-                axes = axes.flatten()
-            else:
-                axes = [axes]
-            for i,gc in enumerate(goal_cells_dt):            
-                for ep in range(len(coms_correct_dt)):
-                    ax = axes[i]
-                    ax.plot(tcs_correct_dt[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
-                    # if len(tcs_fail)>0:
-                    #         ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                    ax.axvline((bins_dt/2), color='k')
-                    ax.set_title(f'cell # {gc}')
-                    ax.spines[['top','right']].set_visible(False)
-            ax.set_xticks(np.arange(0,bins_dt+1,30))
-            ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/3),2))
-            ax.set_xlabel('Radian position (centered start rew loc)')
-            ax.set_ylabel('Fc3')
-            # fig.tight_layout()
-            fig.suptitle(f'{animal}, {day}, goal cells w/ dt')
-            pdf.savefig(fig)
-            plt.show()
-            # plt.close(fig)
+        # shuffle
+        num_iterations=1000
+        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window, num_iterations = 1000)
+        goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_dt, goal_window, num_iterations = 1000)
+        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
+        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps)[1])
+        goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
+        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
+        # dark time
+        goal_cell_shuf_ps_per_comp_av_dt = np.nanmedian(goal_cell_shuf_ps_per_comp_dt,axis=0)        
+        goal_cell_shuf_ps_av_dt = np.nanmedian(np.array(goal_cell_shuf_ps_dt)[1])
+        goal_cell_p_dt=len(goal_cells_dt)/len(coms_correct[0]) 
+        p_value_dt = sum(shuffled_dist_dt>goal_cell_p_dt)/num_iterations
+        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v w/ dark ttime {p_value_dt}')
+        goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
+                        goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt])
+        pvals.append([p_value,p_value_dt]); 
+        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
+                tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 pdf.close()
 #%%
-# distribution of % goal cells
+plt.rc('font', size=16)          # controls default text sizes
+# plot goal cells across epochs
+inds = [int(xx[-3:]) for xx in datadct.keys()]
 df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep<2)]
-a=0.3
-plt.hist(p_goal_cells,alpha=a,label = 'w/o dark time',color='darkcyan',bins=20)
-plt.hist(p_goal_cells_dt,alpha=a,label = 'w/ dark time',color='k',bins=20)
-plt.legend()
-plt.xlabel('Reward cell %')
-plt.ylabel('Sessions')
-#%%
-fig, ax = plt.subplots()
-x_ = np.array(p_goal_cells)
-x = x_[x_>0]
-y = np.array(p_goal_cells_dt)
-y = y[x_>0]
-x = x[y>0]
-y = y[y>0]
-ax.scatter(x,y,s=50)
-ax.set_xlabel('Reward cell % without delay period')
-ax.set_ylabel('Reward cell % with delay period')
-ax.plot(ax.get_xlim(), ax.get_ylim(), ls="--", c="k")
+df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
+df['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
+df['goal_cell_prop'] = p_goal_cells
+df['opto'] = df.optoep.values>1
+df['day'] = df.days
+df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
+df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
+df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
+df['p_value'] = pvals
+df['goal_cell_prop_shuffle'] = [xx[1] for xx in goal_cell_null]
 
-slope, intercept = np.polyfit(x,y, 1)
-x_fit = np.array(ax.get_xlim())
-y_fit = slope * x_fit + intercept
-ax.plot(x_fit, y_fit, color='red', label=f'Fit: y = {slope:.2f}x + {intercept:.2f}')
-
+fig,ax = plt.subplots(figsize=(5,5))
+ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', 
+                hue='animals', bins=40)
+ax.spines[['top','right']].set_visible(False)
+ax.axvline(x=0.05, color='k', linestyle='--')
+sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
+ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
+ax.set_xlabel('P-value')
+ax.set_ylabel('Sessions')

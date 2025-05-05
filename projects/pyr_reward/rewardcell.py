@@ -2724,11 +2724,10 @@ def get_radian_position_first_lick_after_rew(eps, ybinned, licks, reward, rewsiz
     else:
         return np.array([])  # Return empty array if no valid trials
 
-def get_goal_cells(goal_window, coms_correct, type = 'all'):    
+def get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all'):    
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
     perm = list(combinations(range(len(coms_correct)), 2)) 
-    rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
     # if 4 ep
     # account for cells that move to the end/front
     # Define a small window around pi (e.g., epsilon)
@@ -2750,25 +2749,24 @@ def get_goal_cells(goal_window, coms_correct, type = 'all'):
     # TODO: implement per cell type
     # if cell_type=='all'
     com_goal_postrew = com_goal
-    # elif cell_type=='pre':
-    # [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
-    #     xx], axis=0)<0)] if len(com)>0 else [] for com in com_goal]
-    # get goal cells across all epochs        
+    perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
+    rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm] 
+    rz_perm=[p for jj,p in enumerate(rz_perm) if len(com_goal_postrew[jj])>0]
+    com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+
     if len(com_goal_postrew)>0:
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-    return goal_cells, com_goal_postrew
+    return goal_cells, com_goal_postrew, perm, rz_perm
 
-def goal_cell_shuffle(rewlocs, coms_correct, goal_window, num_iterations = 1000):
+def goal_cell_shuffle(coms_correct, goal_window, num_iterations = 1000):
     # get shuffled iterations
     shuffled_dist = np.zeros((num_iterations))
     # max of 5 epochs = 10 perms
     goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan
     goal_cell_shuf_ps = []
     for i in range(num_iterations):
-        # shuffle locations
-        rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
         shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
         [random.shuffle(shuf) for shuf in shufs]
         # first com is as ep 1, others are shuffled cell identities
@@ -2781,8 +2779,14 @@ def goal_cell_shuffle(rewlocs, coms_correct, goal_window, num_iterations = 1000)
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         # get goal cells across all epochs
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        com_goal_postrew=com_goal
         goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
-        goal_cells_shuf = intersect_arrays(*com_goal); 
+        perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
+        com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+        if len(com_goal_postrew)>0:
+            goal_cells_shuf = intersect_arrays(*com_goal_postrew); 
+        else:
+            goal_cells_shuf=[]
         shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
         goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
         goal_cell_shuf_ps.append(goal_cell_shuf_p)
