@@ -39,6 +39,7 @@ bins = 90
 goal_window_cm=20
 epoch_perm=[]
 assembly_cells_all_an=[]
+dedicated_not_in_ensemble_all=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -141,6 +142,7 @@ for ii in range(len(conddf)):
         else:
             goal_cells=[]
         assembly_cells_all = {}
+        goal_unique_cells = [] # collect ensemble cells
         try: # if enough neurons
             goal_all = np.unique(np.concatenate(com_goal_postrew))
             from ensemble import detect_assemblies_with_ica,cluster_neurons_from_ica,\
@@ -153,7 +155,7 @@ for ii in range(len(conddf)):
             # Sort assemblies by size (descending)
             sorted_assemblies = sorted(assembly_cells.items(), key=lambda x: len(x[1]), reverse=True)
             unique_cells = np.unique(np.concatenate([xx[1] for xx in sorted_assemblies]))
-            goal_unique_cells = [] # collect ensemble cells            
+
             used_cells = set()
             for assembly_id, cells in sorted_assemblies:
                 if len(cells) < 3:
@@ -189,11 +191,16 @@ for ii in range(len(conddf)):
             print(e)
         gucells = np.unique(np.concatenate(goal_unique_cells))
         dedicated_in_ensemble = [xx for xx in gucells if xx in goal_cells]
+        dedicated_not_in_ensemble = [xx for xx in gucells if xx not in goal_cells]
         try:
             pcells = len(dedicated_in_ensemble)/len(goal_cells)
         except Exception as e:
             pcells = np.nan
-
+        postrew_not_in_ensemble=np.array(dedicated_not_in_ensemble)
+        if len(postrew_not_in_ensemble)>0:
+            dedicated_not_in_ensemble_all.append(tcs_correct[:,postrew_not_in_ensemble,:])
+        else:
+            dedicated_not_in_ensemble_all.append(np.nan)
         p_rewcells_in_assemblies.append(pcells)
         print(f'% of cells in assemblies: {pcells*100}')
         # print the ones that pass the thresholds

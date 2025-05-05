@@ -1,22 +1,22 @@
 
 """
 zahra
-pca on tuning curves of reward cells
+get tuning curves with dark time
 """
 #%%
-import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
+import numpy as np, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math
 from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
-from sklearn.cluster import KMeans
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from projects.memory.behavior import consecutive_stretch
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH
 from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric,\
     get_radian_position_first_lick_after_rew, get_rewzones
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -26,8 +26,162 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'pre_rew_assemblies.pdf')
+savepth = os.path.join(savedst, 'dark_time_tuning.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+
+
+def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward, rewsize,rewlocs,
+                    trialnum):
+    """
+    Computes radian position aligned to the first lick after reward.
+    Parameters:
+    - i = epoch
+    - eps: List of trial start indices.
+    - ybinned: 1D array of position values.
+    - licks: 1D binary array (same length as ybinned) indicating lick events.
+    - reward: 1D binary array (same length as ybinned) indicating reward delivery.
+    - track_length: Total length of the circular track.
+
+    Returns:
+    - rad: 1D array of radian positions aligned to the first lick after reward.
+    """
+    rad = []  # Store radian coordinates
+    # for i in range(len(eps) - 1):
+    # Extract data for the current trial
+    y_trial = ybinned#[eps[i]:eps[i+1]]
+    licks_trial = licks#[eps[i]:eps[i+1]]
+    reward_trial = reward#[eps[i]:eps[i+1]]
+    trialnum_trial = trialnum#[eps[i]:eps[i+1]]
+    unique_trials = np.unique(trialnum)  # Get unique trial numbers [eps[i]:eps[i+1]]
+    for tr,trial in enumerate(unique_trials):
+        # Extract data for the current trial
+        trial_mask = trialnum_trial == trial  # Boolean mask for the current trial
+        y = y_trial[trial_mask]
+        licks_trial_ = licks_trial[trial_mask]
+        reward_trial_ = reward_trial[trial_mask]
+        # Find the reward location in this trial
+        reward_indices = np.where(reward_trial_ > 0)[0]  # Indices where reward occurs
+        if len(reward_indices) == 0:
+            try:
+                # 1.5 bc doesn't work otherwise?
+                y_rew = np.where((y<(rewlocs[tr][i]+rewsize*.5)) & (y>(rewlocs[i][tr]-rewsize*.5)))[0][0]
+                reward_idx=y_rew
+            except Exception as e: # if trial is empty??
+                reward_idx=int(len(y)/2) # put in random middle place of trials
+        else:
+            reward_idx = reward_indices[0]  # First occurrence of reward
+        # Find the first lick after the reward
+        lick_indices_after_reward = np.where((licks_trial_ > 0) & (np.arange(len(licks_trial_)) > reward_idx))[0]
+        if len(lick_indices_after_reward) > 0:
+            first_lick_idx = lick_indices_after_reward[0]  # First lick after reward
+        else:
+            # if animal did not lick after reward/no reward was given
+            first_lick_idx=reward_idx
+        # Convert positions to radians relative to the first lick
+        first_lick_pos = y[first_lick_idx]
+        track_length = np.max(y) # custom max for each trial w dark time
+        rad.append((((((y - first_lick_pos) * 2 * np.pi) / track_length) + np.pi) % (2 * np.pi)) - np.pi)
+
+    if len(rad) > 0:
+        rad = np.concatenate(rad)
+        return rad
+    else:
+        return np.array([])  # Return empty array if no valid trials
+
+def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+            Fc3,trialnum, rewards,forwardvel,bin_size,
+            lasttr=8,bins=90,track_length=270,
+            velocity_filter=False):    
+    rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
+    rewlocs_w_dt = []; ybinned_dt = []
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        rewloc = rewlocs[ep]
+        ypos_ep = ybinned[eprng]
+        vel_ep = forwardvel[eprng]
+        trial_ep = trialnum[eprng]        
+        reward_ep = rewards[eprng]
+        lick_ep = licks[eprng]
+        # Get dark time frames and estimate distance
+        ypos_dt = []
+        rewloc_per_trial = []
+        rewloc_bool = []
+        # get the dark time and add it to the beginning of the trial
+        for trial in np.unique(trial_ep):
+            trial_mask = trial_ep==trial
+            # constant set to dt
+            ypos_num = ypos_ep[trial_mask][5]
+            ypos_trial = ypos_ep[trial_mask]
+            # remove random end of track value            
+            ypos_trial[:5] = ypos_num
+            dark_mask = ypos_trial == ypos_num
+            dark_vel = vel_ep[trial_mask][dark_mask]
+            dark_frames = np.sum(dark_mask)
+            dark_dt = time[eprng][trial_mask][dark_mask] 
+            dark_distance = np.nanmean(dark_vel) * dark_dt
+            dark_distance = dark_distance-dark_distance[0]            
+            # find start of rew loc index
+            rewloc = (ypos_trial >= rewlocs[ep]-rewsize/2-3) & (ypos_trial <= rewlocs[ep]+rewsize/2+3)
+            rewloc = consecutive_stretch(np.where(rewloc)[0])[0]
+            rewloc = min(rewloc)
+            from scipy.ndimage import gaussian_filter1d
+            dt_ind = np.where(ypos_trial==ypos_num)[0]
+            ypos_trial_new = ypos_trial.copy()
+            ypos_trial_new[ypos_trial_new==ypos_num] = dark_distance
+            ypos_trial_new[ypos_trial>ypos_num] = ypos_trial_new[ypos_trial>ypos_num]+dark_distance[-1]
+            ypos_dt.append(ypos_trial_new)
+            # get new rewloc 
+            rewloc_per_trial.append(ypos_trial_new[rewloc])
+            rl_bool = np.zeros_like(ypos_trial_new)
+            rl_bool[rewloc]=1
+            rewloc_bool.append(rl_bool)
+        
+        # nan pad position
+        ypos_w_dt = np.concatenate(ypos_dt)
+        ybinned_dt.append(ypos_w_dt)
+        # realign to reward????        
+        rewloc_bool = np.concatenate(rewloc_bool)
+        # test
+        # plt.plot(ypos_w_dt)
+        # plt.plot(rewloc_bool*400)
+        relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
+                reward_ep, rewsize, rewloc_per_trial,
+                trial_ep)
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        rates.append(success/total_trials)
+        F = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F = F[moving_middle,:]
+        relpos = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            # last 8 correct trials
+            if len(strials)>0:
+                mask = [True if xx in strials[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+                F = F[mask,:]
+                relpos = relpos[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_correct.append(tc)
+                coms_correct.append(com)
+            # failed trials
+            elif len(ftrials)>0:
+                mask = [True if xx in ftrials else False for xx in trialnum[eprng][moving_middle]]
+                F = F[mask,:]
+                relpos = relpos[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_fail.append(tc)
+                coms_fail.append(com)
+        rewlocs_w_dt.append(rewloc_per_trial)
+    tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)  
+    tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
+    
+    return tcs_correct, coms_correct, tcs_fail, coms_fail, rewlocs_w_dt, ybinned_dt
 
 #%%
 # initialize var
@@ -50,7 +204,7 @@ for ii in range(len(conddf)):
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF',
                 'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
                 'stat', 'licks'])
         VR = fall['VR'][0][0][()]
@@ -66,6 +220,7 @@ for ii in range(len(conddf)):
         trialnum=fall['trialnum'][0]
         rewards = fall['rewards'][0]
         licks=fall['licks'][0]
+        time=fall['timedFF'][0]
         if animal=='e145':
             ybinned=ybinned[:-1]
             forwardvel=forwardvel[:-1]
@@ -73,20 +228,19 @@ for ii in range(len(conddf)):
             trialnum=trialnum[:-1]
             rewards=rewards[:-1]
             licks=licks[:-1]
+            time=time[:-1]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,
-                        trialnum, track_length) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins 
         rz = get_rewzones(rewlocs,1/scalingf)       
         # get average success rate
         rates = []
         for ep in range(len(eps)-1):
-                eprng = range(eps[ep],eps[ep+1])
-                success, fail, str_trials, ftr_trials, ttr, \
-                total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-                rates.append(success/total_trials)
+            eprng = range(eps[ep],eps[ep+1])
+            success, fail, str_trials, ftr_trials, ttr, \
+            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+            rates.append(success/total_trials)
         rate=np.nanmean(np.array(rates))
         
         # added to get anatomical info
@@ -98,14 +252,27 @@ for ii in range(len(conddf)):
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        # if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-        #     tcs_correct, coms_correct, tcs_fail, coms_fail, \
-        #     com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-        # else:# remake tuning curves relative to reward        
-            # 9/19/24
-            # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
+        # tc w/ dark time
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            rewsize,ybinned,time,licks,
+            Fc3,trialnum, rewards,forwardvel,bin_size,bins=120)
+        #test
+        bins=120
+        ep = 2
+        min_rewloc = np.quantile(np.array(rewloc_dt[ep]),.01)
+        max_rewloc = np.quantile(np.array(rewloc_dt[ep]),.99)
+        av_ypos = np.nanmax(ybinned_dt[ep])
+        binsize_dt = av_ypos/bins
+        min_rewloc_tc = min_rewloc/binsize_dt
+        max_rewloc_tc = max_rewloc/binsize_dt
+        fig,ax = plt.subplots()
+        ax.imshow(tcs_correct[ep][np.argsort(coms_correct[ep])]**.5)
+        ax.axvline(min_rewloc_tc, color='w')
+        ax.axvline(max_rewloc_tc, color='w')
+        fig,ax = plt.subplots()
+        ax.plot(ybinned_dt[ep])
+        
+        ################################# NOT TESTED BELOW ######################################
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])

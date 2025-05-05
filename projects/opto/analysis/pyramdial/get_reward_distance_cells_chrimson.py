@@ -8,7 +8,6 @@ import pickle, seaborn as sns, random, math
 from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
-
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10 
@@ -98,12 +97,19 @@ for ii in range(len(conddf)):
                 Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
                 dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
                 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-                # if animal!='z14' and animal!='e200' and animal!='e189':
+                # if animal!='z14' and animal!='e200' and animal!='e189':                
                 Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-                # 9/19/24
-                # find correct trials within each epoch!!!!
-                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                rewards,forwardvel,rewsize,bin_size)         
+                if Fc3.shape[1]>0:
+                        # 9/19/24
+                        # find correct trials within each epoch!!!!
+                        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                        rewards,forwardvel,rewsize,bin_size)         
+                else: # if no skewed cells
+                        Fc3 = fall_fc3['Fc3']                        
+                        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+                        # Fc3 = Fc3[:, skew>.5]
+                        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                        rewards,forwardvel,rewsize,bin_size)         
         # only get opto vs. ctrl epoch comparisons
         tcs_correct = tcs_correct[[eptest-2, eptest-1]] 
         coms_correct = coms_correct[[eptest-2, eptest-1]] 
@@ -192,7 +198,6 @@ plt.rc('font', size=18)          # controls default text sizes
 # plot goal cells across epochs
 # just opto days
 s=12
-inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
 # df = df[df.optoep>1]
 df['goal_cell_prop'] = goal_cell_prop
@@ -203,6 +208,7 @@ df['condition'] = ['vip' if xx=='vip_ex' else 'ctrl' for xx in df.in_type.values
 df['p_value'] = pvals
 df['goal_cell_prop_shuffle'] = goal_cell_null
 df['goal_cell_prop_shuffle']=df['goal_cell_prop_shuffle']*100
+# remove 0 goal cell prop
 df = df[df.goal_cell_prop>0]
 fig,ax = plt.subplots(figsize=(5,5))
 ax = sns.histplot(data = df, x='p_value', 
@@ -213,16 +219,21 @@ sessions_sig = sum(df['p_value'].values<0.05)/len(df)
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
+#%%
 # number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 df = df[(df.animals!='e200')&(df.animals!='e189')]
 df_plt = df
-# df_plt = df_plt.groupby(['animals','condition']).mean(numeric_only=True)
+df_an = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True)
 sns.stripplot(x='condition', y='goal_cell_prop',
         hue='opto',data=df_plt,
         palette={'no_stim': "slategray", 'stim': "darkgoldenrod"},
-        s=s, dodge=True,alpha=.5)
+        s=9, dodge=True,alpha=.5)
+sns.stripplot(x='condition', y='goal_cell_prop',
+        hue='opto',data=df_an,
+        palette={'no_stim': "slategray", 'stim': "darkgoldenrod"},
+        s=s, dodge=True)
 sns.barplot(x='condition', y='goal_cell_prop',hue='opto',
         data=df_plt,
         palette={'no_stim': "slategray", 'stim': "darkgoldenrod"},
@@ -230,15 +241,28 @@ sns.barplot(x='condition', y='goal_cell_prop',hue='opto',
 sns.barplot(x='condition', y='goal_cell_prop_shuffle',
         data=df_plt,ax=ax, color='dimgrey',label='shuffle',alpha=0.3,
         err_kws={'color': 'grey'},errorbar=None)
+# animal lines
+df_an = df_an.reset_index()
+ans = df_an.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=[-.2,0.2], y='goal_cell_prop', 
+    data=df_an[df_an.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 ax.set_xlabel('')
 ax.set_xticks([0,1], labels=['VIP\nExcitation', 'Control'],rotation=45)
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('Reward cell %')
 df_plt = df_plt.reset_index()
 rewprop = df_plt.loc[((df_plt.condition=='vip')&(df_plt.opto=='stim')), 'goal_cell_prop']
 shufprop = df_plt.loc[((df_plt.condition=='vip')&(df_plt.opto=='no_stim')), 'goal_cell_prop']
 t,pval = scipy.stats.ranksums(rewprop, shufprop)
+# per animal stats
+rewprop = df_an.loc[((df_an.condition=='vip')&(df_an.opto=='stim')), 'goal_cell_prop']
+shufprop = df_an.loc[((df_an.condition=='vip')&(df_an.opto=='no_stim')), 'goal_cell_prop']
+t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
+
 # statistical annotation    
 fs=46
 ii=0

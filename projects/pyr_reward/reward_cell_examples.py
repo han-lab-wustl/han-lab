@@ -26,8 +26,6 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'pre_post_rew_assemblies.pdf')
-pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
 tcs_rew = []
@@ -38,7 +36,7 @@ epoch_perm=[]
 assembly_cells_all_an=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-ii=152
+ii=130
 
 day = conddf.days.values[ii]
 animal = conddf.animals.values[ii]
@@ -165,7 +163,7 @@ cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
 
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
-plt.savefig(os.path.join(savedst, 'tuning_curve_correct_v_incorrect_eg.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_tuning_curve_correct_v_incorrect_eg.svg'),bbox_inches='tight')
 #%%
 # correct only
 # Create subplots
@@ -192,10 +190,10 @@ for kk, tcs in enumerate(tcs_correct_r):
     ax.set_title(f'Epoch {kk + 1} \n\n Rew. Loc.= {np.round((rewlocs[kk]),1)} cm \n Correct trials')
     ax.axvline(bins / 2, color='w', linestyle='--')
     # draw line before and after rew at 'near' threshold
-    line = (np.pi/4)/(2*np.pi/track_length)
-    ax.axvline(line, color='y', linestyle='--')
-    line = 90-line
-    ax.axvline(line, color='y', linestyle='--')
+    # line = (np.pi/4)/(2*np.pi/track_length)
+    # ax.axvline(line, color='y', linestyle='--')
+    # line = 90-line
+    # ax.axvline(line, color='y', linestyle='--')
     # track_length_rad = track_length*(2*np.pi/track_length)
     if kk==0: ax.set_ylabel('Reward cell ID #')
     if kk==len(tcs_correct)-1:
@@ -205,8 +203,54 @@ ax.set_xticks(np.arange(0,bins,30))
 ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
 fig.colorbar(im, cax=cbar_ax, label=f'Norm. $\Delta$ F/F')
-
+fig.suptitle(f'{animal}_{day}')
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
-plt.savefig(os.path.join(savedst, 'tuning_curve_correct_eg.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_tuning_curve_correct_eg.svg'),bbox_inches='tight')
+
+#%%
+# correct only
+# far to near
+# Create subplots
+tcs_correct_r = tcs_correct[:2,np.unique(np.concatenate(com_goal))]
+coms_correct_r = coms_correct[:2,np.unique(np.concatenate(com_goal))]
+fig, axes = plt.subplots(ncols=len(tcs_correct_r),
+                    figsize=(10, 8),sharex=True, sharey=True)
+
+# Plot each subplot with shared normalization
+for kk, tcs in enumerate(tcs_correct_r):
+    ax = axes[kk]
+    rows = np.argsort(coms_correct_r[0])
+    tc_sorted = tcs[rows]
+    # 2) per-row min–max normalization
+    #    subtract row min, divide by (row max − row min)
+    row_min = np.nanmin(tc_sorted,axis=1, keepdims=True)
+    row_max = np.nanmax(tc_sorted,axis=1, keepdims=True)
+    row_max = np.nanmax(tc_sorted)-5
+    tc_norm = tc_sorted#(tc_sorted - row_min) / (row_max - row_min)
+    nan_row_mask = np.isnan(tc_norm).any(axis=1)   # True for rows with at least one NaN
+    tc_norm[nan_row_mask, :] = 0
+    # 3) apply gamma
+    gamma=0.4
+    tc_norm_gamma = tc_norm**gamma
+    im = ax.imshow(tc_norm_gamma, aspect='auto',vmax=row_max, vmin=0)
+    ax.set_title(f'Epoch {kk + 1} \n\n Rew. Loc.= {np.round((rewlocs[kk]),1)} cm \n Correct trials')
+    ax.axvline(bins / 2, color='w', linestyle='--')
+    # draw line before and after rew at 'near' threshold
+    # line = (np.pi/4)/(2*np.pi/track_length)
+    # ax.axvline(line, color='y', linestyle='--')
+    # line = 90-line
+    # ax.axvline(line, color='y', linestyle='--')
+    # track_length_rad = track_length*(2*np.pi/track_length)
+    if kk==0: ax.set_ylabel('Reward cell ID #')
+    if kk==len(tcs_correct)-1:
+        ax.set_xlabel('Reward-relative distance ($\Theta$)')  
+        
+ax.set_xticks(np.arange(0,bins,30))
+ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
+cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+fig.colorbar(im, cax=cbar_ax, label=f'Norm. $\Delta$ F/F')
+fig.suptitle(f'{animal}_{day}')
+plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_tuning_curve_correct_eg.svg'),bbox_inches='tight')
 
 #%%
