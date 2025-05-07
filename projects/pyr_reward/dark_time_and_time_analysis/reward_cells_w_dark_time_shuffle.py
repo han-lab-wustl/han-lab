@@ -16,10 +16,10 @@ plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
-from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype,\
+    make_tuning_curves_by_trialtype_w_darktime,get_radian_position_first_lick_after_rew_w_dt
 from projects.pyr_reward.rewardcell import get_radian_position,\
-    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle,\
-        make_tuning_curves_by_trialtype_w_darktime,get_radian_position_first_lick_after_rew_w_dt
+    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -130,9 +130,11 @@ for ii in range(len(conddf)):
             Goal cells w/ dt: {goal_cells_dt}')
         # shuffle
         num_iterations=1000
-        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window, num_iterations = 1000)
-        goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_dt, goal_window, num_iterations = 1000)
-        goal_cell_shuf_ps_pers_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
+        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
+                            perm,num_iterations = num_iterations)
+        goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_dt, \
+                        goal_window, perm_dt, num_iterations = num_iterations)
+        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
         goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
         goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
@@ -157,7 +159,7 @@ inds = [int(xx[-3:]) for xx in datadct.keys()]
 df = conddf.copy()
 df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
 df['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
-df['goal_cell_prop'] = p_goal_cells
+df['goal_cell_prop'] =  [xx[0] for xx in p_goal_cells]
 df['opto'] = df.optoep.values>1
 df['day'] = df.days
 df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
@@ -177,44 +179,69 @@ ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
 # w/ dark time
-df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
-df['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
-df['goal_cell_prop'] = p_goal_cells_dt
-df['opto'] = df.optoep.values>1
-df['day'] = df.days
-df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
-df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = [xx[1] for xx in pvals]
-df['goal_cell_prop_shuffle'] = [xx[1][1] for xx in goal_cell_null]
+df_dt = conddf.copy()
+df_dt = df_dt[((df_dt.animals!='e217')) & (df_dt.optoep<2) & (df_dt.index.isin(inds))]
+df_dt['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
+df_dt['goal_cell_prop'] = [xx[0] for xx in p_goal_cells_dt]
+df_dt['opto'] = df_dt.optoep.values>1
+df_dt['day'] = df_dt.days
+df_dt['session_num_opto'] = np.concatenate([[xx-df_dt[df_dt.animals==an].days.values[0] for xx in df_dt[df_dt.animals==an].days.values] for an in np.unique(df_dt.animals.values)])
+df_dt['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df_dt[df_dt.animals==an].days.values)] for an in np.unique(df_dt.animals.values)])
+df_dt['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df_dt.in_type.values]
+df_dt['p_value'] = [xx[1] for xx in pvals]
+df_dt['goal_cell_prop_shuffle'] = [xx[1][1] for xx in goal_cell_null]
 
 fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', 
+ax = sns.histplot(data = df_dt.loc[df_dt.opto==False], x='p_value', 
                 hue='animals', bins=40)
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
+sessions_sig = sum(df_dt.loc[df_dt.opto==False,'p_value'].values<0.05)/len(df_dt.loc[df_dt.opto==False])
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Reward cells w/ dark time')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
 # number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(5,5))
+fig,axes = plt.subplots(ncols = 2, figsize=(6,5),sharex=True,sharey=True)
+ax = axes[0]
 df_plt = df[df.num_epochs<5]
 # av across mice
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
 sns.stripplot(x='num_epochs', y='goal_cell_prop',
         hue='animals',data=df_plt,
-        s=10)
+        s=10,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt,
         fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.lineplot(data=df_plt, # correct shift
+sns.lineplot(data=df_plt, # correct shift
         x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle')
+        label='shuffle',ax=ax)
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.get_legend().remove()
+
+eps = [2,3,4]
+for ep in eps:
+    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+    rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
+    shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
+    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+    print(f'{ep} epochs, pval: {pval}')
+
+ax = axes[1]
+df_plt = df_dt[df_dt.num_epochs<5]
+# av across mice
+df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
+sns.stripplot(x='num_epochs', y='goal_cell_prop',
+        hue='animals',data=df_plt,
+        s=10,ax=ax)
+sns.barplot(x='num_epochs', y='goal_cell_prop',
+        data=df_plt,
+        fill=False,ax=ax, color='k', errorbar='se')
+sns.lineplot(data=df_plt, # correct shift
+        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle',ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.get_legend().remove()
 
 eps = [2,3,4]
 for ep in eps:
@@ -226,8 +253,8 @@ for ep in eps:
 #%%    
 # include all comparisons 
 df_perms = pd.DataFrame()
-goal_cell_perm = [xx[0] for xx in goal_cell_prop]
-goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
+goal_cell_perm = [xx[1] for xx in p_goal_cells]
+goal_cell_perm_shuf = [xx[0][0][~np.isnan(xx[0][0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
 df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
