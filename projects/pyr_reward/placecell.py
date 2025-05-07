@@ -1336,7 +1336,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
     tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
     return tcs_correct, coms_correct, tcs_fail, coms_fail, rewlocs_w_dt, ybinned_dt
 
-def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned,
+def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                             lasttr=8, bins=90, velocity_filter=False):
     rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []
     failed_trialnm = []; trial_times = []
@@ -1375,8 +1375,7 @@ def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned,
             # # Create a second y-axis that shares the same x-axis
             # ax2 = ax1.twinx()
             # Plot second dataset
-            ax2.plot(ypos_trial)
-            
+            # ax2.plot(ypos_trial)
             trial_time_list.append(t_rel)
             F_trial_list.append(F_trial)
 

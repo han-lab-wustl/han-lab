@@ -103,7 +103,7 @@ for ii in range(len(conddf)):
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         # tc w/ time
         tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, trial_times = make_time_tuning_curves(eps, 
-                time, Fc3, trialnum, rewards, licks, ybinned,
+                time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                 lasttr=8, bins=bins, velocity_filter=False)
         # time bin is roughly (16/90) or 170 ms
         # test
@@ -118,7 +118,6 @@ for ii in range(len(conddf)):
         bin_size=track_length_rad/bins 
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size)  
-
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
         goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]           
@@ -127,31 +126,33 @@ for ii in range(len(conddf)):
         goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]            
         # eg cell 
         # cellid = goal_cells[5]
-        for cellid in goal_cells:
-            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
-            for ep in range(len(coms_correct)):            
-                axes[0].plot(tcs_correct[ep,cellid,:])
-                axes[0].set_title('Track aligned')
-                axes[0].axvline(int(bins/2),color='k',linestyle='--')
-                axes[1].plot(tcs_correct_time[ep,cellid,:])
-                axes[1].set_title('Time aligned')
-                axes[1].axvline(int(bins/2),color='k',linestyle='--')
+        # for cellid in goal_cells:
+        #     fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
+        #     for ep in range(len(coms_correct)):            
+        #         axes[0].plot(tcs_correct[ep,cellid,:])
+        #         axes[0].set_title('Track aligned')
+        #         axes[0].axvline(int(bins/2),color='k',linestyle='--')
+        #         axes[1].plot(tcs_correct_time[ep,cellid,:])
+        #         axes[1].set_title('Time aligned')
+        #         axes[1].axvline(int(bins/2),color='k',linestyle='--')
+        #     fig.suptitle('Reward cells')
                 
-        for cellid in goal_cells_time:
-            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
-            for ep in range(len(coms_correct)):            
-                axes[0].plot(tcs_correct[ep,cellid,:])
-                axes[0].set_title('Track aligned')
-                axes[0].axvline(int(bins/2),color='k',linestyle='--')
-                axes[1].plot(tcs_correct_time[ep,cellid,:])
-                axes[1].set_title('Time aligned')
-                axes[1].axvline(int(bins/2),color='k',linestyle='--')
-        plt.show()    
+        # for cellid in goal_cells_time:
+        #     fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
+        #     for ep in range(len(coms_correct)):            
+        #         axes[0].plot(tcs_correct[ep,cellid,:])
+        #         axes[0].set_title('Track aligned')
+        #         axes[0].axvline(int(bins/2),color='k',linestyle='--')
+        #         axes[1].plot(tcs_correct_time[ep,cellid,:])
+        #         axes[1].set_title('Time aligned')
+        #         axes[1].axvline(int(bins/2),color='k',linestyle='--')
+        #     fig.suptitle('Time cells')
+        # plt.show()    
         #only get perms with non zero cells
         # get per comparison and also across epochs
         p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
-        p_goal_cells_dt.append([len(goal_cells_dt)/len(coms_correct_dt[0]), goal_cells_p_per_comparison_dt])
-        goal_cells_iind.append([goal_cells, goal_cells_dt])
+        p_goal_cells_dt.append([len(goal_cells_time)/len(coms_correct_time[0]), goal_cells_p_per_comparison_time])
+        goal_cells_iind.append([goal_cells, goal_cells_time])
         # save perm
         perms.append([[perm, rz_perm],
             [perm_time, rz_perm_time]])
@@ -177,7 +178,7 @@ for ii in range(len(conddf)):
                         [goal_cell_shuf_ps_per_comp_av_time,goal_cell_shuf_ps_av_time]])
         pvals.append([p_value,p_value_time]); 
         datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+                tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time]
 
 pdf.close()
 ####################################### RUN CODE #######################################

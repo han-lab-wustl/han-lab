@@ -293,16 +293,17 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 # make lines
+alpha=0.5
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
 ax.set_xlabel('')
 ax.set_ylabel('Reward cell % ')
 
 eps = [2,3,4]
-y = 35
+y = 37
 pshift = 4
 fs=36
 for ii,ep in enumerate(eps):
@@ -339,16 +340,17 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
 ax.spines[['top','right']].set_visible(False)
-ax.set_title('Reward cell %-shuffle',pad=30)
-# ax.set_ylim([0, 37])
+ax.set_title('Reward cell %-shuffle')
+ax.set_ylim([0, 18])
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7)
+    errorbar=None, color='dimgray', linewidth=2, alpha=alpha)
+    
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
-
+fig.suptitle('Including delay period')
 plt.savefig(os.path.join(savedst, 'allreward_w_darktime_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
