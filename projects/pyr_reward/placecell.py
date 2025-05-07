@@ -1336,3 +1336,89 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
     tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
     return tcs_correct, coms_correct, tcs_fail, coms_fail, rewlocs_w_dt, ybinned_dt
 
+def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned,
+                            lasttr=8, bins=90, velocity_filter=False):
+    rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []
+    failed_trialnm = []; trial_times = []
+
+    for ep in range(len(eps) - 1):
+        eprng = np.arange(eps[ep], eps[ep + 1])
+        time_ep = time[eprng]
+        trial_ep = trialnum[eprng]
+        reward_ep = rewards[eprng]
+        lick_ep = licks[eprng]
+        ypos_ep = ybinned[eprng]
+        F_ep = Fc3[eprng, :]
+
+        unique_trials = np.unique(trial_ep)
+        trial_time_list = []
+        F_trial_list = []
+
+        for trial in unique_trials:
+            mask = trial_ep == trial
+            t_trial = time_ep[mask]
+            F_trial = F_ep[mask, :]
+            ypos_trial = ypos_ep[mask]
+            if len(t_trial) == 0:
+                continue
+            # Align to time of entering rew loc
+            rew_mask = (ypos_trial >= (rewlocs[ep] - (rewsize / 2) - 5)) & \
+                (ypos_trial <= (rewlocs[ep] + (rewsize / 2) + 5))
+            rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
+            rew_idx = int(len(ypos_trial) / 2) if len(rew_indices) == 0 else min(rew_indices)
+            # time relative to reward
+            t_rel = t_trial - t_trial[rew_idx]
+            #test
+            # fig, ax1 = plt.subplots()
+            # # Plot first dataset
+            # ax1.plot(t_rel)
+            # # Create a second y-axis that shares the same x-axis
+            # ax2 = ax1.twinx()
+            # Plot second dataset
+            ax2.plot(ypos_trial)
+            
+            trial_time_list.append(t_rel)
+            F_trial_list.append(F_trial)
+
+        # Pad all trials with NaNs to equal length
+        max_len = max(len(t) for t in trial_time_list)
+        time_matrix = np.full((len(trial_time_list), max_len), np.nan)
+        F_tensor = np.full((len(trial_time_list), max_len, Fc3.shape[1]), np.nan)
+
+        for i, (t_rel, F_trial) in enumerate(zip(trial_time_list, F_trial_list)):
+            time_matrix[i, :len(t_rel)] = t_rel
+            F_tensor[i, :len(t_rel), :] = F_trial
+
+        trial_times.append(time_matrix)
+        # Get successful and failed trials
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trial_ep, reward_ep)
+        rates.append(success / total_trials)
+
+        if len(strials) > 0:
+            failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
+            failed_inbtw = np.array(ftrials)[failed_inbtw > 0]
+        else:
+            failed_inbtw = np.array(ftrials)
+        failed_trialnm.append(failed_inbtw)
+        # Build tuning curves over time bins
+        if len(ttr) > lasttr:
+            if len(strials) > 0:
+                idxs = [i for i, tr in enumerate(unique_trials) if tr in strials[-lasttr:]]
+                time_sel = time_matrix[idxs, :].flatten()
+                F_sel = F_tensor[idxs, :, :].reshape(-1, Fc3.shape[1])
+                tc = np.array([get_tuning_curve(time_sel, F_sel[:, i], bins=bins) for i in range(Fc3.shape[1])])
+                com = calc_COM_EH(tc, (np.nanmax(time_sel)/bins))
+                tcs_correct.append(tc)
+                coms_correct.append(com)
+            if len(failed_inbtw) > 0:
+                idxs = [i for i, tr in enumerate(unique_trials) if tr in failed_inbtw[-lasttr:]]
+                time_sel = time_matrix[idxs, :].flatten()
+                F_sel = F_tensor[idxs, :, :].reshape(-1, Fc3.shape[1])
+                tc = np.array([get_tuning_curve(time_sel, F_sel[:, i], bins=bins) for i in range(Fc3.shape[1])])
+                com = calc_COM_EH(tc, (np.nanmax(time_sel)/bins))
+                tcs_fail.append(tc)
+                coms_fail.append(com)
+
+    tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)
+    tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)
+    return tcs_correct, coms_correct, tcs_fail, coms_fail, trial_times

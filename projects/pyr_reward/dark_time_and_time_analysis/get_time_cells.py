@@ -12,12 +12,12 @@ import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
-plt.rc('font', size=20)          # controls default text sizes
+# plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
 from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype,\
-    make_tuning_curves_by_trialtype_w_darktime,get_radian_position_first_lick_after_rew_w_dt
+    make_time_tuning_curves
 from projects.pyr_reward.rewardcell import get_radian_position,\
     get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -27,7 +27,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'dark_time_tuning.pdf')
+savepth = os.path.join(savedst, 'time_tuning.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
@@ -80,8 +80,6 @@ for ii in range(len(conddf)):
             time=time[:-1]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        track_length_rad = track_length*(2*np.pi/track_length)
-        bin_size=track_length_rad/bins 
         rz = get_rewzones(rewlocs,1/scalingf)       
         # get average success rate
         rates = []
@@ -103,22 +101,52 @@ for ii in range(len(conddf)):
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        # tc w/ dark time
-        track_length_dt = 550 # cm estimate based on 99.9% of ypos
-        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-        bins_dt=150 
-        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
-            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-            bins=bins_dt)
+        # tc w/ time
+        tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, trial_times = make_time_tuning_curves(eps, 
+                time, Fc3, trialnum, rewards, licks, ybinned,
+                lasttr=8, bins=bins, velocity_filter=False)
+        # time bin is roughly (16/90) or 170 ms
+        # test
+        # fig, axes = plt.subplots(ncols = len(tcs_correct_time))
+        # for ep in range(len(coms_correct_time)):
+        #     ax=axes[ep]
+        #     ax.imshow(tcs_correct_time[ep][np.argsort(coms_correct_time[ep])]**.3)
+        #     ax.set_title(f'Rew. Loc. {rewlocs[ep]} cm',fontsize=12)
+        #     ax.axvline(int(bins/2),color='w',linestyle='--')
         # normal tc
+        track_length_rad = track_length*(2*np.pi/track_length)
+        bin_size=track_length_rad/bins 
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)      
+        rewards,forwardvel,rewsize,bin_size)  
+
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
         goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
-        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]
-        goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_dt, cell_type = 'all')
-        goal_cells_p_per_comparison_dt = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_dt]
+        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]           
+        # get goal cells aligned to time
+        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, goal_window, coms_correct_time, cell_type = 'all')
+        goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]            
+        # eg cell 
+        # cellid = goal_cells[5]
+        for cellid in goal_cells:
+            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
+            for ep in range(len(coms_correct)):            
+                axes[0].plot(tcs_correct[ep,cellid,:])
+                axes[0].set_title('Track aligned')
+                axes[0].axvline(int(bins/2),color='k',linestyle='--')
+                axes[1].plot(tcs_correct_time[ep,cellid,:])
+                axes[1].set_title('Time aligned')
+                axes[1].axvline(int(bins/2),color='k',linestyle='--')
+                
+        for cellid in goal_cells_time:
+            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
+            for ep in range(len(coms_correct)):            
+                axes[0].plot(tcs_correct[ep,cellid,:])
+                axes[0].set_title('Track aligned')
+                axes[0].axvline(int(bins/2),color='k',linestyle='--')
+                axes[1].plot(tcs_correct_time[ep,cellid,:])
+                axes[1].set_title('Time aligned')
+                axes[1].axvline(int(bins/2),color='k',linestyle='--')
+        plt.show()    
         #only get perms with non zero cells
         # get per comparison and also across epochs
         p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
@@ -126,30 +154,30 @@ for ii in range(len(conddf)):
         goal_cells_iind.append([goal_cells, goal_cells_dt])
         # save perm
         perms.append([[perm, rz_perm],
-            [perm_dt, rz_perm_dt]])
+            [perm_time, rz_perm_time]])
         print(f'Goal cells w/o dt: {goal_cells}\n\
-            Goal cells w/ dt: {goal_cells_dt}')
+            Goal cells w/ dt: {goal_cells_time}')
         # shuffle
         num_iterations=1000
         goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
-                            perm,num_iterations = num_iterations)
-        goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_dt, \
-                        goal_window, perm_dt, num_iterations = num_iterations)
+                    perm,num_iterations = num_iterations)
+        goal_cell_shuf_ps_per_comp_time, goal_cell_shuf_ps_time, shuffled_dist_time=goal_cell_shuffle(coms_correct_time, \
+                goal_window, perm_time, num_iterations = num_iterations)
         goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
         goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
         goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
         # dark time
-        goal_cell_shuf_ps_per_comp_av_dt = np.nanmedian(goal_cell_shuf_ps_per_comp_dt,axis=0)        
-        goal_cell_shuf_ps_av_dt = np.nanmedian(np.array(goal_cell_shuf_ps_dt))
-        goal_cell_p_dt=len(goal_cells_dt)/len(coms_correct[0]) 
-        p_value_dt = sum(shuffled_dist_dt>goal_cell_p_dt)/num_iterations
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v w/ dark ttime {p_value_dt}')
+        goal_cell_shuf_ps_per_comp_av_time = np.nanmedian(goal_cell_shuf_ps_per_comp_time,axis=0)        
+        goal_cell_shuf_ps_av_time = np.nanmedian(np.array(goal_cell_shuf_ps_time))
+        goal_cell_p_time=len(goal_cells_time)/len(coms_correct[0]) 
+        p_value_time = sum(shuffled_dist_time>goal_cell_p_time)/num_iterations
+        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v time aligned {p_value_time}')
         goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
-                        [goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt]])
-        pvals.append([p_value,p_value_dt]); 
+                        [goal_cell_shuf_ps_per_comp_av_time,goal_cell_shuf_ps_av_time]])
+        pvals.append([p_value,p_value_time]); 
         datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+                tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 pdf.close()
 ####################################### RUN CODE #######################################
