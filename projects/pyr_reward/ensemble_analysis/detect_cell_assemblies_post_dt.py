@@ -159,20 +159,20 @@ for ii in range(len(conddf)):
 
             used_cells = set()
             for assembly_id, cells in sorted_assemblies:
-                if len(cells) < 3:
-                    continue  # skip small assemblies
                 # minimum peak of cell in ensemble must be > 
                 peak = np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1)
                 if sum(peak < .05)>0: # remove low firing cells?
                     # remove cell from list
                     cells = np.array(cells)[peak>.05]
                     # continue
+                if len(cells) < 3:
+                    continue  # skip small assemblies
                 cell_ids = set(goal_all[cells])
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
                 goal_unique_cells.append(goal_all[cells])
                 used_cells.update(cell_ids)  # mark cells as used
-                time_bins = np.arange(90)
+                time_bins = np.arange(bins_dt)
                 activity = tcs_correct[0, goal_all[cells], :]                
                 # Calculate center of mass
                 center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
@@ -228,12 +228,12 @@ from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
 from matplotlib import colors
 plt.rc('font', size=20)
 an_plt = 'z9' # 1 eg animal
-an_day = 19
+an_day = 16
 cs_all = []; num_epochs = []
 plt.close('all')
-plot = False
+plot = True
 for ii,ass in enumerate(assembly_cells_all_an):
-    # if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
+    if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
         print(f'{df.iloc[ii].animals}, {df.iloc[ii].days}')
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
@@ -250,21 +250,22 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     ax = axes[kk]
                     vmin = np.min(tcs)
                     vmax = np.max(tcs)
+                    print(tcs.shape[0])
                     norm = colors.Normalize(vmin=vmin, vmax=vmax)
                     if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
                     im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
                     ax.set_title(f'Epoch {kk+1}')
-                    ax.axvline(bins/2, color='w', linestyle='--')
-                ax.set_xticks(np.arange(0,bins,30))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
+                    ax.axvline(bins_dt/2, color='w', linestyle='--')
+                ax.set_xticks(np.arange(0,bins_dt+10,30))
+                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
                 fig.suptitle(f'Post-reward ensemble \n {df.iloc[ii].animals}, {df.iloc[ii].days} \n\
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
                 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
                 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
                 if jj==0:
-                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_postrew_ensemble_eg.svg'),bbox_inches='tight')
-        cs_all.append(cs_per_ep)
-        num_epochs.append(len(asm))
+                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_dark_time_postrew_ensemble_eg.svg'),bbox_inches='tight')
+            cs_all.append(cs_per_ep)
+            num_epochs.append(len(asm))
             # plt.figure()
             # plt.plot(tcs[np.argsort(com_per_cell)].T)
 # %%
@@ -340,5 +341,5 @@ ax.set_title('Post-reward ensembles', pad=50)
 plt.tight_layout()
 plt.show()
 ax.spines[['top','right']].set_visible(False)
-
+#%%
 df_clean.to_csv(r'Z:\condition_df\postrew_ensemble.csv', index=None)

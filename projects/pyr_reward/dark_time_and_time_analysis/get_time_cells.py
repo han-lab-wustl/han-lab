@@ -107,12 +107,15 @@ for ii in range(len(conddf)):
                 lasttr=8, bins=bins, velocity_filter=False)
         # time bin is roughly (16/90) or 170 ms
         # test
-        # fig, axes = plt.subplots(ncols = len(tcs_correct_time))
+        # max time trials
+        # max_trial_times = [tr.shape[1]/31.25 for tr in trial_times]
+        # fig, axes = plt.subplots(ncols = len(tcs_correct_time),figsize=(12,10))
         # for ep in range(len(coms_correct_time)):
         #     ax=axes[ep]
-        #     ax.imshow(tcs_correct_time[ep][np.argsort(coms_correct_time[ep])]**.3)
-        #     ax.set_title(f'Rew. Loc. {rewlocs[ep]} cm',fontsize=12)
+        #     ax.imshow(tcs_correct_time[ep][np.argsort(coms_correct_time[0])]**.3,aspect='auto')
+        #     ax.set_title(f'Rew. Loc. {rewlocs[ep]} cm\n Max trial time {max_trial_times[ep]:.1f}s',fontsize=12)
         #     ax.axvline(int(bins/2),color='w',linestyle='--')
+        # fig.tight_layout()
         # normal tc
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins 
@@ -125,29 +128,29 @@ for ii in range(len(conddf)):
         goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, goal_window, coms_correct_time, cell_type = 'all')
         goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]            
         # eg cell 
-        # cellid = goal_cells[5]
-        # for cellid in goal_cells:
-        #     fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
-        #     for ep in range(len(coms_correct)):            
-        #         axes[0].plot(tcs_correct[ep,cellid,:])
-        #         axes[0].set_title('Track aligned')
-        #         axes[0].axvline(int(bins/2),color='k',linestyle='--')
-        #         axes[1].plot(tcs_correct_time[ep,cellid,:])
-        #         axes[1].set_title('Time aligned')
-        #         axes[1].axvline(int(bins/2),color='k',linestyle='--')
-        #     fig.suptitle('Reward cells')
+        plt.close('all')
+        for cellid in goal_cells:
+            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
+            for ep in range(len(coms_correct)):            
+                axes[0].plot(tcs_correct[ep,cellid,:])
+                axes[0].set_title('Track aligned')
+                axes[0].axvline(int(bins/2),color='k',linestyle='--')
+                axes[1].plot(tcs_correct_time[ep,cellid,:])
+                axes[1].set_title('Time aligned')
+                axes[1].axvline(int(bins/2),color='k',linestyle='--')
+            fig.suptitle('Reward cells')
                 
-        # for cellid in goal_cells_time:
-        #     fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
-        #     for ep in range(len(coms_correct)):            
-        #         axes[0].plot(tcs_correct[ep,cellid,:])
-        #         axes[0].set_title('Track aligned')
-        #         axes[0].axvline(int(bins/2),color='k',linestyle='--')
-        #         axes[1].plot(tcs_correct_time[ep,cellid,:])
-        #         axes[1].set_title('Time aligned')
-        #         axes[1].axvline(int(bins/2),color='k',linestyle='--')
-        #     fig.suptitle('Time cells')
-        # plt.show()    
+        for cellid in goal_cells_time:
+            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
+            for ep in range(len(coms_correct)):            
+                axes[0].plot(tcs_correct[ep,cellid,:])
+                axes[0].set_title('Track aligned')
+                axes[0].axvline(int(bins/2),color='k',linestyle='--')
+                axes[1].plot(tcs_correct_time[ep,cellid,:])
+                axes[1].set_title('Time aligned')
+                axes[1].axvline(int(bins/2),color='k',linestyle='--')
+            fig.suptitle('Time cells')
+        plt.show()    
         #only get perms with non zero cells
         # get per comparison and also across epochs
         p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
@@ -157,7 +160,7 @@ for ii in range(len(conddf)):
         perms.append([[perm, rz_perm],
             [perm_time, rz_perm_time]])
         print(f'Goal cells w/o dt: {goal_cells}\n\
-            Goal cells w/ dt: {goal_cells_time}')
+            Time cells: {goal_cells_time}')
         # shuffle
         num_iterations=1000
         goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
@@ -227,7 +230,7 @@ ax = sns.histplot(data = df_dt.loc[df_dt.opto==False], x='p_value',
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(x=0.05, color='k', linestyle='--')
 sessions_sig = sum(df_dt.loc[df_dt.opto==False,'p_value'].values<0.05)/len(df_dt.loc[df_dt.opto==False])
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Reward cells w/ dark time')
+ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Time cells')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
@@ -248,7 +251,6 @@ sns.lineplot(data=df_plt, # correct shift
         label='shuffle',ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().remove()
-
 eps = [2,3,4]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
@@ -256,7 +258,9 @@ for ep in eps:
     shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
     t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
     print(f'{ep} epochs, pval: {pval}')
-
+ax.set_title('Reward-distance cells')
+ax.set_ylabel('% Cells') 
+# dark time
 ax = axes[1]
 df_plt = df_dt[df_dt.num_epochs<5]
 # av across mice
@@ -272,7 +276,7 @@ sns.lineplot(data=df_plt, # correct shift
         label='shuffle',ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().remove()
-
+ax.set_title('Time cells')
 eps = [2,3,4]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
@@ -283,8 +287,8 @@ for ep in eps:
 #%%    
 # include all comparisons 
 df_perms = pd.DataFrame()
-goal_cell_perm = [xx[1] for xx in p_goal_cells]
-goal_cell_perm_shuf = [xx[0][0][~np.isnan(xx[0][0])] for xx in goal_cell_null]
+goal_cell_perm = [xx[1] for xx in p_goal_cells_dt]
+goal_cell_perm_shuf = [xx[1][0][~np.isnan(xx[1][0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
 df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
@@ -328,7 +332,7 @@ for i in range(len(ans)):
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
 ax.set_xlabel('')
-ax.set_ylabel('Reward cell % ')
+ax.set_ylabel('Cell % ')
 
 eps = [2,3,4]
 y = 35
@@ -368,8 +372,8 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
 ax.spines[['top','right']].set_visible(False)
-ax.set_title('Reward cell %-shuffle',pad=30)
-# ax.set_ylim([0, 37])
+ax.set_title('Cell %-shuffle',pad=30)
+ax.set_ylim([0, 15])
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
@@ -379,5 +383,5 @@ for i in range(len(ans)):
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
 
-plt.savefig(os.path.join(savedst, 'allreward_w_darktime_cell_prop-shuffle_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'time_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')

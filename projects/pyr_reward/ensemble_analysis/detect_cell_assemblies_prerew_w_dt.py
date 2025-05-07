@@ -158,14 +158,14 @@ for ii in range(len(conddf)):
             
             used_cells = set()
             for assembly_id, cells in sorted_assemblies:
-                if len(cells) < 3:
-                    continue  # skip small assemblies
                 # minimum peak of cell in ensemble must be > 
                 peak = np.nanmax(tcs_correct[0, goal_all[cells], :],axis=1)
                 if sum(peak < .05)>0: # remove low firing cells?
                     # remove cell from list
                     cells = np.array(cells)[peak>.05]
                     # continue
+                if len(cells) < 3:
+                    continue  # skip small assemblies
                 cell_ids = set(goal_all[cells])
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
