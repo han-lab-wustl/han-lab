@@ -42,6 +42,7 @@ assembly_cells_all_an=[]
 dedicated_not_in_ensemble_all=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
+#%%
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
@@ -189,7 +190,9 @@ for ii in range(len(conddf)):
                 assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, goal_all[cells], :]
         except Exception as e:
             print(e)
-        gucells = np.unique(np.concatenate(goal_unique_cells))
+        if len(goal_unique_cells)>0:
+            gucells = np.unique(np.concatenate(goal_unique_cells))
+        else: gucells = []
         dedicated_in_ensemble = [xx for xx in gucells if xx in goal_cells]
         dedicated_not_in_ensemble = [xx for xx in gucells if xx not in goal_cells]
         try:
@@ -307,9 +310,9 @@ reject, corrected_pvals, _, _ = multipletests(raw_pvals, method='bonferroni')
 s=10
 plt.figure(figsize=(3,5))
 ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, errorbar='se',
-                 fill=False, color='k')
+            fill=False, color='k')
 sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, color='k', jitter=True,
-              s=s,alpha=0.7)
+            s=s,alpha=0.7)
 
 # Annotate
 fs = 30

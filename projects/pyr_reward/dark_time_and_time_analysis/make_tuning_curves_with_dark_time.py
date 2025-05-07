@@ -302,7 +302,7 @@ for ii in range(len(conddf)):
         #only get perms with non zero cells
         
         p_goal_cells = len(goal_cells)/len(coms_correct[0])
-        p_goal_cells_dt = =len(goal_cells_dt)/len(coms_correct_dt[0])
+        p_goal_cells_dt = len(goal_cells_dt)/len(coms_correct_dt[0])
         goal_cells_iind = [goal_cells, goal_cells_dt]
         # save!!!
         data_dct[f'{animal}_{day:03d}_index{ii:03d}'] = [p_goal_cells,p_goal_cells_dt,

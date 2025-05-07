@@ -414,7 +414,7 @@ if __name__ == "__main__":
     drives = [r'Y:\halo_grabda',r'Y:\halo_grabda', r'X:\vipcre',
               r'X:\vipcre',  r'X:\vipcre']#,
             # r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda']
-    animals = ['e242','e243', 'z14', 'z17','z16']#,
+    animals = ['e242','e243', 'z15', 'z17','z16']#,
         # 'e278', 'e279', 'e280']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])
@@ -423,4 +423,4 @@ if __name__ == "__main__":
     src=r'X:\vipcre'
     dst=r'Y:\analysis\fmats'
     animal='z17'
-    # copyfmats(src,dst,animal,days=[32],combined=True)
+    copyfmats(src,dst,animal,days=[11],combined=True,overwrite=True)
