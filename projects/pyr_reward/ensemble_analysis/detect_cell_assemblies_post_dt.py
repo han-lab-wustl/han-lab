@@ -228,7 +228,7 @@ from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
 from matplotlib import colors
 plt.rc('font', size=20)
 an_plt = 'z9' # 1 eg animal
-an_day = 16
+an_day = 19
 cs_all = []; num_epochs = []
 plt.close('all')
 plot = True
