@@ -224,6 +224,7 @@ an_plt = 'z9' # 1 eg animal
 an_day = 19
 cs_all = []; num_epochs = []
 plt.close('all')
+# plot=True
 plot = False
 for ii,ass in enumerate(assembly_cells_all_an):
     # if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
@@ -260,6 +261,127 @@ for ii,ass in enumerate(assembly_cells_all_an):
         cs_all.append(cs_per_ep)
             # plt.figure()
             # plt.plot(tcs[np.argsort(com_per_cell)].T)
+#%%
+
+######################## shuffle ########################
+# look through all the assemblies
+df = conddf.copy()
+df = df[(df.animals!='e217') & (df.optoep.values<2)]
+an_plt = 'z9' # 1 eg animal
+an_day = 19
+cs_all_shuffle = []; num_epochs_shuffle = []
+plt.close('all')
+plot = False
+for ii,ass in enumerate(assembly_cells_all_an):
+    # if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
+        print(f'{df.iloc[ii].animals}, {df.iloc[ii].days}')
+        ass_all = list(ass.values()) # all assemblies
+        cs_per_ep = []; ne = []
+        for jj,asm in enumerate(ass_all):
+            perm = list(combinations(range(len(asm)), 2)) 
+            # consecutive ep only
+            perm = [p for p in perm if p[0]-p[1]==-1]
+            ############ SHUFFLE ############
+            shufs = np.arange(len(asm[perm[0][0]]))
+            random.shuffle(shufs)
+            ############ SHUFFLE ############
+            # shuffle 2nd epoch
+            cs = [cosine_sim_ignore_nan(asm[p[0]], asm[p[1]][shufs,:]) for p in perm]
+            cs_per_ep.append(cs)
+            if plot:
+                fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
+                gamma=.5
+                for kk,tcs in enumerate(asm):
+                    ax = axes[kk]
+                    vmin = np.min(tcs)
+                    vmax = np.max(tcs)
+                    norm = colors.Normalize(vmin=vmin, vmax=vmax)
+                    if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                    im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
+                    ax.set_title(f'Epoch {kk+1}')
+                    ax.axvline(bins/2, color='w', linestyle='--')
+                ax.set_xticks(np.arange(0,bins,30))
+                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
+                fig.suptitle(f'Pre-reward ensemble \n {df.iloc[ii].animals}, {df.iloc[ii].days} \n\
+                    Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
+                cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+                fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
+                if jj==0:
+                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_prerew_ensemble_eg.svg'),bbox_inches='tight')
+        num_epochs_shuffle.append(len(asm))
+        cs_all_shuffle.append(cs_per_ep)
+            
+# add 2 ep combinaitions as 2 ep
+df2 = pd.DataFrame()
+df2['cosine_sim_across_ep'] = np.hstack([np.concatenate(xx) if len(xx)>0 else np.nan for xx in cs_all_shuffle])
+df2['animals'] = np.concatenate([[df.iloc[ii].animals]*len(np.concatenate(xx)) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all_shuffle)])
+df2['num_epochs'] =[2]*len(df2)
+
+df['num_epochs'] = num_epochs_shuffle
+# df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
+df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all_shuffle]
+
+df = pd.concat([df,df2])
+df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
+dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+dfan = dfan.reset_index()
+dfan = dfan[dfan.num_epochs<5]
+df_clean = dfan
+# temp
+df_clean = df_clean[(df_clean.animals!='e139') & (df_clean.animals!='e200') & (df_clean.animals!='e190')]
+from statsmodels.formula.api import ols
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
+from statsmodels.stats.multitest import multipletests
+
+# Pairwise comparisons (Bonferroni)
+unique_groups = sorted(df_clean['num_epochs'].unique())
+group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_across_ep'] for group in unique_groups}
+
+comparisons = list(combinations(unique_groups, 2))
+raw_pvals = []
+for g1, g2 in comparisons:
+    _, pval = scipy.stats.ranksums(group_data[g1], group_data[g2])
+    raw_pvals.append(pval)
+
+# Bonferroni correction
+reject, corrected_pvals, _, _ = multipletests(raw_pvals, method='bonferroni')
+# Plot
+s=10
+plt.figure(figsize=(3,5))
+ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, errorbar='se',
+            fill=False, color='k')
+sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', data=df_clean, color='k', jitter=True,
+            s=s,alpha=0.7)
+# Annotate
+fs = 30
+pshift = 0.05
+max_y = df_clean['cosine_sim_across_ep'].max()
+
+for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reject)):
+    x1, x2 = int(g1)-2, int(g2)-2
+    y = max_y + 0.05 * (i + 1)
+    ax.plot([x1, x1, x2, x2], [y, y+0.01, y+0.01, y], lw=1.5, c='k')
+
+    if pval < 0.001:
+        star = '***'
+    elif pval < 0.01:
+        star = '**'
+    elif pval < 0.05:
+        star = '*'
+    else:
+        star = 'ns'
+
+    ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
+    ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
+
+ax.set_title('Shuffle ensembles', pad=50)
+plt.tight_layout()
+plt.show()
+df_clean.to_csv(r'Z:\condition_df\shuffle_ensemble_w_dt.csv', index=None)
+######################## shuffle ########################
+
 # %%# %%
 # add 2 ep combinaitions as 2 ep
 df2 = pd.DataFrame()
@@ -269,8 +391,7 @@ df2['num_epochs'] =[2]*len(df2)
 
 df['num_epochs'] = num_epochs
 # df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.nanmin(xx) if len(xx)>0 else np.nan for xx in cs_all]
+df['cosine_sim_across_ep'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in cs_all]
 df = pd.concat([df,df2])
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
 dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
@@ -332,9 +453,9 @@ plt.show()
 #%%
 plt.rc('font', size=20)
 # compare to post rew
-df_post = pd.read_csv(r'Z:\condition_df\postrew_ensemble.csv')
-df_nonrew = pd.read_csv(r'Z:\condition_df\place_ensemble.csv')
-df_shuffle = pd.read_csv(r'Z:\condition_df\shuffle_ensemble.csv')
+df_post = pd.read_csv(r'Z:\condition_df\postrew_ensemble_w_dt.csv')
+df_nonrew = pd.read_csv(r'Z:\condition_df\place_ensemble_w_dt.csv')
+df_shuffle = pd.read_csv(r'Z:\condition_df\shuffle_ensemble_w_dt.csv')
 df_post['cell_type'] = ['Post-reward']*len(df_post)
 df_nonrew['cell_type'] = ['Place']*len(df_nonrew)
 df_shuffle['cell_type'] = ['Shuffle']*len(df_nonrew)
@@ -433,9 +554,10 @@ for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reje
 ax.set_ylabel('Mean ensemble cosine similarity')
 ax.set_xlabel('# of reward loc. switches')
 
-plt.savefig(os.path.join(savedst, 'ensemble_cosine_sim_pre_v_post.svg'))
+plt.savefig(os.path.join(savedst, 'dark_time_ensemble_cosine_sim_pre_v_post.svg'))
 #%%
 # histogram of cell % in assemblies
+df_all=df_all.reset_index()
 fig, axes = plt.subplots(ncols=2,figsize=(10,5))
 ax=axes[0]
 sns.histplot(
@@ -461,4 +583,4 @@ ax.set_ylabel('Dedicated cell % in ensemble')
 # ax.set_ylabel('Sessions')
 ax.spines[['top','right']].set_visible(False)
 fig.tight_layout()
-plt.savefig(os.path.join(savedst, 'pcells_in_ensembles.svg'))
+plt.savefig(os.path.join(savedst, 'dark_time_pcells_in_ensembles.svg'))

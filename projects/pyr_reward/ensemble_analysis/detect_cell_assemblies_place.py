@@ -16,7 +16,7 @@ mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, make_tuning_curves
+from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime, intersect_arrays, make_tuning_curves
 from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric,\
     get_radian_position_first_lick_after_rew, get_rewzones
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -52,7 +52,7 @@ for ii in range(len(conddf)):
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
             'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell','licks', 'bordercells',
-            'stat'])
+            'stat', 'timedFF'])
         pcs = np.vstack(np.array(fall['putative_pcs'][0]))
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
@@ -67,6 +67,7 @@ for ii in range(len(conddf)):
         trialnum=fall['trialnum'][0]
         rewards = fall['rewards'][0]
         licks = fall['licks'][0]
+        time = fall['timedFF'][0]
         if animal=='e145':
             ybinned=ybinned[:-1]
             forwardvel=forwardvel[:-1]
@@ -74,6 +75,7 @@ for ii in range(len(conddf)):
             trialnum=trialnum[:-1]
             rewards=rewards[:-1]
             licks=licks[:-1]
+            time=time[:-1]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf
         eps = np.append(eps, len(changeRewLoc))        
@@ -105,8 +107,14 @@ for ii in range(len(conddf)):
         tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size)
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size)          
+        # tc w/ dark time added to the end of track
+        track_length_dt = 550 # cm estimate based on 99.9% of ypos
+        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+        bins_dt=150 
+        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)
 
         # get cells that maintain their coms across at least 2 epochs
         place_window = 20 # cm converted to rad                
@@ -133,20 +141,20 @@ for ii in range(len(conddf)):
             
             used_cells = set()
             for assembly_id, cells in sorted_assemblies:
-                if len(cells) < 3:
-                    continue  # skip small assemblies
                 # minimum peak of cell in ensemble must be > 
                 peak = np.nanmax(tcs_correct[0, other_cells[cells], :],axis=1)
                 if sum(peak < .05)>0: # remove low firing cells?
                     # remove cell from list
                     cells = np.array(cells)[peak>.05]
                     # continue
+                if len(cells) < 3:
+                    continue  # skip small assemblies
                 cell_ids = set(other_cells[cells])
                 if not cell_ids.isdisjoint(used_cells):
                     continue  # skip if any cell already used in larger assembly
                 goal_unique_cells.append(other_cells[cells])
                 used_cells.update(cell_ids)  # mark cells as used
-                time_bins = np.arange(90)
+                time_bins = np.arange(bins_dt)
                 activity = tcs_correct[0, other_cells[cells], :]                
                 # Calculate center of mass
                 center_of_mass = np.sum(activity * time_bins) / np.sum(activity) if np.sum(activity) > 0 else np.nan
@@ -187,7 +195,7 @@ df = conddf.copy()
 df = df[(df.animals!='e217') & (df.optoep.values<2)]
 df['p_cells_in_assemblies'] = p_rewcells_in_assemblies
 df['p_cells_in_assemblies'] = df['p_cells_in_assemblies'] *100
-ax = sns.histplot(x = 'p_cells_in_assemblies',data=df)
+ax = sns.histplot(x = 'p_cells_in_assemblies',data=df) 
 
 #%%
 from projects.pyr_reward.rewardcell import cosine_sim_ignore_nan
@@ -200,8 +208,9 @@ an_day = 50
 cs_all = []; num_epochs = []
 plt.close('all')
 plot = False
+# plot=True
 for ii,ass in enumerate(assembly_cells_all_an):
-    if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
+    # if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
         print(f'{df.iloc[ii].animals}, {df.iloc[ii].days}')
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
@@ -213,7 +222,7 @@ for ii,ass in enumerate(assembly_cells_all_an):
             cs_per_ep.append(cs)
             if plot:
                 fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
-                gamma=.5
+                gamma=.4
                 for kk,tcs in enumerate(asm):
                     ax = axes[kk]
                     vmin = np.min(tcs)
@@ -221,19 +230,19 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     norm = colors.Normalize(vmin=vmin, vmax=vmax)
                     if kk==0: 
                         com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
-                        ax.set_ylabel('Reward cell ID #')
+                        ax.set_ylabel('Place cell ID #')
                     im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
                     ax.set_title(f'Epoch {kk+1}')
-                    ax.axvline(bins/2, color='w', linestyle='--')
-                ax.set_xticks(np.arange(0,bins,30))
-                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
+                    ax.axvline(bins_dt/2, color='w', linestyle='--')
+                ax.set_xticks(np.arange(0,bins_dt+10,30))
+                ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
                 ax.set_xlabel('Reward-relative distance ($\Theta$)')
                 fig.suptitle(f'Place ensemble \n {df.iloc[ii].animals}, {df.iloc[ii].days} \n\
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
                 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
                 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
                 if jj==1:
-                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_place_ensemble_eg.svg'),bbox_inches='tight')
+                    plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_dark_time_place_ensemble_eg.svg'),bbox_inches='tight')
         cs_all.append(cs_per_ep)
         num_epochs.append(len(asm))
 # %%# %%
@@ -246,7 +255,7 @@ df2['num_epochs'] =[2]*len(df2)
 df['num_epochs'] = num_epochs
 # df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
 df['cosine_sim_across_ep'] = [np.mean(xx) if len(xx)>0 else np.nan for xx in cs_all]
-df['cosine_sim_across_ep'] = [np.nanmin(xx) if len(xx)>0 else np.nan for xx in cs_all]
+# df['cosine_sim_across_ep'] = [np.nanmin(xx) if len(xx)>0 else np.nan for xx in cs_all]
 df = pd.concat([df,df2])
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
 dfan = df.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
@@ -267,7 +276,7 @@ group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_acros
 comparisons = list(combinations(unique_groups, 2))
 raw_pvals = []
 for g1, g2 in comparisons:
-    _, pval = scipy.stats.wilcoxon(group_data[g1], group_data[g2])
+    _, pval = scipy.stats.ranksums(group_data[g1], group_data[g2])
     raw_pvals.append(pval)
 
 # Bonferroni correction
@@ -304,4 +313,4 @@ for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reje
 ax.set_title('Place ensembles', pad=50)
 plt.tight_layout()
 plt.show()
-df_clean.to_csv(r'Z:\condition_df\place_ensemble.csv', index=None)
+df_clean.to_csv(r'Z:\condition_df\place_ensemble_w_dt.csv', index=None)

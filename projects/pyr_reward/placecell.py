@@ -1215,7 +1215,12 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,
             lasttr=8,bins=90,
             velocity_filter=False):    
-    rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []        
+    rates = []; 
+    # initialize
+    tcs_fail = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    coms_fail = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
     rewlocs_w_dt = []; ybinned_dt = []
     failed_trialnm = []; 
     # remake tuning curves relative to reward        
@@ -1317,8 +1322,8 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
                 com = calc_COM_EH(tc,bin_size)
-                tcs_correct.append(tc)
-                coms_correct.append(com)
+                tcs_correct[ep, :,:] = tc
+                coms_correct[ep, :] = com
             # failed trials                        
             # UPDATE 4/16/25
             # only take last 8 failed trials?
@@ -1329,11 +1334,11 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
                 com = calc_COM_EH(tc,bin_size)
-                tcs_fail.append(tc)
-                coms_fail.append(com)
+                tcs_fail[ep, :,:] = tc
+                coms_fail[ep, :] = com
         rewlocs_w_dt.append(rewloc_per_trial)
-    tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)  
-    tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
+    # tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)  
+    # tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
     return tcs_correct, coms_correct, tcs_fail, coms_fail, rewlocs_w_dt, ybinned_dt
 
 def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,

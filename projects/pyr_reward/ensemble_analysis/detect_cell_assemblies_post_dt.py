@@ -232,6 +232,7 @@ an_day = 19
 cs_all = []; num_epochs = []
 plt.close('all')
 plot = True
+# plot=False
 for ii,ass in enumerate(assembly_cells_all_an):
     if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
         print(f'{df.iloc[ii].animals}, {df.iloc[ii].days}')
@@ -264,21 +265,21 @@ for ii,ass in enumerate(assembly_cells_all_an):
                 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
                 if jj==0:
                     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_dark_time_postrew_ensemble_eg.svg'),bbox_inches='tight')
-            cs_all.append(cs_per_ep)
-            num_epochs.append(len(asm))
+        cs_all.append(cs_per_ep)
+        num_epochs.append(len(asm))
             # plt.figure()
             # plt.plot(tcs[np.argsort(com_per_cell)].T)
 # %%
 # add 2 ep combinaitions as 2 ep
 df2 = pd.DataFrame()
 df2['cosine_sim_across_ep'] = np.hstack([np.concatenate(xx) if len(xx)>0 else np.nan for xx in cs_all])
-df2['animals'] = np.concatenate([[df.iloc[ii].animals]*len(np.concatenate(xx)) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all)])
+ans = np.concatenate([[df.iloc[ii].animals]*len(np.concatenate(xx)) if len(xx)>0 else [df.iloc[ii].animals] for ii,xx in enumerate(cs_all)])
+df2['animals'] = ans
 df2['num_epochs'] =[2]*len(df2)
 
 # df = conddf.copy()
 # df = df[(df.animals!='e217') & (df.optoep.values<2)]
 df['num_epochs'] = num_epochs
-df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
 df['cosine_sim_across_ep'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in cs_all]
 df = pd.concat([df,df2])
 df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
@@ -342,4 +343,4 @@ plt.tight_layout()
 plt.show()
 ax.spines[['top','right']].set_visible(False)
 #%%
-df_clean.to_csv(r'Z:\condition_df\postrew_ensemble.csv', index=None)
+df_clean.to_csv(r'Z:\condition_df\postrew_ensemble_w_dt.csv', index=None)

@@ -29,10 +29,12 @@ for ii in range(len(conddf)):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        tcs_correct,tcs_fail,rates,rz_perm,lick_selectivity_success=performance_by_trialtype(params_pth, animal,bins=90)
+        tcs_correct,tcs_fail,rates,rz_perm,lick_selectivity=performance_by_trialtype(params_pth, animal,bins=90)
         data_df[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct,tcs_fail,
-                rates,rz_perm,lick_selectivity_success]
-
+                rates,rz_perm,lick_selectivity]
+# lick selectivity
+# 0 = early
+# 1 = late
 #%%
 
 # get examples of correct vs. fail
@@ -228,7 +230,66 @@ plt.savefig(os.path.join(savedst, 'rewzone_performance.svg'),bbox_inches='tight'
 #%%
 # licks selectivity by reward zone
 # performance average by transition
-rates=[[np.nanmean(yy) for yy in xx[4]] for k,xx in data_df.items()]
+rates=[[np.nanmean(yy[1]) for yy in xx[4]] for k,xx in data_df.items()]
+perms=[list(combinations(range(len(xx[0])), 2)) for k,xx in data_df.items()]
+rz_perm=[xx[3] for k,xx in data_df.items()]
+rates_perm = [[[rates[i][p[0]],rates[i][p[1]]] for p in perm] for i,perm in enumerate(perms)] 
+# get different transition combinations?
+perms = [[list(xx) for xx in perm] for perm in perms]
+rz_perm = [[list(xx) for xx in perm] for perm in rz_perm]
+pairs = np.concatenate(perms)
+rz_pairs = np.concatenate(rz_perm)
+df = pd.DataFrame(pairs)
+df.columns = ['ep_transition_1', 'ep_transition_2']
+df_org = conddf.copy()
+df_org = df_org[((df_org.animals!='e217')) & (df_org.optoep<2)]
+
+df['animal'] = np.concatenate([[xx]*len(perms[ii]) for ii,xx in enumerate(df_org.animals.values)])
+df['performance_transition_1'] = np.concatenate(rates_perm)[:,0]
+df['performance_transition_1'] = df['performance_transition_1']
+df['performance_transition_2'] = np.concatenate(rates_perm)[:,1]
+df['performance_transition_2'] = df['performance_transition_2']
+df['rewzone_transition_1'] = np.concatenate(rz_perm)[:,0]
+df['rewzone_transition_2'] = np.concatenate(rz_perm)[:,1]
+
+df = df[(df.ep_transition_1==1) & (df.ep_transition_2==2)]
+df = df.groupby(['animal','rewzone_transition_1','rewzone_transition_2']).mean(numeric_only=True)
+dflate = df.reset_index()
+s=10
+colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+rz_palette = 'Set1_r'#sns.color_palette(colors)  # Set custom palette
+
+fig,ax = plt.subplots(figsize=(6,5))
+sns.stripplot(x='rewzone_transition_2',
+    y='performance_transition_2',hue='rewzone_transition_1',data=dflate,palette=rz_palette,
+    dodge=True,s=s,alpha=0.7)
+sns.barplot(x='rewzone_transition_2',
+    y='performance_transition_2',hue='rewzone_transition_1',data=dflate,palette=rz_palette,
+    fill=False)
+handles, labels = ax.get_legend_handles_labels()
+by_label = dict(zip(labels, handles))
+ax.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(1.0, 0.5), 
+        title='Previous Reward Zone')
+ax.set_ylabel('Lick Selectivity (last 5 trials)')
+ax.set_xlabel('Reward Zone')
+ax.spines[['top','right']].set_visible(False)
+
+# not significant
+df_rz1 = dflate[dflate['rewzone_transition_2'] == 1]  # make sure type matches if it's string
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+# Fit model to see effect of previous reward zone (transition 1) on performance in reward zone 1
+model = ols('performance_transition_2 ~ C(rewzone_transition_1) + C(animal)', data=df_rz1).fit()
+anova_table = sm.stats.anova_lm(model)
+print("ANOVA (Effect of previous reward zone on performance in current reward zone 1):\n")
+print(anova_table)
+groups = df_rz1.groupby('rewzone_transition_1')
+data_by_prev = {k: v.set_index('animal')['performance_transition_2'] for k, v in groups}
+plt.savefig(os.path.join(savedst, 'rewzone_lick_select_last5trials.svg'),bbox_inches='tight')
+#%%
+# licks selectivity by reward zone
+# performance average by transition
+rates=[[np.nanmean(yy[0]) for yy in xx[4]] for k,xx in data_df.items()]
 perms=[list(combinations(range(len(xx[0])), 2)) for k,xx in data_df.items()]
 rz_perm=[xx[3] for k,xx in data_df.items()]
 rates_perm = [[[rates[i][p[0]],rates[i][p[1]]] for p in perm] for i,perm in enumerate(perms)] 
@@ -253,6 +314,7 @@ df['rewzone_transition_2'] = np.concatenate(rz_perm)[:,1]
 df = df[(df.ep_transition_1==1) & (df.ep_transition_2==2)]
 df = df.groupby(['animal','rewzone_transition_1','rewzone_transition_2']).mean(numeric_only=True)
 df = df.reset_index()
+
 s=10
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 rz_palette = 'Set1_r'#sns.color_palette(colors)  # Set custom palette
@@ -268,7 +330,7 @@ handles, labels = ax.get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
 ax.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(1.0, 0.5), 
         title='Previous Reward Zone')
-ax.set_ylabel('Lick Selectivity (last 8 trials)')
+ax.set_ylabel('Lick Selectivity (early 5 trials)')
 ax.set_xlabel('Reward Zone')
 ax.spines[['top','right']].set_visible(False)
 
@@ -283,7 +345,7 @@ print("ANOVA (Effect of previous reward zone on performance in current reward zo
 print(anova_table)
 groups = df_rz1.groupby('rewzone_transition_1')
 data_by_prev = {k: v.set_index('animal')['performance_transition_2'] for k, v in groups}
-plt.savefig(os.path.join(savedst, 'rewzone_lick_select.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'rewzone_lick_select_early5trials.svg'),bbox_inches='tight')
 
 #%%
 # recalculate tc

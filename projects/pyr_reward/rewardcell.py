@@ -20,7 +20,8 @@ from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
     consecutive_stretch,make_tuning_curves,make_tuning_curves_warped,make_tuning_curves_trial_by_trial,\
-        make_tuning_curves_radians_by_trialtype_behavior, make_tuning_curves_probes
+        make_tuning_curves_radians_by_trialtype_behavior, make_tuning_curves_probes,\
+        make_tuning_curves_by_trialtype_w_darktime
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.memory.behavior import get_lick_selectivity
 from collections import Counter
@@ -763,7 +764,7 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
@@ -778,6 +779,7 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     lick = fall['licks'][0]
+    time = fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -785,6 +787,7 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         lick=lick[:-1]
+        time=time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -802,7 +805,11 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # added to get anatomical info
     # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -817,9 +824,11 @@ def extract_data_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            rewsize,ybinned,time,lick,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)  
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -965,7 +974,7 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
@@ -980,6 +989,7 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     lick = fall['licks'][0]
+    time = fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -987,6 +997,7 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         lick=lick[:-1]
+        time=time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -1004,7 +1015,11 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # added to get anatomical info
     # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -1019,9 +1034,12 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            rewsize,ybinned,time,lick,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)  
+
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -1083,8 +1101,8 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
                 ax = axes[i]
                 ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
                 if len(tcs_fail)>0:
-                        ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', 
-                            color=colors[ep], linestyle = '--')
+                    ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', 
+                        color=colors[ep], linestyle = '--')
                 ax.axvline((bins/2), color='k')
                 ax.set_title(f'cell # {gc}')
                 ax.spines[['top','right']].set_visible(False)
@@ -1168,14 +1186,14 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'licks','stat', 'timedFF'])
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     try:
-        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
     except:
-        rewsize = 10
+            rewsize = 10
     ybinned = fall['ybinned'][0]/scalingf
     track_length=180/scalingf    
     forwardvel = fall['forwardvel'][0]    
@@ -1183,6 +1201,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     lick = fall['licks'][0]
+    time = fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -1190,6 +1209,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         lick=lick[:-1]
+        time=time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -1207,7 +1227,11 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # added to get anatomical info
     # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -1222,16 +1246,11 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
-    # fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
-    # ops = fall_stat['ops']
-    # stat = fall_stat['stat']
-    # meanimg=np.squeeze(ops)[()]['meanImg']
-    # s2p_iind = np.arange(stat.shape[1])
-    # s2p_iind_filter = s2p_iind[(fall['iscell'][:,0]).astype(bool)]
-    # s2p_iind_filter = s2p_iind_filter[skew>2]
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            rewsize,ybinned,time,lick,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -1316,12 +1335,12 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
                 ax = axes[i]
                 ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
                 if len(tcs_fail)>0:
-                        ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                ax.axvline((bins/2), color='k')
+                    ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
+                ax.axvline((bins_dt/2), color='k')
                 ax.set_title(f'cell # {gc}')
                 ax.spines[['top','right']].set_visible(False)
-        ax.set_xticks(np.arange(0,bins+1,20))
-        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+        # ax.set_xticks(np.arange(0,bins+1,20))
+        # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
         ax.set_xlabel('Radian position (centered start rew loc)')
         ax.set_ylabel('Fc3')
         fig.tight_layout()
@@ -1453,7 +1472,7 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
@@ -1468,6 +1487,7 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     lick = fall['licks'][0]
+    time = fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -1475,6 +1495,7 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         lick=lick[:-1]
+        time=time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -1492,7 +1513,11 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # added to get anatomical info
     # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -1507,9 +1532,11 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
+            rewlocs,rewsize,ybinned,time,lick,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)  
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -2312,14 +2339,15 @@ def performance_by_trialtype(params_pth, animal,bins=90):
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf
     eps = np.append(eps, len(changeRewLoc))
-    lasttr=8 # last trials
+    lasttr=5 # last trials
+    earlytr=5
     rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
                     trialnum, track_length) # get radian coordinates
     track_length_rad = track_length*(2*np.pi/track_length)
     bin_size=track_length_rad/bins 
     rz = get_rewzones(rewlocs,1/scalingf)       
     # get average success rate
-    rates = []; lick_selectivity_success = []
+    rates = []; lick_selectivity = []
     for ep in range(len(eps)-1):
         eprng = range(eps[ep],eps[ep+1])
         success, fail, str_trials, ftr_trials, ttr, \
@@ -2327,13 +2355,17 @@ def performance_by_trialtype(params_pth, animal,bins=90):
         rates.append(success/total_trials)
         # get lick selectivity
         mask = np.array([xx in str_trials[-lasttr:] for xx in trialnum[eprng]])
-        ls = get_lick_selectivity(ybinned[eprng][mask], 
+        ls_late = get_lick_selectivity(ybinned[eprng][mask], 
                         trialnum[eprng][mask], lick[eprng][mask], 
                         rewlocs[ep], rewsize,
                         fails_only = False) 
-        lick_selectivity_success.append(ls)
+        mask = np.array([xx in ttr[:earlytr] for xx in trialnum[eprng]])
+        ls_early = get_lick_selectivity(ybinned[eprng][mask], 
+                        trialnum[eprng][mask], lick[eprng][mask], 
+                        rewlocs[ep], rewsize,
+                        fails_only = False) 
+        lick_selectivity.append([ls_early,ls_late])
     rate=np.nanmean(np.array(rates))
-           
 
     tcs_correct, tcs_fail = make_tuning_curves_radians_by_trialtype_behavior(eps,rewlocs,ybinned,rad,
         lick,trialnum,rewards,forwardvel,rewsize,bin_size)   
@@ -2341,7 +2373,7 @@ def performance_by_trialtype(params_pth, animal,bins=90):
     rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]      
     
     # get mean tuning curve correct vs. incorrect
-    return tcs_correct,tcs_fail,rates,rz_perm,lick_selectivity_success
+    return tcs_correct,tcs_fail,rates,rz_perm,lick_selectivity
 
 def licks_by_trialtype(params_pth, animal,bins=90):
     """
