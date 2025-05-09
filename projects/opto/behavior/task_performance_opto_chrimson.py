@@ -65,7 +65,7 @@ for dd,day in enumerate(conddf.days.values):
     dcts.append(dct)
 #%%
 # plot performance 
-s = 12 # pontsize
+s = 10 # pontsize
 dcts_opto = np.array(dcts)
 df=pd.DataFrame()
 df['rates'] = np.concatenate([dct['rates'] for dct in dcts])

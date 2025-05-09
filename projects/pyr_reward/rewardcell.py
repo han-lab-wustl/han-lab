@@ -314,7 +314,7 @@ def extract_data_prerew(ii,params_pth,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'stat', 'timedFF', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
@@ -329,6 +329,7 @@ def extract_data_prerew(ii,params_pth,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     lick=fall['licks'][0]
+    time=fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -336,6 +337,7 @@ def extract_data_prerew(ii,params_pth,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         lick=lick[:-1]
+        time=time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -353,7 +355,11 @@ def extract_data_prerew(ii,params_pth,
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # added to get anatomical info
     # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -368,16 +374,12 @@ def extract_data_prerew(ii,params_pth,
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
-    # fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
-    # ops = fall_stat['ops']
-    # stat = fall_stat['stat']
-    # meanimg=np.squeeze(ops)[()]['meanImg']
-    # s2p_iind = np.arange(stat.shape[1])
-    # s2p_iind_filter = s2p_iind[(fall['iscell'][:,0]).astype(bool)]
-    # s2p_iind_filter = s2p_iind_filter[skew>2]
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            rewsize,ybinned,time,lick,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)  
+
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -442,11 +444,11 @@ def extract_data_prerew(ii,params_pth,
                 ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
                 if len(tcs_fail)>0:
                         ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                ax.axvline((bins/2), color='k')
+                ax.axvline((bins_dt/2), color='k')
                 ax.set_title(f'cell # {gc}')
                 ax.spines[['top','right']].set_visible(False)
-        ax.set_xticks(np.arange(0,bins+1,20))
-        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+        # ax.set_xticks(np.arange(0,bins+1,20))
+        # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
         ax.set_xlabel('Radian position (centered start rew loc)')
         ax.set_ylabel('Fc3')
         fig.suptitle(animal)
@@ -563,7 +565,7 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
@@ -578,6 +580,7 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     licks=fall['licks'][0]
+    time=fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -585,6 +588,7 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         licks=licks[:-1]
+        time=time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -602,7 +606,11 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
             total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
             rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # added to get anatomical info
     # takes time
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -617,16 +625,12 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
         com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
     else:# remake tuning curves relative to reward        
         # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
-    # fall_stat = scipy.io.loadmat(params_pth, variable_names=['stat','ops'])
-    # ops = fall_stat['ops']
-    # stat = fall_stat['stat']
-    # meanimg=np.squeeze(ops)[()]['meanImg']
-    # s2p_iind = np.arange(stat.shape[1])
-    # s2p_iind_filter = s2p_iind[(fall['iscell'][:,0]).astype(bool)]
-    # s2p_iind_filter = s2p_iind_filter[skew>2]
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            rewsize,ybinned,time,lick,
+            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)  
+
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -685,11 +689,11 @@ def extract_data_rewcentric(ii,params_pth,animal,day,bins,radian_alignment,
                 ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
                 # if len(tcs_fail)>0:
                 #         ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
-                ax.axvline((bins/2), color='k')
+                ax.axvline((bins_dt/2), color='k')
                 ax.set_title(f'cell # {gc}')
                 ax.spines[['top','right']].set_visible(False)
-        ax.set_xticks(np.arange(0,bins+1,20))
-        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+        # ax.set_xticks(np.arange(0,bins+1,20))
+        # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
         ax.set_xlabel('Radian position (centered start rew loc)')
         ax.set_ylabel('Fc3')
         fig.tight_layout()
@@ -1247,10 +1251,16 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
-            rewsize,ybinned,time,lick,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, \
+        rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
+            rewlocs,rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
+        # tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, \
+        # rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
+        #     rewlocs,rewsize,ybinned,time,lick,
+        #     Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+        #     bins=bins_dt)
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -1279,27 +1289,27 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
         xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
         xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
-    acc = fall['forwardvel'][0][1:]/np.diff(fall['timedFF'][0])
-    acc=np.hstack(pd.DataFrame({'acc': acc}).rolling(5).mean().values)    
-    nans,x = nan_helper(acc)
-    acc[nans] = np.interp(x(nans), x(~nans), acc[~nans])
-    # check to make sure just a subset
-    # calc acc corr
-    raccs_all = []
-    for com in com_goal_postrew:
-        raccs = []
-        if len(com)>0:
-            for cll in com:
-                try: # if dff is nans
-                    dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
-                    _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
-                except Exception as e:
-                    racc = np.nan
-                raccs.append(racc)
-        raccs_all.append(raccs)
-    thres=1e-50 # correlation thres
-    com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
-        if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
+    # acc = fall['forwardvel'][0][1:]/np.diff(fall['timedFF'][0])
+    # acc=np.hstack(pd.DataFrame({'acc': acc}).rolling(5).mean().values)    
+    # nans,x = nan_helper(acc)
+    # acc[nans] = np.interp(x(nans), x(~nans), acc[~nans])
+    # # check to make sure just a subset
+    # # calc acc corr
+    # raccs_all = []
+    # for com in com_goal_postrew:
+    #     raccs = []
+    #     if len(com)>0:
+    #         for cll in com:
+    #             try: # if dff is nans
+    #                 dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
+    #                 _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
+    #             except Exception as e:
+    #                 racc = np.nan
+    #             raccs.append(racc)
+    #     raccs_all.append(raccs)
+    # thres=1e-50 # correlation thres
+    # com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
+    #     if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
     #only get perms with non zero cells
     perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
     rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
@@ -1345,6 +1355,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
         ax.set_ylabel('Fc3')
         fig.tight_layout()
         pdf.savefig(fig)
+        # plt.show()
         plt.close(fig)
     # get shuffled iteration
     shuffled_dist = np.zeros((num_iterations))
@@ -1352,8 +1363,6 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan
     goal_cell_shuf_ps = []
     for i in range(num_iterations):
-        # shuffle locations
-        rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
         shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
         [random.shuffle(shuf) for shuf in shufs]
         # first com is as ep 1, others are shuffled cell identities
@@ -1420,21 +1429,21 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
                 xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal_shuf]
 
         # calc acc corr
-        raccs_all = []
-        for com in com_goal_postrew_shuf:
-            raccs = []
-            if len(com)>0:
-                for cll in com:
-                    nans,x = nan_helper(dFF[1:,cll])
-                    try: # if dff is nans
-                        dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
-                        _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
-                    except Exception as e:
-                        racc = np.nan
-                    raccs.append(racc)
-            raccs_all.append(raccs)
-        com_goal_postrew_shuf = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
-            if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew_shuf)]
+        # raccs_all = []
+        # for com in com_goal_postrew_shuf:
+        #     raccs = []
+        #     if len(com)>0:
+        #         for cll in com:
+        #             nans,x = nan_helper(dFF[1:,cll])
+        #             try: # if dff is nans
+        #                 dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
+        #                 _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
+        #             except Exception as e:
+        #                 racc = np.nan
+        #             raccs.append(racc)
+        #     raccs_all.append(raccs)
+        # com_goal_postrew_shuf = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
+        #     if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew_shuf)]
         #only get perms with non zero cells
         perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew_shuf[ii])>0]
         com_goal_postrew_shuf=[com for com in com_goal_postrew_shuf if len(com)>0]

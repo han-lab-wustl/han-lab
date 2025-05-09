@@ -60,8 +60,8 @@ for ii in range(len(conddf)):
                         total_cells)
 pdf.close()
 # save pickle of dcts
-# with open(saveddataset, "wb") as fp:   #Pickling
-#         pickle.dump(radian_alignment, fp) 
+with open(saveddataset, "wb") as fp:   #Pickling
+        pickle.dump(radian_alignment, fp) 
 #%%
 plt.rc('font', size=16)          # controls default text sizes
 # plot goal cells across epochs
@@ -213,7 +213,7 @@ ax.set_ylabel('')
 ax.set_title('Far post-reward cell %-shuffle',pad=30)
 ax.set_ylim([-1,8])
 
-plt.savefig(os.path.join(savedst, 'post_farreward_cell_prop-shuffle_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'post_farreward_dark_time_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
 
 #%% 
@@ -265,26 +265,25 @@ tau_all_postrew = [2.5081012042756297,
  1.7613987163758171,
  2.403541822072123]
 
-tau_all_prerew =[1.6056888447006052,
- 1.7426458455678147,
- 5.050873750828834,
- 2.2320785654220607,
- 1.8576189935003193,
- 1.386477229747204,
- 1.6253067659011684,
- 1.4999119163136394,
- 2.5827747398002434]
+tau_all_prerew =[2.349997695562105,
+ 3.3542296271312786,
+ 5.401831519039983,
+ 2.3131417522099587,
+ 2.177319788868507,
+ 1.4432255209360099,
+ 1.3448952235370013,
+ 1.3658867417424119,
+ 6.234399065992553]
 
-# not > shuffle lol
-tau_far_prerew = [1.6849461455869947,
- 0.3593246565418688,
- 1.26719951539498,
- 0.6347168116394608,
- 0.735269843464658,
- 1.0729934865806332,
- 0.6829821514321549,
- 0.7800329951225865,
- 0.8197247675728667]
+tau_far_prerew = [1.902184232684948,
+ 1.1130375903752456,
+ 1.1891335993849583,
+ 0.42929035493938306,
+ 1.4182488607462183,
+ 1.0666197205416246,
+ 0.6676340435284304,
+ 0.7522738857806301,
+ 0.7907558229642044]
 
 df = pd.DataFrame()
 df['tau'] = np.concatenate([tau_far_prerew,tau_all,tau_all_postrew,tau_all_prerew])
@@ -294,6 +293,8 @@ df['cell_type'] =np.concatenate([['Far pre-reward']*len(tau_far_prerew),
                                 ['Pre-reward']*len(tau_all_prerew)])
 order = ['Pre-reward', 'Post-reward', 'Far pre-reward','Far post-reward']
 # number of epochs vs. reward cell prop incl combinations    
+# make sure outlier numbers aren't there?
+df=df[df.tau<10]
 fig,ax = plt.subplots(figsize=(3.5,5))
 # av across mice
 sns.stripplot(x='cell_type', y='tau',color='k',
@@ -351,12 +352,12 @@ for i, (group1, group2) in enumerate(comparisons):
     else:
         significance = ''
     ax.plot([x1, x1, x2, x2], [y, y + 0.01, y + 0.01, y], lw=1.5, c='k')
-    ax.text((x1 + x2)/2, y-.5, significance, ha='center', va='bottom', color='k',
+    ax.text((x1 + x2)/2, y-1, significance, ha='center', va='bottom', color='k',
             fontsize=fs)
-    ax.text((x1 + x2) / 1.5, y + 0.015 + pshift, f'p={p_val:.2g}', ha='center', rotation=45, fontsize=12)
+    ax.text((x1 + x2) / 1.5, y-.5 + pshift, f'p={p_val:.2g}', ha='center', rotation=45, fontsize=12)
 
-ax.set_title('Ranksum and bonferroni')
-plt.savefig(os.path.join(savedst, 'decay_rewardcell.svg'), 
+# ax.set_title('Ranksum and bonferroni')
+plt.savefig(os.path.join(savedst, 'decay_rewardcell_dark_time.svg'), 
         bbox_inches='tight')
 
 #%%
@@ -461,82 +462,3 @@ for an in an_nms:
     rr+=1
     if rr>=rows: rr=0; cc+=1    
 fig.tight_layout()
-#%%
-# # #examples
-fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-Fc3 = fall_fc3['Fc3']
-dFF = fall_fc3['dFF']
-Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-Fc3 = Fc3[:,(skew>2)] # only keep cells with skew greateer than 2
-bin_size=3 # cm
-# get abs dist tuning 
-tcs_correct_abs, coms_correct_abs, tcs_fail, coms_fail = make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,
-Fc3,trialnum,rewards,forwardvel,rewsize,bin_size)
-
-# # #plot example tuning curve
-plt.rc('font', size=30)  
-fig,axes = plt.subplots(1,3,figsize=(20,20), sharex = True)
-for ep in range(3):
-        axes[ep].imshow(tcs_correct_abs[ep,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.3)
-        axes[ep].set_title(f'Epoch {ep+1}')
-        axes[ep].axvline((rewlocs[ep]-rewsize/2)/bin_size, color='w', linestyle='--', linewidth=4)
-        axes[ep].set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
-        axes[ep].set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
-axes[0].set_ylabel('Reward-distance cells')
-axes[2].set_xlabel('Absolute distance (cm)')
-plt.savefig(os.path.join(savedst, 'abs_dist_tuning_curves_3_ep.svg'), bbox_inches='tight')
-
-# fig,axes = plt.subplots(1,4,figsize=(15,20), sharey=True, sharex = True)
-# axes[0].imshow(tcs_correct[0,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[0].set_title('Epoch 1')
-# im = axes[1].imshow(tcs_correct[1,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[1].set_title('Epoch 2')
-# im = axes[2].imshow(tcs_correct[2,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[2].set_title('Epoch 3')
-# im = axes[3].imshow(tcs_correct[3,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[3].set_title('Epoch 4')
-# ax = axes[1]
-# ax.set_xticks(np.arange(0,bins+1,10))
-# ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),1))
-# ax.axvline((bins/2), color='w', linestyle='--')
-# axes[0].axvline((bins/2), color='w', linestyle='--')
-# axes[2].axvline((bins/2), color='w', linestyle='--')
-# axes[3].axvline((bins/2), color='w', linestyle='--')
-# axes[0].set_ylabel('Reward distance cells')
-# axes[3].set_xlabel('Reward-relative distance (rad)')
-# fig.tight_layout()
-# plt.savefig(os.path.join(savedst, 'tuning_curves_4_ep.png'), bbox_inches='tight')
-# for gc in goal_cells:
-#%%
-gc = 51
-plt.rc('font', size=24)  
-fig2,ax2 = plt.subplots(figsize=(5,5))
-
-for ep in range(3):        
-        ax2.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
-        ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
-        
-        ax2.spines[['top','right']].set_visible(False)
-ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
-ax2.set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
-ax2.set_xlabel('Absolute position (cm)')
-ax2.set_ylabel('$\Delta$ F/F')
-        
-plt.savefig(os.path.join(savedst, f'rewardd_cell_{gc}_tuning_per_ep.svg'), bbox_inches='tight')
-
-fig2,ax2 = plt.subplots(figsize=(5,5))
-for ep in range(3):        
-        ax2.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
-        ax2.axvline(bins/2, color="k", linestyle='--',linewidth=3)
-        
-        ax2.spines[['top','right']].set_visible(False)
-ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-ax2.set_xticks(np.arange(0,bins+1,30))
-ax2.set_xticklabels(np.round(np.arange(-np.pi, 
-        np.pi+np.pi/1.5, np.pi/1.5),1))
-ax2.set_xlabel('Radian position ($\Theta$)')
-ax2.set_ylabel('$\Delta$ F/F')
-plt.savefig(os.path.join(savedst, f'rewardd_cell_{gc}_aligned_tuning_per_ep.svg'), bbox_inches='tight')

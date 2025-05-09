@@ -212,7 +212,7 @@ ax.set_ylabel('')
 ax.set_title('Far pre-reward cell %-shuffle',pad=30)
 ax.set_ylim([-1,8])
 
-plt.savefig(os.path.join(savedst, 'pre_farreward_cell_prop-shuffle_per_an.svg'), 
+plt.savefig(os.path.join(savedst, 'pre_farreward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')
 
 #%% 
@@ -253,104 +253,6 @@ ax.set_ylabel('Reward-centric cell proportion')
 #         bbox_inches='tight')
 
 #%%
-# compare to persistent cells
-tau_all_postrew = [2.5081012042756297,
- 1.3564559842969026,
- 3.067144722017443,
- 4.017594663159857,
- 2.307820130958938,
- 1.814554708027948,
- 1.9844914154882163,
- 1.7613987163758171,
- 2.403541822072123]
-
-tau_all_prerew =[1.6056888447006052,
- 1.7426458455678147,
- 5.050873750828834,
- 2.2320785654220607,
- 1.8576189935003193,
- 1.386477229747204,
- 1.6253067659011684,
- 1.4999119163136394,
- 2.5827747398002434]
-
-tau_far_pre = tau_all
-tau_far_post = [
-    
-]
-df = pd.DataFrame()
-df['tau'] = np.concatenate([tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Far-reward']*len(tau_all),
-                                ['Post-reward']*len(tau_all_postrew),
-                                ['Pre-reward']*len(tau_all_prerew)])
-# number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
-# av across mice
-sns.stripplot(x='cell_type', y='tau',color='k',
-        data=df,s=10,alpha=0.7)
-sns.barplot(x='cell_type', y='tau',
-        data=df, fill=False,ax=ax, color='k', errorbar='se')
-ax.spines[['top','right']].set_visible(False)
-ax.legend().set_visible(False)
-ax.set_ylabel(f'Decay over epochs ($\\tau$)')
-ax.set_xlabel('')
-ax.tick_params(axis='x', rotation=45)
-
-import scipy.stats as stats
-from scikit_posthocs import posthoc_dunn
-from statsmodels.stats.multitest import multipletests
-
-df = df.reset_index()
-
-# Perform Kruskal-Wallis test
-grouped = [df[df['cell_type'] == group]['tau'] for group in df['cell_type'].unique()]
-kruskal_result = stats.kruskal(*grouped)
-print(f"Kruskal-Wallis H-statistic: {kruskal_result.statistic}, p-value: {kruskal_result.pvalue}")
-
-# Perform Dunn's test for pairwise comparisons and apply Bonferroni correction
-dunn_result = posthoc_dunn(df, val_col='tau', group_col='cell_type',p_adjust='bonferroni')
-# Annotate the plot
-# Annotate the plot
-def add_stat_annotation(ax, x1, x2, y, adjusted_p):
-        h = 0.2  # height offset
-        line_offset = 0.1  # offset of the horizontal line
-        # Draw horizontal line
-        ax.plot([x1, x1, x2, x2], [y, y + line_offset, y + line_offset, y], lw=1.5, c='k')
-        # Determine significance level
-        if adjusted_p < 0.001:
-                significance = '***'
-        elif adjusted_p < 0.01:
-                significance = '**'
-        elif adjusted_p < 0.05:
-                significance = '*'
-        else:
-                significance = 'ns'  # Not significant
-        # Combine significance level and p-value in the annotation
-        text = f'{significance}\n(p={adjusted_p:.3g})'
-        line_offset2=.5
-        # Add p-value text
-        ax.text((x1 + x2) * 0.5, y + line_offset2, text, ha='center', va='bottom', color='k',
-                fontsize=14)
-
-# Example usage of add_stat_annotation with group annotations and asterisks
-y_max = df['tau'].max()-5  # maximum y value of the plot
-y_range = df['tau'].max() - df['tau'].min()  # range of y values
-
-cell_types = df['cell_type'].unique()
-for i, group1 in enumerate(cell_types):
-        for j, group2 in enumerate(cell_types):
-                if i < j:
-                        p_value = dunn_result.loc[group1, group2]
-                        adjusted_p = p_value  # Already Bonferroni-adjusted
-                        x1 = list(cell_types).index(group1)
-                        x2 = list(cell_types).index(group2)
-                        y = y_max + (i + j+3) * y_range * .1  # adjust y position
-                        print(i,y)
-                        add_stat_annotation(ax, x1, x2, y+i+j, adjusted_p)
-
-plt.savefig(os.path.join(savedst, 'decay_rewardcell.svg'), 
-        bbox_inches='tight')
-
 #%%
 # as a function of session/day
 df_plt = df.groupby(['animals','session_num','num_epochs']).mean(numeric_only=True)

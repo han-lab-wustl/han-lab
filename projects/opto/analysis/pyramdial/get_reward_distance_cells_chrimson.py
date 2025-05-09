@@ -224,6 +224,8 @@ ax.set_ylabel('Sessions')
 fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 df = df[(df.animals!='e200')&(df.animals!='e189')]
+# exclude outliere?
+df = df[(df.days!=8)]
 df_plt = df
 df_an = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True)
 sns.stripplot(x='condition', y='goal_cell_prop',

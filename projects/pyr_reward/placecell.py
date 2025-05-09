@@ -1268,7 +1268,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 # not all dark time in beginning/never started the track on the trial
                 ypos_trial_new = ypos_trial_new[~np.isnan(ypos_trial_new)]                
                 # find start of rew loc index
-                rew_mask = (ypos_trial_new >= (rewlocs[ep] - (rewsize / 2) - 5)) & \
+                rew_mask = (ypos_trial_new >= (rewlocs[ep] - (rewsize / 2))) & \
                         (ypos_trial_new <= (rewlocs[ep] + (rewsize / 2) + 5))
                 rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
                 rew_idx = int(len(ypos_trial_new) / 2) if len(rew_indices) == 0 else min(rew_indices)
