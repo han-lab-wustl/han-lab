@@ -1187,9 +1187,10 @@ def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward
         if len(reward_indices) == 0:
             try:
                 # 1.5 bc doesn't work otherwise?
-                y_rew = np.where((y<(rewlocs[tr][i]+rewsize*.5)) & (y>(rewlocs[i][tr]-rewsize*.5)))[0][0]
+                y_rew = np.where((y<(rewlocs[tr][i]+(rewsize*.5)+5)) & (y>(rewlocs[i][tr]-(rewsize*.5))))[0][0]
                 reward_idx=y_rew
             except Exception as e: # if trial is empty??
+                print(e)
                 reward_idx=int(len(y)/2) # put in random middle place of trials
         else:
             reward_idx = reward_indices[0]  # First occurrence of reward
@@ -1215,6 +1216,9 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,
             lasttr=8,bins=90,
             velocity_filter=False):    
+    """
+    fixed misalignment 5/12/25
+    """
     rates = []; 
     # initialize
     tcs_fail = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
@@ -1245,37 +1249,52 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 trial_ind = 1
             elif sum(trial_mask)==1:
                 trial_ind=0
-            ypos_num = ypos_ep[trial_mask][trial_ind]
+            ypos_num = 3#ypos_ep[trial_mask][trial_ind]
             ypos_trial = ypos_ep[trial_mask]
             # remove random end of track value            
             ypos_trial[:trial_ind] = ypos_num
-            dark_mask = ypos_trial == ypos_num
+            dark_mask = ypos_trial < ypos_num
             dark_vel = vel_ep[trial_mask][dark_mask]
             dark_frames = np.sum(dark_mask)
-            dark_dt = time[eprng][trial_mask][dark_mask] 
-            dark_distance = np.nanmean(dark_vel) * dark_dt
-            dark_distance = (dark_distance-dark_distance[0])/scalingf # scale to gain            
+            dark_time = time[eprng][trial_mask][dark_mask] 
+            if len(dark_time)>0:
+                init_dark_time=dark_time[0]
+            else: 
+                init_dark_time=0
+            dark_dt = np.diff(dark_time, prepend=init_dark_time)  # Ensure same length as dark_vel
+            dark_distance = np.nancumsum(dark_vel * dark_dt)
+            # do not scale to gain? do we need this?
+            # gerardo said to add
+            if len(dark_distance)>0:
+                dark_distance = (dark_distance - dark_distance[0])#/ scalingf  # scale to gain             
+            # dark_distance = (dark_distance-dark_distance[0])/scalingf # scale to gain            
             from scipy.ndimage import gaussian_filter1d
             dt_ind = np.where(ypos_trial==ypos_num)[0]
             ypos_trial_new = ypos_trial.copy()
             # add dark time to end of trial instead of beginning
-            ypos_trial_new[ypos_trial_new==ypos_num] = np.nan
+            # ypos_trial_new[ypos_trial_new==ypos_num] = np.nan
+            ypos_trial_new[ypos_trial_new<ypos_num] = dark_distance+ypos_trial[-1]
             # add distance on dark distance
-            ypos_trial_new = np.append(ypos_trial_new, dark_distance+ypos_trial[-1])
-            # ypos_trial_new[ypos_trial>ypos_num] = ypos_trial_new[ypos_trial>ypos_num]+dark_distance[-1]
+            # REMOVED BC CAUSING MISALIGNMENT
+            # ypos_trial_new = np.append(ypos_trial_new, dark_distance+ypos_trial[-1])            
             # remove nan
             if not sum(np.isnan(ypos_trial_new))==len(ypos_trial_new):
                 # not all dark time in beginning/never started the track on the trial
                 ypos_trial_new = ypos_trial_new[~np.isnan(ypos_trial_new)]                
                 # find start of rew loc index
-                rew_mask = (ypos_trial_new >= (rewlocs[ep] - (rewsize / 2))) & \
-                        (ypos_trial_new <= (rewlocs[ep] + (rewsize / 2) + 5))
-                rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
-                rew_idx = int(len(ypos_trial_new) / 2) if len(rew_indices) == 0 else min(rew_indices)
-
-                rewloc_per_trial.append(ypos_trial_new[rew_idx])
+                # rew_mask = (ypos_trial_new >= (rewlocs[ep] - (rewsize / 2))) & \
+                #         (ypos_trial_new <= (rewlocs[ep] + (rewsize / 2) + 5))
+                # rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
+                # rew_idx = int(len(ypos_trial_new) / 2) if len(rew_indices) == 0 else min(rew_indices)
+                # set to auto rewlocs
+                rew_idx = int(rewlocs[ep]-(rewsize/2))
+                rewloc_per_trial.append(rew_idx)
                 rl_bool = np.zeros_like(ypos_trial_new)
-                rl_bool[rew_idx] = 1
+                try:
+                    rl_bool[rew_idx] = 1
+                except Exception as e: # if trial does not reach rew zone
+                    print(e)
+                    rl_bool[int(len(rl_bool)/2)] = 1
                 rewloc_bool.append(rl_bool)
             else:
                 rewloc_per_trial.append(np.nan)
@@ -1330,16 +1349,13 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             if len(failed_inbtw)>0:
                 mask = [True if xx in failed_inbtw[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
                 F = F_all[mask,:]
-                # print(f'Fluorescence array size:\n{F.shape}\n')
                 relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
                 com = calc_COM_EH(tc,bin_size)
                 tcs_fail[ep, :,:] = tc
                 coms_fail[ep, :] = com
         rewlocs_w_dt.append(rewloc_per_trial)
-    # tcs_correct = np.array(tcs_correct); coms_correct = np.array(coms_correct)  
-    # tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)  
-    return tcs_correct, coms_correct, tcs_fail, coms_fail, rewlocs_w_dt, ybinned_dt
+    return tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt
 
 def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                             lasttr=8, bins=90, velocity_filter=False):

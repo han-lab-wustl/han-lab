@@ -33,7 +33,7 @@ pctile = 0.08; % pctile for baseline calc
 % for dopamine
 close all
 
-for dy=4:length(pr_dir)
+for dy=1:length(pr_dir)
     src = pr_dir{dy};
     daypth = dir(fullfile(src, "behavior\vr\*.mat"));
 %     sprintf('%i', day), sprintf('%s*mat', mouse_name)));%, 

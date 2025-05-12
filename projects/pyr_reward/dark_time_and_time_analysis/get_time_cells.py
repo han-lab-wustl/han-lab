@@ -126,7 +126,7 @@ for ii in range(len(conddf)):
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]           
         # get goal cells aligned to time
         goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, goal_window, coms_correct_time, cell_type = 'all')
-        goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]            
+        goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_time]            
         # eg cell 
         # plt.close('all')
         # for cellid in goal_cells:
@@ -328,7 +328,7 @@ df_plt2=df_plt2.reset_index()
 # v dark time
 df_perms = pd.DataFrame()
 goal_cell_perm = [xx[1] for xx in p_goal_cells_dt]
-goal_cell_perm_shuf = [xx[1][0][~np.isnan(xx[0][0])] for xx in goal_cell_null]
+goal_cell_perm_shuf = [xx[1][0][~np.isnan(xx[1][0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
 df_perms['goal_cell_prop'] =df_perms['goal_cell_prop'] *100
 df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
@@ -374,26 +374,18 @@ for i in range(len(ans)):
     errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
 ax.set_xlabel('')
 ax.set_ylabel('Reward cell % ')
-
+ax.set_ylim([0,40])
 eps = [2,3,4]
 y = 37
 pshift = 4
 fs=36
+pvals=[]
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                ax.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                ax.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                ax.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        pvals.append(pval)
 
-# time
 ax=axes[1]
 # av across mice
 color='cadetblue'
@@ -426,8 +418,17 @@ fs=36
 for ii,ep in enumerate(eps):
         rewprop = df_plt2_dt.loc[(df_plt2_dt.num_epochs==ep), 'goal_cell_prop']
         shufprop = df_plt2_dt.loc[(df_plt2_dt.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        pvals.append(pval)
+from statsmodels.stats.multitest import multipletests
+corrected, pvals_corrected, _, _ = multipletests(pvals, method='bonferroni')
+
+for ii,pval in enumerate(pvals_corrected):                
+        if ii<3:
+                ax=axes[0]
+        else:
+                ax=axes[1]
+                ii=ii-3
         # statistical annotation        
         if pval < 0.001:
                 ax.text(ii, y, "***", ha='center', fontsize=fs)
@@ -435,9 +436,19 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
-plt.savefig(os.path.join(savedst, 'time_cell_prop-shuffle_per_an.svg'), 
+
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+ax.set_ylim([0,40])
+fig.tight_layout()
+plt.savefig(os.path.join(savedst, 'time_cell_prop_per_an.svg'), 
         bbox_inches='tight')
 
 #%%

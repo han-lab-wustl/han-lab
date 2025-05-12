@@ -104,7 +104,7 @@ for ii in range(len(conddf)):
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
@@ -246,7 +246,7 @@ for ii,ass in enumerate(assembly_cells_all_an):
             cs_per_ep.append(cs)
             if plot:
                 fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
-                gamma=.5
+                gamma=.3
                 for kk,tcs in enumerate(asm):
                     ax = axes[kk]
                     vmin = np.min(tcs)
@@ -263,7 +263,7 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
                 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
                 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
-                if jj==0:
+                if jj==2:
                     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_dark_time_postrew_ensemble_eg.svg'),bbox_inches='tight')
         cs_all.append(cs_per_ep)
         num_epochs.append(len(asm))

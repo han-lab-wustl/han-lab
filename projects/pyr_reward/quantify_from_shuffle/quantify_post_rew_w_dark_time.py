@@ -12,8 +12,8 @@ from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone

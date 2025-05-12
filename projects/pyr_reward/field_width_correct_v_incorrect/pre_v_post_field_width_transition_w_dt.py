@@ -181,7 +181,7 @@ for ii in range(len(conddf)):
         else:# remake tuning curves relative to reward        
             # 9/19/24
             # tc w/ dark time added to the end of track
-            tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+            tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
                 rewsize,ybinned,time,lick,
                 Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
                 bins=bins_dt)  
@@ -242,13 +242,13 @@ for ii in range(len(conddf)):
         df['animal'] = [animal]*len(df)
         df['day'] = [day]*len(df)
         df['cell_type'] = ['Pre']*len(df)
-        try: # eg., suppress after validation
-            ii=0
-            plt.figure()
-            plt.plot(tcs_correct[:,goal_all[ii],:].T)
-            plt.title(f"{df.loc[df.cellid==goal_all[ii], 'width_cm'].values}")
-        except Exception as e:
-            print(e)
+        # try: # eg., suppress after validation
+        #     ii=0
+        #     plt.figure()
+        #     plt.plot(tcs_correct[:,goal_all[ii],:].T)
+        #     plt.title(f"{df.loc[df.cellid==goal_all[ii], 'width_cm'].values}")
+        # except Exception as e:
+        #     print(e)
 
         alldf.append(df)
         # ppost reward
@@ -279,14 +279,14 @@ for ii in range(len(conddf)):
         df['animal'] = [animal]*len(df)
         df['day'] = [day]*len(df)
         df['cell_type'] = ['Post']*len(df)
-        try:
-            ii=0
-            plt.figure()
-            plt.plot(tcs_correct[:,goal_all[ii],:].T)
-            plt.title(f"{df.loc[df.cellid==goal_all[ii], 'width_cm'].values}")
-        except Exception as e:
-            print(e)
-        plt.show()
+        # try:
+        #     ii=0
+        #     plt.figure()
+        #     plt.plot(tcs_correct[:,goal_all[ii],:].T)
+        #     plt.title(f"{df.loc[df.cellid==goal_all[ii], 'width_cm'].values}")
+        # except Exception as e:
+        #     print(e)
+        # plt.show()
         alldf.append(df)
         dfs.append(pd.concat(alldf))
 
