@@ -1256,6 +1256,8 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
             rewlocs,rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
+        # tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(
+        # eps, rewlocs, ybinned, rad, Fc3, trialnum, rewards, forwardvel, rewsize, bin_size)   
         # tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, \
         # rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
         #     rewlocs,rewsize,ybinned,time,lick,
@@ -2897,6 +2899,67 @@ def goal_cell_shuffle(coms_correct, goal_window, perm, num_iterations = 1000):
         goal_cell_shuf_ps.append(goal_cell_shuf_p)
         goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
     
+    return goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist
+
+def goal_cell_shuffle_time(coms_rew, coms_correct, goal_window, perm, num_iterations = 1000):
+    """
+    exclude reward cells
+    """
+    # also give perm from original non zero perm combinations
+    # get shuffled iterations
+    shuffled_dist = np.zeros((num_iterations))
+    # max of 5 epochs = 10 perms
+    goal_cell_shuf_ps_per_comp = np.ones((num_iterations,10))*np.nan
+    goal_cell_shuf_ps = []
+    for i in range(num_iterations):
+        shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
+        [random.shuffle(shuf) for shuf in shufs]
+        # first com is as ep 1, others are shuffled cell identities
+        com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
+        com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+        # OR shuffle cell identities relative to reward
+        coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+        # perm = list(combinations(range(len(coms_correct)), 2))     
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+        # get goal cells across all epochs
+        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        com_goal_postrew=com_goal
+        goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal]
+        perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
+        com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+        if len(com_goal_postrew)>0:
+            goal_cells_shuf = intersect_arrays(*com_goal_postrew); 
+        else:
+            goal_cells_shuf=[]
+        ############################
+        # do same for rew cells
+        shufs = [list(range(coms_rew[ii].shape[0])) for ii in range(1, len(coms_rew))]
+        [random.shuffle(shuf) for shuf in shufs]
+        # first com is as ep 1, others are shuffled cell identities
+        com_shufs = np.zeros_like(coms_rew); com_shufs[0,:] = coms_rew[0]
+        com_shufs[1:1+len(shufs),:] = [coms_rew[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+        # OR shuffle cell identities relative to reward
+        coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+        # perm = list(combinations(range(len(coms_rew)), 2))     
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+        # get goal cells across all epochs
+        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        com_goal_postrew=com_goal
+        goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_rew[0]) for xx in com_goal]
+        perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
+        com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+        if len(com_goal_postrew)>0:
+            rew_cells = intersect_arrays(*com_goal_postrew); 
+        else:
+            rew_cells=[]
+        # remove rew cells
+        ############################
+        goal_cells_shuf = [xx for xx in goal_cells_shuf if xx not in rew_cells]
+        shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
+        goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
+        goal_cell_shuf_ps.append(goal_cell_shuf_p)
+        goal_cell_shuf_ps_per_comp[i, :len(goal_cells_shuf_p_per_comparison)] = goal_cells_shuf_p_per_comparison
+
     return goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist
 
 

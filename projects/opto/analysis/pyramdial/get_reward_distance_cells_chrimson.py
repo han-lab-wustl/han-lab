@@ -99,7 +99,7 @@ for ii in range(len(conddf)):
                 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
                 # if animal!='z14' and animal!='e200' and animal!='e189':                
                 Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-                if Fc3.shape[1]>0:
+                if Fc3.shape[1]>0:                        
                         # 9/19/24
                         # find correct trials within each epoch!!!!
                         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
@@ -107,7 +107,7 @@ for ii in range(len(conddf)):
                 else: # if no skewed cells
                         Fc3 = fall_fc3['Fc3']                        
                         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-                        # Fc3 = Fc3[:, skew>.5]
+                        Fc3 = Fc3[:, skew>.5]
                         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                         rewards,forwardvel,rewsize,bin_size)         
         # only get opto vs. ctrl epoch comparisons
@@ -194,12 +194,11 @@ pdf.close()
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 #%%
-plt.rc('font', size=18)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 # plot goal cells across epochs
 # just opto days
 s=12
 df = conddf.copy()
-# df = df[df.optoep>1]
 df['goal_cell_prop'] = goal_cell_prop
 df['goal_cell_prop']=df['goal_cell_prop']*100
 df['opto'] = df.optoep.values>1
@@ -225,7 +224,7 @@ fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 df = df[(df.animals!='e200')&(df.animals!='e189')]
 # exclude outliere?
-df = df[(df.days!=8)]
+df = df[(df.days!=7)]
 df_plt = df
 df_an = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True)
 sns.stripplot(x='condition', y='goal_cell_prop',

@@ -1367,7 +1367,7 @@ def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, r
             if len(t_trial) == 0:
                 continue
             # Align to time of entering rew loc
-            rew_mask = (ypos_trial >= (rewlocs[ep] - (rewsize / 2) - 5)) & \
+            rew_mask = (ypos_trial >= (rewlocs[ep] - (rewsize / 2))) & \
                 (ypos_trial <= (rewlocs[ep] + (rewsize / 2) + 5))
             rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
             rew_idx = int(len(ypos_trial) / 2) if len(rew_indices) == 0 else min(rew_indices)
