@@ -10,8 +10,8 @@ import matplotlib
 from behavior import get_success_failure_trials, consecutive_stretch
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 plt.rcParams["font.family"] = "Arial"
@@ -24,7 +24,7 @@ src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [62,63]
+days = [80,81,82]
 range_val=7; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False

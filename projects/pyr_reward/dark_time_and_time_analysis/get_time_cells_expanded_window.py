@@ -27,7 +27,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'time_tuning.pdf')
+savepth = os.path.join(savedst, 'time_tuning_expanded.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
@@ -132,10 +132,11 @@ for ii in range(len(conddf)):
         # expand window to 7.5% of trial time?
         # roughly equivalent to 20 cm of 270 cm
         max_trial_times = np.nanmax(np.array([tr.shape[1]/fr for tr in trial_times]))
-        time_window = max_trial_times*.074 #s
+        # expanded window
+        time_window = max_trial_times*.074*2 #s
         time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad
         print(f'Radian window for time cells: {time_window:.2f}')
-        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, goal_window, coms_correct_time, cell_type = 'all')
+        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, time_window, coms_correct_time, cell_type = 'all')
         goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_time]            
         # eg cell         
         for cellid in goal_cells:

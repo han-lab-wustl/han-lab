@@ -231,14 +231,18 @@ an_plt = 'z9' # 1 eg animal
 an_day = 19
 cs_all = []; num_epochs = []
 plt.close('all')
-plot = True
-# plot=False
+# plot = True
+plot=False
 for ii,ass in enumerate(assembly_cells_all_an):
-    if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
+    # if df.iloc[ii].animals==an_plt and df.iloc[ii].days==an_day:
         print(f'{df.iloc[ii].animals}, {df.iloc[ii].days}')
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
         for jj,asm in enumerate(ass_all):
+            # only pick cells > 10
+            cell_nm = asm.shape[1]
+            if cell_nm<10:
+                continue
             perm = list(combinations(range(len(asm)), 2)) 
             # consecutive ep only
             perm = [p for p in perm if p[0]-p[1]==-1]
@@ -263,7 +267,7 @@ for ii,ass in enumerate(assembly_cells_all_an):
                     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}')
                 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
                 fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
-                if jj==2:
+                if jj==0:
                     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_dark_time_postrew_ensemble_eg.svg'),bbox_inches='tight')
         cs_all.append(cs_per_ep)
         num_epochs.append(len(asm))

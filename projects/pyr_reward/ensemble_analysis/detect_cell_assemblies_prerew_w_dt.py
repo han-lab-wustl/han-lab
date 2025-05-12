@@ -221,7 +221,7 @@ bins_dt=150
 # df = conddf.copy()
 # df = df[(df.animals!='e217') & (df.optoep.values<2)]
 an_plt = 'z9' # 1 eg animal
-an_day = 19
+an_day = 22
 cs_all = []; num_epochs = []
 plt.close('all')
 # plot=True
@@ -232,6 +232,10 @@ for ii,ass in enumerate(assembly_cells_all_an):
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
         for jj,asm in enumerate(ass_all):
+            # only pick cells > 10
+            cell_nm = asm.shape[1]
+            if cell_nm<10:
+                continue
             perm = list(combinations(range(len(asm)), 2)) 
             # consecutive ep only
             perm = [p for p in perm if p[0]-p[1]==-1]
@@ -278,6 +282,10 @@ for ii,ass in enumerate(assembly_cells_all_an):
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
         for jj,asm in enumerate(ass_all):
+            # only pick cells > 10
+            cell_nm = asm.shape[1]
+            if cell_nm<10:
+                continue
             perm = list(combinations(range(len(asm)), 2)) 
             # consecutive ep only
             perm = [p for p in perm if p[0]-p[1]==-1]
@@ -413,7 +421,7 @@ group_data = {group: df_clean[df_clean['num_epochs'] == group]['cosine_sim_acros
 comparisons = list(combinations(unique_groups, 2))
 raw_pvals = []
 for g1, g2 in comparisons:
-    _, pval = scipy.stats.ranksums(group_data[g1], group_data[g2])
+    _, pval = scipy.stats.wilcoxon(group_data[g1], group_data[g2])
     raw_pvals.append(pval)
 
 # Bonferroni correction
@@ -483,15 +491,15 @@ df_all = df_all.reset_index()
 ax.spines[['top','right']].set_visible(False)
 
 # Plot individual lines per animal with x-axis offset
-offset = {'Pre-reward': -0.2, 'Post-reward': 0.2}
-for animal in df_all.animals.unique():
-    for cell_type in ['Pre-reward', 'Post-reward']:
-        df_sub = df_all[(df_all.animals == animal) & (df_all.cell_type == cell_type)]
-        if df_sub.empty:
-            continue
-        x_vals = df_sub.num_epochs + offset[cell_type]
-        ax.plot(x_vals-2, df_sub.cosine_sim_across_ep, color=sns.color_palette('Dark2')[['Pre-reward', 'Post-reward'].index(cell_type)],
-                alpha=0.3, linewidth=2)
+# offset = {'Pre-reward': -0.2, 'Post-reward': 0.2}
+# for animal in df_all.animals.unique():
+#     for cell_type in ['Pre-reward', 'Post-reward']:
+#         df_sub = df_all[(df_all.animals == animal) & (df_all.cell_type == cell_type)]
+#         if df_sub.empty:
+#             continue
+#         x_vals = df_sub.num_epochs + offset[cell_type]
+#         ax.plot(x_vals-2, df_sub.cosine_sim_across_ep, color=sns.color_palette('Dark2')[['Pre-reward', 'Post-reward'].index(cell_type)],
+#                 alpha=0.3, linewidth=2)
 # Get unique epochs
 epochs = sorted(df_all.num_epochs.unique())
 ymax = .6
@@ -513,13 +521,19 @@ pshift = 0.08  # p-value label offset
 #     y = y_offsets[i]
 #     # Show p-value (optional)
 #     ax.text(x, y + pshift, f'place vs. pre p={pval:.2g}', ha='center', fontsize=12, rotation=45)
+groups = [
+    df_all[df_all.cell_type == ct]['cosine_sim_across_ep'].dropna()
+    for ct in ['Place', 'Pre-reward', 'Post-reward']
+]
+f_stat, p_anova = scipy.stats.f_oneway(*groups)
+print(f"ANOVA F={f_stat:.3f}, p={p_anova:.3g}")
 
 for i, epoch in enumerate(epochs):
     data_epoch = df_all[df_all.num_epochs == epoch]
     pre_vals = data_epoch[data_epoch.cell_type == 'Pre-reward']['cosine_sim_across_ep'].dropna()
     post_vals = data_epoch[data_epoch.cell_type == 'Post-reward']['cosine_sim_across_ep'].dropna()
     # t-test
-    stat, pval = scipy.stats.ranksums(pre_vals, post_vals)
+    stat, pval = scipy.stats.wilcoxon(pre_vals, post_vals)
 
     # Plot annotation
     x = i
@@ -534,22 +548,22 @@ for i, epoch in enumerate(epochs):
     # Show p-value (optional)
     ax.text(x, y + pshift, f'post v pre\np={pval:.2g}', ha='center', fontsize=12, rotation=45)
     
-    # pre-reward comp
-for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reject)):
-    x1, x2 = int(g1)-2, int(g2)-2
-    y = max_y + 0.05 * (i + 1)
-    ax.plot([x1, x1, x2, x2], [y, y+0.01, y+0.01, y], lw=1.5, c='k')
+# pre-reward comp
+# for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reject)):
+#     x1, x2 = int(g1)-2, int(g2)-2
+#     y = max_y + 0.05 * (i + 1)
+#     ax.plot([x1, x1, x2, x2], [y, y+0.01, y+0.01, y], lw=1.5, c='k')
 
-    if pval < 0.001:
-        star = '***'
-    elif pval < 0.01:
-        star = '**'
-    elif pval < 0.05:
-        star = '*'
-    else: star=''
+#     if pval < 0.001:
+#         star = '***'
+#     elif pval < 0.01:
+#         star = '**'
+#     elif pval < 0.05:
+#         star = '*'
+#     else: star=''
 
-    ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
-    ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
+#     ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
+#     ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
 
 ax.set_ylabel('Mean ensemble cosine similarity')
 ax.set_xlabel('# of reward loc. switches')

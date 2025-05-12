@@ -35,7 +35,6 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 tcs_rew = []
 goal_cells_all = []
 p_rewcells_in_assemblies=[]
-
 bins = 90
 goal_window_cm=20
 epoch_perm=[]
@@ -166,7 +165,7 @@ for ii in range(len(conddf)):
                 ax.set_title(f'{animal}, {day}, Assembly ID: {assembly_id}')
                 fig.tight_layout()
                 pdf.savefig(fig)
-                plt.show()
+                plt.close('all')
                 # plt.close(fig)
                 # Save time courses
                 assembly_cells_all[f'assembly {assembly_id}'] = tcs_correct[:, other_cells[cells], :]
