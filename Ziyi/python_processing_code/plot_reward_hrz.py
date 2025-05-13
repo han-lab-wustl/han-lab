@@ -36,21 +36,16 @@ animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
+days = []
 animals = ['e276']
 rolling_win = 3
 day_date_dff = {}
 
 for ii,animal in enumerate(animals):
-    days = conddf.loc[((conddf.Animal==animal)), 'Day'].values.astype(int)    
+    
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
-        # for each plane
-        stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
-        stims = scipy.io.loadmat(stimspth)
-        stims = np.hstack(stims['stims']) # nan out stims
-        plndff = []
-        fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
-        condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0]    
+   
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             params = scipy.io.loadmat(path)
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             

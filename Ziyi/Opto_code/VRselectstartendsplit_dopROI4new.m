@@ -21,7 +21,8 @@
 %NOTE: assigning values at teleportation points takes whichever position
 %has more iterations during this frame of cellular activity. I.E. if they
 %spent 3 points at y = 180 and 2 at y = 0 during0 the time in which this
-%frame of celular data was recorded, y would be assined to 180.
+%frame of celular data was re4
+%corded, y would be assined to 180.
 
 %does this as well with trial num to ensure the first trial num is 0 and
 %not 30 for the new rewlocation

@@ -13,6 +13,7 @@ stop_corr_prob = [];
 mov_corr_fail = [];
 stop_corr_fail = [];
 cnt = 0;
+clim_max = 1.02;
 
 pr_dir0 = uipickfiles;
 
@@ -175,6 +176,7 @@ avg_roinorm_single_traces_roesmthCS = cellfun(@(x) nanmean(x, 2), all_roinorm_si
 % if ~make_it_tight,  clear subplot;  end
 
 num_days = size(all_day_roinorm_single_tracesCS{plane},2); % Number of days
+num_trials = size(all_roinorm_single_tracesCS{plane},2);
 
 for plane = 1:4
     
@@ -211,12 +213,12 @@ for plane = 1:4
     pls.Color(4) = 0.5;
 
     find_figure('dFF_accross_days')
-     subplot(4,1,plane)
+    subplot(4,1,plane)
 
     imagesc(xax,1:num_days,all_day_roinorm_single_tracesCS{plane}');
     %imagesc(all_day_roinorm_single_tracesCS{plane}')
     colorbar
-    clim([0.985 1.02])
+    clim([0.985 clim_max])
     y_tick_positions = 0.5:num_days-0.5;
     y_tick_labels = 1:num_days;
     %yticks(1:num_days)
@@ -233,6 +235,32 @@ for plane = 1:4
     title('Daily Data Representation Over Time');
     hold on
     title(reg_name(plane))
+
+    find_figure('dFF_accross_trials ')
+    subplot(1,4,plane)
+    
+
+    imagesc(xax,1:num_trials,all_roinorm_single_tracesCS{plane}');
+    %imagesc(all_day_roinorm_single_tracesCS{plane}')
+    colorbar
+    clim([0.985 clim_max])
+    y_tick_positions = 0.5:num_trials-0.5;
+    y_tick_labels = 1:num_trials;
+    %yticks(1:num_days)
+    % Adjust the y-axis to represent days
+
+    %colorbar; % Add a colorbar to show the scaling
+    set(gca, 'YTick', y_tick_positions); % Set x-ticks at positions calculated
+    set(gca, 'YTickLabel', y_tick_labels); % Label these ticks with corresponding time values
+
+
+    % Add labels and title
+    xlabel('Time (seconds)');
+    ylabel('Day');
+    title('Daily Data Representation Over Time');
+    hold on
+    title(reg_name(plane))
+
 
     find_figure('Avg_dFF_same_panel')
     xax=frame_time*(-pre_win_frames)*numplanes:frame_time*numplanes:frame_time*numplanes*post_win_frames;

@@ -4,6 +4,8 @@ function loadVideoTiffNoSplit_EH2_new_sbxSERVER(varargin)
 % 200501 EH. changed java path for this computer
 % also change to imagej save file name.
 % 241008 ZH. Cropped the top part of the etl artifact, use the batch
+% 250407 ZH. Added the part to find the opto stims, not doing opto
+% correction for this code
 % processing no cropping to aviod accessive cropping 
 % Uses sbxread to load chunks of .sbx files, limiting RAM requirements
 % for some reason, suite2p turns everything into unsigned 16bit with max
@@ -53,6 +55,8 @@ numframes = info.max_idx+1;
 % lims(2)=max(chone(:))
 % lims=double(lims); %lims = [min max] pixel values of chone
 lenVid=3000;
+stims = [];
+temps = [];
 
 for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number of files
 % ii=1;
@@ -83,6 +87,7 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     
    chtemp=(((double(chtemp))/2)-1); %make max of movie 32767 (assuming it was 65535 before)
    chtemp=uint16(chtemp);
+   temps =  [temps squeeze(nanmean(squeeze(nanmean(chtemp(1:20,:,:)))))];
    
    
 %     chtemp=double(chtemp);
@@ -96,6 +101,24 @@ for ii=1:ceil(numframes/lenVid) %splitting into 3000 frame chunks. ii=1:number o
     MIJ.run('Save', imageJ_savefilename);   %saves with defined filename
     MIJ.run('Close All');
 end
+ tempstims = zeros(length(temps),1);
+ numStdDevs = 2; 
+for p = 1:size(info.etl_table,1)
+    currx = p:size(info.etl_table,1):length(temps);
+    temps_currx = temps(currx);
+    currxMean = mean(temps_currx);
+    currxStd = std(temps_currx);
+    threshold = currxMean + numStdDevs * currxStd;
+    s = find(temps_currx>threshold);
+    if ~isempty(s)
+        tempstims(currx(s)) = 1;
+    end
+end
+   if ii == 1
+       tempstims(1:10) = 0;
+   end
+stims = [stims; tempstims];
+save([stripped_filename '.mat'],'stims','-append')
 MIJ.exit;
 % 
 % clear chone;

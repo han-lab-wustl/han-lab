@@ -26,7 +26,7 @@ import numpy as np
 plt.close('all')
 
 src = r'E:\Ziyi\Data\VTA_mice'
-range_val = 8; binsize=0.2 #s
+range_val = 12; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 2 # for which to normalize
@@ -36,7 +36,7 @@ animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
-animals = ['e276']
+animals = ['e276','e277']
 rolling_win = 3
 day_date_dff = {}
 
@@ -48,6 +48,11 @@ for ii,animal in enumerate(animals):
         stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
         stims = scipy.io.loadmat(stimspth)
         stims = np.hstack(stims['stims']) # nan out stims
+
+
+
+
+        
         plndff = []
         fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
         condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0]    
@@ -100,15 +105,6 @@ for ii,animal in enumerate(animals):
             startofstims = np.zeros_like(dff)
             startofstims[unrewstimidx]=1
             '''
-            '''
-            offpln=pln+1 if pln<3 else pln-1
-            #offpln=pln+3 if pln>1 else pln-1
-            #startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
-            #min_iind = [min(xx) for xx in startofstims if len(xx)>0]
-            min_iind = find_start_points(stims[offpln::4])
-            startofstims = np.zeros_like(dff)
-            startofstims[min_iind]=1
-            '''
             #Stim for every other plane, grab the result from off plane
             '''
             offpln=pln+1 if pln<3 else pln-1
@@ -119,16 +115,14 @@ for ii,animal in enumerate(animals):
             
             #Stim for every fourth plane, grab the result from one plane
             # stim at 1, grab data from fourth
-            
             '''
             min_iind = find_start_points(stims[(pln+1)%4::4])
             startofstims = np.zeros_like(dff)
             startofstims[min_iind]=1
+
             '''
-           
             #Stim for every fourth plane, grab the result from one plane
             # stim at 1, grab data from third fourth
-            
             '''
             offplane1 = (pln+1)%4
             offplane2 = (offplane1+1)%4
@@ -139,8 +133,14 @@ for ii,animal in enumerate(animals):
             startofstims[min_iind_2]=1
             '''
 
+        
+            #offplane_indices = (pln+3)  % 4 # Get 2nd plane after stim
+            #min_iind = find_start_points(stims[offplane_indices::4])
+
             # Calculate offplane indices
             offplane_indices = [(pln + i) % 4 for i in range(1, 3)]
+            offplane1 = (pln+1)%4
+            #min_iind = find_start_points(stims[offplane1::4])
 
             # Find start points for stimuli in off planes
             min_iind = [find_start_points(stims[offplane::4]) for offplane in offplane_indices]
@@ -151,6 +151,8 @@ for ii,animal in enumerate(animals):
             # Set start points in the stimulation array
             for indices in min_iind:
                 startofstims[indices] = 1
+
+
 
 
             # # get on plane stim for red laser
@@ -282,7 +284,7 @@ lbls = ['Deep', 'Superficial']
 fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(7,6), sharex=True)
 ymin=-0.035
 ymax=0.02
-stimsec=1.3
+stimsec=3
 height=ymax-ymin
 for i in range(len(saline)):
     # plot

@@ -12,7 +12,7 @@ pr_dir0 = uipickfiles;
 oldbatch=0;%input('if oldbatch press 1 else 0=');
 % dop_allsuc_stop_no_reward = NaN(length(pr_dir0),4,79);
 
-
+exclude = [9,10,11,12,13,14,15,16,17,18,19,20];
 
 
 for alldays = 1:length(pr_dir0)%[3:1
@@ -224,9 +224,10 @@ for alldays = 1:length(pr_dir0)%[3:1
                single_rew=find(short);
                single_idx=[];single_lick_idx=[]; single_lick_gap = [];
                
-                 singlerew = single_rew(find(single_rew>pre_win_frames&single_rew<length(licksALL)-post_win_frames))-CSUSframelag_win_frames;
-                
-                
+               singlerew = single_rew(find(single_rew>pre_win_frames&single_rew<length(licksALL)-post_win_frames))-CSUSframelag_win_frames;
+               
+
+               singlerew = setdiff(singlerew, singlerew(exclude));
                 
                 %%%
                 
