@@ -411,10 +411,10 @@ def compresssbx_move_to_archive(sbxsrc, dst, compress=True):
     
 if __name__ == "__main__":
     usb = r"G:\2023-2026_ZD_VR"
-    drives = [r'Y:\halo_grabda',r'Y:\halo_grabda', r'X:\vipcre',r'X:\vipcre',
+    drives = [r'Y:\halo_grabda',r'Y:\halo_grabda', r'X:\vipcre',
               r'X:\vipcre',  r'X:\vipcre']#,
             # r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda', r'X:\lc_chr2_grabda']
-    animals = ['e242','e243','z14','z15', 'z17','z16']#,
+    animals = ['e242','e243','z15', 'z17','z16']#,
         # 'e278', 'e279', 'e280']
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])
@@ -422,7 +422,8 @@ if __name__ == "__main__":
     # e.g.
     src=r'X:\vipcre'
     dst=r'Y:\analysis\fmats'
-    # animal='z17'
-    # copyfmats(src,dst,animal,days=[14],combined=True,overwrite=True)
-    # animal='z15'
-    # copyfmats(src,dst,animal,days=[6],overwrite=True)
+    animal='z17'
+    # copyfmats(src,dst,animal,days=[16],combined=True,overwrite=True)
+    animal='z16'
+    copyfmats(src,dst,animal,days=np.arange(5,11),overwrite=True)
+

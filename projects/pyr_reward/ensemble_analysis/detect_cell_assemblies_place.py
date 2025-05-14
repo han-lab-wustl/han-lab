@@ -214,6 +214,10 @@ for ii,ass in enumerate(assembly_cells_all_an):
         ass_all = list(ass.values()) # all assemblies
         cs_per_ep = []; ne = []
         for jj,asm in enumerate(ass_all):
+            # only pick cells > 10
+            cell_nm = asm.shape[1]
+            if cell_nm<10:
+                continue
             perm = list(combinations(range(len(asm)), 2)) 
             # consecutive ep only
             perm = [p for p in perm if p[0]-p[1]==-1]

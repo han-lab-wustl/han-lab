@@ -10,6 +10,7 @@ import pickle, seaborn as sns, random, math
 from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
+from statsmodels.stats.multitest import multipletests
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
@@ -167,11 +168,18 @@ eps = [2,3,4]
 y = 28
 pshift = 1
 fs=36
+pvalues=[]
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
         t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        pvalues.append(pval)
         print(f'{ep} epochs, pval: {pval}')
+# correct pvalues
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
         # statistical annotation        
         if pval < 0.001:
                 ax.text(ii, y, "***", ha='center', fontsize=fs)
@@ -179,7 +187,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):

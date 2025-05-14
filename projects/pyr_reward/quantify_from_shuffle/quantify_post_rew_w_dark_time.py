@@ -30,7 +30,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -151,7 +151,7 @@ df_plt=df_plt.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2=df_plt2.reset_index()
-df_plt2 = df_plt2[(df_plt2.animals!='e189') & (df_plt2.animals!='e200')]
+df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189')]
 df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
@@ -176,11 +176,19 @@ eps = [2,3,4]
 y = 28
 pshift=.15
 fs=36
+from statsmodels.stats.multitest import multipletests
+pvalues=[]
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
+        t,pval = scipy.stats.wilcoxon(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
+        pvalues.append(pval)
         print(f'{ep} epochs, pval: {pval}')
+# correct pvalues
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
         # statistical annotation        
         if pval < 0.001:
                 ax.text(ii, y, "***", ha='center', fontsize=fs)
@@ -188,7 +196,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
+        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 ax.set_title('Post-reward cells',pad=30)
 df_plt2=df_plt2.reset_index()
 # make lines
@@ -221,7 +229,7 @@ for i in range(len(ans)):
     errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
-ax.set_ylim([-1,8])
+ax.set_ylim([-1,9])
 ax.set_title('Post-reward cell %-shuffle',pad=30)
 
 plt.savefig(os.path.join(savedst, 'postreward_cell_prop_dark_time-shuffle_per_an.svg'), 

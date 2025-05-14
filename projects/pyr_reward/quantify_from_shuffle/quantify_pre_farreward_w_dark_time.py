@@ -10,6 +10,7 @@ import pickle, seaborn as sns, random, math
 from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
+from statsmodels.stats.multitest import multipletests
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
@@ -166,19 +167,26 @@ eps = [2,3,4]
 y = 28
 pshift = 1
 fs=36
+pvalues=[]
 for ii,ep in enumerate(eps):
-    rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
-    shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
-    # statistical annotation        
-    if pval < 0.001:
-            ax.text(ii, y, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
-            ax.text(ii, y, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
-            ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
+        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        pvalues.append(pval)
+        print(f'{ep} epochs, pval: {pval}')
+# correct pvalues
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
@@ -210,7 +218,7 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
 ax.set_title('Far pre-reward cell %-shuffle',pad=30)
-ax.set_ylim([-1,8])
+ax.set_ylim([-1,9])
 
 plt.savefig(os.path.join(savedst, 'pre_farreward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')

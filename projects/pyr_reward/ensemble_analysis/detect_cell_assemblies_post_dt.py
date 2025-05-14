@@ -31,7 +31,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 tcs_rew = []
 p_rewcells_in_assemblies=[]
 goal_cells_all = []

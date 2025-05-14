@@ -375,7 +375,7 @@ def extract_data_prerew(ii,params_pth,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
             rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)  
@@ -1039,7 +1039,7 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
             rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)  
@@ -1543,7 +1543,7 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
             rewlocs,rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)  

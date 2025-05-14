@@ -12,6 +12,10 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype
 from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew
+from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime, \
+        intersect_arrays, make_tuning_curves_radians_by_trialtype
+from projects.pyr_reward.rewardcell import get_radian_position
+from projects.opto.behavior.behavior import get_success_failure_trials
 
 def get_inactivated_cells_hist(dd, day, conddf):
     dct = {}
@@ -807,8 +811,8 @@ def get_dff_opto(conddf, dd, day, gain=1.5, pc=True):
     pcs = np.array([np.squeeze(xx) for xx in fall['putative_pcs'][0]])
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     # place cells only
-    if pc: dFF = dFF[:, (np.sum(pcs,axis=0)>0)]
-    else: dFF = dFF[:, ~(np.sum(pcs,axis=0)>0)]
+    # if pc: dFF = dFF[:, (np.sum(pcs,axis=0)>0)]
+    # else: dFF = dFF[:, ~(np.sum(pcs,axis=0)>0)]
     ybinned = fall['ybinned'][0]*gain
     changeRewLoc = np.hstack(fall['changeRewLoc'])
     eptest = conddf.optoep.values[dd]    
@@ -853,3 +857,171 @@ def calculate_noise_correlations(data, trial_info):
             noise_corr[i, j] = noise_corr[j, i] = r
 
     return noise_corr
+
+def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
+        goal_cell_iind, goal_cell_prop, goal_cell_null, dist_to_rew, num_epochs, pvals, 
+        rates_all, total_cells, epoch_perm, radian_alignment,cm_window = 20):
+    
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+    'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+    'stat', 'licks'])
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+            rewsize = 10
+    ybinned = fall['ybinned'][0]/scalingf
+    track_length=180/scalingf    
+    forwardvel = fall['forwardvel'][0]    
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    trialnum=fall['trialnum'][0]
+    rewards = fall['rewards'][0]
+    time = fall['timedFF'][0]
+    lick = fall['licks'][0]
+    if animal=='e145':
+            ybinned=ybinned[:-1]
+            forwardvel=forwardvel[:-1]
+            changeRewLoc=changeRewLoc[:-1]
+            trialnum=trialnum[:-1]
+            rewards=rewards[:-1]
+            time=time[:-1]
+            lick=lick[:-1]
+    # set vars
+    eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+    # only test opto vs. ctrl
+    eptest = conddf.optoep.values[ii]
+    if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs 
+    eptest=int(eptest)   
+
+    tcs_early = []; tcs_late = []        
+    ypos_rel = []; tcs_early = []; tcs_late = []; coms = []
+    lasttr=8 # last trials
+    bins=90
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
+    track_length_rad = track_length*(2*np.pi/track_length)
+    bin_size=track_length_rad/bins        
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+
+    if f'{animal}_{day:03d}' in radian_alignment_saved.keys():
+            k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
+            print(k)
+            tcs_correct, coms_correct, tcs_fail, coms_fail,\
+                    com_goal,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
+    else:# remake tuning curves relative to reward        
+    # takes time
+            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+            Fc3 = fall_fc3['Fc3']
+            dFF = fall_fc3['dFF']
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+            # if animal!='z14' and animal!='e200' and animal!='e189':                
+            Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+            if Fc3.shape[1]>0:                        
+                    # 9/19/24
+                    # find correct trials within each epoch!!!!
+                    # tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+                    # rewsize,ybinned,time,lick,
+                    # Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                    # bins=bins_dt)
+                    # normal tc
+                    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                    rewards,forwardvel,rewsize,bin_size)      
+
+            else: # if no skewed cells
+                    print('************************0 cells skew > 2************************')
+                    Fc3 = fall_fc3['Fc3']                        
+                    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+                    Fc3 = Fc3[:, skew>.7]
+                    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                    rewards,forwardvel,rewsize,bin_size)      
+
+    # only get opto vs. ctrl epoch comparisons
+    tcs_correct = tcs_correct[[eptest-2, eptest-1]] 
+    coms_correct = coms_correct[[eptest-2, eptest-1]] 
+    goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
+    # change to relative value 
+    coms_rewrel = np.array([com-np.pi for com in coms_correct])
+    perm = [(eptest-2, eptest-1)]    
+    # print(eptest, perm)
+    com_remap = np.array((coms_rewrel[1]-coms_rewrel[0]))        
+    com_goal = [ii for ii,comr in enumerate(com_remap) if (comr<goal_window) & (comr>-goal_window) ]
+    dist_to_rew.append(coms_rewrel)
+    # get goal cells across all epochs        
+    goal_cells = com_goal
+    # get per comparison
+    goal_cell_iind.append(goal_cells)
+    goal_cell_p=len(goal_cells)/len(coms_correct[0])
+    epoch_perm.append(perm)
+    goal_cell_prop.append(goal_cell_p)
+    # do not plot cell profiles
+    colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+    if len(goal_cells)>0:
+        rows = int(np.ceil(np.sqrt(len(goal_cells))))
+        cols = int(np.ceil(len(goal_cells) / rows))
+        fig, axes = plt.subplots(rows, cols, figsize=(30,30),sharex=True)
+        if len(goal_cells) > 1:
+            axes = axes.flatten()
+        else:
+            axes = [axes]
+        for i,gc in enumerate(goal_cells):            
+            for ep in range(len(coms_correct)):
+                ax = axes[i]
+                ax.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep])
+                # if len(tcs_fail)>0:
+                #         ax.plot(tcs_fail[ep,gc,:], label=f'fail rewloc {rewlocs[ep]}', color=colors[ep], linestyle = '--')
+                ax.axvline((bins/2), color='k')
+                ax.set_title(f'cell # {gc}')
+                ax.spines[['top','right']].set_visible(False)
+        ax.set_xticks(np.arange(0,bins+1,20))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi, np.pi/2.25),3))
+        ax.set_xlabel('Radian position (centered start rew loc)')
+        ax.set_ylabel('Fc3')
+        fig.suptitle(f'{animal}, day {day}')
+        fig.tight_layout()
+        # plt.show()
+        pdf.savefig(fig)
+        plt.close(fig)
+
+    # get shuffled iterations
+    num_iterations = 10000; shuffled_dist = np.zeros((num_iterations))
+    # max of 5 epochs = 10 perms
+    goal_cell_shuf_ps = []
+    for i in range(num_iterations):
+            # shuffle locations
+            rewlocs_shuf = rewlocs #[random.randint(100,250) for iii in range(len(eps))]
+            shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
+            [random.shuffle(shuf) for shuf in shufs]
+            # first com is as ep 1, others are shuffled cell identities
+            com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
+            com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+            # OR shuffle cell identities
+            # relative to reward
+            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+            perm = [(eptest-2, eptest-1)]    
+            com_remap = np.array((coms_rewrel[1]-coms_rewrel[0]))        
+            com_goal_shuf = [ii for ii,comr in enumerate(com_remap) if (comr<goal_window) & (comr>-goal_window)]
+            goal_cells_shuf = com_goal_shuf
+            shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
+            goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
+            goal_cell_shuf_ps.append(goal_cell_shuf_p)
+    # save median of goal cell shuffle
+    goal_cell_shuf_ps_av = np.nanmean(np.array(goal_cell_shuf_ps))
+    goal_cell_null.append(goal_cell_shuf_ps_av)
+    p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
+    pvals.append(p_value)
+    print(f'\n\n {animal}, day {day}: significant goal cells proportion p-value: {p_value}\n\
+            total cells: {len(coms_correct[0])}')
+    total_cells.append(len(coms_correct[0]))
+    radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
+                    com_goal,goal_cell_shuf_ps_av]
+    
+    return radian_alignment, goal_cell_iind, goal_cell_prop, goal_cell_null, dist_to_rew,\
+    num_epochs, pvals, rates_all, total_cells, epoch_perm

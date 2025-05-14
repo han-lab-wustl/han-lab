@@ -21,6 +21,8 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.rewardcell import get_radian_position,extract_data_prerew
+from statsmodels.stats.multitest import multipletests
+
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -30,7 +32,7 @@ goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_prereward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
-    radian_alignment_saved = pickle.load(fp)
+        radian_alignment_saved = pickle.load(fp)
 radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
@@ -100,7 +102,7 @@ ax = sns.lineplot(data=df_plt, # correct shift
         x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
         label='shuffle')
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))s
+ax.legend(bbox_to_anchor=(1.01, 1.05))
 
 eps = [2,3,4]
 for ep in eps:
@@ -188,11 +190,18 @@ eps = [2,3,4]
 y = 28
 pshift=3
 fs=36
+pvalues = []
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
+        t,pval = scipy.stats.wilcoxon(rewprop[~np.isnan(shufprop.values)], shufprop.values[~np.isnan(shufprop.values)])
+        pvalues.append(pval)
         print(f'{ep} epochs, pval: {pval}')
+# correct pvalues
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
         # statistical annotation        
         if pval < 0.001:
                 ax.text(ii, y, "***", ha='center', fontsize=fs)
@@ -200,7 +209,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
+        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 ax.set_title('Pre-reward cells',pad=30)
 ax.set_ylim([0, 30])
 # subtract from shuffle
@@ -223,7 +232,7 @@ for i in range(len(ans)):
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('')
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylim([-1, 8])
+ax.set_ylim([-1, 9])
 ax.set_title('Pre-reward cell %-shuffle',pad=30)
 
 plt.savefig(os.path.join(savedst, 'prereward_cell_prop_dark_time-shuffle_per_an.svg'), 

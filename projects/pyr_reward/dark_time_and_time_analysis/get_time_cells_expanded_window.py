@@ -459,8 +459,8 @@ for ii,pval in enumerate(pvals_corrected):
         ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 ax.set_ylim([0,40])
 fig.tight_layout()
-plt.savefig(os.path.join(savedst, 'time_cell_prop_per_an.svg'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'time_cell_prop_per_an.svg'), 
+#         bbox_inches='tight')
 
 #%%
 # overlap of reward and time cells
@@ -479,7 +479,6 @@ df['day'] = df.days
 df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
 df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = [xx[0] for xx in pvals]
 df['goal_cell_prop_shuffle'] = [xx[0][1] for xx in goal_cell_null]
 df['p_time_reward'] = time_reward
 df['p_time_reward'] = df['p_time_reward']*100
@@ -491,8 +490,8 @@ ax.axvline(df.p_time_reward.mean(), color='k', linestyle='--',linewidth=3,label=
 # ax.legend()
 ax.spines[['top','right']].set_visible(False)
 ax.set_title('Time Reward overlap')
-plt.savefig(os.path.join(savedst, 'time_reward_overlap.svg'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'time_reward_overlap.svg'), 
+#         bbox_inches='tight')
 
 #%%
 # time cells and a function of total cells?
@@ -505,5 +504,5 @@ ax.set_ylabel('% of time cells that are reward cells')
 ax.set_xlabel('Total cells in session')
 ax.spines[['top','right']].set_visible(False)
 
-plt.savefig(os.path.join(savedst, 'p_time_cells_v_total_cells.svg'), 
-        bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'p_time_cells_v_total_cells.svg'), 
+#         bbox_inches='tight')
