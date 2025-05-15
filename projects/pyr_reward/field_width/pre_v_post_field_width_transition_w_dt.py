@@ -146,9 +146,9 @@ for _, row in posthoc.iterrows():
     stars = '***' if p<0.001 else '**' if p<0.01 else '*' if p<0.05 else ''
     x = x_map[ct]+offset[ct]  # test is Pre vs Post, annotate at Pre position
     # y-height: just above max for that group
-    ymax = .8#anrzdf[(anrzdf.cell_type==ct)]['width_cm'].max()
+    ymax = anrzdf[(anrzdf.cell_type==ct)]['width_cm'].max()
     ax.text(x, ymax, stars, ha='center', va='bottom',fontsize=42)
-    ax.text(x, ymax+.1, f'{ct} near v far\np={p:.2g}', ha='center', va='bottom',fontsize=12,
+    ax.text(x, ymax+5, f'{ct} near v far\np={p:.2g}', ha='center', va='bottom',fontsize=12,
             rotation=45)
 plt.savefig(os.path.join(os.path.join(savedst, 'near_to_far_dark_time_field_width.svg')))
 
@@ -174,6 +174,7 @@ anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
 # anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e139')
 #              & (anrzdf.animal!='e216')]
+anrzdf=anrzdf[(anrzdf.animal!='z16')]
 
 sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
     palette='Dark2',hue_order=hue_order)
@@ -228,7 +229,7 @@ for ct in ['Pre','Post']:
     sub = anrzdf[anrzdf['cell_type']==ct]
     near = sub[sub['epoch']=='rz3']['width_cm']
     far  = sub[sub['epoch']=='rz1']['width_cm']
-    t, p = scipy.stats.ttest_ind(near[~np.isnan(near)], far[~np.isnan(far)])
+    t, p = scipy.stats.ttest_rel(near[~np.isnan(near)], far[~np.isnan(far)])
     results.append({'cell_type':ct, 't_stat':t, 'p_uncorrected':p})
 
 posthoc = pd.DataFrame(results)

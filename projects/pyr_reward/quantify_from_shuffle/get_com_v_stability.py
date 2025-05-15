@@ -44,3 +44,62 @@ for ii in range(len(conddf)):
 pdf.close()
 ####################################### RUN CODE #######################################
 #%%
+# key = ep
+com_ep2_comb = [xx[1] for xx in ep_dicts]
+com_ep3_comb = [xx[2] for xx in ep_dicts if 2 in xx.keys()]
+com_ep4_comb = [xx[3] for xx in ep_dicts if 3 in xx.keys()]
+com_ep5_comb = [xx[4] for xx in ep_dicts if 4 in xx.keys()]
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+
+# plot histograms
+fig, ax = plt.subplots()
+colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+a = 0.2
+lw = 3
+
+# Plot histogram and confidence intervals for each epoch
+data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb,com_ep5_comb]
+labels = ['2', '3', '4', '5']
+for i, data in enumerate(data_sets):
+    all_data = np.concatenate(data)
+    ax.hist(all_data, density=True, alpha=a, label=f'{labels[i]}, {len(all_data)} cells', color=colors[i],
+            edgecolor=colors[i], linewidth=lw)
+    
+    # Confidence interval: 95% = [2.5th, 97.5th] percentiles
+    ci_low = np.nanpercentile(all_data, 2.5)
+    ci_high = np.nanpercentile(all_data, 97.5)
+
+    vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--')
+    vline_low.set_dashes([10, 8])  # dashed spacing
+
+    vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--')
+    vline_high.set_dashes([10, 8])
+
+# Add label for one CI line only
+ci_ref = np.concatenate(com_ep3_comb)
+ci_high = np.nanpercentile(ci_ref, 97.5)
+ax.axvline(ci_high, color=colors[1], linewidth=lw, linestyle='--', label='95% CI').set_dashes([10, 8])
+
+# Style and labels
+ax.set_ylabel('Relative cell density\n(across all sessions)')
+ax.set_xticks([-np.pi, -np.pi/4,0, np.pi/4,np.pi])
+ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
+ax.set_xlabel('Reward-relative distance')
+ax.spines[['top', 'right']].set_visible(False)
+
+# Legend
+h_strip, l_strip = ax.get_legend_handles_labels()
+if ax.legend_: ax.legend_.remove()
+ax.legend(
+    h_strip, l_strip,
+    title='Epoch #',
+    loc='upper left',
+    bbox_to_anchor=(1.02, 1),
+    borderaxespad=0.
+)
+ax.axvline(0,color='dimgrey')
+
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+plt.savefig(os.path.join(savedst, 'com_hist_across_ep.svg'),bbox_inches='tight')
