@@ -424,6 +424,6 @@ if __name__ == "__main__":
     dst=r'Y:\analysis\fmats'
     animal='z17'
     # copyfmats(src,dst,animal,days=[16],combined=True,overwrite=True)
-    animal='z16'
-    copyfmats(src,dst,animal,days=np.arange(5,11),overwrite=True)
+    animal='z15'
+    copyfmats(src,dst,animal,days=[9],overwrite=True)
 

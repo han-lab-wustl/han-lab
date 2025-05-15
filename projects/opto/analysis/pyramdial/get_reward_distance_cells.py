@@ -71,7 +71,7 @@ df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['goal_cell_prop_shuffle'] = goal_cell_null
 df['goal_cell_prop_shuffle']=df['goal_cell_prop_shuffle']*100
-# df=df[df.p_value<0.05]
+# df=df[df.p_value<0.5]
 # remove 0 goal cell prop
 df = df[df.goal_cell_prop>0]
 # df=df[df.days>5]
@@ -91,13 +91,14 @@ ax.set_ylabel('Sessions')
 # number of epochs vs. reward cell prop    
 fig,ax = plt.subplots(figsize=(4,5))
 # av across mice
-df = df[(df.animals!='e200')]
+df = df[(df.animals!='e200')&(df.animals!='e189')]
 # only get -1 pre opto values
 df=df[(df.optoep==-1) | (df.optoep>1)]
 df_plt = df
 color = 'red'
 # top 75%?
-df_an = df_plt.groupby(['animals','condition','opto']).quantile(0.25,numeric_only=True)
+df_an = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True)
+
 order = ['no_stim', 'stim']
 sns.stripplot(x='condition', y='goal_cell_prop',
         hue='opto',data=df_plt,hue_order=order,
@@ -178,7 +179,7 @@ df_diff = (
 df_diff['no_stim'] = df_an[df_an.opto == 'no_stim'].set_index(['animals', 'condition'])['goal_cell_prop']
 df_diff['delta'] = df_diff['stim'] - df_diff['no_stim']
 df_diff = df_diff.reset_index()
-df_diff = df_diff[(df_diff.animals!='e190')]
+# df_diff = df_diff[(df_diff.animals!='e190')]
 # Plot
 sns.stripplot(data=df_diff, x='condition', y='delta', ax=ax2, 
              palette={'ctrl': "slategray", 'vip': color}, size=s, dodge=True)
@@ -220,13 +221,15 @@ plt.rc('font', size=18)          # controls default text sizes
 s=12
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
-df = df[df.optoep>1]
+# df = df[df.optoep>1]
 df['goal_cell_prop'] = goal_cell_prop
+df['goal_cell_prop'] = df['goal_cell_prop']*100
 df['opto'] = df.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['goal_cell_prop_shuffle'] = goal_cell_null
-fig,ax = plt.subplots(figsize=(5,5))
+df['goal_cell_prop_shuffle']=df['goal_cell_prop_shuffle']*100
+fig,ax = plt.subplots(figsize=(4,5))
 ax = sns.histplot(data = df, x='p_value', 
                 hue='animals', bins=40)
 ax.spines[['top','right']].set_visible(False)
@@ -256,13 +259,13 @@ ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 ax.set_xlabel('')
 ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'],rotation=45)
-ax.set_ylabel('Reward-centric cell proportion\n(LEDoff vs. LEDon)')
+ax.set_ylabel('Reward cell %\n(LEDon)')
 rewprop = df_plt.loc[(df_plt.index.get_level_values('condition')=='vip'), 'goal_cell_prop']
 shufprop = df_plt.loc[(df_plt.index.get_level_values('condition')=='ctrl'), 'goal_cell_prop']
 t,pval = scipy.stats.ranksums(rewprop, shufprop)
 # statistical annotation    
 fs=46
-ii=0.5; y=.37; pshift=.05
+ii=0.5; y=35; pshift=.05
 if pval < 0.001:
         ax.text(ii, y, "***", ha='center', fontsize=fs)
 elif pval < 0.01:
@@ -271,7 +274,9 @@ elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
-plt.savefig(os.path.join(savedst, 'reward_cell_prop_ctrlvopto.svg'),bbox_inches='tight')
+df_plt=df_plt.reset_index()
+df_plt.to_csv(r'Z:\saved_datasets\vip_inhibition_rew_cells.csv')
+plt.savefig(os.path.join(savedst, 'raw_reward_cell_prop_ctrlvopto.svg'),bbox_inches='tight')
 
 #%%    
 # include all comparisons 
