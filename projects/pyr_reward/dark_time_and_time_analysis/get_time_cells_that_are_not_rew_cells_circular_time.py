@@ -17,7 +17,7 @@ plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
 from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype,\
-    make_time_tuning_curves, make_tuning_curves, intersect_arrays
+    make_time_tuning_curves_radians, make_tuning_curves, intersect_arrays
 from projects.pyr_reward.rewardcell import get_radian_position,\
     get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle,\
         goal_cell_shuffle_time
@@ -25,10 +25,10 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-saveddataset = r"Z:\saved_datasets\time_tuning.p"
+saveddataset = r"Z:\saved_datasets\time_tuning_circ.p"
 # with open(saveddataset, "rb") as fp: #unpickle
         # radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'time_tuning_wo_rew_cells.pdf')
+savepth = os.path.join(savedst, 'time_tuning_wo_rew_cells_circ.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
 #%%
@@ -109,7 +109,7 @@ for ii in range(len(conddf)):
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         #################### tc w/ time ###################
-        tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, trial_times = make_time_tuning_curves(eps, 
+        tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, trial_times = make_time_tuning_curves_radians(eps, 
                 time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                 lasttr=8, bins=bins, velocity_filter=False)
         # time bin is roughly (16/90) or 170 ms
@@ -139,8 +139,7 @@ for ii in range(len(conddf)):
         # get goal cells aligned to time
         # same % as goal window
         max_trial_times = np.nanmax(np.array([tr.shape[1]/fr for tr in trial_times]))
-        time_window = max_trial_times*.148 #s
-        # CANNOT CONVERT TO RAD BC THE TC IS STILL IN S
+        time_window = max_trial_times*.148 #s/rad
         # time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad
         print(f'Radian window for time cells: {time_window:.2f}')
         goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, time_window, coms_correct_time, cell_type = 'all')

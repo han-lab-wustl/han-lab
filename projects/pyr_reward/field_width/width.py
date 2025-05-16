@@ -200,6 +200,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     df['cellid'] = np.concatenate([goal_all]*len(widths_per_ep))
     df['epoch'] = np.concatenate([[f'epoch{ep+1}_rz{int(rz[ep])}']*len(widths_per_ep[ep]) for ep in range(len(tcs_correct))])        
     df['animal'] = [animal]*len(df)
+    df['rewloc'] = np.concatenate([[f'epoch{ep+1}_rewloc{rewlocs[ep]}']*len(widths_per_ep[ep]) for ep in range(len(tcs_correct))])  
     df['day'] = [day]*len(df)
     df['cell_type'] = ['Pre']*len(df)
     try: # eg., suppress after validation
@@ -236,6 +237,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     df['75_quantile'] = np.concatenate(peak_per_ep)
     df['cellid'] = np.concatenate([goal_all]*len(widths_per_ep))
     df['epoch'] = np.concatenate([[f'epoch{ep+1}_rz{int(rz[ep])}']*len(widths_per_ep[ep]) for ep in range(len(tcs_correct))])        
+    df['rewloc'] = np.concatenate([[f'epoch{ep+1}_rewloc{rewlocs[ep]}']*len(widths_per_ep[ep]) for ep in range(len(tcs_correct))])  
     df['animal'] = [animal]*len(df)
     df['day'] = [day]*len(df)
     df['cell_type'] = ['Post']*len(df)
@@ -249,4 +251,70 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     # plt.show()
     # add add pre and post dfs
     alldf.append(df)
-    return pd.concat(alldf)
+
+    # lick
+    pre_lick_locs = []
+    pre_lick_times = []
+    lick_rates = []
+    epoch_labels = []    
+    pre_velocities = []
+
+    # Define pre-reward window in seconds and/or cm
+    pre_window_s = 10  # seconds before reward
+    for ep in range(len(eps)-1):
+        eprng = range(eps[ep], eps[ep+1])
+        trials = np.unique(trialnum[eprng])
+        trialnum_ep = trialnum[eprng]
+        tr_range = range(eps[ep], eps[ep+1])
+        trials = np.unique(trialnum[tr_range])
+        rewards_ep = rewards[eprng]
+        lick_ep = lick[eprng]
+        success, fail, str_trials, ftr_trials, ttr, \
+        total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        # only use last 8 correct trials
+        lasttr=8
+        for tr in str_trials[-8:]:
+            tr_idx = (trialnum_ep == tr)
+            if np.sum(rewards_ep[tr_idx]) == 0:
+                continue  # no reward delivered
+            time_tr = time[eprng][tr_idx]-time[eprng][tr_idx][0]
+            reward_time = time_tr[(rewards_ep[tr_idx] > 0)][0]  # first reward frame
+            lick_mask = (lick_ep[tr_idx] > 0) & (time_tr < reward_time) & (time_tr > reward_time - pre_window_s)
+            # Get velocity in pre-reward window
+            vel_tr = forwardvel[eprng][tr_idx]
+            pre_vel_mask = (time_tr < reward_time) & (time_tr > reward_time - pre_window_s)
+            if np.any(pre_vel_mask):
+                avg_vel = np.nanmean(vel_tr[pre_vel_mask])
+            else:
+                avg_vel = np.nan
+            pre_velocities.append(avg_vel)
+
+            if np.any(lick_mask):
+                # Locations (in cm)
+                lick_locs = ybinned[eprng][tr_idx][lick_mask]
+                lick_times = time_tr[lick_mask]
+                pre_lick_locs.append((np.min(lick_locs), np.max(lick_locs)))  # first and last
+                pre_lick_times.append((np.min(lick_times), np.max(lick_times)))
+                lick_rates.append(np.sum(lick_mask) / pre_window_s)
+            else:
+                pre_lick_locs.append((np.nan, np.nan))
+                pre_lick_times.append((np.nan, np.nan))
+                lick_rates.append(np.nan)
+            # ... your lick processing here ...
+            epoch_labels.append(f'epoch{ep+1}_rz{int(rz[ep])}')
+            
+    # Convert to DataFrame for easier analysis
+    lick_df = pd.DataFrame({
+        'first_lick_loc_cm': [x[0] for x in pre_lick_locs],
+        'last_lick_loc_cm': [x[1] for x in pre_lick_locs],
+        'first_lick_time': [x[0] for x in pre_lick_times],
+        'last_lick_time': [x[1] for x in pre_lick_times],
+        'lick_rate_hz': lick_rates,
+        'avg_velocity_cm_s': pre_velocities,
+        'animal': [animal]*len(pre_lick_locs),
+        'day': [day]*len(pre_lick_locs),
+        'epoch': epoch_labels
+    })
+
+    # Optional: return this alongside widths
+    return pd.concat(alldf), lick_df
