@@ -260,7 +260,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     pre_velocities = []
 
     # Define pre-reward window in seconds and/or cm
-    pre_window_s = 10  # seconds before reward
+    pre_window_s = 5  # seconds before reward
     for ep in range(len(eps)-1):
         eprng = range(eps[ep], eps[ep+1])
         trials = np.unique(trialnum[eprng])

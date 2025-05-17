@@ -140,7 +140,7 @@ for ii in range(len(conddf)):
         # same % as goal window
         max_trial_times = np.nanmax(np.array([tr.shape[1]/fr for tr in trial_times]))
         time_window = max_trial_times*.148 #s/rad
-        # time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad
+        time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad
         print(f'Radian window for time cells: {time_window:.2f}')
         goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, time_window, coms_correct_time, cell_type = 'all')
         com_goal_postrew_time = [[xx for xx in yy if yy not in com_goal_postrew[kk]] for kk,yy in enumerate(com_goal_postrew)]

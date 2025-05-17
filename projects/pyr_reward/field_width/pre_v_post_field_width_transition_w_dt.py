@@ -264,294 +264,94 @@ plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_widt
 
 #%%
 # get corresponding licking behavior 
+import scipy.stats as stats
+from statsmodels.stats.multitest import multipletests
+
+def get_transition_df(lickbigdf, rz_pairs):
+    rzdf = pd.concat([
+        lickbigdf[lickbigdf['epoch'].str.contains(pair[0]) | lickbigdf['epoch'].str.contains(pair[1])]
+        for pair in rz_pairs
+    ])
+    rzdf = rzdf.reset_index(drop=True)
+    rzdf['epoch'] = [e[-3:] for e in rzdf['epoch']]
+    return rzdf
+
+def plot_transition_panel(rzdf, axes, label_order, color='mediumvioletred'):
+    # Mean per animal x epoch
+    anrzdf = rzdf.groupby(['animal', 'epoch']).mean(numeric_only=True).reset_index()
+    anrzdf = anrzdf.sort_values(by="epoch", ascending=(label_order == ['Near', 'Far']))
+
+    metrics = [
+        ('lick_cm_diff', '$\Delta$ Distance (cm) (first-last lick)'),
+        ('lick_time_diff', '$\Delta$ Time (s) (first-last lick)'),
+        ('lick_rate_hz', 'Lick rate (Hz)'),
+        ('avg_velocity_cm_s', 'Velocity (cm/s)'),
+    ]
+
+    pvals = []
+
+    for i, (metric, ylabel) in enumerate(metrics):
+        ax = axes[i]
+        sns.stripplot(x='epoch', y=metric, data=anrzdf, alpha=0.7, dodge=True, s=10, ax=ax, color=color)
+        sns.boxplot(x='epoch', y=metric, data=anrzdf, fill=False, ax=ax, color=color, showfliers=False)
+        ax.spines[['top','right']].set_visible(False)
+
+        for animal in anrzdf['animal'].unique():
+            df_ = anrzdf[anrzdf.animal == animal].sort_values('epoch', ascending=(label_order == ['Near', 'Far']))
+            x_vals = np.arange(len(df_)) + (i * 0.1) - 0.1
+            sns.lineplot(x=x_vals, y=df_[metric].values, ax=ax, color='dimgrey', linewidth=2, alpha=0.3)
+
+        ax.set_ylabel(ylabel)
+        ax.set_xticklabels(label_order)
+        ax.set_xlabel('')
+
+        # Stats
+        df1 = anrzdf[anrzdf['epoch'] == 'rz1'].sort_values('animal')
+        df2 = anrzdf[anrzdf['epoch'] == 'rz3'].sort_values('animal')
+        assert all(df1['animal'].values == df2['animal'].values)
+        p = stats.wilcoxon(df1[metric], df2[metric]).pvalue
+        pvals.append(p)
+
+    # Bonferroni correction
+    reject, pvals_corr, _, _ = multipletests(pvals, alpha=0.05, method='bonferroni')
+
+    def get_asterisks(p):
+        return '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else 'n.s.'
+
+    for i, ax in enumerate(axes):
+        ymax = anrzdf[metrics[i][0]].max()
+        y_text = ymax + 0.01 * abs(ymax)
+        y_p = ymax - 0.005 * abs(ymax)
+        ax.annotate(get_asterisks(pvals_corr[i]), xy=(.5, y_text), ha='center', fontsize=46, fontweight='bold')
+        ax.annotate(f'{pvals_corr[i]:.2g}', xy=(.5, y_p), ha='center', fontsize=11)
+
+    return anrzdf
+
+# === USAGE ===
+
+# Preprocessing
 lickbigdf = pd.concat(lick_dfs)
-lickbigdf['lick_cm_diff'] = lickbigdf['last_lick_loc_cm']-lickbigdf['first_lick_loc_cm']
-lickbigdf['lick_time_diff'] = lickbigdf['last_lick_time']-lickbigdf['first_lick_time']
+lickbigdf['lick_cm_diff'] = lickbigdf['last_lick_loc_cm'] - lickbigdf['first_lick_loc_cm']
+lickbigdf['lick_time_diff'] = lickbigdf['last_lick_time'] - lickbigdf['first_lick_time']
 
-# 1 to 3 transition
-rzdf = lickbigdf[(lickbigdf.epoch.str.contains('epoch1_rz1') | lickbigdf.epoch.str.contains('epoch2_rz3'))]
-rzdf2 = lickbigdf[(lickbigdf.epoch.str.contains('epoch2_rz1') | lickbigdf.epoch.str.contains('epoch3_rz3'))]
-rzdf3 = lickbigdf[(lickbigdf.epoch.str.contains('epoch3_rz1') | lickbigdf.epoch.str.contains('epoch4_rz3'))]
-rzdf4 = lickbigdf[(lickbigdf.epoch.str.contains('epoch4_rz1') | lickbigdf.epoch.str.contains('epoch5_rz3'))]
-rzdf = pd.concat([rzdf,rzdf2,rzdf3,rzdf4])
-
-rzdf=rzdf.reset_index()
-rzdf['epoch'] = [xx[-3:] for xx in rzdf.epoch.values]
-
-# per animal
-s=10
-fig, axes_all = plt.subplots(nrows=2,ncols = 4, figsize=(11,10))
-axes=axes_all[0]
-color='mediumvioletred'
-# only get super close rz1 rewlocs
-anrzdf = rzdf.groupby(['animal', 'epoch']).mean(numeric_only=True)
-anrzdf=anrzdf.reset_index()
-anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
-ax=axes[0]
-sns.stripplot(x='epoch',y='lick_cm_diff',data=anrzdf,alpha=0.7,dodge=True,s=s,ax=ax,color=color)
-h_strip, l_strip = ax.get_legend_handles_labels()
-sns.boxplot(x='epoch',y='lick_cm_diff',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=True)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='lick_cm_diff',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('$\Delta$ Distance (cm) (first-last lick)')  
-ax.set_xticklabels(['Near','Far'])
-ax.set_xlabel('')
-
-ax=axes[1]
-sns.stripplot(x='epoch',y='lick_time_diff',data=anrzdf,alpha=0.7,color=color,dodge=True,ax=ax,s=s)
-h_strip, l_strip = ax.get_legend_handles_labels()
-sns.boxplot(x='epoch',y='lick_time_diff',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=True)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='lick_time_diff',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('$\Delta$ Time (s) (first-last lick)')
-ax.set_xticklabels(['Near','Far'])
-ax.set_xlabel('')
-
-ax=axes[2]
-sns.stripplot(x='epoch',y='lick_rate_hz',data=anrzdf,color=color,alpha=0.7,dodge=True,ax=ax,s=s)
-h_strip, l_strip = ax.get_legend_handles_labels()
-sns.boxplot(x='epoch',y='lick_rate_hz',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=True)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='lick_rate_hz',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('Lick rate (Hz)')  
-ax.set_xticklabels(['Near','Far'])
-ax.set_xlabel('')
-
-ax=axes[3]
-sns.stripplot(x='epoch',y='avg_velocity_cm_s',data=anrzdf,
-    ax=ax,color=color,alpha=0.7,dodge=True,s=s)
-sns.boxplot(x='epoch',y='avg_velocity_cm_s',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=True)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='avg_velocity_cm_s',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('Velocity (cm/s)')  
-ax.set_xticklabels(['Near','Far'])
-ax.set_xlabel('')
-
-from statsmodels.stats.multitest import multipletests
-# Filter for common animals only
-df_epoch1 = anrzdf[(anrzdf.epoch == 'rz1')].sort_values('animal')
-df_epoch2 = anrzdf[(anrzdf.epoch == 'rz3')].sort_values('animal')
-# Sanity check: matched animals
-assert all(df_epoch1.animal.values == df_epoch2.animal.values)
-# Paired t-tests
-lick_cm_diff_p = scipy.stats.wilcoxon(df_epoch1['lick_cm_diff'], df_epoch2['lick_cm_diff']).pvalue
-lick_rate_hz_p = scipy.stats.wilcoxon(df_epoch1['lick_rate_hz'], df_epoch2['lick_rate_hz']).pvalue
-lick_time_diff_p = scipy.stats.wilcoxon(df_epoch1['lick_time_diff'], df_epoch2['lick_time_diff']).pvalue
-avg_velocity_cm_s_p = scipy.stats.wilcoxon(df_epoch1['avg_velocity_cm_s'], df_epoch2['avg_velocity_cm_s']).pvalue
-# Bonferroni correction
-pvals = [lick_cm_diff_p, lick_time_diff_p,lick_rate_hz_p, avg_velocity_cm_s_p]
-reject, pvals_corr, _, _ = multipletests(pvals, alpha=0.05, method='bonferroni')
-# Define position for annotations per epoch
-epochs = sorted(anrzdf['epoch'].unique())
-x_positions = np.arange(len(epochs))  # x positions for each epoch (0, 1, 2)
+# Plot setup
+fig, axes_all = plt.subplots(nrows=2, ncols=4, figsize=(11, 10))
 plt.tight_layout()
-# Function to convert p-value to asterisk significance
-def get_asterisks(p):
-    if p < 0.001:
-        return '***'
-    elif p < 0.01:
-        return '**'
-    elif p < 0.05:
-        return '*'
-    else:
-        return 'n.s.'
 
-# Add annotations for each subplot
-metrics = ['lick_cm_diff', 'lick_time_diff','lick_rate_hz', 'avg_velocity_cm_s']
-for i, metric in enumerate(metrics):
-    ax = axes[i]
-    # Get max y value for the current metric to place annotation above the data
-    ymax = anrzdf[metric].max()
-    y_text = ymax + 0.01 * abs(ymax)  # Offset a bit above max value
-    y_p  = ymax - 0.005 * abs(ymax)
-    pval = pvals_corr[i]
-    star = get_asterisks(pval)
-    ax.annotate(f'{star}',
-                xy=(.5, y_text),  # position over epoch 1 (middle box)
-                xycoords='data',
-                ha='center', va='bottom',
-                fontsize=46, fontweight='bold')
-    ax.annotate(f'{pval:.2g}',
-                xy=(.5, y_p),  # position over epoch 1 (middle box)
-                xycoords='data',
-                ha='center', va='bottom',
-                fontsize=11)
-    
-# 3 to 1 transition
-rzdf = lickbigdf[(lickbigdf.epoch.str.contains('epoch1_rz3') | lickbigdf.epoch.str.contains('epoch2_rz1'))]
-rzdf2 = lickbigdf[(lickbigdf.epoch.str.contains('epoch2_rz3') | lickbigdf.epoch.str.contains('epoch3_rz1'))]
-rzdf3 = lickbigdf[(lickbigdf.epoch.str.contains('epoch3_rz3') | lickbigdf.epoch.str.contains('epoch4_rz1'))]
-rzdf4 = lickbigdf[(lickbigdf.epoch.str.contains('epoch4_rz3') | lickbigdf.epoch.str.contains('epoch5_rz1'))]
-rzdf = pd.concat([rzdf,rzdf2,rzdf3,rzdf4])
+# Plot 1→3
+rz_pairs_13 = [('epoch1_rz1', 'epoch2_rz3'), ('epoch2_rz1', 'epoch3_rz3'),
+               ('epoch3_rz1', 'epoch4_rz3'), ('epoch4_rz1', 'epoch5_rz3')]
+rzdf13 = get_transition_df(lickbigdf, rz_pairs_13)
+plot_transition_panel(rzdf13, axes_all[0], label_order=['Near', 'Far'])
 
-rzdf=rzdf.reset_index()
-rzdf['epoch'] = [xx[-3:] for xx in rzdf.epoch.values]
-
-# per animal
-s=10
-axes = axes_all[1]
-color='mediumvioletred'
-# only get super close rz1 rewlocs
-anrzdf = rzdf.groupby(['animal', 'epoch']).mean(numeric_only=True)
-anrzdf=anrzdf.reset_index()
-anrzdf = anrzdf.sort_values(by="epoch", ascending=False)
-# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
-ax=axes[0]
-sns.stripplot(x='epoch',y='lick_cm_diff',data=anrzdf,alpha=0.7,dodge=True,s=s,ax=ax,color=color)
-h_strip, l_strip = ax.get_legend_handles_labels()
-sns.boxplot(x='epoch',y='lick_cm_diff',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=False)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='lick_cm_diff',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('$\Delta$ Distance (cm) (first-last lick)')  
-ax.set_xticklabels(['Far','Near'])
-
-ax=axes[1]
-sns.stripplot(x='epoch',y='lick_time_diff',data=anrzdf,alpha=0.7,color=color,dodge=True,ax=ax,s=s)
-h_strip, l_strip = ax.get_legend_handles_labels()
-sns.boxplot(x='epoch',y='lick_time_diff',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=False)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='lick_time_diff',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('$\Delta$ Time (s) (first-last lick)')
-ax.set_xticklabels(['Far','Near'])
-
-ax=axes[2]
-sns.stripplot(x='epoch',y='lick_rate_hz',data=anrzdf,color=color,alpha=0.7,dodge=True,ax=ax,s=s)
-h_strip, l_strip = ax.get_legend_handles_labels()
-sns.boxplot(x='epoch',y='lick_rate_hz',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=False)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='lick_rate_hz',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('Lick rate (Hz)')  
-ax.set_xticklabels(['Far','Near'])
-
-ax=axes[3]
-sns.stripplot(x='epoch',y='avg_velocity_cm_s',data=anrzdf,
-    ax=ax,color=color,alpha=0.7,dodge=True,s=s)
-sns.boxplot(x='epoch',y='avg_velocity_cm_s',data=anrzdf,
-        fill=False,ax=ax,color=color,
-           showfliers=False)
-ax.spines[['top','right']].set_visible(False)
-ans = anrzdf.animal.unique()
-for i in range(len(ans)):    
-    df_ = anrzdf[(anrzdf.animal==ans[i])]
-    df_ = df_.sort_values(by="epoch", ascending=False)
-    ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='avg_velocity_cm_s',
-    data=df_,
-    errorbar=None, color='dimgrey', linewidth=2, alpha=0.3,ax=ax)
-ax.set_ylabel('Velocity (cm/s)')  
-ax.set_xticklabels(['Far','Near'])
-from scipy.stats import ttest_rel
-from statsmodels.stats.multitest import multipletests
-# Filter for common animals only
-df_epoch1 = anrzdf[(anrzdf.epoch == 'rz1')].sort_values('animal')
-df_epoch2 = anrzdf[(anrzdf.epoch == 'rz3')].sort_values('animal')
-# Sanity check: matched animals
-assert all(df_epoch1.animal.values == df_epoch2.animal.values)
-# Paired t-tests
-lick_cm_diff_p = scipy.stats.wilcoxon(df_epoch1['lick_cm_diff'], df_epoch2['lick_cm_diff']).pvalue
-lick_rate_hz_p = scipy.stats.wilcoxon(df_epoch1['lick_rate_hz'], df_epoch2['lick_rate_hz']).pvalue
-lick_time_diff_p = scipy.stats.wilcoxon(df_epoch1['lick_time_diff'], df_epoch2['lick_time_diff']).pvalue
-avg_velocity_cm_s_p = scipy.stats.wilcoxon(df_epoch1['avg_velocity_cm_s'], df_epoch2['avg_velocity_cm_s']).pvalue
-# Bonferroni correction
-pvals = [lick_cm_diff_p, lick_time_diff_p,lick_rate_hz_p, avg_velocity_cm_s_p]
-reject, pvals_corr, _, _ = multipletests(pvals, alpha=0.05, method='bonferroni')
-# Define position for annotations per epoch
-epochs = sorted(anrzdf['epoch'].unique())
-x_positions = np.arange(len(epochs))  # x positions for each epoch (0, 1, 2)
-plt.tight_layout()
-# Function to convert p-value to asterisk significance
-def get_asterisks(p):
-    if p < 0.001:
-        return '***'
-    elif p < 0.01:
-        return '**'
-    elif p < 0.05:
-        return '*'
-    else:
-        return 'n.s.'
-
-# Add annotations for each subplot
-metrics = ['lick_cm_diff', 'lick_time_diff','lick_rate_hz', 'avg_velocity_cm_s']
-for i, metric in enumerate(metrics):
-    ax = axes[i]
-    # Get max y value for the current metric to place annotation above the data
-    ymax = anrzdf[metric].max()
-    y_text = ymax + 0.01 * abs(ymax)  # Offset a bit above max value
-    y_p  = ymax - 0.005 * abs(ymax)
-    pval = pvals_corr[i]
-    star = get_asterisks(pval)
-    ax.annotate(f'{star}',
-                xy=(.5, y_text),  # position over epoch 1 (middle box)
-                xycoords='data',
-                ha='center', va='bottom',
-                fontsize=46, fontweight='bold')
-    ax.annotate(f'{pval:.2g}',
-                xy=(.5, y_p),  # position over epoch 1 (middle box)
-                xycoords='data',
-                ha='center', va='bottom',
-                fontsize=11)
+# Plot 3→1
+rz_pairs_31 = [('epoch1_rz3', 'epoch2_rz1'), ('epoch2_rz3', 'epoch3_rz1'),
+               ('epoch3_rz3', 'epoch4_rz1'), ('epoch4_rz3', 'epoch5_rz1')]
+rzdf31 = get_transition_df(lickbigdf, rz_pairs_31)
+plot_transition_panel(rzdf31, axes_all[1], label_order=['Far', 'Near'],color='mediumslateblue')
+fig.suptitle('Last 8 correct trials')
 plt.savefig(os.path.join(os.path.join(savedst, 'transition_licks_velocity.svg')))
+
 
 #%%
 ii=152 # near to far
