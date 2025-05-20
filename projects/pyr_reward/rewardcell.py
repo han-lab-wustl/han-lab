@@ -2922,7 +2922,8 @@ def goal_cell_shuffle(coms_correct, goal_window, perm, num_iterations = 1000):
     
     return goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist
 
-def goal_cell_shuffle_time(coms_rew, coms_correct, goal_window, perm, num_iterations = 1000):
+def goal_cell_shuffle_time(coms_rew, coms_place,coms_correct, goal_window, perm, place_window=20,
+            num_iterations = 1000):
     """
     exclude reward cells
     """
@@ -2973,9 +2974,25 @@ def goal_cell_shuffle_time(coms_rew, coms_correct, goal_window, perm, num_iterat
             rew_cells = intersect_arrays(*com_goal_postrew); 
         else:
             rew_cells=[]
-        # remove rew cells
         ############################
-        goal_cells_shuf = [xx for xx in goal_cells_shuf if xx not in rew_cells]
+        # do same for place cells
+        shufs = [list(range(coms_place[ii].shape[0])) for ii in range(1, len(coms_place))]
+        [random.shuffle(shuf) for shuf in shufs]
+        # first com is as ep 1, others are shuffled cell identities
+        com_shufs = np.zeros_like(coms_place); com_shufs[0,:] = coms_place[0]
+        com_shufs[1:1+len(shufs),:] = [coms_rew[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+        # get cells that maintain their coms across at least 2 epochs
+        perm = list(combinations(range(len(com_shufs)), 2))     
+        com_per_ep = np.array([(com_shufs[perm[jj][0]]-com_shufs[perm[jj][1]]) for jj in range(len(perm))])        
+        compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+        # get cells across all epochs that meet crit
+        if len(compc)>0:
+            pcs_all = intersect_arrays(*compc)
+        else:
+            pcs_all=[]
+        # remove rew and place cells
+        ############################
+        goal_cells_shuf = [xx for xx in goal_cells_shuf if xx not in rew_cells and xx not in pcs_all]
         shuffled_dist[i] = len(goal_cells_shuf)/len(coms_correct[0])
         goal_cell_shuf_p=len(goal_cells_shuf)/len(com_shufs[0])
         goal_cell_shuf_ps.append(goal_cell_shuf_p)

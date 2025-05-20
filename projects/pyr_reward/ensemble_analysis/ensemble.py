@@ -335,7 +335,6 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     rewards = fall['rewards'][0]
     licks = fall['licks'][0]
     time = fall['timedFF'][0]
-
     # trim if needed
     if animal == 'e145':
         ybinned = ybinned[:-1]
@@ -349,9 +348,6 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     eps = np.where(changeRewLoc > 0)[0]
     rewlocs = changeRewLoc[eps] / scalingf
     eps = np.append(eps, len(changeRewLoc))
-
-    rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize, rewlocs,
-                    trialnum, track_length)
     rz = get_rewzones(rewlocs, 1 / scalingf)
 
     # Load and filter dF/F data
@@ -362,26 +358,21 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     dFF = dFF[:, (fall['iscell'][:, 0]).astype(bool)]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     Fc3 = Fc3[:, skew > 2]
-
     # bin size based on dark time estimate
     bins_dt = 150
     track_length_dt = 550
     bin_size_dt = (2 * np.pi) / bins_dt
-
     # Get tuning curves for each trial type
     tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(
         eps, rewlocs, rewsize, ybinned, time, licks, Fc3, trialnum, rewards, forwardvel, 
         scalingf, bin_size_dt, bins=bins_dt)
-
     # Define goal window
     goal_window = goal_window_cm * (2 * np.pi / track_length)
-
     # Recenter COMs around reward zone
     coms_rewrel = np.array([com - np.pi for com in coms_correct])
     perm = list(combinations(range(len(coms_correct)), 2))
     com_remap = np.array([(coms_rewrel[p[0]] - coms_rewrel[p[1]]) for p in perm])
     com_goal = [np.where((comr < goal_window) & (comr > -goal_window))[0] for comr in com_remap]
-
     # Fix wrap-around
     epsilon = 0.7
     com_loop_w_in_window = []
@@ -392,69 +383,66 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
             if ((abs(com1_rel - np.pi) < epsilon) and (abs(com2_rel + np.pi) < epsilon)):
                 com_loop_w_in_window.append(cll)
     coms_rewrel[:, com_loop_w_in_window] = abs(coms_rewrel[:, com_loop_w_in_window])
-
     # Separate cells into pre- and post-reward goal cells
     com_goal_prerew = [[xx for xx in com if np.nanmedian(coms_rewrel[:, xx]) < 0] if len(com) > 0 else [] for com in com_goal]
     com_goal_postrew = [[xx for xx in com if np.nanmedian(coms_rewrel[:, xx]) >= 0] if len(com) > 0 else [] for com in com_goal]
-
     pre_goal_cells = intersect_arrays(*com_goal_prerew) if len(com_goal_prerew) > 0 else []
     post_goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
-
     # Place cell detection
-    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards,
-                                                            forwardvel, rewsize, bin_size_dt)
-    place_window = 20 * (2 * np.pi / track_length)
+    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards, forwardvel, rewsize, bin_size_dt)
+    place_window = 20
     perm_abs = list(combinations(range(len(coms_correct_abs)), 2))
     com_per_ep = np.array([(coms_correct_abs[p[0]] - coms_correct_abs[p[1]]) for p in perm_abs])
     compc = [np.where((comr < place_window) & (comr > -place_window))[0] for comr in com_per_ep]
     pcs_all = intersect_arrays(*compc) if len(compc) > 0 else []
 
-    # ICA function to run and save tuning curve plots
-    def run_ica_and_plot(cell_ids, label):
-        assemblies = {}; used_cells = set()
-        if len(cell_ids) > 0:
-            try:
-                patterns, activities, labels_, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1], cell_ids].T)
-                print(f"{label}: {n} assemblies detected")
-                labels_clusters = cluster_neurons_from_ica(patterns)
-                cell_groups = get_cells_by_assembly(labels_clusters)
-                for assembly_id, cells in sorted(cell_groups.items(), key=lambda x: len(x[1]), reverse=True):
-                    cells = np.array(cells)
-                    # leave max filter out
-                    # peak = np.nanmax(tcs_correct[0, cell_ids[cells], :], axis=1)
-                    # cells = cells[peak > 0.05]
-                    if len(cells) < 3:
-                        continue
-                    ids = set(cell_ids[cells])
-                    if not ids.isdisjoint(used_cells):
-                        continue
-                    used_cells.update(ids)
-                    fig, ax = plt.subplots()
-                    ax.plot(tcs_correct[0, cell_ids[cells], :].T)
-                    ax.set_title(f'{animal}, {day}, {label} Assembly {assembly_id}')
-                    fig.tight_layout()
-                    pdf.savefig(fig)
-                    plt.close(fig)
-                    assemblies[f'{label}_assembly_{assembly_id}'] = [
-                        tcs_correct[:, cell_ids[cells], :], 
-                        tcs_fail[:, cell_ids[cells], :]
-                    ]
-            except Exception as e:
-                print(f"{label} ICA failed: {e}")
-        return assemblies, len(used_cells) / len(cell_ids) if len(cell_ids) > 0 else np.nan
-
     # Run ICA for each population
     print("\nRunning ICA on pre-reward goal cells...")
-    assemblies_pre, frac_pre = run_ica_and_plot(pre_goal_cells, 'pre')
+    pdf,assemblies_pre, frac_pre = run_ica_and_plot(pre_goal_cells,'pre',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)
 
     print("\nRunning ICA on post-reward goal cells...")
-    assemblies_post, frac_post = run_ica_and_plot(post_goal_cells, 'post')
+    pdf,assemblies_post, frac_post = run_ica_and_plot(post_goal_cells, 'post',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)
 
     print("\nRunning ICA on place cells...")
-    assemblies_place, frac_place = run_ica_and_plot(pcs_all, 'place')
+    # not sep into correct/incorr for place cells
+    pdf,assemblies_place, frac_place = run_ica_and_plot(pcs_all, 'place',Fc3,eps,tcs_correct_abs,np.zeros_like(tcs_correct_abs),pdf,animal, day)
 
     return {
         'pre': {'assemblies': assemblies_pre, 'fraction': frac_pre},
         'post': {'assemblies': assemblies_post, 'fraction': frac_post},
         'place': {'assemblies': assemblies_place, 'fraction': frac_place}
     }
+
+# ICA function to run and save tuning curve plots
+def run_ica_and_plot(cell_ids,label,Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day):
+    assemblies = {}; used_cells = set()
+    try:
+        if len(cell_ids) > 0:
+            patterns, activities, labels_, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1], cell_ids].T)
+            print(f"{label}: {n} assemblies detected")
+            labels_clusters = cluster_neurons_from_ica(patterns)
+            cell_groups = get_cells_by_assembly(labels_clusters)
+            for assembly_id, cells in sorted(cell_groups.items(), key=lambda x: len(x[1]), reverse=True):
+                cells = np.array(cells)
+                # leave max filter out
+                # peak = np.nanmax(tcs_correct[0, cell_ids[cells], :], axis=1)
+                # cells = cells[peak > 0.05]
+                if len(cells) < 5:
+                    continue
+                ids = set(cell_ids[cells])
+                if not ids.isdisjoint(used_cells):
+                    continue
+                used_cells.update(ids)
+                fig, ax = plt.subplots()
+                ax.plot(tcs_correct[0, cell_ids[cells], :].T)
+                ax.set_title(f'{animal}, {day}, {label} Assembly {assembly_id}')
+                fig.tight_layout()
+                pdf.savefig(fig)
+                plt.close(fig)
+                assemblies[f'{label}_assembly_{assembly_id}'] = [
+                    tcs_correct[:, cell_ids[cells], :], 
+                    tcs_fail[:, cell_ids[cells], :]
+                ]
+    except Exception as e:
+        print(e)
+    return pdf, assemblies, len(used_cells) / len(cell_ids) if len(cell_ids) > 0 else np.nan

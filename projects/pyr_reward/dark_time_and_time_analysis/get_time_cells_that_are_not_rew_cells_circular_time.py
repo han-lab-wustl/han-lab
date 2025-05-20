@@ -37,7 +37,8 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 # initialize var
 radian_alignment_saved = {} # overwrite
 p_goal_cells=[]
-p_goal_cells_dt = []
+p_goal_cells_pure_time = []
+p_goal_cells_all_time=[]
 p_goal_cells_pc=[]
 goal_cells_iind=[]
 pvals = []
@@ -46,6 +47,7 @@ goal_window_cm=20
 datadct = {}
 goal_cell_null= []
 perms = []
+#%%
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
@@ -116,11 +118,11 @@ for ii in range(len(conddf)):
                 time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                 lasttr=8, bins=bins, velocity_filter=False)
         # filter by in/out field firing
-        selected_cells, in_field_fraction = filter_cells_by_field_selectivity(tcs_correct_time, 
-                        threshold=0.5, fraction_cutoff=0.6)
+        # selected_cells, in_field_fraction = filter_cells_by_field_selectivity(tcs_correct_time, 
+        #                 threshold=0.5, fraction_cutoff=0.6)
         # time bin is roughly (16/90) or 170 ms
         # test
-        max_trial_times =np.array([tr.shape[1]/fr for tr in trial_times])
+        # max_trial_times =np.array([tr.shape[1]/fr for tr in trial_times])
         # fig, axes = plt.subplots(ncols = len(tcs_correct_time),figsize=(12,10))
         # for ep in range(len(coms_correct_time)):
         #     ax=axes[ep]
@@ -157,10 +159,8 @@ for ii in range(len(conddf)):
         time_window = max_trial_times*.074 #s/rad
         # 5/19/25: halved window of time compared to distance?
         # 5/20/25:back to original window
-        time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad
-        print(f'Radian window for time cells: {time_window:.2f}')
-        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells_time(rz, time_window, coms_correct_time, cell_type = 'all')
-        com_goal_postrew_time = [[xx for xx in yy if yy not in com_goal_postrew[kk]] for kk,yy in enumerate(com_goal_postrew)]
+        time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad        
+        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells_time(rz, time_window, coms_correct_time)
         goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_time]            
         ################### get place cells ###################
         # get cells that maintain their coms across at least 2 epochs
@@ -175,16 +175,19 @@ for ii in range(len(conddf)):
         # get indices
         goal_cells_iind.append([goal_cells, goal_cells_time, pcs_all])
         # remove rew and place cells
-        goal_cells_time = [xx for xx in goal_cells_time if (xx not in goal_cells) and (xx not in pcs_all)]
-        # filter tc by selected cells
-        goal_cells_time = [xx for xx in goal_cells_time if xx in selected_cells]
+        pure_time = [xx for xx in goal_cells_time if (xx not in goal_cells) and (xx not in pcs_all)]
+        # also for per comparison
+        pure_time_cells_p_per_comparison = [[xx for xx in com_time if xx not in compc[ll] and xx not in com_goal_postrew[ll]] for ll,com_time in enumerate(com_goal_postrew_time)]
         # eg cell         
         # For goal_cells (Reward cells)
         xticks_time = [r'$-\pi$', '0', r'$\pi$']
         xticks_labels_pi = [r'$-\pi$', '0', r'$\pi$']
         xticks_rew = [0,75,150]
         xticks_poslbl = np.arange(0,track_length+1,90).astype(int)
-        xticks_pos = np.arange(0,90+1,30)
+        if track_length>180:
+                xticks_pos = np.arange(0,90+1,30)
+        else:
+                xticks_pos = np.arange(0,90+1,45)
         n_cells = len(goal_cells)
         if n_cells>0:
                 figlength = n_cells if n_cells<30 else n_cells/2
@@ -230,13 +233,13 @@ for ii in range(len(conddf)):
                 pdf.savefig(fig)
                 plt.close(fig)
         # For goal_cells_time (Time cells)
-        n_cells = len(goal_cells_time)
+        n_cells = len(pure_time)
         if n_cells>0:
                 figlength = n_cells if n_cells<30 else n_cells/2
                 fig, axes = plt.subplots(nrows=n_cells, ncols=3,figsize=(6,figlength))
                 if n_cells == 1:
                         axes = [axes]
-                for i, cellid in enumerate(goal_cells_time):
+                for i, cellid in enumerate(pure_time):
                         axes[i][0].set_title('Track aligned') if i == 0 else None
                         axes[i][1].set_title('Reward-relative distance aligned') if i == 0 else None
                         axes[i][2].set_title('Time aligned') if i == 0 else None
@@ -261,32 +264,49 @@ for ii in range(len(conddf)):
                 plt.show()
                 # plt.close(fig)        #only get perms with non zero cells
         # get per comparison and also across epochs
+        ####### rew #######
         p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
-        p_goal_cells_dt.append([len(goal_cells_time)/len(coms_correct_time[0]), goal_cells_p_per_comparison_time])
+        ####### pure time #######
+        p_goal_cells_pure_time.append([len(pure_time)/len(coms_correct_time[0]), pure_time_cells_p_per_comparison])
+        ####### all time #######
+        p_goal_cells_all_time.append([len(goal_cells_time)/len(coms_correct_time[0]), goal_cells_p_per_comparison_time])
+        ####### place #######
         p_goal_cells_pc.append([len(pcs_all)/len(coms_correct_abs[0]), place_cells_p_per_comparison])
         # save perm
         perms.append([[perm, rz_perm],
             [perm_time, rz_perm_time]])
-        print(f'Goal cells w/o dt: {len(goal_cells)} cells\n\
-            Time cells: {len(goal_cells_time)} cells')
-        # shuffle
-        num_iterations=1000
-        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
-                    perm,num_iterations = num_iterations)
-        goal_cell_shuf_ps_per_comp_time, goal_cell_shuf_ps_time, shuffled_dist_time=goal_cell_shuffle_time(coms_correct,
-                    coms_correct_time, time_window, perm_time)
+        print(f'Goal cells w/ dt: {len(goal_cells)} cells\n\
+            Time cells: {len(pure_time)} cells')
+        ################ rew shuffle ################
+        # num_iterations=1000
+        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,perm)
+        ################ all time rew shuffle ################
+        time_cell_shuf_ps_per_comp, time_cell_shuf_ps, shuffled_time_all=goal_cell_shuffle(coms_correct_time, goal_window,perm_time)
+        # gets shuffle w/o rew and place cells
+        ################ for pure time cells ################
+        # normalize by time epochs
+        shuf_ps_per_comp_pure_time, shuf_ps_pure_time, shuffled_dist_time=goal_cell_shuffle_time(coms_correct[:len(coms_correct_time),:],coms_correct_abs[:len(coms_correct_time),:],coms_correct_time, time_window, perm_time)
+        ################## for rew cells
         goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
         goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
         goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
         p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        goal_cell_shuf_ps_per_comp_av_time = np.nanmedian(goal_cell_shuf_ps_per_comp_time,axis=0)        
-        goal_cell_shuf_ps_av_time = np.nanmedian(np.array(goal_cell_shuf_ps_time))
-        goal_cell_p_time=len(goal_cells_time)/len(coms_correct[0]) 
-        p_value_time = sum(shuffled_dist_time>goal_cell_p_time)/num_iterations
+        ######## for pure time cells only 
+        shuf_ps_per_comp_av_pure_time = np.nanmedian(shuf_ps_per_comp_pure_time,axis=0)        
+        shuf_ps_av_pure_time = np.nanmedian(np.array(shuf_ps_pure_time))
+        p_pure_time=len(pure_time)/len(coms_correct[0]) 
+        p_value_time = sum(shuffled_dist_time>p_pure_time)/num_iterations
+        ########### for all time cells
+        shuf_ps_per_comp_av_all_time = np.nanmedian(time_cell_shuf_ps_per_comp,axis=0)        
+        shuf_ps_av_all_time = np.nanmedian(np.array(time_cell_shuf_ps))
+        p_all_time=len(goal_cells_time)/len(coms_correct[0]) 
+        p_value_all_time = sum(shuffled_time_all>p_all_time)/num_iterations
+
         print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v time aligned {p_value_time}')
         goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
-                        [goal_cell_shuf_ps_per_comp_av_time,goal_cell_shuf_ps_av_time]])
-        pvals.append([p_value,p_value_time]); 
+                        [shuf_ps_per_comp_av_all_time,shuf_ps_av_all_time],
+                        [shuf_ps_per_comp_av_pure_time,shuf_ps_av_pure_time]])
+        pvals.append([p_value,p_value_time,p_value_all_time]); 
         datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
                 tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time]
 
@@ -321,12 +341,11 @@ sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.o
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Reward cells')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
-#%%
 # w/ dark time
 df_dt = conddf.copy()
 df_dt = df_dt[((df_dt.animals!='e217')) & (df_dt.optoep<2) & (df_dt.index.isin(inds))]
 df_dt['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
-df_dt['goal_cell_prop'] = [xx[0] for xx in p_goal_cells_dt]
+df_dt['goal_cell_prop'] = [xx[0] for xx in p_goal_cells_time]
 df_dt['opto'] = df_dt.optoep.values>1
 df_dt['day'] = df_dt.days
 df_dt['session_num_opto'] = np.concatenate([[xx-df_dt[df_dt.animals==an].days.values[0] for xx in df_dt[df_dt.animals==an].days.values] for an in np.unique(df_dt.animals.values)])
@@ -410,7 +429,6 @@ for ii,ep in enumerate(eps):
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
 
-
 #%%
 # include all comparisons 
 df_perms = pd.DataFrame()
@@ -489,33 +507,41 @@ eps = [2,3,4]
 y = 37
 pshift = 4
 fs=36
-for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.wilcoxon(rewprop, shufprop,alternative='greater')
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                ax.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                ax.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                ax.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
-ax.set_ylim([0,40])
+from statsmodels.stats.multitest import multipletests
+pvalues = []
+# First, compute all raw p-values
+for ep in eps:
+    rewprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop']
+    shufprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop_shuffle']
+    t, pval = scipy.stats.wilcoxon(rewprop, shufprop, alternative='greater')
+    pvalues.append(pval)
+# Apply FDR correction
+rejected, pvals_corr, _, _ = multipletests(pvalues, alpha=0.05, method='fdr_bh')
+# Plot and annotate
+for ii, (ep, pval_corr, reject) in enumerate(zip(eps, pvals_corr, rejected)):
+    if pval_corr < 0.001:
+        ax.text(ii, y, "***", ha='center', fontsize=fs)
+    elif pval_corr < 0.01:
+        ax.text(ii, y, "**", ha='center', fontsize=fs)
+    elif pval_corr < 0.05:
+        ax.text(ii, y, "*", ha='center', fontsize=fs)
+    ax.text(ii - 0.5, y + pshift, f'p={pval_corr:.3g}', fontsize=10, rotation=45)
+
+ax.set_ylim([0, 40])
+
 # time
 ax=axes[1]
 # av across mice
-color='cadetblue'
+color='lightseagreen'
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color=color,
         data=df_plt2_dt,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2_dt,
         fill=False,ax=ax, color=color, errorbar='se')
 # bar plot of shuffle instead
-# ax = sns.barplot(data=df_plt2_dt, # correct shift
-#         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
-#         label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
+ax = sns.barplot(data=df_plt2_dt, # correct shift
+        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
@@ -529,7 +555,6 @@ for i in range(len(ans)):
 ax.set_xlabel('# of rew. loc. switches')
 ax.set_ylabel('Time cell % \n(excl. reward & place cell) ')
 
-ax.set_ylim([0,2])
 fig.tight_layout()
 plt.savefig(os.path.join(savedst, 'time_cell_wo_reward_cell_prop.svg'), 
         bbox_inches='tight')
@@ -542,7 +567,7 @@ time_cell_ind = [xx[1] for xx in goal_cells_iind]
 place_cell_ind = [xx[2] for xx in goal_cells_iind]
 
 # find % of time cells that are goal cells
-time_reward = [len([xx for xx in tc if xx in goal_cell_ind[ii]])/len(tc) if len(tc)>0 else np.nan for ii,tc in enumerate(time_cell_ind)]
+time_reward = [len([xx for xx in tc if xx in goal_cell_ind[ii]])/len(tc) if len(tc)>0 else 0 for ii,tc in enumerate(time_cell_ind)]
 df = conddf.copy()
 df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
 df['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
@@ -554,21 +579,24 @@ df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = [xx[0] for xx in pvals]
 df['goal_cell_prop_shuffle'] = [xx[0][1] for xx in goal_cell_null]
-df['p_time_reward'] = time_reward
+# df=df.iloc[:-1]
+df['p_time_reward'] = time_reward[:-1]
 df['p_time_reward'] = df['p_time_reward']*100
 fig,ax=plt.subplots()
 sns.histplot(x='p_time_reward',hue='animals',data=df,bins=20)
 ax.set_xlabel('% of time cells that are reward cells')
 ax.set_ylabel('Sessions across animals')
-ax.axvline(df.p_time_reward.mean(), color='k', linestyle='--',linewidth=3,label='Mean')
+mean_val = df.p_time_reward.mean()
+ax.axvline(mean_val, color='k', linestyle='--', linewidth=3, label='Mean')
+ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g}%', color='k', ha='center', va='bottom', fontsize=14)
 # ax.legend()
 ax.spines[['top','right']].set_visible(False)
-ax.set_title('Time Reward overlap')
+ax.set_title('Time Reward overlap',pad=30)
 plt.savefig(os.path.join(savedst, 'time_reward_overlap.svg'), 
         bbox_inches='tight')
 
 # find % of time cells that are place cells
-time_reward = [len([xx for xx in tc if xx in place_cell_ind[ii]])/len(tc) if len(tc)>0 else np.nan for ii,tc in enumerate(time_cell_ind)]
+time_reward = [len([xx for xx in tc if xx in place_cell_ind[ii]])/len(tc) if len(tc)>0 else 0 for ii,tc in enumerate(time_cell_ind)]
 df = conddf.copy()
 df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
 df['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
@@ -580,16 +608,18 @@ df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = [xx[0] for xx in pvals]
 df['goal_cell_prop_shuffle'] = [xx[0][1] for xx in goal_cell_null]
-df['p_time_reward'] = time_reward
+df['p_time_reward'] = time_reward[:-1]
 df['p_time_reward'] = df['p_time_reward']*100
 fig,ax=plt.subplots()
 sns.histplot(x='p_time_reward',hue='animals',data=df,bins=20)
 ax.set_xlabel('% of time cells that are place cells')
 ax.set_ylabel('Sessions across animals')
-ax.axvline(df.p_time_reward.mean(), color='k', linestyle='--',linewidth=3,label='Mean')
+mean_val = df.p_time_reward.mean()
+ax.axvline(mean_val, color='k', linestyle='--',linewidth=3,label='Mean')
+ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g}%', color='k', ha='center', va='bottom', fontsize=14)
 # ax.legend()
 ax.spines[['top','right']].set_visible(False)
-ax.set_title('Time Place overlap')
+ax.set_title('Time Place overlap',pad=20)
 plt.savefig(os.path.join(savedst, 'time_place_overlap.svg'), 
         bbox_inches='tight')
 
@@ -607,3 +637,13 @@ ax.spines[['top','right']].set_visible(False)
 
 plt.savefig(os.path.join(savedst, 'p_time_cells_v_total_cells.svg'), 
         bbox_inches='tight')
+
+#%% 
+# com histogram of time cells
+time_iind = [v[1] for v in goal_cells_iind]
+com_time = [v[5] for k,v in datadct.items()]
+com_time = [np.nanmedian(com[:,time_iind[iind]],axis=0) for iind,com in enumerate(com_time)]
+fig,ax = plt.subplots()
+ax.hist(np.concatenate(com_time))
+# datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
+#                 tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time]

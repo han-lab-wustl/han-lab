@@ -1533,7 +1533,7 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
                 F_sel = F_tensor[idxs, :, :].reshape(-1, Fc3.shape[1])
                 # print(f'########## F array shape: {F_sel.shape} vs. original shape: {F_ep[idxs].shape}##########\n')
                 tc = np.array([get_tuning_curve(time_sel, F_sel[:, i], bins=bins) for i in range(Fc3.shape[1])])
-                com = calc_COM_EH(tc, (np.nanmax(time_sel)/bins))
+                com = calc_COM_EH(tc, (2 * np.pi/bins))
                 tcs_correct.append(tc)
                 coms_correct.append(com)
             if len(failed_inbtw) > 0:
