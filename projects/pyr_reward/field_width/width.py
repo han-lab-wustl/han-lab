@@ -260,7 +260,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     pre_velocities = []
 
     # Define pre-reward window in seconds and/or cm
-    pre_window_s = 5  # seconds before reward
+    pre_window_s = 12  # seconds before reward
     for ep in range(len(eps)-1):
         eprng = range(eps[ep], eps[ep+1])
         trials = np.unique(trialnum[eprng])
@@ -273,7 +273,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         # only use last 8 correct trials
         lasttr=8
-        for tr in str_trials[-8:]:
+        for tr in str_trials[-lasttr:]:
             tr_idx = (trialnum_ep == tr)
             if np.sum(rewards_ep[tr_idx]) == 0:
                 continue  # no reward delivered

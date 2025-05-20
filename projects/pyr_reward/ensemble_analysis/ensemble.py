@@ -412,7 +412,7 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     # ICA function to run and save tuning curve plots
     def run_ica_and_plot(cell_ids, label):
         assemblies = {}; used_cells = set()
-        if len(cell_ids) >= 5:
+        if len(cell_ids) > 0:
             try:
                 patterns, activities, labels_, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1], cell_ids].T)
                 print(f"{label}: {n} assemblies detected")
@@ -420,8 +420,9 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
                 cell_groups = get_cells_by_assembly(labels_clusters)
                 for assembly_id, cells in sorted(cell_groups.items(), key=lambda x: len(x[1]), reverse=True):
                     cells = np.array(cells)
-                    peak = np.nanmax(tcs_correct[0, cell_ids[cells], :], axis=1)
-                    cells = cells[peak > 0.05]
+                    # leave max filter out
+                    # peak = np.nanmax(tcs_correct[0, cell_ids[cells], :], axis=1)
+                    # cells = cells[peak > 0.05]
                     if len(cells) < 3:
                         continue
                     ids = set(cell_ids[cells])

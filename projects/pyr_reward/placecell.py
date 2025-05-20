@@ -1434,7 +1434,8 @@ def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, r
                 F_sel = F_tensor[idxs, :, :].reshape(-1, Fc3.shape[1])
                 # print(f'########## F array shape: {F_sel.shape} vs. original shape: {F_ep[idxs].shape}##########\n')
                 tc = np.array([get_tuning_curve(time_sel, F_sel[:, i], bins=bins) for i in range(Fc3.shape[1])])
-                com = calc_COM_EH(tc, (np.nanmax(time_sel)/bins))
+                time_ln=np.nanmax(time_sel)-np.nanmin(time_sel)
+                com = calc_COM_EH(tc, (time_ln/bins))
                 tcs_correct.append(tc)
                 coms_correct.append(com)
             if len(failed_inbtw) > 0:
@@ -1442,7 +1443,7 @@ def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, r
                 time_sel = time_matrix[idxs, :].flatten()
                 F_sel = F_tensor[idxs, :, :].reshape(-1, Fc3.shape[1])
                 tc = np.array([get_tuning_curve(time_sel, F_sel[:, i], bins=bins) for i in range(Fc3.shape[1])])
-                com = calc_COM_EH(tc, (np.nanmax(time_sel)/bins))
+                com = calc_COM_EH(tc, (time_ln/bins))
                 tcs_fail.append(tc)
                 coms_fail.append(com)
 
@@ -1464,7 +1465,6 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
         lick_ep = licks[eprng]
         ypos_ep = ybinned[eprng]
         F_ep = Fc3[eprng, :]
-
         unique_trials = np.unique(trial_ep)
         trial_time_list = []
         F_trial_list = []
@@ -1489,13 +1489,19 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
 
             lick_indices_after_reward = np.where((lick_ep[mask] > 0) & (np.arange(len(lick_ep[mask])) > reward_idx))[0]
             first_lick_idx = lick_indices_after_reward[0] if len(lick_indices_after_reward) > 0 else reward_idx
-
+            # CONFIRMED ALIGNMENT
             # Convert time to radians aligned to first lick
+            # remove dark time artifacts
+            try:
+                t_trial[0] = t_trial[1]
+            except Exception as e:
+                print(e)
+            t_norm = t_trial-t_trial[0] # trial starts from 0
+            t_lickpos = t_norm[first_lick_idx]
             t_rel = t_trial - t_trial[first_lick_idx]
-            trial_duration = np.nanmax(t_rel) - np.nanmin(t_rel)
+            trial_duration = np.nanmax(t_trial) - np.nanmin(t_trial)
             trial_duration = trial_duration if trial_duration != 0 else 1  # Avoid div by zero
-            t_rad = (((t_rel - np.nanmin(t_rel)) * 2 * np.pi / trial_duration + np.pi) % (2 * np.pi)) - np.pi
-
+            t_rad = ((((t_norm - t_lickpos) * 2 * np.pi / trial_duration) + np.pi) % (2 * np.pi)) - np.pi
             trial_time_list.append(t_rad)
             F_trial_list.append(F_trial)
 
@@ -1647,7 +1653,7 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
         F_ep = Fc3[eprng, :]
         vel_ep = forwardvel[eprng]
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trial_ep, reward_ep)
-        trials = [xx for xx in np.unique(trial_ep) if np.sum(trial_ep == xx) > 10]
+        trials = np.unique(trial_ep)
         trialstate = np.ones(len(trials)) * -1
         trialstate[[xx for xx, t in enumerate(trials) if t in strials]] = 1
         trialstate[[xx for xx, t in enumerate(trials) if t in ftrials]] = 0

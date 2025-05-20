@@ -880,13 +880,13 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
     time = fall['timedFF'][0]
     lick = fall['licks'][0]
     if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]
-            time=time[:-1]
-            lick=lick[:-1]
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
+        time=time[:-1]
+        lick=lick[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     # only test opto vs. ctrl
@@ -939,7 +939,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
                     print('************************0 cells skew > 2************************')
                     Fc3 = fall_fc3['Fc3']                        
                     Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-                    Fc3 = Fc3[:, skew>.7]
+                    Fc3 = Fc3[:, skew>1]
                     tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
                     rewards,forwardvel,rewsize,bin_size)      
 
@@ -991,7 +991,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
         plt.close(fig)
 
     # get shuffled iterations
-    num_iterations = 10000; shuffled_dist = np.zeros((num_iterations))
+    num_iterations = 1000; shuffled_dist = np.zeros((num_iterations))
     # max of 5 epochs = 10 perms
     goal_cell_shuf_ps = []
     for i in range(num_iterations):

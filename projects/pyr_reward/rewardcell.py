@@ -2866,6 +2866,28 @@ def get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all'):
         goal_cells=[]
     return goal_cells, com_goal_postrew, perm, rz_perm
 
+def get_goal_cells_time(rz, goal_window, coms_correct, cell_type = 'all'):    
+    # change to relative value 
+    coms_rewrel = np.array([com-np.pi for com in coms_correct])
+    perm = list(combinations(range(len(coms_correct)), 2)) 
+    # if 4 ep
+    com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+    # TODO: implement per cell type
+    # if cell_type=='all'
+    com_goal_postrew = com_goal
+    perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
+    rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm] 
+    rz_perm=[p for jj,p in enumerate(rz_perm) if len(com_goal_postrew[jj])>0]
+    com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
+
+    if len(com_goal_postrew)>0:
+        goal_cells = intersect_arrays(*com_goal_postrew); 
+    else:
+        goal_cells=[]
+    return goal_cells, com_goal_postrew, perm, rz_perm
+
+
 def goal_cell_shuffle(coms_correct, goal_window, perm, num_iterations = 1000):
     # also give perm from original non zero perm combinations
     # get shuffled iterations

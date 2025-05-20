@@ -23,7 +23,7 @@ plt.close('all')
 condrewloc = pd.read_csv(r"C:\Users\Han\Downloads\data_organization - pyr_vip_chrimson.csv", index_col = None)
 src = r"X:\vipcre"
 animals = ['z14']#,'e242','e243']
-days_all = [np.arange(45,49)]#,[29,30],[36,37]]
+days_all = [np.arange(45,51)]#,[29,30],[36,37]]
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -273,7 +273,7 @@ for i in range(len(ans)):
 ax.get_legend().set_visible(False)
 ax.set_ylabel('Memory lick selectivity')
 ax.spines[['top','right']].set_visible(False)
-plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
+# plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
 # plt.savefig(os.path.join(dst, 'memory_lick_selectivity.svg'), bbox_inches='tight')
 
 #%%

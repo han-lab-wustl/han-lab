@@ -34,7 +34,8 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 bins = 150
 goal_window_cm=20
 dfs = []; lick_dfs = [] # licks and velocity
-# cm_window = [10,20,30,40,50,60,70,80] # cm
+# cm_window = [10,20,30,40,50,
+# 60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]

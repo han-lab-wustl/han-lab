@@ -16,22 +16,23 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
-from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype,\
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_by_trialtype_w_darktime,\
     make_time_tuning_curves_radians, make_tuning_curves, intersect_arrays
 from projects.pyr_reward.rewardcell import get_radian_position,\
     get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle,\
-        goal_cell_shuffle_time
+        goal_cell_shuffle_time, get_goal_cells_time
 from projects.opto.behavior.behavior import get_success_failure_trials
+from projects.pyr_reward.dark_time_and_time_analysis.time import filter_cells_by_field_selectivity
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 saveddataset = r"Z:\saved_datasets\time_tuning_circ.p"
 # with open(saveddataset, "rb") as fp: #unpickle
         # radian_alignment_saved = pickle.load(fp)
+#%%
 savepth = os.path.join(savedst, 'time_tuning_wo_rew_cells_circ.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
-#%%
 ####################################### RUN CODE #######################################
 # initialize var
 radian_alignment_saved = {} # overwrite
@@ -45,12 +46,14 @@ goal_window_cm=20
 datadct = {}
 goal_cell_null= []
 perms = []
-
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+    # check if its the last 4 days of animal behavior
+    andf = conddf[(conddf.animals==animal) &( conddf.optoep<2)]
+    lastdays = andf.days.values[-4:]
+    if (animal!='e217') and (day in lastdays):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -112,10 +115,12 @@ for ii in range(len(conddf)):
         tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, trial_times = make_time_tuning_curves_radians(eps, 
                 time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                 lasttr=8, bins=bins, velocity_filter=False)
+        # filter by in/out field firing
+        selected_cells, in_field_fraction = filter_cells_by_field_selectivity(tcs_correct_time, 
+                        threshold=0.5, fraction_cutoff=0.6)
         # time bin is roughly (16/90) or 170 ms
         # test
-        # max time trials
-        # max_trial_times = [tr.shape[1]/31.25 for tr in trial_times]
+        max_trial_times =np.array([tr.shape[1]/fr for tr in trial_times])
         # fig, axes = plt.subplots(ncols = len(tcs_correct_time),figsize=(12,10))
         # for ep in range(len(coms_correct_time)):
         #     ax=axes[ep]
@@ -127,22 +132,34 @@ for ii in range(len(conddf)):
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins 
         ################### get rew cells ###################
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)  
+        # dark time params
+        track_length_dt = 550 # cm estimate based on 99.9% of ypos
+        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+        bins_dt=150 
+        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+        # tc w/ dark time added to the end of track
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        rewsize,ybinned,time,licks,
+        Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+        bins=bins_dt)  
         # get abs dist tuning for rew cells
+        # binsize = 3 for place
+        ################### get place cells ###################
         tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
                 Fc3,trialnum,rewards,forwardvel,
-                rewsize,bin_size)
+                rewsize,3)
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
         goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]           
         # get goal cells aligned to time
         # same % as goal window
         max_trial_times = np.nanmax(np.array([tr.shape[1]/fr for tr in trial_times]))
-        time_window = max_trial_times*.148 #s/rad
+        time_window = max_trial_times*.074 #s/rad
+        # 5/19/25: halved window of time compared to distance?
+        # 5/20/25:back to original window
         time_window = time_window*(2*np.pi/max_trial_times) # s converted to rad
         print(f'Radian window for time cells: {time_window:.2f}')
-        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells(rz, time_window, coms_correct_time, cell_type = 'all')
+        goal_cells_time, com_goal_postrew_time, perm_time, rz_perm_time = get_goal_cells_time(rz, time_window, coms_correct_time, cell_type = 'all')
         com_goal_postrew_time = [[xx for xx in yy if yy not in com_goal_postrew[kk]] for kk,yy in enumerate(com_goal_postrew)]
         goal_cells_p_per_comparison_time = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_time]            
         ################### get place cells ###################
@@ -158,57 +175,100 @@ for ii in range(len(conddf)):
         # get indices
         goal_cells_iind.append([goal_cells, goal_cells_time, pcs_all])
         # remove rew and place cells
-        goal_cells_time = [xx for xx in goal_cells_time if xx not in goal_cells and xx not in pcs_all]
-
+        goal_cells_time = [xx for xx in goal_cells_time if (xx not in goal_cells) and (xx not in pcs_all)]
+        # filter tc by selected cells
+        goal_cells_time = [xx for xx in goal_cells_time if xx in selected_cells]
         # eg cell         
-        for cellid in goal_cells:
-            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
-            for ep in range(len(tcs_correct)-1):            
-                axes[0].plot(tcs_correct[ep,cellid,:])
-                axes[0].set_title('Reward-relative distance aligned')
-                axes[0].axvline(int(bins/2),color='k',linestyle='--')
-                axes[1].plot(tcs_correct_time[ep,cellid,:])
-                axes[1].set_title('Time aligned')
-                axes[1].axvline(int(bins/2),color='k',linestyle='--')
-            fig.suptitle(f'{animal}, day {day}\nReward cells')
-        pdf.savefig(fig)  
-        for cellid in pcs_all:
-            fig, axes = plt.subplots(nrows = 2,figsize=(3,5),sharex=True,sharey=True)
-            for ep in range(len(tcs_correct)-1):            
-                axes[0].plot(tcs_correct_abs[ep,cellid,:])
-                axes[0].set_title('Track aligned')
-                axes[0].axvline(int(bins/2),color='k',linestyle='--')
-                axes[1].plot(tcs_correct_time[ep,cellid,:])
-                axes[1].set_title('Time aligned')
-                axes[1].axvline(int(bins/2),color='k',linestyle='--')
-            fig.suptitle(f'{animal}, day {day}\nPlace cells')
-        pdf.savefig(fig)  
-        for cellid in goal_cells_time:
-            fig, axes = plt.subplots(nrows = 3,figsize=(3,5),sharex=True,sharey=True)
-            for ep in range(len(tcs_correct)-1):            
-                axes[0].plot(tcs_correct_abs[ep,cellid,:])
-                axes[0].set_title('Track aligned')
-                axes[0].axvline(int(bins/2),color='k',linestyle='--')
-                axes[1].plot(tcs_correct[ep,cellid,:])
-                axes[1].set_title('Reward-relative distance aligned')
-                axes[1].axvline(int(bins/2),color='k',linestyle='--')
-                axes[2].plot(tcs_correct_time[ep,cellid,:])
-                axes[2].set_title('Time aligned')
-                axes[2].axvline(int(bins/2),color='k',linestyle='--')
-            fig.suptitle(f'{animal}, day {day}\nTime cells')
-        pdf.savefig(fig)
-        plt.close('all')
-        #only get perms with non zero cells
+        # For goal_cells (Reward cells)
+        xticks_time = [r'$-\pi$', '0', r'$\pi$']
+        xticks_labels_pi = [r'$-\pi$', '0', r'$\pi$']
+        xticks_rew = [0,75,150]
+        xticks_poslbl = np.arange(0,track_length+1,90).astype(int)
+        xticks_pos = np.arange(0,90+1,30)
+        n_cells = len(goal_cells)
+        if n_cells>0:
+                figlength = n_cells if n_cells<30 else n_cells/2
+                fig, axes = plt.subplots(nrows=n_cells, ncols=2,figsize=(6,figlength))
+                if n_cells == 1:
+                        axes = [axes]  # Ensure it's iterable
+                for i, cellid in enumerate(goal_cells):
+                        axes[i][0].set_title('Reward-relative distance aligned') if i == 0 else None
+                        axes[i][1].set_title('Time aligned') if i == 0 else None
+                        axes[i][0].plot(tcs_correct[:, cellid, :].T)
+                        axes[i][0].axvline(int(bins_dt / 2), color='k', linestyle='--')
+                        axes[i][1].plot(tcs_correct_time[:, cellid, :].T)
+                        axes[i][1].axvline(int(bins / 2), color='k', linestyle='--')
+                        # Set xticks for both plots
+                        axes[i][0].set_xticks(xticks_rew)
+                        axes[i][0].set_xticklabels(xticks_labels_pi)
+                        axes[i][1].set_xticks([0,45,90])
+                        axes[i][1].set_xticklabels(xticks_time)
+                fig.suptitle(f'{animal}, day {day}\nReward cells')
+                plt.tight_layout()
+                pdf.savefig(fig)
+                plt.close(fig)
+        # For pcs_all (Place cells)
+        n_cells = len(pcs_all)
+        if n_cells>0:
+                figlength = n_cells if n_cells<30 else n_cells/2
+                fig, axes = plt.subplots(nrows=n_cells, ncols=2,figsize=(6,figlength))
+                if n_cells == 1:
+                        axes = [axes]
+                for i, cellid in enumerate(pcs_all):
+                        axes[i][0].set_title('Track aligned') if i == 0 else None
+                        axes[i][1].set_title('Time aligned') if i == 0 else None
+                        axes[i][0].plot(tcs_correct_abs[:, cellid, :].T)
+                        axes[i][1].plot(tcs_correct_time[:, cellid, :].T)
+                        axes[i][1].axvline(int(bins / 2), color='k', linestyle='--')
+                        # Set xticks for both plots
+                        axes[i][0].set_xticks(xticks_pos)
+                        axes[i][0].set_xticklabels(xticks_poslbl)
+                        axes[i][1].set_xticks([0,45,90])
+                        axes[i][1].set_xticklabels(xticks_time)
+                fig.suptitle(f'{animal}, day {day}\nPlace cells')
+                plt.tight_layout()
+                pdf.savefig(fig)
+                plt.close(fig)
+        # For goal_cells_time (Time cells)
+        n_cells = len(goal_cells_time)
+        if n_cells>0:
+                figlength = n_cells if n_cells<30 else n_cells/2
+                fig, axes = plt.subplots(nrows=n_cells, ncols=3,figsize=(6,figlength))
+                if n_cells == 1:
+                        axes = [axes]
+                for i, cellid in enumerate(goal_cells_time):
+                        axes[i][0].set_title('Track aligned') if i == 0 else None
+                        axes[i][1].set_title('Reward-relative distance aligned') if i == 0 else None
+                        axes[i][2].set_title('Time aligned') if i == 0 else None
+                        axes[i][0].plot(tcs_correct_abs[:, cellid, :].T)
+                        axes[i][1].plot(tcs_correct[:, cellid, :].T)
+                        axes[i][1].axvline(int(bins_dt / 2), color='k', linestyle='--')
+                        axes[i][2].plot(tcs_correct_time[:, cellid, :].T)
+                        axes[i][2].axvline(int(bins / 2), color='k', linestyle='--')
+                        # Set xticks for both plots
+                axes[i][0].set_xticks(xticks_pos)
+                axes[i][0].set_xticklabels(xticks_poslbl)
+                axes[i][0].set_xlabel('Distance (cm)')
+                axes[i][1].set_xticks(xticks_rew)
+                axes[i][1].set_xticklabels(xticks_labels_pi)
+                axes[i][1].set_xlabel('Reward-relative distance (rad)')
+                axes[i][2].set_xticks([0,45,90])
+                axes[i][2].set_xticklabels(xticks_time)
+                axes[i][2].set_xlabel('Reward-relative time (rad)')
+                fig.suptitle(f'{animal}, day {day}\nTime cells\n rewlocs: {rewlocs}')
+                plt.tight_layout()
+                pdf.savefig(fig)
+                plt.show()
+                # plt.close(fig)        #only get perms with non zero cells
         # get per comparison and also across epochs
         p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
         p_goal_cells_dt.append([len(goal_cells_time)/len(coms_correct_time[0]), goal_cells_p_per_comparison_time])
         p_goal_cells_pc.append([len(pcs_all)/len(coms_correct_abs[0]), place_cells_p_per_comparison])
-        
         # save perm
         perms.append([[perm, rz_perm],
             [perm_time, rz_perm_time]])
-        print(f'Goal cells w/o dt: {goal_cells}\n\
-            Time cells: {goal_cells_time}')
+        print(f'Goal cells w/o dt: {len(goal_cells)} cells\n\
+            Time cells: {len(goal_cells_time)} cells')
         # shuffle
         num_iterations=1000
         goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\

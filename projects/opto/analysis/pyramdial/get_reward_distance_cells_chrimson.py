@@ -23,7 +23,7 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_vipexcitation.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []
@@ -39,7 +39,7 @@ cm_window = 20
 for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
     animal = conddf.animals.values[ii]
-    if True:#(conddf.optoep.values[ii]>1):
+    if (conddf.in_type.values[ii]=='vip_ex'):
         if animal=='e145': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -89,9 +89,11 @@ ax.set_ylabel('Sessions')
 fig,ax = plt.subplots(figsize=(3.5,5))
 # av across mice
 df = df[(df.animals!='e190')&(df.animals!='e189')]
+df = df[(df.animals!='e200')]
+
 # exclude outliere?
-exclude_days = [13,16]
-df  = df[~((df.animals=='z17') & (df.days.isin(exclude_days)))]
+# exclude_days = [7,13,16,15]
+# df  = df[~((df.animals=='z17') & (df.days.isin(exclude_days)))]
 df_plt = df
 color = 'darkgoldenrod'
 # top 75%?
@@ -180,25 +182,25 @@ df_diff = (
 df_diff['no_stim'] = df_an[df_an.opto == 'no_stim'].set_index(['animals', 'condition'])['goal_cell_prop']
 df_diff['delta'] = df_diff['stim'] - df_diff['no_stim']
 df_diff = df_diff.reset_index()
-df_diff=df_diff[(df_diff.animals!='e190') & (df_diff.animals!='e189')]
+# df_diff=df_diff[(df_diff.animals!='e190') & (df_diff.animals!='e189')]
 # Plot
-sns.stripplot(data=df_diff, x='condition', y='delta', ax=ax2, 
+sns.stripplot(data=df_diff, x='condition', y='delta',hue='condition', ax=ax2, 
              palette={'ctrl': "slategray", 'vip': color}, size=s, dodge=True)
-sns.barplot(data=df_diff, x='condition', y='delta', ax=ax2, 
+sns.barplot(data=df_diff, x='condition', y='delta', hue='condition',ax=ax2, 
              palette={'ctrl': "slategray", 'vip': color}, fill=False)
 
 # Aesthetics
 ax2.axhline(0, color='black', linestyle='--')
-ax2.set_ylabel('Δ Reward cell % (LEDon-LEDoff)')
+ax2.set_ylabel('$\Delta$ Reward cell % (LEDon-LEDoff)')
 ax2.set_xticklabels(['Control', 'VIP Excitation'], rotation=45)
 ax2.set_title('Per-animal difference\n\n')
 ax2.spines[['top', 'right']].set_visible(False)
 # control vs. chrimson
 rewprop = df_diff.loc[((df_diff.condition=='vip')), 'delta']
 shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
-t,pval = scipy.stats.ttest_ind(rewprop, shufprop)
+t,pval = scipy.stats.ranksums(rewprop, shufprop)
 # statistical annotation    
-y = 10
+y = 7
 ii=.5
 if pval < 0.001:
         ax2.text(ii, y, "***", ha='center', fontsize=fs)
