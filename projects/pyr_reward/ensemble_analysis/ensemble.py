@@ -363,6 +363,7 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     track_length_dt = 550
     bin_size_dt = (2 * np.pi) / bins_dt
     # Get tuning curves for each trial type
+    ########################## rew cells w/ dt ##########################
     tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(
         eps, rewlocs, rewsize, ybinned, time, licks, Fc3, trialnum, rewards, forwardvel, 
         scalingf, bin_size_dt, bins=bins_dt)
@@ -371,8 +372,6 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     # Recenter COMs around reward zone
     coms_rewrel = np.array([com - np.pi for com in coms_correct])
     perm = list(combinations(range(len(coms_correct)), 2))
-    com_remap = np.array([(coms_rewrel[p[0]] - coms_rewrel[p[1]]) for p in perm])
-    com_goal = [np.where((comr < goal_window) & (comr > -goal_window))[0] for comr in com_remap]
     # Fix wrap-around
     epsilon = 0.7
     com_loop_w_in_window = []
@@ -383,19 +382,28 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
             if ((abs(com1_rel - np.pi) < epsilon) and (abs(com2_rel + np.pi) < epsilon)):
                 com_loop_w_in_window.append(cll)
     coms_rewrel[:, com_loop_w_in_window] = abs(coms_rewrel[:, com_loop_w_in_window])
+    com_remap = np.array([(coms_rewrel[p[0]] - coms_rewrel[p[1]]) for p in perm])
+    com_goal = [np.where((comr < goal_window) & (comr > -goal_window))[0] for comr in com_remap]
     # Separate cells into pre- and post-reward goal cells
     com_goal_prerew = [[xx for xx in com if np.nanmedian(coms_rewrel[:, xx]) < 0] if len(com) > 0 else [] for com in com_goal]
     com_goal_postrew = [[xx for xx in com if np.nanmedian(coms_rewrel[:, xx]) >= 0] if len(com) > 0 else [] for com in com_goal]
-    pre_goal_cells = intersect_arrays(*com_goal_prerew) if len(com_goal_prerew) > 0 else []
-    post_goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
+    # pre_goal_cells = intersect_arrays(*com_goal_prerew) if len(com_goal_prerew) > 0 else []
+    # post_goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
+    # use all cells in every epoch
+    pre_goal_cells = np.concatenate(com_goal_prerew)
+    post_goal_cells = np.concatenate(com_goal_postrew)
+    ########################## place cells w/ dt ##########################
     # Place cell detection
-    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards, forwardvel, rewsize, bin_size_dt)
+    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards, forwardvel, rewsize, 3)
     place_window = 20
     perm_abs = list(combinations(range(len(coms_correct_abs)), 2))
     com_per_ep = np.array([(coms_correct_abs[p[0]] - coms_correct_abs[p[1]]) for p in perm_abs])
-    compc = [np.where((comr < place_window) & (comr > -place_window))[0] for comr in com_per_ep]
-    pcs_all = intersect_arrays(*compc) if len(compc) > 0 else []
-
+    compc = [np.where((comr < place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+    # pcs_all = intersect_arrays(*compc) if len(compc) > 0 else []
+    pcs_all = np.concatenate(compc)
+    print(f'# pre rew: {len(pre_goal_cells)}\n\
+          # post rew: {len(post_goal_cells)}\n\
+            # place: {len(pcs_all)}')
     # Run ICA for each population
     print("\nRunning ICA on pre-reward goal cells...")
     pdf,assemblies_pre, frac_pre = run_ica_and_plot(pre_goal_cells,'pre',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)

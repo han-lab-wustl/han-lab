@@ -7,7 +7,6 @@ pca on tuning curves of reward cells
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math
 import matplotlib.backends.backend_pdf, matplotlib as mpl
-from sklearn.cluster import KMeans
 from itertools import combinations
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -69,18 +68,18 @@ bins_dt=150
 # look through all the assemblies
 # df = conddf.copy()
 # df = df[(df.animals!='e217') & (df.optoep.values<2)]
-an_plt = 'e218' # 1 eg animal
-an_day = 20
+an_plt = 'e201' # 1 eg animal
+an_day = 52
+plt.close('all')
 cs_all_celltype = []; num_epochs_celltype = []
 cell_types = ['pre', 'post', 'place']
 for cell_type in cell_types:
     cs_all = []; num_epochs = []
-    plt.close('all')
-    # plot=True
-    plot = False
+    plot=True
+    # plot = False
     assembly=[assembly_cells_all_an[i][cell_type]['assemblies'] for i in range(len(assembly_cells_all_an))]
     for ii,ass in enumerate(assembly):
-        # if df.iloc[ii].animal==an_plt and df.iloc[ii].days==an_day:
+        if df.iloc[ii].animal==an_plt and df.iloc[ii].days==an_day:
             print(f'{df.iloc[ii].animal}, {df.iloc[ii].days}')
             ass_all = [xx[0] for xx in list(ass.values())] # all assemblies
             # split into correct v fail
@@ -89,8 +88,8 @@ for cell_type in cell_types:
             for jj,asm in enumerate(ass_all):
                 # only pick cells > 10
                 cell_nm = asm.shape[1]
-                if cell_nm<5:
-                    continue
+                # if cell_nm<5:
+                #     continue
                 perm = list(combinations(range(len(asm)), 2)) 
                 # consecutive ep only
                 perm = [p for p in perm if p[0]-p[1]==-1]
@@ -104,38 +103,38 @@ for cell_type in cell_types:
                         vmin = np.min(tcs)
                         vmax = np.max(tcs)
                         norm = colors.Normalize(vmin=vmin, vmax=vmax)
-                        time_bins = np.arange(150)
+                        time_bins = np.arange(tcs.shape[1])
                         if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
                         im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
                         ax.set_title(f'Epoch {kk+1}')
-                        ax.axvline(bins_dt/2, color='w', linestyle='--')
-                    ax.set_xticks(np.arange(0,bins_dt+10,30))
-                    ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
-                    fig.suptitle(f'Correct \n Pre-reward ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
+                        ax.axvline(time_bins[-1]/2, color='w', linestyle='--')
+                    # ax.set_xticks(np.arange(0,bins_dt+10,30))
+                    # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
+                    fig.suptitle(f'Correct \n {cell_type} ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
                         Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}\n\n')
                     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
                     fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
                     # if jj==0:
                     #     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_darktime_prerew_ensemble_eg.svg'),bbox_inches='tight')
-                    # incorrects
-                    asm = ass_all_incorr[jj]
-                    fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
-                    for kk,tcs in enumerate(asm):
-                        ax = axes[kk]
-                        vmin = np.min(tcs)
-                        vmax = np.max(tcs)
-                        norm = colors.Normalize(vmin=vmin, vmax=vmax)
-                        # same order as corrects
-                        # if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
-                        im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
-                        ax.set_title(f'Epoch {kk+1}')
-                        ax.axvline(bins_dt/2, color='w', linestyle='--')
-                    ax.set_xticks(np.arange(0,bins_dt+10,30))
-                    ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
-                    fig.suptitle(f'Incorrect \n Pre-reward ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
-                        Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}\n\n')
-                    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-                    fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
+                    ############## incorrects #############
+                    # asm = ass_all_incorr[jj]
+                    # fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
+                    # for kk,tcs in enumerate(asm):
+                    #     ax = axes[kk]
+                    #     vmin = np.min(tcs)
+                    #     vmax = np.max(tcs)
+                    #     norm = colors.Normalize(vmin=vmin, vmax=vmax)
+                    #     # same order as corrects
+                    #     # if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                    #     im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
+                    #     ax.set_title(f'Epoch {kk+1}')
+                    #     ax.axvline(bins_dt/2, color='w', linestyle='--')
+                    # # ax.set_xticks(np.arange(0,bins_dt+10,30))
+                    # # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
+                    # fig.suptitle(f'Incorrect \n Pre-reward ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
+                    #     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}\n\n')
+                    # cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+                    # fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
                     # if jj==0:
                     #     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_darktime_prerew_ensemble_eg.svg'),bbox_inches='tight')
 
@@ -238,23 +237,24 @@ df_clean.to_csv(r'Z:\condition_df\shuffle_ensemble_w_dt.csv', index=None)
 cell_types = ['pre', 'post', 'place']
 df2 = pd.DataFrame()
 df2['cosine_sim_across_ep'] = np.concatenate([np.concatenate([np.concatenate(xx) if len(xx)>0 else [np.nan ]for xx in cs_all]) for cs_all in cs_all_celltype])
+df2['cell_type'] = np.concatenate([np.concatenate([[cell_types[ctype]]*len(np.concatenate(xx)) if len(xx)>0 else [cell_types[ctype]] for xx in cs_all]) for ctype,cs_all in enumerate(cs_all_celltype)])
 # FIX
 dfc = conddf.copy()
 dfc = dfc[(dfc.animals!='e217') & (dfc.optoep.values<2)]
-df2['animals'] = np.concatenate([np.concatenate([[dfc.animals.values[ii]]*len(np.concatenate(xx)) if len(xx)>0 else [np.nan]for ii,xx in enumerate(cs_all)]) for cs_all in cs_all_celltype])
+df2['animal'] = np.concatenate([np.concatenate([[dfc.animals.values[ii]]*len(np.concatenate(xx)) if len(xx)>0 else [np.nan]for ii,xx in enumerate(cs_all)]) for cs_all in cs_all_celltype])
+df2['days'] = np.concatenate([np.concatenate([[dfc.days.values[ii]]*len(np.concatenate(xx)) if len(xx)>0 else [np.nan]for ii,xx in enumerate(cs_all)]) for cs_all in cs_all_celltype])
 df2['num_epochs'] =[2]*len(df2)
 df['num_epochs'] = np.concatenate(num_epochs_celltype)
 # df['cosine_sim_across_ep'] = [np.quantile(xx,.75) if len(xx)>0 else np.nan for xx in cs_all]
 df['cosine_sim_across_ep'] = np.concatenate([[np.nanmean(xx) if len(xx)>0 else np.nan for xx in cs_all] for cs_all in cs_all_celltype])
-df = pd.concat([df,df2])
-df = df.dropna(subset=['cosine_sim_across_ep', 'num_epochs'])
+df_all = pd.concat([df,df2])
+# df_all = df.dropna(subset=['cosine_sim_across_ep'])
 #%%
 plt.rc('font', size=20) 
-dfan = df.groupby(['animal', 'num_epochs', 'cell_type']).mean(numeric_only=True)
+dfan = df_all.groupby(['animal', 'num_epochs', 'cell_type']).mean(numeric_only=True)
 dfan = dfan.reset_index()
 dfan = dfan[dfan.num_epochs<5]
 df_clean = dfan
-
 # palette = seaborn Dark2
 s=10
 df_all = df_clean
@@ -271,21 +271,7 @@ ax = sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',dat
 handles, labels = ax.get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
 ax.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(1.0, 0.5), title='Cell Type')
-
-# make lines
-df_all = df_all.reset_index()
 ax.spines[['top','right']].set_visible(False)
-
-# Plot individual lines per animal with x-axis offset
-# offset = {'Pre-reward': -0.2, 'Post-reward': 0.2}
-# for animal in df_all.animals.unique():
-#     for cell_type in ['Pre-reward', 'Post-reward']:
-#         df_sub = df_all[(df_all.animals == animal) & (df_all.cell_type == cell_type)]
-#         if df_sub.empty:
-#             continue
-#         x_vals = df_sub.num_epochs + offset[cell_type]
-#         ax.plot(x_vals-2, df_sub.cosine_sim_across_ep, color=sns.color_palette('Dark2')[['Pre-reward', 'Post-reward'].index(cell_type)],
-#                 alpha=0.3, linewidth=2)
 # Get unique epochs
 epochs = sorted(df_all.num_epochs.unique())
 ymax = .6
@@ -313,48 +299,43 @@ groups = [
 ]
 f_stat, p_anova = scipy.stats.f_oneway(*groups)
 print(f"ANOVA F={f_stat:.3f}, p={p_anova:.3g}")
+comparisons = [('place', 'pre'), ('place', 'post'), ('pre', 'post')]
+pvals = []
+epochs = sorted(df_all.num_epochs.unique())
+y_offsets = [0.6 + 0.03 * i for i in range(len(comparisons))]  # adjust if needed
+from statsmodels.stats.multitest import multipletests
 
 for i, epoch in enumerate(epochs):
     data_epoch = df_all[df_all.num_epochs == epoch]
-    pre_vals = data_epoch[data_epoch.cell_type == 'pre']['cosine_sim_across_ep'].dropna()
-    post_vals = data_epoch[data_epoch.cell_type == 'post']['cosine_sim_across_ep'].dropna()
-    # t-test
-    stat, pval = scipy.stats.ranksums(pre_vals, post_vals)
-
-    # Plot annotation
-    x = i
-    y = y_offsets[i]
-    if pval < 0.001:
-        ax.text(x, y, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
-        ax.text(x, y, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
-        ax.text(x, y, "*", ha='center', fontsize=fs)
-
-    # Show p-value (optional)
-    ax.text(x, y + pshift, f'post v pre\np={pval:.2g}', ha='center', fontsize=12, rotation=45)
+    pairwise_pvals = []
+    for (a, b) in comparisons:
+        vals_a = data_epoch[data_epoch.cell_type == a]['cosine_sim_across_ep']
+        vals_b = data_epoch[data_epoch.cell_type == b]['cosine_sim_across_ep']
+        _, p = scipy.stats.ttest_ind(vals_a[~np.isnan(vals_a)], vals_b[~np.isnan(vals_b)])
+        pairwise_pvals.append(p)
+    # FDR correction
+    reject, pvals_corr, _, _ = multipletests(pairwise_pvals, method='fdr_bh')
     
-# pre-reward comp
-# for i, ((g1, g2), pval, rej) in enumerate(zip(comparisons, corrected_pvals, reject)):
-#     x1, x2 = int(g1)-2, int(g2)-2
-#     y = max_y + 0.05 * (i + 1)
-#     ax.plot([x1, x1, x2, x2], [y, y+0.01, y+0.01, y], lw=1.5, c='k')
-
-#     if pval < 0.001:
-#         star = '***'
-#     elif pval < 0.01:
-#         star = '**'
-#     elif pval < 0.05:
-#         star = '*'
-#     else: star=''
-
-#     ax.text((x1 + x2) / 2, y + 0.015, star, ha='center', fontsize=fs)
-#     ax.text((x1 + x2) / 2, y + 0.015 + pshift, f'p={pval:.2g}', ha='center', rotation=45, fontsize=12)
+    # Plot annotations
+    for j, ((a, b), pval, sig) in enumerate(zip(comparisons, pvals_corr, reject)):
+        x = i-j/3+.5
+        y = 0.62 + j * 0.05  # stagger vertical position
+        if sig:
+            if pval < 0.001:
+                star = '***'
+            elif pval < 0.01:
+                star = '**'
+            elif pval < 0.05:
+                star = '*'
+            else:
+                star = ''
+            ax.text(x, y, star, ha='center', fontsize=16)
+            ax.text(x, y + 0.02, f'{a} vs {b}\np={pval:.2g}', ha='center', fontsize=10, rotation=45)
 
 ax.set_ylabel('Mean ensemble cosine similarity')
 ax.set_xlabel('# of reward loc. switches')
 
-# plt.savefig(os.path.join(savedst, 'dark_time_ensemble_cosine_sim_pre_v_post.svg'))
+plt.savefig(os.path.join(savedst, 'dark_time_ensemble_cosine_sim_pre_v_post.svg'))
 #%%
 # histogram of cell % in assemblies
 df_all=df_all.reset_index()

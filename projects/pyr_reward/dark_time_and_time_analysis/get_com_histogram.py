@@ -261,8 +261,6 @@ ax.axvline(0, color='k', linestyle='--',linewidth=3)
 # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+1, np.pi/2),2))
 ax.set_xticks([-np.pi, -np.pi/4,0, np.pi/4,np.pi])
 ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
-ax.set_xlabel('Reward-relative distance')
-
 ax.set_xlabel('Reward-relative distance ($\Theta$)')
 ax.set_ylabel('Density of cells')
 fig.tight_layout()

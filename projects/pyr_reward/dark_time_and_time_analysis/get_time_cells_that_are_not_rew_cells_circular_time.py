@@ -47,7 +47,7 @@ goal_window_cm=20
 datadct = {}
 goal_cell_null= []
 perms = []
-#%%
+
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
@@ -278,7 +278,7 @@ for ii in range(len(conddf)):
         print(f'Goal cells w/ dt: {len(goal_cells)} cells\n\
             Time cells: {len(pure_time)} cells')
         ################ rew shuffle ################
-        # num_iterations=1000
+        num_iterations=1000
         goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,perm)
         ################ all time rew shuffle ################
         time_cell_shuf_ps_per_comp, time_cell_shuf_ps, shuffled_time_all=goal_cell_shuffle(coms_correct_time, goal_window,perm_time)
@@ -314,7 +314,6 @@ pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(datadct, fp) 
-
 ####################################### RUN CODE #######################################
 #%%
 plt.rc('font', size=20)          # controls default text sizes
@@ -341,17 +340,17 @@ sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.o
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Reward cells')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
-# w/ dark time
+# all time cells (not pure)
 df_dt = conddf.copy()
 df_dt = df_dt[((df_dt.animals!='e217')) & (df_dt.optoep<2) & (df_dt.index.isin(inds))]
 df_dt['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
-df_dt['goal_cell_prop'] = [xx[0] for xx in p_goal_cells_time]
+df_dt['goal_cell_prop'] = [xx[0] for xx in p_goal_cells_all_time]
 df_dt['opto'] = df_dt.optoep.values>1
 df_dt['day'] = df_dt.days
 df_dt['session_num_opto'] = np.concatenate([[xx-df_dt[df_dt.animals==an].days.values[0] for xx in df_dt[df_dt.animals==an].days.values] for an in np.unique(df_dt.animals.values)])
 df_dt['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df_dt[df_dt.animals==an].days.values)] for an in np.unique(df_dt.animals.values)])
 df_dt['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df_dt.in_type.values]
-df_dt['p_value'] = [xx[1] for xx in pvals]
+df_dt['p_value'] = [xx[2] for xx in pvals]
 df_dt['goal_cell_prop_shuffle'] = [xx[1][1] for xx in goal_cell_null]
 
 fig,ax = plt.subplots(figsize=(5,5))
@@ -360,7 +359,7 @@ ax = sns.histplot(data = df_dt.loc[df_dt.opto==False], x='p_value',
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(x=0.05, color='k', linestyle='--')
 sessions_sig = sum(df_dt.loc[df_dt.opto==False,'p_value'].values<0.05)/len(df_dt.loc[df_dt.opto==False])
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Time cells')
+ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n All time cells')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
@@ -455,7 +454,7 @@ df_plt2=df_plt2.reset_index()
 # v time
 # HACK TO FIX UNEQUAL 2 COMPARISON SHUFFLES??? IT SHOULDNT MATTER
 df_perms = pd.DataFrame()
-goal_cell_perm = [xx[1] for xx in p_goal_cells_dt]
+goal_cell_perm = [xx[1] for xx in p_goal_cells_all_time]
 goal_cell_perm_shuf = [xx[1][0][~np.isnan(xx[1][0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perms['goal_cell_prop_shuffle']=df_perms['goal_cell_prop_shuffle']*100
@@ -478,6 +477,67 @@ df_plt2_dt = df_plt2_dt.groupby(['animals', 'num_epochs']).mean(numeric_only=Tru
 df_plt2_dt=df_plt2_dt.reset_index()
 #%%
 # number of epochs vs. reward cell prop incl combinations    
+# combine the dataframes 
+df_plt2['type'] = ['Distance']*len(df_plt2)
+df_plt2_dt['type'] = ['Time']*len(df_plt2_dt)
+df_new = pd.concat([df_plt2_dt,df_plt2])
+df_new['prop_diff'] = df_new['goal_cell_prop'] - df_new['goal_cell_prop_shuffle']
+df_av = df_new.groupby(['animals', 'type']).median(numeric_only=True)
+df_av = df_av.reset_index()
+distance_diff = df_av[df_av['type'] == 'Distance']['prop_diff'].reset_index(drop=True)
+time_diff = df_av[df_av['type'] == 'Time']['prop_diff'].reset_index(drop=True)
+# Make sure they're aligned properly — this assumes same number and order
+t_stat, p_val = scipy.stats.wilcoxon(distance_diff, time_diff)
+df_new = df_new.reset_index()
+
+fig,axes = plt.subplots(figsize=(10,5),ncols=2,sharex=True)
+ax=axes[0]
+custom_palette = ['black', 'navy']
+sns.set_palette(custom_palette)
+hue_order = ['Distance', 'Time']
+# av across mice
+sns.stripplot(x='num_epochs', y='goal_cell_prop',hue='type',
+        data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
+sns.barplot(x='num_epochs', y='goal_cell_prop',hue='type',
+        data=df_new,hue_order=hue_order,
+        fill=False,ax=ax, errorbar='se')
+# bar plot of shuffle instead
+ax = sns.barplot(data=df_new, # correct shift
+        x='num_epochs', y='goal_cell_prop_shuffle',hue='type',color='grey', hue_order=hue_order,
+        alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Cell %')
+ax.set_xlabel('')
+ans = df_new.animals.unique()
+# lines
+alpha=0.5
+# One value per animal per epoch per type
+df_lines = df_new.groupby(['animals', 'num_epochs', 'type'])['goal_cell_prop'].median().reset_index()
+for epoch in df_lines['num_epochs'].unique():
+    df_ep = df_lines[df_lines['num_epochs'] == epoch]
+    for animal in df_ep['animals'].unique():
+        sub = df_ep[df_ep['animals'] == animal]
+        if len(sub) == 2:  # Ensure both Distance and Time are present
+            x = ['Distance', 'Time']
+            y = sub.sort_values('type')['goal_cell_prop'].values
+            ax.plot([epoch-2 - 0.2, epoch-2 + 0.2], y, color='dimgray', alpha=0.5, linewidth=2)
+ax.legend().set_visible(False)
+
+ax=axes[1]
+sns.stripplot(x='num_epochs', y='prop_diff',hue='type',
+        data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
+sns.barplot(x='num_epochs', y='prop_diff',hue='type',
+        data=df_new,hue_order=hue_order,
+        fill=False,ax=ax, errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+ax.set_ylabel('Cell %-shuffle')
+ax.set_xlabel('# of rew. loc. switches')
+ax.text(.5, 25, f'p={p_val:.3g}', fontsize=12)
+plt.savefig(os.path.join(savedst, 'time_v_reward_sidebyside.svg'), 
+        bbox_inches='tight')
+#%%
+# side by side
 fig,axes = plt.subplots(figsize=(7,5),ncols=2,sharex=True)
 ax=axes[0]
 # av across mice
@@ -494,7 +554,6 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 # make lines
-alpha=0.5
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
@@ -502,9 +561,9 @@ for i in range(len(ans)):
     errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
 ax.set_xlabel('')
 ax.set_ylabel('Reward cell % ')
-
+ax.set_ylim([0,40])
 eps = [2,3,4]
-y = 37
+y = 40
 pshift = 4
 fs=36
 from statsmodels.stats.multitest import multipletests
@@ -527,12 +586,10 @@ for ii, (ep, pval_corr, reject) in enumerate(zip(eps, pvals_corr, rejected)):
         ax.text(ii, y, "*", ha='center', fontsize=fs)
     ax.text(ii - 0.5, y + pshift, f'p={pval_corr:.3g}', fontsize=10, rotation=45)
 
-ax.set_ylim([0, 40])
-
 # time
 ax=axes[1]
 # av across mice
-color='lightseagreen'
+color='navy'
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color=color,
         data=df_plt2_dt,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
@@ -545,18 +602,37 @@ ax = sns.barplot(data=df_plt2_dt, # correct shift
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
+pvalues = []
+# First, compute all raw p-values
+for ep in eps:
+    rewprop = df_plt2_dt.loc[(df_plt2_dt.num_epochs == ep), 'goal_cell_prop']
+    shufprop = df_plt2_dt.loc[(df_plt2_dt.num_epochs == ep), 'goal_cell_prop_shuffle']
+    t, pval = scipy.stats.wilcoxon(rewprop, shufprop, alternative='greater')
+    pvalues.append(pval)
+# Apply FDR correction
+rejected, pvals_corr, _, _ = multipletests(pvalues, alpha=0.05, method='fdr_bh')
+# Plot and annotate
+for ii, (ep, pval_corr, reject) in enumerate(zip(eps, pvals_corr, rejected)):
+    if pval_corr < 0.001:
+        ax.text(ii, y, "***", ha='center', fontsize=fs)
+    elif pval_corr < 0.01:
+        ax.text(ii, y, "**", ha='center', fontsize=fs)
+    elif pval_corr < 0.05:
+        ax.text(ii, y, "*", ha='center', fontsize=fs)
+    ax.text(ii - 0.5, y + pshift, f'p={pval_corr:.3g}', fontsize=10, rotation=45)
+
 # make lines
 alpha=0.5
-ans = df_plt2.animals.unique()
+ans = df_plt2_dt.animals.unique()
 for i in range(len(ans)):
     sns.lineplot(x=df_plt2_dt.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2_dt[df_plt2_dt.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
 ax.set_xlabel('# of rew. loc. switches')
-ax.set_ylabel('Time cell % \n(excl. reward & place cell) ')
-
+ax.set_ylabel('Time cell % \n(incl. reward & place cell)')
+ax.set_ylim([0,40])
 fig.tight_layout()
-plt.savefig(os.path.join(savedst, 'time_cell_wo_reward_cell_prop.svg'), 
+plt.savefig(os.path.join(savedst, 'time_cell_cell_prop.svg'), 
         bbox_inches='tight')
 
 #%%
@@ -580,7 +656,7 @@ df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = [xx[0] for xx in pvals]
 df['goal_cell_prop_shuffle'] = [xx[0][1] for xx in goal_cell_null]
 # df=df.iloc[:-1]
-df['p_time_reward'] = time_reward[:-1]
+df['p_time_reward'] = time_reward
 df['p_time_reward'] = df['p_time_reward']*100
 fig,ax=plt.subplots()
 sns.histplot(x='p_time_reward',hue='animals',data=df,bins=20)
@@ -608,7 +684,7 @@ df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = [xx[0] for xx in pvals]
 df['goal_cell_prop_shuffle'] = [xx[0][1] for xx in goal_cell_null]
-df['p_time_reward'] = time_reward[:-1]
+df['p_time_reward'] = time_reward
 df['p_time_reward'] = df['p_time_reward']*100
 fig,ax=plt.subplots()
 sns.histplot(x='p_time_reward',hue='animals',data=df,bins=20)
@@ -641,9 +717,39 @@ plt.savefig(os.path.join(savedst, 'p_time_cells_v_total_cells.svg'),
 #%% 
 # com histogram of time cells
 time_iind = [v[1] for v in goal_cells_iind]
-com_time = [v[5] for k,v in datadct.items()]
+com_time = [v[5]-np.pi for k,v in datadct.items()]
 com_time = [np.nanmedian(com[:,time_iind[iind]],axis=0) for iind,com in enumerate(com_time)]
+com_rew = [v[1]-np.pi for k,v in datadct.items()]
+rew_iind = [v[0] for v in goal_cells_iind]
+com_rew = [np.nanmedian(com[:,rew_iind[iind]],axis=0) for iind,com in enumerate(com_rew)]
+# compare to pure time cells?
+goal_cell_ind = [xx[0] for xx in goal_cells_iind]
+time_cell_ind = [xx[1] for xx in goal_cells_iind]
+place_cell_ind = [xx[2] for xx in goal_cells_iind]
+pure_time = [[xx for xx in time_cell if xx not in goal_cell_ind[ind] and xx not in place_cell_ind[ind]]
+              for ind,time_cell in enumerate(time_cell_ind) ]
+com_time_tc = [v[5]-np.pi for k,v in datadct.items()]
+com_pure_time = [np.nanmedian(com[:,pure_time[iind]],axis=0) for iind,com in enumerate(com_time_tc)]
+
 fig,ax = plt.subplots()
-ax.hist(np.concatenate(com_time))
+ncells = len(np.concatenate(com_time))
+a=0.4
+ax.hist(np.concatenate(com_time),color=color,density=True,alpha=a, label=f'Time, {ncells} cells',bins=20)
+ncells = len(np.concatenate(com_pure_time))
+ax.hist(np.concatenate(com_pure_time),color='orangered',density=True,alpha=a, label=f'Pure Time, {ncells} cells',bins=20)
+ncells = len(np.concatenate(com_rew))
+ax.hist(np.concatenate(com_rew),color='k',density=True,alpha=a, label=f'Distance, {ncells} cells',bins=20)
+
+ax.axvline(0, color='k',linewidth=3,linestyle='--')
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Density of cells')
+ax.set_xticks([-np.pi, -np.pi/4,0, np.pi/4,np.pi])
+ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
+ax.set_xlabel('Reward-relative time or distance ($\Theta$)')
+ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.savefig(os.path.join(savedst, 'time_v_distance_com.svg'), 
+        bbox_inches='tight')
+
 # datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
 #                 tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time]
+# goal_cells_iind.append([goal_cells, goal_cells_time, pcs_all])
