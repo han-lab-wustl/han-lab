@@ -313,13 +313,11 @@ def detect_cell_assemblies(spike_matrix, significance_threshold=None, plot=True)
     return significant_components, assembly_patterns, assembly_activities
 
 def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=20):
-    
     # Load relevant variables
     fall = scipy.io.loadmat(params_pth, variable_names=[
         'coms', 'changeRewLoc', 'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 
         'rewards', 'iscell', 'bordercells', 'stat', 'licks'
     ])
-    
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     try:
@@ -421,6 +419,7 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
         'place': {'assemblies': assemblies_place, 'fraction': frac_place}
     }
 
+def 
 # ICA function to run and save tuning curve plots
 def run_ica_and_plot(cell_ids,label,Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day):
     assemblies = {}; used_cells = set()

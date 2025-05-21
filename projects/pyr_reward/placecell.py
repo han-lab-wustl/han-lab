@@ -1451,7 +1451,7 @@ def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, r
     tcs_fail = np.array(tcs_fail); coms_fail = np.array(coms_fail)
     return tcs_correct, coms_correct, tcs_fail, coms_fail, trial_times
 
-def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
+def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,forwardvel,
                             lasttr=8, bins=90, velocity_filter=False):
     rates = []; tcs_fail = []; tcs_correct = []; coms_correct = []; coms_fail = []
     failed_trialnm = []; trial_times = []
@@ -1468,26 +1468,34 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
         unique_trials = np.unique(trial_ep)
         trial_time_list = []
         F_trial_list = []
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
 
         for trial in unique_trials:
-            mask = trial_ep == trial
-            t_trial = time_ep[mask]
-            F_trial = F_ep[mask, :]
-            ypos_trial = ypos_ep[mask]
+            mask = trial_ep[moving_middle] == trial
+            t_trial = time_ep[moving_middle][mask]
+            F_trial = F_ep[moving_middle,:][mask, :]
+            ypos_trial = ypos_ep[moving_middle][mask]
             if len(t_trial) == 0:
                 continue
-            reward_trial = reward_ep[mask]
+            reward_trial = reward_ep[moving_middle][mask]
             # if correct trial
             # Find reward/lick alignment index
             if sum(reward_trial) > 0.5:
-                reward_idx = np.where(reward_trial == 1)[0][0]
+                try:
+                    reward_idx = np.where(reward_trial == 1)[0][0]
+                except: # for some trials where there is no cs???
+                    reward_idx = np.where(reward_trial == .5)[0][0]
             else:
                 rew_mask = (ypos_trial >= (rewlocs[ep] - (rewsize / 2))) & \
                         (ypos_trial <= (rewlocs[ep] + (rewsize / 2) + 5))
                 rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
                 reward_idx = int(len(ypos_trial) / 2) if len(rew_indices) == 0 else min(rew_indices)
 
-            lick_indices_after_reward = np.where((lick_ep[mask] > 0) & (np.arange(len(lick_ep[mask])) > reward_idx))[0]
+            lick_indices_after_reward = np.where((lick_ep[moving_middle][mask] > 0) & (np.arange(len(lick_ep[moving_middle][mask])) > reward_idx))[0]
             first_lick_idx = lick_indices_after_reward[0] if len(lick_indices_after_reward) > 0 else reward_idx
             # CONFIRMED ALIGNMENT
             # Convert time to radians aligned to first lick
@@ -1518,7 +1526,6 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
         # Get successful and failed trials
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trial_ep, reward_ep)
         rates.append(success / total_trials)
-
         if len(strials) > 0:
             failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
             failed_inbtw = np.array(ftrials)[failed_inbtw > 0]
