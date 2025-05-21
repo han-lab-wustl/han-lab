@@ -488,12 +488,13 @@ time_diff = df_av[df_av['type'] == 'Time']['prop_diff'].reset_index(drop=True)
 # Make sure they're aligned properly — this assumes same number and order
 t_stat, p_val = scipy.stats.wilcoxon(distance_diff, time_diff)
 df_new = df_new.reset_index()
-
-fig,axes = plt.subplots(figsize=(10,5),ncols=2,sharex=True)
+df_new = df_new[df_new.animals!='e139']
+fig,axes = plt.subplots(figsize=(14,5),ncols=3,width_ratios=[2.5,2,1])
 ax=axes[0]
 custom_palette = ['black', 'navy']
 sns.set_palette(custom_palette)
 hue_order = ['Distance', 'Time']
+df_new = df_new[df_new.animals!='e200']
 # av across mice
 sns.stripplot(x='num_epochs', y='goal_cell_prop',hue='type',
         data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
@@ -521,6 +522,7 @@ for epoch in df_lines['num_epochs'].unique():
             y = sub.sort_values('type')['goal_cell_prop'].values
             ax.plot([epoch-2 - 0.2, epoch-2 + 0.2], y, color='dimgray', alpha=0.5, linewidth=2)
 ax.legend().set_visible(False)
+ax.set_xlabel('# of rew. loc. switches')
 
 ax=axes[1]
 sns.stripplot(x='num_epochs', y='prop_diff',hue='type',
@@ -529,10 +531,33 @@ sns.barplot(x='num_epochs', y='prop_diff',hue='type',
         data=df_new,hue_order=hue_order,
         fill=False,ax=ax, errorbar='se')
 ax.spines[['top','right']].set_visible(False)
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+ax.legend().set_visible(False)
 ax.set_ylabel('Cell %-shuffle')
 ax.set_xlabel('# of rew. loc. switches')
-ax.text(.5, 25, f'p={p_val:.3g}', fontsize=12)
+# average of epochs
+ax=axes[2]
+df_new = df_new.groupby(['animals','type']).mean(numeric_only=True)
+sns.stripplot(x='type', y='prop_diff',hue='type',
+        data=df_new,s=10,alpha=0.7,ax=ax,hue_order=hue_order)
+sns.barplot(x='type', y='prop_diff',hue='type',
+        data=df_new,hue_order=hue_order,
+        fill=False,ax=ax, errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+ax.set_title('Mean of epochs')
+ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+ax.set_ylabel('Cell %-shuffle')
+ax.set_xlabel('')
+# One value per animal per epoch per type
+df_new=df_new.reset_index()
+for ai, animal in enumerate(df_new['animals'].unique()):
+    sub = df_new[df_new['animals'] == animal]
+    # if len(sub) == 2:  # Ensure both Distance and Time are present
+    x = ['Distance', 'Time']
+    y = sub.sort_values('type')['prop_diff'].values
+    ax.plot([0.1, 0.9], y, color='dimgray', alpha=0.5, linewidth=2)
+ax.legend().set_visible(False)
+
+ax.text(.5, 15, f'p={p_val:.3g}', fontsize=12)
 fig.suptitle('Time v. Distance Reward cells during movement')
 plt.savefig(os.path.join(savedst, 'time_v_reward_sidebyside_wo_stopped.svg'), 
         bbox_inches='tight')
@@ -747,10 +772,130 @@ ax.set_ylabel('Density of cells')
 ax.set_xticks([-np.pi, -np.pi/4,0, np.pi/4,np.pi])
 ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
 ax.set_xlabel('Reward-relative time or distance ($\Theta$)')
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+ax.legend(loc='center left', bbox_to_anchor=(0.6, 0.5))
+ax.set_title('During movement')
 plt.savefig(os.path.join(savedst, 'time_v_distance_com_wo_stopped.svg'), 
         bbox_inches='tight')
 
 # datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
 #                 tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time]
 # goal_cells_iind.append([goal_cells, goal_cells_time, pcs_all])
+
+#%%
+# eg
+colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+sns.set_palette(colors)
+plt.rc('font', size=12)
+n_cells = len(goal_cells[:4])
+if n_cells>0:
+        figlength = n_cells if n_cells<30 else n_cells/2
+        fig, axes = plt.subplots(nrows=n_cells, ncols=2,figsize=(5,7))
+        if n_cells == 1:
+            axes = [axes]  # Ensure it's iterable
+        for i, cellid in enumerate(goal_cells[:4]):
+            axes[i][0].set_title('Distance aligned') if i == 0 else None
+            axes[i][1].set_title('Time aligned') if i == 0 else None
+            axes[i][0].plot(tcs_correct[:, cellid, :].T)
+            axes[i][0].axvline(int(bins_dt / 2), color='k', linestyle='--')
+            for ep in range(len(tcs_correct_time)):
+                axes[i][1].plot(tcs_correct_time[ep, cellid, :].T, label=f'{int(rewlocs[ep])} cm')
+            axes[i][1].axvline(int(bins / 2), color='k', linestyle='--')
+            # Set xticks for both plots
+            axes[i][0].set_xticks(xticks_rew)
+            axes[i][0].set_xticklabels(xticks_labels_pi)
+            axes[i][1].set_xticks([0,45,90])
+            axes[i][1].set_xticklabels(xticks_time)
+            axes[i][0].spines[['top','right']].set_visible(False)
+            axes[i][1].spines[['top','right']].set_visible(False)
+            if i==0:
+                axes[i][0].set_ylabel('$\Delta$ F/F')
+        axes[i][0].set_xlabel('Reward-relative distance ($\Theta$)')
+        axes[i][1].set_xlabel('Reward-relative time ($\Theta$)')
+        axes[i][1].legend(title='Rew. zone center')
+        fig.suptitle(f'{animal}, day {day}\nReward-distance cells')
+        plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'time_aligned_rew_cells.svg'), 
+        bbox_inches='tight')
+#%%
+# For pcs_all (Place cells)
+cellid=[0,1,4,6]
+n_cells = len(pcs_all[cellid])
+if n_cells>0:
+        figlength = n_cells if n_cells<30 else n_cells/2
+        fig, axes = plt.subplots(nrows=n_cells, ncols=2,figsize=(5,7))
+        if n_cells == 1:
+                axes = [axes]
+        for i, cellid in enumerate(pcs_all[cellid]):
+            axes[i][0].set_title('Track aligned') if i == 0 else None
+            axes[i][1].set_title('Time aligned') if i == 0 else None
+            axes[i][0].plot(tcs_correct_abs[:, cellid, :].T)
+            axes[i][1].plot(tcs_correct_time[:, cellid, :].T)
+            axes[i][1].axvline(int(bins / 2), color='k', linestyle='--')
+            # Set xticks for both plots
+            axes[i][0].set_xticks(xticks_pos)
+            axes[i][0].set_xticklabels(xticks_poslbl)
+            axes[i][1].set_xticks([0,45,90])
+            axes[i][1].set_xticklabels(xticks_time)
+            axes[i][0].spines[['top','right']].set_visible(False)
+            axes[i][1].spines[['top','right']].set_visible(False)
+            if i==0:
+                axes[i][0].set_ylabel('$\Delta$ F/F')
+        axes[i][0].set_xlabel('Track position (cm)')
+        axes[i][1].set_xlabel('Reward-relative time ($\Theta$)')
+        fig.suptitle(f'{animal}, day {day}\nPlace cells')
+        plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'time_aligned_place_cells.svg'), 
+        bbox_inches='tight')
+#%%
+# For goal_cells_time (Time cells)
+pure_time=np.array(pure_time)
+cellid = [1,3,4,5]
+n_cells = len(pure_time[cellid])
+if n_cells>0:
+        figlength = n_cells if n_cells<30 else n_cells/2
+        fig, axes = plt.subplots(nrows=n_cells, ncols=3,figsize=(7,7))
+        if n_cells == 1:
+            axes = [axes]
+        for i, cellid in enumerate(pure_time[cellid]):
+            axes[i][0].set_title('Track aligned') if i == 0 else None
+            axes[i][1].set_title('Distance aligned') if i == 0 else None
+            axes[i][2].set_title('Time aligned') if i == 0 else None
+            axes[i][0].plot(tcs_correct_abs[:, cellid, :].T)
+            axes[i][1].plot(tcs_correct[:, cellid, :].T)
+            axes[i][1].axvline(int(bins_dt / 2), color='k', linestyle='--')
+            axes[i][2].plot(tcs_correct_time[:, cellid, :].T)
+            axes[i][2].axvline(int(bins / 2), color='k', linestyle='--')
+            if i==0:
+                axes[i][0].set_ylabel('$\Delta$ F/F')
+                # Set xticks for both plots
+            axes[i][0].set_xticks(xticks_pos)
+            axes[i][0].set_xticklabels(xticks_poslbl)        
+            axes[i][1].set_xticks(xticks_rew)
+            axes[i][1].set_xticklabels(xticks_labels_pi)        
+            axes[i][2].set_xticks([0,45,90])
+            axes[i][2].set_xticklabels(xticks_time)
+            axes[i][0].spines[['top','right']].set_visible(False)
+            axes[i][1].spines[['top','right']].set_visible(False)
+            axes[i][2].spines[['top','right']].set_visible(False)
+        axes[i][0].set_xlabel('Track position (cm)')
+        axes[i][1].set_xlabel('Reward-relative distance ($\Theta$)')
+        axes[i][2].set_xlabel('Reward-relative time ($\Theta$)')
+        fig.suptitle(f'{animal}, day {day}\nPure time cells')
+        plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'time_aligned_time_cells.svg'), 
+        bbox_inches='tight')
+#%%
+# venn diagram
+from matplotlib_venn import venn3
+colors = ['dimgrey', 'navy', sns.color_palette('Dark2')[2]]
+# Example sets
+goal_cell_ind = np.concatenate([[f'{yy}_{ii}' for yy in xx[0]] for ii,xx in enumerate(goal_cells_iind)])
+time_cell_ind = np.concatenate([[f'{yy}_{ii}' for yy in xx[1]] for ii,xx in enumerate(goal_cells_iind)])
+place_cell_ind = np.concatenate([[f'{yy}_{ii}' for yy in xx[2]] for ii,xx in enumerate(goal_cells_iind)])
+goal_cell_ind=set(goal_cell_ind)
+time_cell_ind=set(time_cell_ind)
+place_cell_ind=set(place_cell_ind)
+venn3([goal_cell_ind,time_cell_ind,place_cell_ind], set_labels=('Reward-distance', 'Reward-time', 'Place'),set_colors=colors)
+plt.title("All cells (sessions across mice)")
+plt.savefig(os.path.join(savedst, 'time_venn_diagram.svg'), 
+        bbox_inches='tight')

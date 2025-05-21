@@ -22,9 +22,6 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 #%%
 goal_cm_window=20 # to search for rew cells
-saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_prereward_cell_bytrialtype_nopto_{goal_cm_window}cm_window.p'
-with open(saveddataset, "rb") as fp: #unpickle
-    radian_alignment_saved = pickle.load(fp)
 # radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
@@ -59,6 +56,107 @@ for ii in range(len(conddf)):
 # get examples of correct vs. fail
 # take the first epoch and first cell?
 # v take all cells
+# all animals
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.stats
+# Assume conddf, tcs_correct_all, tcs_fail_all, and bins are defined
+
+# Filter valid animals
+animals = [xx for ii, xx in enumerate(conddf.animals.values)
+           if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
+
+# Collect across all animals
+all_tcs_correct = []
+all_tcs_fail = []
+
+for ii, (tcs_corr, tcs_f) in enumerate(zip(tcs_correct_all, tcs_fail_all)):
+    if animals[ii] in animals:  # already filtered list
+        if tcs_corr.shape[1] > 0:
+            tc_corr = np.vstack(np.nanmean(tcs_corr[:, :], axis=0))
+            all_tcs_correct.append(tc_corr)
+        if tcs_f.shape[1] > 0:
+            tc_fail = np.vstack(np.nanmean(tcs_f[:, :], axis=0))
+            if np.sum(np.isnan(tc_fail)) == 0:
+                all_tcs_fail.append(tc_fail)
+
+# Create figure
+plt.rc('font', size=16)
+fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, figsize=(6, 8), height_ratios=[3, 1])
+axes = axes.flatten()
+bins = 90  # assumed defined
+
+# --- Heatmap: correct trials ---
+ax = axes[0]
+if all_tcs_correct:
+        tccorr = np.hstack(all_tcs_correct).T
+        max_per_row = np.nanmax(tccorr, axis=1)
+        max_per_row[max_per_row == 0] = np.nan
+        tccorr=tccorr.T / max_per_row
+        im = ax.imshow(tccorr.T, vmin=0, vmax=1,aspect='auto')
+        ax.axvline(45, color='w', linestyle='--')
+        ax.set_xticks(np.arange(0, bins, 30))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi + .6, np.pi), 2), rotation=45)
+        ax.set_ylabel('Epochs')
+        ax.set_xlabel('Reward-relative distance ($\Theta$)')
+        ax.set_title('All animals\nCorrect')
+
+# --- Heatmap: incorrect trials ---
+ax = axes[1]
+if all_tcs_fail:
+        tc = np.hstack(all_tcs_fail).T
+        max_per_row = np.nanmax(tc, axis=1)
+        max_per_row[max_per_row == 0] = np.nan
+        tc=tc.T / max_per_row
+        im = ax.imshow(tc.T, vmin=0, vmax=1,aspect='auto')
+        ax.axvline(45, color='w', linestyle='--')
+        ax.set_xticks(np.arange(0, bins, 30))
+        ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi + .6, np.pi), 2), rotation=45)
+        ax.set_title('Incorrect')
+
+cbar = fig.colorbar(im, ax=ax, fraction=0.046)
+cbar.ax.set_ylabel('Norm. lick', rotation=270, labelpad=15)
+
+# --- Average trace: correct ---
+ax = axes[2]
+if all_tcs_correct:
+    m = np.nanmean(tccorr.T, axis=0)
+    ax.plot(m, color='seagreen')
+    ax.fill_between(
+        range(0, tccorr.shape[0]),
+        m - scipy.stats.sem(tccorr.T, axis=0, nan_policy='omit'),
+        m + scipy.stats.sem(tccorr.T, axis=0, nan_policy='omit'),
+        alpha=0.5, color='seagreen'
+    )
+    ax.axvline(45, color='k', linestyle='--')
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_title('Correct')
+    ax.set_ylabel('Norm. lick')
+    ax.set_ylim([0, 1])
+
+# --- Average trace: incorrect ---
+ax = axes[3]
+if all_tcs_fail:
+    m = np.nanmean(tc.T, axis=0)
+    ax.plot(m, color='firebrick')
+    ax.fill_between(
+        range(0, tc.shape[0]),
+        m - scipy.stats.sem(tc.T, axis=0, nan_policy='omit'),
+        m + scipy.stats.sem(tc.T, axis=0, nan_policy='omit'),
+        alpha=0.5, color='firebrick'
+    )
+    ax.axvline(45, color='k', linestyle='--')
+    ax.set_xticks([0,45,90])
+    ax.set_xticklabels(['-$\\pi$',0,'$\\pi$'])
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_xlabel('Reward-relative distance ($\Theta$)')
+    ax.set_title('Incorrect')
+    ax.set_ylim([0, 1])
+
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'lick_correctvfail_mean.svg'),bbox_inches='tight')
+
+#%%
 # per day per animal
 animals =[xx for ii,xx in enumerate(conddf.animals.values) if (xx!='e217') & (conddf.optoep.values[ii]<2)]
 
@@ -77,9 +175,9 @@ for animal in np.unique(animals):
                                 tcs_correct.append(tc)
                                 # pre vs. post reward
                                 #pre
-                                # dff_correct.append(np.quantile(tc[int(bins/3):int(bins/2)],.9,axis=1))
+                                dff_correct.append(np.quantile(tc[int(bins/3):int(bins/2)],.9,axis=1))
                                 #posts
-                                dff_correct.append(np.quantile(tc[int(bins/2)+20:],.9,axis=1))
+                                # dff_correct.append(np.quantile(tc[int(bins/2)+20:],.9,axis=1))
 
 
         tcs_fail = []
@@ -92,9 +190,9 @@ for animal in np.unique(animals):
                                 if np.sum(np.isnan(tc))==0:
                                         tcs_fail.append(tc)
                                         # pre
-                                        # dff_fail.append(np.quantile(tc[int(bins/3):int(bins/2)],.9,axis=1))
+                                        dff_fail.append(np.quantile(tc[int(bins/3):int(bins/2)],.9,axis=1))
                                         # post
-                                        dff_fail.append(np.quantile(tc[int(bins/2)+20:],.9,axis=1))
+                                        # dff_fail.append(np.quantile(tc[int(bins/2)+20:],.9,axis=1))
         dff_correct_per_an.append(dff_correct)
         dff_fail_per_an.append(dff_fail)
         fig, axes=plt.subplots(ncols=2, nrows=2,sharex=True,figsize=(6,8), 
@@ -166,11 +264,11 @@ for animal in np.unique(animals):
 animals_unique = np.unique(animals)
 df=pd.DataFrame()
 correct = np.concatenate([np.concatenate(xx) for xx in dff_correct_per_an])
-incorrect = np.concatenate([np.concatenate(xx) for xx in dff_fail_per_an])
+incorrect = np.concatenate([np.concatenate(xx) if len(xx)>0 else [np.nan] for xx in dff_fail_per_an])
 df['mean_dff'] = np.concatenate([correct,incorrect])
 df['trial_type']=np.concatenate([['correct']*len(correct),['incorrect']*len(incorrect)])
 ancorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_correct_per_an)])
-anincorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_fail_per_an)])
+anincorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) if len(xx)>0 else [animals_unique[ii]] for ii,xx in enumerate(dff_fail_per_an)])
 df['animal'] = np.concatenate([ancorr, anincorr])
 bigdf=df
 # average
@@ -179,17 +277,18 @@ bigdf=bigdf.reset_index()
 s=13
 fig,ax = plt.subplots(figsize=(2,5))
 sns.stripplot(x='trial_type', y='mean_dff', data=bigdf,hue='trial_type',
-        dodge=True,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
+        palette={'correct':'seagreen', 'incorrect': 'firebrick'},
         s=s,alpha=0.7)
 sns.barplot(x='trial_type', y='mean_dff', data=bigdf,hue='trial_type',
         fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'})
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Post-reward mean tuning curve ($\Delta F/F$)')
+# ax.set_ylabel('Post-reward mean tuning curve (av. licks)')
+ax.set_ylabel('Pre-reward mean tuning curve (av. licks)')
 ax.set_xlabel('Trial type')
 cor = bigdf.loc[(bigdf.trial_type=='correct'), 'mean_dff']
 incor = bigdf.loc[(bigdf.trial_type=='incorrect'), 'mean_dff']
-t,pval = scipy.stats.wilcoxon(cor,incor)
+t,pval = scipy.stats.ranksums(cor,incor[~np.isnan(incor)])
 ans = bigdf.animal.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x='trial_type', y='mean_dff', 
@@ -210,3 +309,5 @@ elif pval < 0.05:
 ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 
 ax.set_title('Licking behavior',pad=50)
+# plt.savefig(os.path.join(savedst, 'lick_correctvfail_post_rew.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'lick_correctvfail_pre_rew.svg'),bbox_inches='tight')

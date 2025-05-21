@@ -301,7 +301,6 @@ for ii in range(len(conddf)):
         shuf_ps_av_all_time = np.nanmedian(np.array(time_cell_shuf_ps))
         p_all_time=len(goal_cells_time)/len(coms_correct[0]) 
         p_value_all_time = sum(shuffled_time_all>p_all_time)/num_iterations
-
         print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v time aligned {p_value_time}')
         goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
                         [shuf_ps_per_comp_av_all_time,shuf_ps_av_all_time],

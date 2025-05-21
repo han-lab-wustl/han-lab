@@ -1473,15 +1473,15 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
             moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
         else:
             moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
-
+        F_ep[~moving_middle,:] = np.nan # nan out activity during stopped
         for trial in unique_trials:
-            mask = trial_ep[moving_middle] == trial
-            t_trial = time_ep[moving_middle][mask]
-            F_trial = F_ep[moving_middle,:][mask, :]
-            ypos_trial = ypos_ep[moving_middle][mask]
+            mask = trial_ep == trial
+            t_trial = time_ep[mask]
+            F_trial = F_ep[mask, :]
+            ypos_trial = ypos_ep[mask]
             if len(t_trial) == 0:
                 continue
-            reward_trial = reward_ep[moving_middle][mask]
+            reward_trial = reward_ep[mask]
             # if correct trial
             # Find reward/lick alignment index
             if sum(reward_trial) > 0.5:
@@ -1495,7 +1495,7 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
                 rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
                 reward_idx = int(len(ypos_trial) / 2) if len(rew_indices) == 0 else min(rew_indices)
 
-            lick_indices_after_reward = np.where((lick_ep[moving_middle][mask] > 0) & (np.arange(len(lick_ep[moving_middle][mask])) > reward_idx))[0]
+            lick_indices_after_reward = np.where((lick_ep[mask] > 0) & (np.arange(len(lick_ep[mask])) > reward_idx))[0]
             first_lick_idx = lick_indices_after_reward[0] if len(lick_indices_after_reward) > 0 else reward_idx
             # CONFIRMED ALIGNMENT
             # Convert time to radians aligned to first lick

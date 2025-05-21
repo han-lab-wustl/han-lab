@@ -25,7 +25,7 @@ from projects.pyr_reward.rewardcell import get_radian_position,\
     get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle
 from projects.opto.behavior.behavior import get_success_failure_trials
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 savepth = os.path.join(savedst, 'trial_by_trial_tuning_w_com.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
@@ -128,7 +128,6 @@ for ii in range(len(conddf)):
         perm=[p for ii,p in enumerate(perm) if len(com_goal[ii])>0]
         rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal[ii])>0]
         com_goal=[com for com in com_goal if len(com)>0]
-
         print(f'Reward-centric cells total: {[len(xx) for xx in com_goal]}')
         # get goal cells across all epochs   
         if len(com_goal)>0:
@@ -138,31 +137,40 @@ for ii in range(len(conddf)):
 
         # trial by trial raster
         trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
-
+#%%
         # plot the distance tuning
-        for cll in range(len(goal_cells)):
-            fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=3,figsize=(12, 10), sharex=True)
+        plt.rc('font', size=16)
+        colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']        
+        clls=range(len(goal_cells))
+        for cll in clls:
+            fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=3,figsize=(12, 10), sharex=True,width_ratios=[1.5,1.5,1])
             # Normalize activity by row
             # per epoch
+            vmin = 0
+            vmax = np.nanmax(tcs_correct[:, goal_cells[cll]])
             for ep in range(len(tcs_dist)):
                 axes=axes_all[ep,:]
                 data = tcs_dist[ep][cll]
                 norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
-                                (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+                        (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
 
                 # Add divider to move colorbar outside of axes[0]
                 divider = make_axes_locatable(axes[0])
                 cax = divider.append_axes("right", size="5%", pad=0.05)
                 
-                im = axes[0].imshow(tcs_dist[ep][cll], aspect='auto')
-                fig.colorbar(im, cax=cax, orientation='vertical', label='Activity')
+                im = axes[0].imshow(norm_data, aspect='auto',cmap='Greys')
+                fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. $\Delta F/F$')
                 trial_mask = np.array(trialstates[ep])  # shape (n_trials,)
                 trial_mask_2d = trial_mask[:, np.newaxis] * np.ones((1, data.shape[1]))  # shape (n_trials, n_timebins)
-                axes[0].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=0.2)
+                a=0.4
+                axes[0].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
                 # plot com
                 bin_size_dt = [ypos/bins_dt for ypos in ypos_max[ep]]
                 axes[0].scatter(coms_dist[ep][cll]/bin_size_dt, np.arange(len(coms_dist[ep][cll])),color='w',marker='|')
-                axes[2].plot(tcs_correct[:, goal_cells[cll]].T)  
+
+                axes[2].plot(tcs_correct[ep, goal_cells[cll]].T, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm')  
+                axes[2].set_ylim([vmin,vmax])
+                axes[2].legend()
                 axes[2].set_ylabel('$\Delta F/F$')              
                 # lick com
                 com_trial = []
@@ -174,22 +182,29 @@ for ii in range(len(conddf)):
                         com= np.nan  # Avoid divide-by-zero
                     else: com = np.sum(bins * arr) / total
                     com_trial.append(com)
-                axes[1].imshow(licks_all_dist[ep], aspect='auto', cmap='Blues')      
+                # norm licks
+                data = licks_all_dist[ep]
+                norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
+                        (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+                axes[1].imshow(norm_data, aspect='auto', cmap='Blues')      
                 axes[1].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
-                axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=0.2)
+                axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
                 center_bin = bins_dt/2                              
                 for ax in axes:
                         ax.axvline(center_bin, color='k')
-                axes[0].axvline(center_bin, color='w')  # for contrast on heatmap
-                axes[2].set_title('Distance tuning ')
-                axes[0].set_title(f'{animal}, {day}, cell: {goal_cells[cll]}, rew @ {rewlocs[ep]} cm')        
+                axes[0].axvline(center_bin, color='w')  # for contrast on heatmap                
+                axes[0].set_title(f'{animal}, {day}, cell: {goal_cells[cll]}')        
                 ticks = [0, bins_dt/2, bins_dt - 1]
                 # Set x-ticks on both the heatmap and the licks plot
                 axes[2].set_xticks(ticks)
                 axes[2].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
                 axes[2].set_xlabel('Reward-relative distance')
-                axes[1].set_ylabel('Licks')
+                axes[1].set_ylabel('Norm. Licks')
+                axes[0].set_ylabel('Trial #')
+                axes[2].spines[['top','right']].set_visible(False)
             plt.tight_layout()
+            plt.savefig(os.path.join(savedst, f'{animal}_{day}_rewcell{cll}_trialbytrial.svg'))
+            #%%
             pdf.savefig(fig)
             plt.close(fig)
 pdf.close()
