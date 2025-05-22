@@ -76,6 +76,9 @@ def get_com_v_persistence(params_pth, animal, day, ii,goal_window_cm=20):
     goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
     # in old track length coordinates, so its closer to ~40 cm
     goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_dt, cell_type = 'all')
+    # only get consecutive perms
+    com_goal_postrew_dt = [xx for ii,xx in enumerate(com_goal_postrew_dt) if perm_dt[ii][0]-perm_dt[ii][1]==-1]
+    perm_dt = [xx for ii,xx in enumerate(perm_dt) if xx[0]-xx[1]==-1]
     #only get perms with non zero cells
     # find dropped out cells 
     unique, counts = np.unique(np.concatenate(com_goal_postrew_dt), return_counts=True)

@@ -370,6 +370,8 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     # Recenter COMs around reward zone
     coms_rewrel = np.array([com - np.pi for com in coms_correct])
     perm = list(combinations(range(len(coms_correct)), 2))
+    # restrict to consecutive epochs
+    perm = [p for p in perm if (p[0]-p[1])<2]
     # Fix wrap-around
     epsilon = 0.7
     com_loop_w_in_window = []
@@ -385,8 +387,8 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     # Separate cells into pre- and post-reward goal cells
     com_goal_prerew = [[xx for xx in com if np.nanmedian(coms_rewrel[:, xx]) < 0] if len(com) > 0 else [] for com in com_goal]
     com_goal_postrew = [[xx for xx in com if np.nanmedian(coms_rewrel[:, xx]) >= 0] if len(com) > 0 else [] for com in com_goal]
-    # pre_goal_cells = intersect_arrays(*com_goal_prerew) if len(com_goal_prerew) > 0 else []
-    # post_goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
+    dedicated_pre = intersect_arrays(*com_goal_prerew) if len(com_goal_prerew) > 0 else []
+    dedicated_post = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
     # use all cells in every epoch
     pre_goal_cells = np.concatenate(com_goal_prerew)
     post_goal_cells = np.concatenate(com_goal_postrew)
@@ -395,23 +397,25 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards, forwardvel, rewsize, 3)
     place_window = 20
     perm_abs = list(combinations(range(len(coms_correct_abs)), 2))
+    # restrict to consecutive epochs
+    perm_abs = [p for p in perm_abs if (p[0]-p[1])==-1]
     com_per_ep = np.array([(coms_correct_abs[p[0]] - coms_correct_abs[p[1]]) for p in perm_abs])
     compc = [np.where((comr < place_window) & (comr>-place_window))[0] for comr in com_per_ep]
-    # pcs_all = intersect_arrays(*compc) if len(compc) > 0 else []
+    dedicated_pcs = intersect_arrays(*compc) if len(compc) > 0 else []
     pcs_all = np.concatenate(compc)
     print(f'# pre rew: {len(pre_goal_cells)}\n\
           # post rew: {len(post_goal_cells)}\n\
             # place: {len(pcs_all)}')
     # Run ICA for each population
     print("\nRunning ICA on pre-reward goal cells...")
-    pdf,assemblies_pre, frac_pre = run_ica_and_plot(pre_goal_cells,'pre',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)
+    pdf,assemblies_pre, frac_pre = run_ica_and_plot(pre_goal_cells,pre_goal_cells,'pre',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)
 
     print("\nRunning ICA on post-reward goal cells...")
-    pdf,assemblies_post, frac_post = run_ica_and_plot(post_goal_cells, 'post',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)
+    pdf,assemblies_post, frac_post = run_ica_and_plot(post_goal_cells,post_goal_cells,'post',Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day)
 
     print("\nRunning ICA on place cells...")
     # not sep into correct/incorr for place cells
-    pdf,assemblies_place, frac_place = run_ica_and_plot(pcs_all, 'place',Fc3,eps,tcs_correct_abs,np.zeros_like(tcs_correct_abs),pdf,animal, day)
+    pdf,assemblies_place, frac_place = run_ica_and_plot(pcs_all,pcs_all,'place',Fc3,eps,tcs_correct_abs,np.zeros_like(tcs_correct_abs),pdf,animal, day)
 
     return {
         'pre': {'assemblies': assemblies_pre, 'fraction': frac_pre},
@@ -419,13 +423,15 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
         'place': {'assemblies': assemblies_place, 'fraction': frac_place}
     }
 
-def 
+
 # ICA function to run and save tuning curve plots
-def run_ica_and_plot(cell_ids,label,Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day):
+def run_ica_and_plot(cell_ids,dedicated_cells,label,Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day):
     assemblies = {}; used_cells = set()
     try:
         if len(cell_ids) > 0:
-            patterns, activities, labels_, n = detect_assemblies_with_ica(Fc3[eps[0]:eps[1], cell_ids].T)
+            # all epochs v 1 epoch
+            # eps[0]:eps[1]
+            patterns, activities, labels_, n = detect_assemblies_with_ica(Fc3[:, cell_ids].T)
             print(f"{label}: {n} assemblies detected")
             labels_clusters = cluster_neurons_from_ica(patterns)
             cell_groups = get_cells_by_assembly(labels_clusters)
@@ -452,4 +458,4 @@ def run_ica_and_plot(cell_ids,label,Fc3,eps,tcs_correct,tcs_fail,pdf,animal, day
                 ]
     except Exception as e:
         print(e)
-    return pdf, assemblies, len(used_cells) / len(cell_ids) if len(cell_ids) > 0 else np.nan
+    return pdf, assemblies, len(used_cells) / len(dedicated_cells) if len(dedicated_cells) > 0 else 0

@@ -44,12 +44,12 @@ goal_window_cm=20
 datadct = {}
 goal_cell_null= []
 perms = []
-# goal_window_cm = np.arange(5,135,5) # cm
+goal_window_cm = np.arange(5,135,5) # cm
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+    if (animal!='e217') & (conddf.optoep.values[ii]<2):        
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -114,43 +114,43 @@ for ii in range(len(conddf)):
             bins=bins_dt)
         # normal tc
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)      
-        goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
-        goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
-        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]
-        goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_dt, cell_type = 'all')
-        goal_cells_p_per_comparison_dt = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_dt]
-        #only get perms with non zero cells
-        # get per comparison and also across epochs
-        p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
-        p_goal_cells_dt.append([len(goal_cells_dt)/len(coms_correct_dt[0]), goal_cells_p_per_comparison_dt])
-        goal_cells_iind.append([goal_cells, goal_cells_dt])
-        # save perm
-        perms.append([[perm, rz_perm],
-            [perm_dt, rz_perm_dt]])
-        print(f'Goal cells w/o dt: {goal_cells}\n\
-            Goal cells w/ dt: {goal_cells_dt}')
-        # shuffle
-        num_iterations=1000
-        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
-                            perm,num_iterations = num_iterations)
-        goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_dt, \
-                        goal_window, perm_dt, num_iterations = num_iterations)
-        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
-        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
-        goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
-        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        # dark time
-        goal_cell_shuf_ps_per_comp_av_dt = np.nanmedian(goal_cell_shuf_ps_per_comp_dt,axis=0)        
-        goal_cell_shuf_ps_av_dt = np.nanmedian(np.array(goal_cell_shuf_ps_dt))
-        goal_cell_p_dt=len(goal_cells_dt)/len(coms_correct[0]) 
-        p_value_dt = sum(shuffled_dist_dt>goal_cell_p_dt)/num_iterations
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v w/ dark ttime {p_value_dt}')
-        goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
-                        [goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt]])
-        pvals.append([p_value,p_value_dt]); 
-        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+        rewards,forwardvel,rewsize,bin_size)     
+        for cm_window in goal_window_cm: 
+            goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
+            goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
+            goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]
+            goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_dt, cell_type = 'all')
+            goal_cells_p_per_comparison_dt = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew_dt]
+            #only get perms with non zero cells
+            # get per comparison and also across epochs
+            p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
+            p_goal_cells_dt.append([len(goal_cells_dt)/len(coms_correct_dt[0]), goal_cells_p_per_comparison_dt])
+            goal_cells_iind.append([goal_cells, goal_cells_dt])
+            # save perm
+            perms.append([[perm, rz_perm],
+                [perm_dt, rz_perm_dt]])
+            print(f'Goal cells w/o dt: {len(goal_cells)}\n\
+                Goal cells w/ dt: {len(goal_cells_dt)}')
+            # shuffle
+            num_iterations=1000
+            goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
+                                perm,num_iterations = num_iterations)
+            goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_dt, \
+                            goal_window, perm_dt, num_iterations = num_iterations)
+            goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
+            goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
+            goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
+            p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
+            # dark time
+            goal_cell_shuf_ps_per_comp_av_dt = np.nanmedian(goal_cell_shuf_ps_per_comp_dt,axis=0)        
+            goal_cell_shuf_ps_av_dt = np.nanmedian(np.array(goal_cell_shuf_ps_dt))
+            goal_cell_p_dt=len(goal_cells_dt)/len(coms_correct[0]) 
+            p_value_dt = sum(shuffled_dist_dt>goal_cell_p_dt)/num_iterations
+            print(f'{animal}, day {day}: goal cells w/ dark time and window {cm_window} cm; p-value: {p_value_dt}')
+            goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
+                            [goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt]])
+            pvals.append([p_value,p_value_dt]); 
+            datadct[f'{animal}_{day:03d}_index{ii:03d}_window{cm_window}'] = [tcs_correct_dt, coms_correct_dt, goal_cell_p_dt,com_goal_postrew_dt,goal_cells_dt,goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt]
 
 pdf.close()
 ####################################### RUN CODE #######################################

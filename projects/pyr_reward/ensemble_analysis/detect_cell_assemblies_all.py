@@ -28,7 +28,6 @@ p_rewcells_in_assemblies=[]
 bins = 90
 goal_window_cm=20
 assembly_cells_all_an=[]
-cell_type = 'pre'
 # iterate through all animals
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
@@ -75,11 +74,11 @@ cs_all_celltype = []; num_epochs_celltype = []
 cell_types = ['pre', 'post', 'place']
 for cell_type in cell_types:
     cs_all = []; num_epochs = []
-    plot=True
-    # plot = False
+    # plot=True
+    plot = False
     assembly=[assembly_cells_all_an[i][cell_type]['assemblies'] for i in range(len(assembly_cells_all_an))]
     for ii,ass in enumerate(assembly):
-        if df.iloc[ii].animal==an_plt and df.iloc[ii].days==an_day:
+        # if df.iloc[ii].animal==an_plt and df.iloc[ii].days==an_day:
             print(f'{df.iloc[ii].animal}, {df.iloc[ii].days}')
             ass_all = [xx[0] for xx in list(ass.values())] # all assemblies
             # split into correct v fail
@@ -276,7 +275,7 @@ plt.rc('font', size=20)
 dfan = df_all.groupby(['animal', 'num_epochs', 'cell_type']).mean(numeric_only=True)
 dfan = dfan.reset_index()
 dfan = dfan[dfan.num_epochs<5]
-df_clean = dfan[(dfan.animal!='e139')]
+df_clean = dfan[(dfan.animal!='e139')& (dfan.animal!='e189')]
 # palette = seaborn Dark2
 s=10
 df_all = df_clean
@@ -362,7 +361,7 @@ plt.savefig(os.path.join(savedst, 'dark_time_ensemble_cosine_sim_pre_v_post.svg'
 # histogram of cell % in assemblies
 # df_all=df_all.reset_index()
 fig, axes = plt.subplots(ncols=2,figsize=(10,5))
-ax=axes[0]
+ax=axes[0] 
 sns.histplot(
     x='p_cells_in_assemblies',
     hue='cell_type',

@@ -48,10 +48,9 @@ pdf.close()
 com_ep2_comb = [xx[1] for xx in ep_dicts]
 com_ep3_comb = [xx[2] for xx in ep_dicts if 2 in xx.keys()]
 com_ep4_comb = [xx[3] for xx in ep_dicts if 3 in xx.keys()]
-com_ep5_comb = [xx[4] for xx in ep_dicts if 4 in xx.keys()]
+# com_ep5_comb = [xx[4] for xx in ep_dicts if 4 in xx.keys()]
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 
 # plot histograms
 fig, ax = plt.subplots()
@@ -60,27 +59,36 @@ a = 0.2
 lw = 3
 
 # Plot histogram and confidence intervals for each epoch
-data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb,com_ep5_comb]
-labels = ['2', '3', '4', '5']
+data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb]
 for i, data in enumerate(data_sets):
     all_data = np.concatenate(data)
-    ax.hist(all_data, density=True, alpha=a, label=f'{labels[i]}, {len(all_data)} cells', color=colors[i],
-            edgecolor=colors[i], linewidth=lw)
-    
-    # Confidence interval: 95% = [2.5th, 97.5th] percentiles
+
+    # Plot histogram
+    ax.hist(
+        all_data, bins=50, density=True, alpha=a,
+        label=f'{labels[i]}, {len(all_data)} cells',
+        color=colors[i], edgecolor=colors[i], linewidth=lw
+    )
+
+    # Smooth Gaussian KDE
+    kde = gaussian_kde(all_data[np.isfinite(all_data)])  # remove NaNs
+    x_vals = np.linspace(-np.pi, np.pi, 500)
+    ax.plot(x_vals, kde(x_vals), color=colors[i], linewidth=2)
+
+    # 95% CI lines
     ci_low = np.nanpercentile(all_data, 2.5)
     ci_high = np.nanpercentile(all_data, 97.5)
 
     vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--')
-    vline_low.set_dashes([10, 8])  # dashed spacing
-
+    vline_low.set_dashes([10, 8])
     vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--')
     vline_high.set_dashes([10, 8])
 
-# Add label for one CI line only
-ci_ref = np.concatenate(com_ep3_comb)
-ci_high = np.nanpercentile(ci_ref, 97.5)
-ax.axvline(ci_high, color=colors[1], linewidth=lw, linestyle='--', label='95% CI').set_dashes([10, 8])
+
+# # Add label for one CI line only
+# ci_ref = np.concatenate(com_ep3_comb)
+# ci_high = np.nanpercentile(ci_ref, 97.5)
+# ax.axvline(ci_high, color=colors[1], linewidth=lw, linestyle='--', label='95% CI').set_dashes([10, 8])
 
 # Style and labels
 ax.set_ylabel('Relative cell density\n(across all sessions)')
