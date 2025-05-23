@@ -81,7 +81,8 @@ def get_com_v_persistence(params_pth, animal, day, ii,goal_window_cm=20):
     perm_dt = [xx for ii,xx in enumerate(perm_dt) if xx[0]-xx[1]==-1]
     #only get perms with non zero cells
     # find dropped out cells 
-    unique, counts = np.unique(np.concatenate(com_goal_postrew_dt), return_counts=True)
+    all_gc = np.concatenate(com_goal_postrew_dt) if len(com_goal_postrew_dt) else []
+    unique, counts = np.unique(all_gc, return_counts=True)
     # Combine into a dictionary if desired
     freq_dict = dict(zip(unique, counts))
     ep_dict = {}
