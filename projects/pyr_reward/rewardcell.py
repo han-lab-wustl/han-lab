@@ -1683,16 +1683,17 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
         goal_cell_prop,num_epochs,goal_cell_null,epoch_perm,pvals
 
 
-def reward_act_farrew(ii,cell_type,params_pth,animal,day,bins,radian_alignment,
+def trail_type_activity_quant(ii,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
     goal_cell_null,pvals,total_cells):
     """
     changed on 2/6/25 to make it more consistent with splitting the different
     subpopulations
+    updated 5/26/25 to do all cell types
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'licks','stat', 'timedFF'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
@@ -1707,6 +1708,7 @@ def reward_act_farrew(ii,cell_type,params_pth,animal,day,bins,radian_alignment,
     trialnum=fall['trialnum'][0]
     rewards = fall['rewards'][0]
     lick = fall['licks'][0]
+    time = fall['timedFF'][0]
     if animal=='e145':
         ybinned=ybinned[:-1]
         forwardvel=forwardvel[:-1]
@@ -1714,6 +1716,7 @@ def reward_act_farrew(ii,cell_type,params_pth,animal,day,bins,radian_alignment,
         trialnum=trialnum[:-1]
         rewards=rewards[:-1]
         lick=lick[:-1]
+        time = time[:-1]
     # set vars
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     lasttr=8 # last trials
@@ -1741,14 +1744,19 @@ def reward_act_farrew(ii,cell_type,params_pth,animal,day,bins,radian_alignment,
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-    if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-        tcs_correct, coms_correct, tcs_fail, coms_fail, \
-        com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-    else:# remake tuning curves relative to reward        
-        # 9/19/24
-        # find correct trials within each epoch!!!!
-        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)          
+    # dark time params
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+    #remake tuning curves relative to reward        
+    # 9/19/24
+    # find correct trials within each epoch!!!!
+    # tc w/ dark time added to the end of track
+    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        rewsize,ybinned,time,lick,
+        Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+        bins=bins_dt)  
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -1772,45 +1780,65 @@ def reward_act_farrew(ii,cell_type,params_pth,animal,day,bins,radian_alignment,
     coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
     com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    #only get perms with non zero cells    
-    if cell_type=='pre':
-        lowerbound = -np.pi/4 # updated 4/21/25
-        com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=lowerbound))] if len(com)>0 else [] for com in com_goal]
-    elif cell_type=='post':
-        lowerbound = np.pi/4 # updated 4/21/25
-        com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
-    perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
-    rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_farrew[ii])>0]
-    com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
-    print(f'Far-reward cells total: {[len(xx) for xx in com_goal_farrew]}')
+    #only get perms with non zero cells  
+    # get both pre and post rew cells at the same time
+    cell_types = ['pre', 'post', 'far_pre', 'far_post']
+    dfs = []
+    tcs_corr = []; tcs_f = []
+    for cell_type in cell_types:
+        if cell_type=='far_pre':
+            lowerbound = -np.pi/4 # updated 4/21/25
+            com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
+                xx], axis=0)<=lowerbound))] if len(com)>0 else [] for com in com_goal]
+        elif cell_type=='far_post':
+            lowerbound = np.pi/4 # updated 4/21/25
+            com_goal_farrew = [[xx for xx in com if (abs(np.nanmedian(coms_rewrel[:,
+                xx], axis=0)>=lowerbound))] if len(com)>0 else [] for com in com_goal]
+        elif cell_type=='post':
+            lowerbound = np.pi/4 # updated 4/21/25
+            com_goal_farrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                xx], axis=0)<=lowerbound) & (np.nanmedian(coms_rewrel[:,
+                xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
+        elif cell_type=='pre':
+            lowerbound = -np.pi/4 # updated 4/21/25
+            com_goal_farrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
+                xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal]
+        perm=[p for ii,p in enumerate(perm) if len(com_goal_farrew[ii])>0]
+        rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_farrew[ii])>0]
+        com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
+        print(f'Far-reward cells total: {[len(xx) for xx in com_goal_farrew]}')
+        # get goal cells across all epochs        
+        # get far reward cells in any ep
+        # CHANGE: 4/24/25
+        if len(com_goal_farrew)>0:
+            goal_cells = intersect_arrays(*com_goal_farrew); 
+            goal_cells = np.unique(np.concatenate(com_goal_farrew))
+        else:
+            goal_cells=[]    
+        # integral
+        # get tc 
+        correct = scipy.integrate.trapz(tcs_correct[:,goal_cells, :],axis=2)
+        # epoch (x) x cells (y)
+        incorrect = scipy.integrate.trapz(tcs_fail[:,goal_cells, :],axis=2)
+        df=pd.DataFrame()
+        df['mean_tc'] = np.concatenate([np.concatenate(correct), 
+                            np.concatenate(incorrect)])
+        # x 2 for both correct and incorrect
+        df['cellid'] = np.concatenate([np.concatenate([np.arange(len(goal_cells))]*correct.shape[0])]*2)
+        df['epoch'] = np.concatenate([np.repeat(np.arange(correct.shape[0]),correct.shape[1])]*2)
+        df['trial_type'] = np.concatenate([['correct']*len(np.concatenate(correct)),
+                        ['incorrect']*len(np.concatenate(incorrect))])
+        df['animal']=[animal]*len(df)
+        df['day']=[day]*len(df)
+        df['cell_type'] = [cell_type]*len(df)
+        dfs.append(df)
+        tcs_corr.append(tcs_correct[:,goal_cells])
+        tcs_f.append(tcs_fail[:,goal_cells])
     epoch_perm.append([perm,rz_perm]) 
-    # get goal cells across all epochs        
-    # get far reward cells in any ep
-    # CHANGE: 4/24/25
-    if len(com_goal_farrew)>0:
-        goal_cells = intersect_arrays(*com_goal_farrew); 
-        goal_cells = np.unique(np.concatenate(com_goal_farrew))
-    else:
-        goal_cells=[]    
-    # integral
-    # get tc 
-    correct = scipy.integrate.trapz(tcs_correct[:,goal_cells, :],axis=2)
-    # epoch (x) x cells (y)
-    incorrect = scipy.integrate.trapz(tcs_fail[:,goal_cells, :],axis=2)
-    df=pd.DataFrame()
-    df['mean_tc'] = np.concatenate([np.concatenate(correct), 
-                        np.concatenate(incorrect)])
-    # x 2 for both correct and incorrect
-    df['cellid'] = np.concatenate([np.concatenate([np.arange(len(goal_cells))]*correct.shape[0])]*2)
-    df['epoch'] = np.concatenate([np.repeat(np.arange(correct.shape[0]),correct.shape[1])]*2)
-    df['trial_type'] = np.concatenate([['correct']*len(np.concatenate(correct)),
-                    ['incorrect']*len(np.concatenate(incorrect))])
-    df['animal']=[animal]*len(df)
-    df['day']=[day]*len(df)
+    df=pd.concat(dfs)
     # get mean tuning curve correct vs. incorrect
-    return df,tcs_correct[:,goal_cells],tcs_fail[:,goal_cells]
+    return df,tcs_corr,tcs_f
 
 def reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,

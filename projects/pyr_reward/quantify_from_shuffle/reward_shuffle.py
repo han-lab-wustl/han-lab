@@ -82,19 +82,20 @@ def get_com_v_persistence(params_pth, animal, day, ii,goal_window_cm=20):
     #only get perms with non zero cells
     # find dropped out cells 
     all_gc = np.concatenate(com_goal_postrew_dt) if len(com_goal_postrew_dt) else []
-    unique, counts = np.unique(all_gc, return_counts=True)
-    # Combine into a dictionary if desired
-    freq_dict = dict(zip(unique, counts))
     ep_dict = {}
-    for ep in range(1,np.max(counts)+1):
-        cells_ep = [k for k,v in freq_dict.items() if v==ep]
-        # find which epochs this cell is considered reward cell
-        rew_perm = [[perm_com for kk,perm_com in enumerate(perm_dt) if cll in com_goal_postrew_dt[kk]] for cll in cells_ep]
-        rew_perm = [[list(yy) for yy in xx] for xx in rew_perm]
-        rew_eps = [np.unique(xx) for xx in rew_perm]
-        # av across epochs
-        coms = [np.nanmean(coms_correct_dt[rew_ep,cells_ep[cll]],axis=0) for cll, rew_ep in enumerate(rew_eps)]
-        coms = np.array(coms)-np.pi
-        ep_dict[ep]=coms
+    if len(all_gc)>0:
+        unique, counts = np.unique(all_gc, return_counts=True)
+        # Combine into a dictionary if desired
+        freq_dict = dict(zip(unique, counts))
+        for ep in range(1,np.max(counts)+1):
+            cells_ep = [k for k,v in freq_dict.items() if v==ep]
+            # find which epochs this cell is considered reward cell
+            rew_perm = [[perm_com for kk,perm_com in enumerate(perm_dt) if cll in com_goal_postrew_dt[kk]] for cll in cells_ep]
+            rew_perm = [[list(yy) for yy in xx] for xx in rew_perm]
+            rew_eps = [np.unique(xx) for xx in rew_perm]
+            # av across epochs
+            coms = [np.nanmean(coms_correct_dt[rew_ep,cells_ep[cll]],axis=0) for cll, rew_ep in enumerate(rew_eps)]
+            coms = np.array(coms)-np.pi
+            ep_dict[ep]=coms
     
     return ep_dict

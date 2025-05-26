@@ -157,203 +157,116 @@ for ii in range(len(conddf)):
 pdf.close()
 ####################################### RUN CODE #######################################
 #%%
-plt.rc('font', size=16)          # controls default text sizes
-# plot goal cells across epochs
-inds = [int(xx[-3:]) for xx in datadct.keys()]
-df = conddf.copy()
-df = df[((df.animals!='e217')) & (df.optoep<2) & (df.index.isin(inds))]
-df['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
-df['goal_cell_prop'] =  [xx[0] for xx in p_goal_cells]
-df['opto'] = df.optoep.values>1
-df['day'] = df.days
-df['session_num_opto'] = np.concatenate([[xx-df[df.animals==an].days.values[0] for xx in df[df.animals==an].days.values] for an in np.unique(df.animals.values)])
-df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = [xx[0] for xx in pvals]
-df['goal_cell_prop_shuffle'] = [xx[0][1] for xx in goal_cell_null]
+plt.rc('font', size=20)          # controls default text sizes
+color = 'cornflowerblue' # reward cell color
+sweep = list(datadct['e218_020_index000'][2].keys())
+# get values for each sweep per session
+sessions = list(datadct.keys())
+pvals_per_an = []
+sweep_labels = []
 
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df.loc[df.opto==False], x='p_value', 
-                hue='animals', bins=40)
-ax.spines[['top','right']].set_visible(False)
-ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df.loc[df.opto==False,'p_value'].values<0.05)/len(df.loc[df.opto==False])
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Reward cells w/o dark time')
-ax.set_xlabel('P-value')
-ax.set_ylabel('Sessions')
-#%%
-# w/ dark time
-df_dt = conddf.copy()
-df_dt = df_dt[((df_dt.animals!='e217')) & (df_dt.optoep<2) & (df_dt.index.isin(inds))]
-df_dt['num_epochs'] = [len(xx[1]) for k,xx in datadct.items()]
-df_dt['goal_cell_prop'] = [xx[0] for xx in p_goal_cells_dt]
-df_dt['opto'] = df_dt.optoep.values>1
-df_dt['day'] = df_dt.days
-df_dt['session_num_opto'] = np.concatenate([[xx-df_dt[df_dt.animals==an].days.values[0] for xx in df_dt[df_dt.animals==an].days.values] for an in np.unique(df_dt.animals.values)])
-df_dt['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df_dt[df_dt.animals==an].days.values)] for an in np.unique(df_dt.animals.values)])
-df_dt['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df_dt.in_type.values]
-df_dt['p_value'] = [xx[1] for xx in pvals]
-df_dt['goal_cell_prop_shuffle'] = [xx[1][1] for xx in goal_cell_null]
+for session in sessions:
+    pvals = [datadct[session][2][sw][5] for sw in sweep]
+    pvals_per_an.extend(pvals)
+    sweep_labels.extend(sweep)
 
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df_dt.loc[df_dt.opto==False], x='p_value', 
-                hue='animals', bins=40)
-ax.spines[['top','right']].set_visible(False)
-ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df_dt.loc[df_dt.opto==False,'p_value'].values<0.05)/len(df_dt.loc[df_dt.opto==False])
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant\n Reward cells w/ dark time')
-ax.set_xlabel('P-value')
-ax.set_ylabel('Sessions')
-#%%
-# number of epochs vs. reward cell prop    
-fig,axes = plt.subplots(ncols = 2, figsize=(6,5),sharex=True,sharey=True)
-ax = axes[0]
-df_plt = df[df.num_epochs<5]
-# av across mice
-df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
-sns.stripplot(x='num_epochs', y='goal_cell_prop',
-        hue='animals',data=df_plt,
-        s=10,ax=ax)
-sns.barplot(x='num_epochs', y='goal_cell_prop',
-        data=df_plt,
-        fill=False,ax=ax, color='k', errorbar='se')
-sns.lineplot(data=df_plt, # correct shift
-        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle',ax=ax)
-ax.spines[['top','right']].set_visible(False)
-ax.get_legend().remove()
+# Repeat sweep labels for each session
+# sweep_column = sweep_labels * len(sessions)
 
-eps = [2,3,4]
-for ep in eps:
-    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-    shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
+# Create DataFrame
+df = pd.DataFrame({
+    'p_value': pvals_per_an,
+    'sweep': sweep_labels
+})
 
-ax = axes[1]
-df_plt = df_dt[df_dt.num_epochs<5]
-# av across mice
-df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
-sns.stripplot(x='num_epochs', y='goal_cell_prop',
-        hue='animals',data=df_plt,
-        s=10,ax=ax)
-sns.barplot(x='num_epochs', y='goal_cell_prop',
-        data=df_plt,
-        fill=False,ax=ax, color='k', errorbar='se')
-sns.lineplot(data=df_plt, # correct shift
-        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle',ax=ax)
-ax.spines[['top','right']].set_visible(False)
-ax.get_legend().remove()
-
-eps = [2,3,4]
-for ep in eps:
-    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
-    shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
-    t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
-#%%    
-# include all comparisons 
-df_perms = pd.DataFrame()
-goal_cell_perm = [xx[1] for xx in p_goal_cells]
-goal_cell_perm_shuf = [xx[0][0][~np.isnan(xx[0][0])] for xx in goal_cell_null]
-df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
-df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
-df_perms['animals'] = np.concatenate(df_perm_animals)
-df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
-df_perms['session_num'] = np.concatenate(df_perm_days)
-
-# take a mean of all epoch comparisons
-df_perms['num_epochs'] = [2]*len(df_perms)
-df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-#%%
-# compare to shuffle
-df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
-df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
-df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-df_plt2=df_plt2.reset_index()
-df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
-df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
-
-# number of epochs vs. reward cell prop incl combinations    
-fig,axes = plt.subplots(figsize=(7,5),ncols=2,sharex=True)
+df = df[df.sweep<180]
+fig,axes=plt.subplots(ncols = 3,figsize=(15,5))
 ax=axes[0]
-# av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
-sns.barplot(x='num_epochs', y='goal_cell_prop',
-        data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
-# bar plot of shuffle instead
-ax = sns.barplot(data=df_plt2, # correct shift
-        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
-
-ax.spines[['top','right']].set_visible(False)
-ax.legend()#.set_visible(False)
-# make lines
-alpha=0.5
-ans = df_plt2.animals.unique()
-for i in range(len(ans)):
-    sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
-    data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
+sns.lineplot(x='sweep',y = 'p_value',data=df, color=color,ax=ax)
+ax.axhline(0.05, color='grey', linestyle='--',linewidth=3)
+ax.axvline(20, color='grey', linestyle='-.',linewidth=3)
+ax.set_ylabel('P-value \n(Reward cell % > shuffle)')
 ax.set_xlabel('')
-ax.set_ylabel('Reward cell % ')
+ax.text(
+    40,                           # x-position (same as vertical line)
+    ax.get_ylim()[1] * 1.02,      # y-position slightly above the top of y-axis
+    'Threshold = 20 cm',                      # text to display
+    ha='center', va='bottom',     # horizontal and vertical alignment
+)
 
-eps = [2,3,4]
-y = 37
-pshift = 4
-fs=36
-for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                ax.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                ax.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+ax.spines[['top', 'right']].set_visible(False)
+# # of cells per threshold
+# 2 - rew cell indices
+goal_cells_per_an = []
+sweep_labels = []
+for session in sessions:
+    gcs = [len(datadct[session][2][sw][2]) for sw in sweep]
+    goal_cells_per_an.extend(gcs)
+    sweep_labels.extend(sweep)
+# Create DataFrame
+df = pd.DataFrame({
+    'numgc': goal_cells_per_an,
+    'sweep': sweep_labels
+})
 
-# subtract from shuffle
-# df_plt2=df_plt2.reset_index()
-df_plt3 = df_plt2.groupby(['num_epochs']).mean(numeric_only=True)
-df_plt3=df_plt3.reset_index()
-# subtract by average across animals?
-sub = []
-for ii,xx in df_plt2.iterrows():
-        ep = xx.num_epochs
-        sub.append(xx.goal_cell_prop-df_plt3.loc[df_plt3.num_epochs==ep, 'goal_cell_prop_shuffle'].values[0])
-        
-df_plt2['goal_cell_prop_sub_shuffle']=sub
-# vs. average within animal
-df_plt2['goal_cell_prop_sub_shuffle']=df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
-ax=axes[1]# av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
-sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
-        data=df_plt2,
-        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
-ax.spines[['top','right']].set_visible(False)
-ax.set_title('Reward cell %-shuffle')
-ax.set_ylim([0, 18])
-# make lines
-ans = df_plt2.animals.unique()
-for i in range(len(ans)):
-    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
-    data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=alpha)
-    
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('')
-fig.suptitle('Including delay period')
-plt.savefig(os.path.join(savedst, 'allreward_w_darktime_cell_prop-shuffle_per_an.svg'), 
-        bbox_inches='tight')
+df = df[df.sweep<180]
+ax=axes[1]
+sns.lineplot(x='sweep',y = 'numgc',data=df, color=color,ax=ax)
+ax.axvline(20, color='grey', linestyle='-.',linewidth=3)
+ax.set_ylabel('# of Reward cells')
+ax.set_xlabel('')
+ax.text(
+    40,                           # x-position (same as vertical line)
+    ax.get_ylim()[1] * 1.02,      # y-position slightly above the top of y-axis
+    'Threshold = 20 cm',                      # text to display
+    ha='center', va='bottom',     # horizontal and vertical alignment
+)
+
+ax.spines[['top', 'right']].set_visible(False)
+# % of cells per threshold
+# 0 - rew cell prop
+# 4 - shuffle prop
+goal_cells_per_an = []
+shuffle_per_an = []
+sweep_labels = []
+for session in sessions:
+    gcs = [datadct[session][2][sw][0] for sw in sweep]
+    shf = [datadct[session][2][sw][4] for sw in sweep]
+    goal_cells_per_an.extend(gcs)
+    shuffle_per_an.extend(shf)
+    sweep_labels.extend(sweep)
+# Create DataFrame
+df = pd.DataFrame({
+    'numgc': goal_cells_per_an,
+    'shufprop': shuffle_per_an,
+    'sweep': sweep_labels
+})
+
+df = df[df.sweep<180]
+ax=axes[2]
+sns.lineplot(x='sweep',y = 'numgc',data=df,ax=ax,color=color,label='Real')
+sns.lineplot(x='sweep',y = 'shufprop',data=df, color='k',ax=ax,label='Shuffle')
+ax.axvline(20, color='grey', linestyle='-.',linewidth=3)
+ax.set_ylabel('Reward cell %')
+ax.set_xlabel('Distance between COM threshold (cm)')
+ax.text(
+    40,                           # x-position (same as vertical line)
+    ax.get_ylim()[1] * 1.02,      # y-position slightly above the top of y-axis
+    'Threshold = 20 cm',                      # text to display
+    ha='center', va='bottom',     # horizontal and vertical alignment
+)
+
+ax.spines[['top', 'right']].set_visible(False)
+ax.legend()
+panel_labels = ['A', 'B', 'C']
+for i, ax in enumerate(axes):
+    ax.text(
+        -0.3, 1.1,                      # x, y in axes coords (left-top outside corner)
+        panel_labels[i],               # label text
+        transform=ax.transAxes,
+        fontsize=26, 
+        va='top', ha='right'
+    )
+
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'pvalue_per_threshold.svg'), bbox_inches='tight')

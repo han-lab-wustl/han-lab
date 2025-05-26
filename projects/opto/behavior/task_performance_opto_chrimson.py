@@ -65,7 +65,6 @@ for dd,day in enumerate(conddf.days.values):
     dcts.append(dct)
 #%%
 # plot performance 
-# plot performance 
 s = 12 # pontsize
 dcts_opto = np.array(dcts)
 df = conddf
@@ -81,7 +80,7 @@ df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip_ex' else 'ctrl' for xx in conddf.in_type.values]
 # plot rates vip vs. ctl led off and on
 color = 'darkgoldenrod'
-df = df[(df.animals!='e189') & (df.animals!='e190')  & (df.animals!='z16')]
+df = df[(df.animals!='e189') & (df.animals!='e190')]
 df=df[(df.optoep.values>1)]
 df=df.drop([17,18,24]) # z17 excluded days
 # df=df[(df.rewzone_transition=='(2.0, 1.0)')]
@@ -107,10 +106,10 @@ ax.set_xlabel('')
 x1 = bigdf_plot.loc[(bigdf_plot.condition=='vip'), 'rates_diff'].values
 x2 = bigdf_plot.loc[(bigdf_plot.condition=='ctrl'), 'rates_diff'].values
 t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-
+ax.set_ylim([-.3,.1])
 # statistical annotation    
 fs=46
-ii=0.5; y=.01; 
+ii=0.5; y=.1; 
 pshift=.01
 if pval < 0.001:
         ax.text(ii, y, "***", ha='center', fontsize=fs)
@@ -171,15 +170,15 @@ sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
             palette={'ctrl': 'slategray','vip': color},                
-            s=s,ax=ax,dodge=True)
+            s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Lick Selectivity, last 5 trials (LEDon)')
 ax.set_xticks([0,1], labels=['Control', 'VIP\nExcitation'])
 ax.set_xlabel('')
 
-x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'lick_selectivity'].values
-x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'lick_selectivity'].values
+x1 = bigdf_plot.loc[((bigdf_plot.condition=='vip')&(bigdf_plot.opto==True)), 'lick_selectivity'].values
+x2 = bigdf_plot.loc[((bigdf_plot.condition=='ctrl')&(bigdf_plot.opto==True)), 'lick_selectivity'].values
 t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46

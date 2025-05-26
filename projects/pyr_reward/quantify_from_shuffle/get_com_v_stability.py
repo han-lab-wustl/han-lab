@@ -45,7 +45,7 @@ pdf.close()
 ####################################### RUN CODE #######################################
 #%%
 # key = ep
-com_ep2_comb = [xx[1] for xx in ep_dicts]
+com_ep2_comb = [xx[1] for xx in ep_dicts if 1 in xx.keys()]
 com_ep3_comb = [xx[2] for xx in ep_dicts if 2 in xx.keys()]
 com_ep4_comb = [xx[3] for xx in ep_dicts if 3 in xx.keys()]
 # com_ep5_comb = [xx[4] for xx in ep_dicts if 4 in xx.keys()]
@@ -57,7 +57,7 @@ fig, ax = plt.subplots()
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 a = 0.2
 lw = 3
-
+labels = [2,3,4,5]
 # Plot histogram and confidence intervals for each epoch
 data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb]
 for i, data in enumerate(data_sets):
@@ -65,7 +65,7 @@ for i, data in enumerate(data_sets):
 
     # Plot histogram
     ax.hist(
-        all_data, bins=50, density=True, alpha=a,
+        all_data, bins=20, density=True, alpha=a,
         label=f'{labels[i]}, {len(all_data)} cells',
         color=colors[i], edgecolor=colors[i], linewidth=lw
     )
@@ -79,9 +79,9 @@ for i, data in enumerate(data_sets):
     ci_low = np.nanpercentile(all_data, 2.5)
     ci_high = np.nanpercentile(all_data, 97.5)
 
-    vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--')
+    vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
     vline_low.set_dashes([10, 8])
-    vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--')
+    vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
     vline_high.set_dashes([10, 8])
 
 
