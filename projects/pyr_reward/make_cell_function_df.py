@@ -39,7 +39,7 @@ bins=90
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+    if (conddf.optoep.values[ii]>1):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -49,6 +49,6 @@ for ii in range(len(conddf)):
 #%%
 # concat bigdf
 bigdf=pd.concat(dfs)
-bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal.csv',index=None)
+bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal_opto.csv',index=None)
 #%%
 bigdf[(bigdf.animal=='e201')&(bigdf.tracked_cellid==2)] 
