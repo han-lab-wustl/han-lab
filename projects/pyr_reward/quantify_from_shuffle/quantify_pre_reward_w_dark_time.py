@@ -64,7 +64,7 @@ pdf.close()
 with open(saveto, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp)
 #%%
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
@@ -88,6 +88,7 @@ ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
 # number of epochs vs. reward cell prop    
+lw = 1.5
 fig,ax = plt.subplots(figsize=(3,5))
 df_plt = df[(df.opto==False)]
 # av across mice
@@ -181,7 +182,7 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=lw, alpha=0.5,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
 ax.set_ylabel('Pre-reward cell %')
@@ -227,12 +228,12 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=lw, alpha=0.5,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('')
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylim([-1, 9])
+ax.set_ylim([-1,14])
 ax.set_title('Pre-reward cell %-shuffle',pad=30)
 
 plt.savefig(os.path.join(savedst, 'prereward_cell_prop_dark_time-shuffle_per_an.svg'), 
@@ -260,7 +261,17 @@ for an in df_plt2.animals.unique():
                 y_fit = exponential_decay(t, A_fit, tau_fit)
         except:
                 print(an)
-
+# 5/27
+# [2.603930689454063,
+#  2.0352245377108544,
+#  5.635193732615664,
+#  2.398793481085887,
+#  2.405144412978555,
+#  1.3451509549494833,
+#  1.6605788300983442,
+#  -147776141.1385724,
+#  1.7114437369218594,
+#  2.7605152082963307]
 
 #%%
 # as a function of session/day

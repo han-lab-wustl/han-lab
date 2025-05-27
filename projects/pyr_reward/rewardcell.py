@@ -1190,8 +1190,8 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     """
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat', 'licks'])
+        'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+        'stat', 'licks'])
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     try:

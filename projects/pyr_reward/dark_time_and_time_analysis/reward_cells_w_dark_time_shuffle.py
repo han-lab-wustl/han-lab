@@ -2,6 +2,7 @@
 """
 zahra
 get tuning curves with dark time
+figure 2
 """
 #%%
 import numpy as np, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -33,7 +34,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 #%%
 ####################################### RUN CODE #######################################
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 p_goal_cells=[]
 p_goal_cells_dt = []
 goal_cells_iind=[]
@@ -108,7 +109,7 @@ for ii in range(len(conddf)):
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, rewloc_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+        tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
         # normal tc
@@ -204,60 +205,118 @@ ax.set_ylabel('Sessions')
 #%%
 # number of epochs vs. reward cell prop    
 fig,axes = plt.subplots(ncols = 2, figsize=(6,5),sharex=True,sharey=True)
+a=0.7
 ax = axes[0]
 df_plt = df[df.num_epochs<5]
 # av across mice
+df_plt=df_plt[(df_plt.animals!='e200') & (df_plt.animals!='e189') ]
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
+df_plt['goal_cell_prop']=df_plt['goal_cell_prop']*100
+df_plt['goal_cell_prop_shuffle']=df_plt['goal_cell_prop_shuffle']*100
+
 sns.stripplot(x='num_epochs', y='goal_cell_prop',
-        hue='animals',data=df_plt,
+        color='k',data=df_plt,alpha=a,
         s=10,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt,
         fill=False,ax=ax, color='k', errorbar='se')
-sns.lineplot(data=df_plt, # correct shift
-        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle',ax=ax)
+# bar plot of shuffle instead
+ax = sns.barplot(data=df_plt, # correct shift
+        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().remove()
-
+ax.set_xlabel('')
+ax.set_ylabel('Reward cell % ')
+ax.set_title('Without delay period')
+ps=[]
 eps = [2,3,4]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
     rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
     shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
     t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
+    ps.append(pval)
+# FDR correction
+fs = 46  # font size for stars
+y_offset = 8  # vertical offset for significance stars
+rej, pvals_fdr = fdrcorrection(ps, alpha=0.05)
+for ii, (sig, pval_corr) in enumerate(zip(rej, pvals_fdr)):
+    if pval_corr < 0.001:
+        stars = '***'
+    elif pval_corr < 0.01:
+        stars = '**'
+    elif pval_corr < 0.05:
+        stars = '*'
+    else:
+        stars = 'n.s.'
+    ax.text(ii, df_plt['goal_cell_prop'].max() + y_offset, stars, ha='center', fontsize=fs,
+            color='black' if sig else 'gray')
+# Connect animals with lines
+for animal in df_plt.index.get_level_values('animals').unique():
+    sub = df_plt.loc[animal].sort_index()
+    ax.plot(sub.index-2, sub['goal_cell_prop'], color='gray', alpha=0.5, linewidth=1.5)
 
 ax = axes[1]
 df_plt = df_dt[df_dt.num_epochs<5]
+df_plt=df_plt[(df_plt.animals!='e200') & (df_plt.animals!='e189') & (df_plt.animals!='z16')]
 # av across mice
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
+df_plt['goal_cell_prop']=df_plt['goal_cell_prop']*100
+df_plt['goal_cell_prop_shuffle']=df_plt['goal_cell_prop_shuffle']*100
+
 sns.stripplot(x='num_epochs', y='goal_cell_prop',
-        hue='animals',data=df_plt,
+        data=df_plt,color='k',alpha=a,
         s=10,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt,
         fill=False,ax=ax, color='k', errorbar='se')
-sns.lineplot(data=df_plt, # correct shift
-        x=df_plt.index.get_level_values('num_epochs')-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle',ax=ax)
+ax = sns.barplot(data=df_plt, # correct shift
+        x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 ax.spines[['top','right']].set_visible(False)
-ax.get_legend().remove()
-
+ax.set_xlabel('# of reward loc. switches')
+ax.set_title('With delay period')
+ps=[]
 eps = [2,3,4]
 for ep in eps:
     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
     rewprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop']
     shufprop = df_plt.loc[(df_plt.index.get_level_values('num_epochs')==ep), 'goal_cell_prop_shuffle']
     t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
+    ps.append(pval)
+# FDR correction
+fs = 46  # font size for stars
+y_offset = 5  # vertical offset for significance stars
+rej, pvals_fdr = fdrcorrection(ps, alpha=0.05)
+for ii, (sig, pval_corr) in enumerate(zip(rej, pvals_fdr)):
+    if pval_corr < 0.001:
+        stars = '***'
+    elif pval_corr < 0.01:
+        stars = '**'
+    elif pval_corr < 0.05:
+        stars = '*'
+    else:
+        stars = 'n.s.'
+    ax.text(ii, df_plt['goal_cell_prop'].max() + y_offset, stars, ha='center', fontsize=fs,
+            color='black' if sig else 'gray')
+# Connect animals with lines
+for animal in df_plt.index.get_level_values('animals').unique():
+    sub = df_plt.loc[animal].sort_index()
+    ax.plot(sub.index-2, sub['goal_cell_prop'], color='gray', alpha=0.5, linewidth=1.5)
+plt.savefig(os.path.join(savedst, 'allreward_w_wo_darktime_cell_prop.svg'), 
+        bbox_inches='tight')
+
 #%%    
 # include all comparisons 
 df_perms = pd.DataFrame()
-goal_cell_perm = [xx[1] for xx in p_goal_cells]
-goal_cell_perm_shuf = [xx[0][0][~np.isnan(xx[0][0])] for xx in goal_cell_null]
+goal_cell_perm = [xx[1] for xx in p_goal_cells_dt]
+goal_cell_perm_shuf = [xx[1][0][~np.isnan(xx[1][0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
 df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+df_perms['goal_cell_prop'] = df_perms['goal_cell_prop']*100
+df_perms['goal_cell_prop_shuffle'] = df_perms['goal_cell_prop_shuffle']*100
+
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
@@ -268,14 +327,10 @@ df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 #%%
 # compare to shuffle
+lw = 1.5 # linewidth
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
-df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2=df_plt2.reset_index()
-df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
-df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
-
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(figsize=(7,5),ncols=2,sharex=True)
 ax=axes[0]
@@ -298,27 +353,41 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
+    errorbar=None, color='dimgray', linewidth=lw, alpha=alpha,ax=ax)
 ax.set_xlabel('')
 ax.set_ylabel('Reward cell % ')
 
 eps = [2,3,4]
-y = 37
+y = 40
 pshift = 4
-fs=36
-for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                ax.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                ax.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+fs=46
+pvalues = []
+
+# Step 1: Compute p-values
+for ep in eps:
+    rewprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop']
+    shufprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop_shuffle']
+    _, pval = scipy.stats.wilcoxon(rewprop, shufprop)
+    pvalues.append(pval)
+    
+from statsmodels.stats.multitest import fdrcorrection
+# Step 2: FDR correction
+reject, pvals_fdr = fdrcorrection(pvalues, alpha=0.05)
+
+# Step 3: Annotate plot
+for ii, (ep, pval_corr, sig) in enumerate(zip(eps, pvals_fdr, reject)):
+    if pval_corr < 0.001:
+        stars = "***"
+    elif pval_corr < 0.01:
+        stars = "**"
+    elif pval_corr < 0.05:
+        stars = "*"
+    else:
+        stars = "n.s."
+    if sig:
+        ax.text(ii, y, stars, ha='center', fontsize=fs)
+    else:
+        ax.text(ii, y, stars, ha='center', fontsize=fs, color='gray')  # Optional: fade non-sig
 
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
@@ -347,10 +416,31 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=alpha)
+    errorbar=None, color='dimgray', linewidth=lw, alpha=alpha)
     
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
-fig.suptitle('Including delay period')
+fig.suptitle('With delay period')
 plt.savefig(os.path.join(savedst, 'allreward_w_darktime_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
+
+# %%
+# example dark time addition
+fig,ax = plt.subplots()
+rng = np.arange(20690,24940)
+ax.plot(np.concatenate(ybinned_dt)[rng],color='darkturquoise',label='With delay period')
+ax.plot(ybinned[rng],color='k',label='VR track position')
+ax.scatter(np.where(licks[rng])[0], ybinned[rng][licks[rng].astype(bool)],color='k',label='Lick',zorder=2)
+ax.scatter(np.where(rewards[rng]==1)[0], ybinned[rng][rewards[rng]==1],color='springgreen',label='Reward',zorder=2)
+ax.legend()
+ax.spines[['top','right']].set_visible(False)
+timetotal = (24940-20690)/31.25
+ax.set_xticks([0, (24940-20690)])
+ax.set_xticklabels([0, np.round(timetotal/60,1)])
+ax.set_xlabel('Time (min)')
+ax.set_ylabel('Position (cm)')
+ax.axhline(270, linewidth=2, linestyle='--', color='grey')
+plt.savefig(os.path.join(savedst, 'dark_time_addition_eg.svg'), 
+        bbox_inches='tight')
+
+# %%

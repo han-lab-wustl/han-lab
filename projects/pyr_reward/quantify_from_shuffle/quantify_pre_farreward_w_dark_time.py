@@ -64,7 +64,7 @@ pdf.close()
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 #%%
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
@@ -218,7 +218,7 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
 ax.set_title('Far pre-reward cell %-shuffle',pad=30)
-ax.set_ylim([-1,9])
+ax.set_ylim([-1,14])
 
 plt.savefig(os.path.join(savedst, 'pre_farreward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')

@@ -34,7 +34,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 #%%
 ####################################### RUN CODE #######################################
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 p_goal_cells=[]
 p_goal_cells_dt = []
 goal_cells_iind=[]
@@ -276,7 +276,7 @@ df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
 df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
-
+df_plt2=df_plt2[df_plt2.animals!='e200']
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(figsize=(7,5),ncols=2,sharex=True)
 ax=axes[0]
@@ -306,20 +306,35 @@ ax.set_ylabel('Reward cell % ')
 eps = [2,3,4]
 y = 37
 pshift = 4
-fs=36
-for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                ax.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                ax.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                ax.text(ii, y, "*", ha='center', fontsize=fs)
-        # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+fs=46
+pvalues = []
+
+# Step 1: Compute p-values
+for ep in eps:
+    rewprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop']
+    shufprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop_shuffle']
+    _, pval = scipy.stats.wilcoxon(rewprop, shufprop)
+    pvalues.append(pval)
+    
+from statsmodels.stats.multitest import fdrcorrection
+# Step 2: FDR correction
+reject, pvals_fdr = fdrcorrection(pvalues, alpha=0.05)
+
+# Step 3: Annotate plot
+for ii, (ep, pval_corr, sig) in enumerate(zip(eps, pvals_fdr, reject)):
+    if pval_corr < 0.001:
+        stars = "***"
+    elif pval_corr < 0.01:
+        stars = "**"
+    elif pval_corr < 0.05:
+        stars = "*"
+    else:
+        stars = "n.s."
+    if sig:
+        ax.text(ii, y, stars, ha='center', fontsize=fs)
+    else:
+        ax.text(ii, y, stars, ha='center', fontsize=fs, color='gray')  # Optional: fade non-sig
+
 
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()

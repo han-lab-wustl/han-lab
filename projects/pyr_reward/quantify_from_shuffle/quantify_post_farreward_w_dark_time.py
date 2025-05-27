@@ -64,7 +64,7 @@ pdf.close()
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 #%%
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
@@ -163,7 +163,7 @@ sns.barplot(data=df_plt2, # correct shift
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
-ax.set_ylabel('Far reward cell %')
+ax.set_ylabel('Far post-reward cell %')
 eps = [2,3,4]
 y = 28
 pshift = 1
@@ -219,7 +219,7 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
 ax.set_ylabel('')
 ax.set_title('Far post-reward cell %-shuffle',pad=30)
-ax.set_ylim([-1,8])
+ax.set_ylim([-1,14])
 
 plt.savefig(os.path.join(savedst, 'post_farreward_dark_time_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
@@ -257,52 +257,55 @@ plt.plot(np.array(y_fit_all).T,color='grey')
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward-centric cell proportion')
+ax.set_ylabel('Reward cell %')
 # plt.savefig(os.path.join(savedst, 'expo_fit_reward_centric.png'), 
 #         bbox_inches='tight')
 
 #%%
 # compare to persistent cells
-tau_all_postrew = [2.5081012042756297,
- 1.3564559842969026,
- 3.067144722017443,
- 4.017594663159857,
- 2.307820130958938,
- 1.814554708027948,
- 1.9844914154882163,
- 1.7613987163758171,
- 2.403541822072123]
+tau_all_postrew = [2.698197384420134,
+ 2.5974534632101327,
+ 145687601.49233776,
+ 4.482881342687014,
+ 3.5076596832575033,
+ 1.7445113074552658,
+ 1.9689062668783275,
+ 3.604632347724085,
+ 1.4094815613603535,
+ 10.282389548100406]
 
-tau_all_prerew =[2.349997695562105,
- 3.3542296271312786,
- 5.401831519039983,
- 2.3131417522099587,
- 2.177319788868507,
- 1.4432255209360099,
- 1.3448952235370013,
- 1.3658867417424119,
- 6.234399065992553]
+tau_all_prerew = [2.603930689454063,
+ 2.0352245377108544,
+ 5.635193732615664,
+ 2.398793481085887,
+ 2.405144412978555,
+ 1.3451509549494833,
+ 1.6605788300983442,
+ -147776141.1385724,
+ 1.7114437369218594,
+ 2.7605152082963307]
 
-tau_far_prerew = [1.902184232684948,
- 1.1130375903752456,
- 1.1891335993849583,
- 0.42929035493938306,
- 1.4182488607462183,
- 1.0666197205416246,
- 0.6676340435284304,
- 0.7522738857806301,
- 0.7907558229642044]
+tau_far_prerew = [1.9315038039770107,
+ 0.5945420766038523,
+ 1.298598071771899,
+ 0.7622143467727189,
+ 0.694001838738672,
+ 1.0911256261609898,
+ 0.7125677083403448,
+ 1.356804131299727,
+ 0.7287799232189978,
+ 0.9571086134149618]
 
 df = pd.DataFrame()
 df['tau'] = np.concatenate([tau_far_prerew,tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Far pre-reward']*len(tau_far_prerew),
-                                ['Far post-reward']*len(tau_all),
-                                ['Post-reward']*len(tau_all_postrew),
-                                ['Pre-reward']*len(tau_all_prerew)])
-order = ['Pre-reward', 'Post-reward', 'Far pre-reward','Far post-reward']
+df['cell_type'] =np.concatenate([['Far pre']*len(tau_far_prerew),
+                                ['Far post']*len(tau_all),
+                                ['Post']*len(tau_all_postrew),
+                                ['Pre']*len(tau_all_prerew)])
+order = ['Pre', 'Post', 'Far pre','Far post']
 # number of epochs vs. reward cell prop incl combinations    
 # make sure outlier numbers aren't there?
-df=df[df.tau<10]
+df=df[(df.tau<10) & (df.tau>0)]
 fig,ax = plt.subplots(figsize=(3.5,5))
 # av across mice
 sns.stripplot(x='cell_type', y='tau',color='k',
@@ -325,10 +328,8 @@ from statsmodels.stats.multitest import multipletests
 df = df.reset_index()
 # Get unique groups
 groups = df['cell_type'].unique()
-
 # Generate all pairwise combinations
 comparisons = list(combinations(groups, 2))
-
 # Perform t-tests
 p_values = []
 for group1, group2 in comparisons:
@@ -338,31 +339,35 @@ for group1, group2 in comparisons:
     p_values.append(p)
 
 # Apply Bonferroni correction
-adjusted = multipletests(p_values, method='bonferroni')
+rej, pvals_corrected, _, _ = multipletests(p_values, method='bonferroni')
 adjusted_p_values = adjusted[1]
 # Define y-position for annotations
+
 y_max = df['tau'].max()
-y_offset = y_max * 0.1  # adjust as needed
-fs=40
-pshift=1.5
-# Add annotations
-for i, (group1, group2) in enumerate(comparisons):
-    x1 = list(groups).index(group1)
-    x2 = list(groups).index(group2)
-    y = y_max + y_offset * (i + 1)
-    p_val = adjusted_p_values[i]
-    if p_val < 0.001:
-        significance = '***'
-    elif p_val < 0.01:
-        significance = '**'
-    elif p_val < 0.05:
-        significance = '*'
+y_offset = .8
+line_offset = 0.2
+font_size = 46
+p_font_size = 10
+
+for i, ((g1, g2), p_corr, sig) in enumerate(zip(comparisons, pvals_corrected, rej)):
+    x1, x2 = order.index(g1), order.index(g2)
+    y = y_max + (i + 1) * y_offset
+    ax.plot([x1, x1, x2, x2], [y, y + line_offset, y + line_offset, y], lw=1.5, c='k')
+    
+    # significance stars
+    if p_corr < 0.001:
+        stars = '***'
+    elif p_corr < 0.01:
+        stars = '**'
+    elif p_corr < 0.05:
+        stars = '*'
     else:
-        significance = ''
-    ax.plot([x1, x1, x2, x2], [y, y + 0.01, y + 0.01, y], lw=1.5, c='k')
-    ax.text((x1 + x2)/2, y-1, significance, ha='center', va='bottom', color='k',
-            fontsize=fs)
-    ax.text((x1 + x2) / 1.5, y-.5 + pshift, f'p={p_val:.2g}', ha='center', rotation=45, fontsize=12)
+        stars = ''
+    ax.text((x1 + x2) / 2, y + line_offset-1, stars,
+            ha='center', va='bottom', fontsize=font_size, color='k' if sig else 'gray')
+    # p-value
+    ax.text((x1 + x2-2) / 2, y + line_offset - 1,
+            f'p={p_corr:.2g}', ha='center', va='bottom', fontsize=p_font_size, rotation=45)
 
 # ax.set_title('Ranksum and bonferroni')
 plt.savefig(os.path.join(savedst, 'decay_rewardcell_dark_time.svg'), 
