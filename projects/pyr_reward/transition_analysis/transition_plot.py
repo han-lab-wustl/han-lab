@@ -1,9 +1,11 @@
 """
 plt transition data
 """
+#%%
 import pickle, os, numpy as np, pandas as pd, seaborn as sns, matplotlib.pyplot as plt,scipy
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 from statsmodels.stats.multitest import multipletests
+import matplotlib.patches as mpatches
 
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
@@ -22,10 +24,70 @@ df.columns = ['Reward-Reward', 'Reward-Place', 'Reward-Untuned', 'Place-Reward',
 order = ['Place-Place','Reward-Place','Place-Reward','Reward-Reward','Place-Untuned', 'Reward-Untuned','Untuned-Reward', 'Untuned-Place', 'Untuned-Untuned']
 df = df[order]*100
 fig,ax = plt.subplots(figsize=(6,4))
-sns.heatmap(df, annot=True, fmt=".1f", cmap="Blues", cbar_kws={'label': '% Cells that transition'},annot_kws={'size': 12})
+sns.heatmap(df, fmt=".1f", cmap="Blues", cbar_kws={'label': '% Cells that transition'},annot_kws={'size': 12})
 ax.set_ylabel('Animal')
 ax.set_xlabel('Transition')
 plt.savefig(os.path.join(savedst, 'transition_matrix.svg'), bbox_inches='tight')
+
+# draw graph
+# Compute means
+means = df.mean().to_dict()
+
+# Build graph
+G = nx.DiGraph()
+for k, v in means.items():
+    src, dst = k.split('-')
+    G.add_edge(src, dst, weight=v)
+
+# Node positions
+pos = nx.spring_layout(G)
+
+fig, ax = plt.subplots(figsize=(6,5))
+matplotlib.rcParams['font.family'] = 'Arial'
+
+# Draw nodes
+nx.draw_networkx_nodes(G, pos, node_size=5000, node_color='w', edgecolors='black', ax=ax)
+nx.draw_networkx_labels(G, pos, font_family='Arial', font_size=16, ax=ax)
+fs=14
+# Draw normal edges (no self-loops)
+for u, v, d in G.edges(data=True):
+    if u != v:
+        nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], arrowstyle='-|>', arrowsize=15,
+                               edge_color='gray', width=2, ax=ax)
+        x_text = (pos[u][0] + pos[v][0]) / 2
+        y_text = (pos[u][1] + pos[v][1]) / 2
+        ax.text(x_text, y_text, f"{d['weight']:.1f}%", fontsize=fs, ha='center', va='center')
+
+# Manually draw self-loop arrows
+loop_offsets = {
+    'Place': (0.0, -0.5),
+    'Reward': (0.0, 0.5),
+    'Untuned': (0.0, -0.5),
+}
+for node, (dx, dy) in loop_offsets.items():
+    x, y = pos[node]
+    if G.has_edge(node, node):
+        weight = G[node][node]['weight']
+        loop = mpatches.FancyArrowPatch(
+            (x, y), (x + dx, y + dy),
+            connectionstyle="arc3,rad=0.6",
+            arrowstyle='-|>',
+            mutation_scale=20,
+            color='gray',
+            lw=2,
+            zorder=10
+        )
+        ax.add_patch(loop)
+        ax.text(x + dx * 1.2, y + dy * 1.2, f"{weight:.1f}%", ha='center', va='center', fontsize=fs)
+
+# Adjust plot
+ax.set_xlim(-2,2)
+ax.set_ylim(-2,2)
+# Final formatting
+# ax.set_title("Transition Diagram", fontsize=16)
+ax.axis('off')
+# plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'transition_diagram.svg'), bbox_inches='tight')
 #%%
 # transition v shuffle
 fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\Truth_vs_Shuffle\ShuffleDistribution_PP2PP"

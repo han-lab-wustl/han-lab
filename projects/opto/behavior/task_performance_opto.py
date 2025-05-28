@@ -66,19 +66,21 @@ for dd,day in enumerate(conddf.days.values):
 #%%
 # plot performance 
 s = 12 # pontsize
+a=1
 dcts_opto = np.array(dcts)
 df = conddf
 df['rates_diff'] = [np.diff(dct['rates'])[0] for dct in dcts]
 df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
 df['velocity'] = [dct['velocity'][0] for dct in dcts]
+df['rates_diff']=df['rates_diff']*100
 # com opto
 df['com'] = [dct['com'][1] for dct in dcts]
-df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts]
+df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1])-np.nanmean(dct['lick_selectivity'][0]) for dct in dcts]
 df['rewzone_transition'] = [tuple(dct['rewzones']) for dct in dcts]
 df['opto'] = conddf.optoep.values>1
 df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
 # plot rates vip vs. ctl led off and on
-df = df[(df.animals!='e189')&(df.animals!='z9')]
+df = df[(df.animals!='e189')&(df.animals!='e190')]
 df=df[(df.optoep.values>1)]
 bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 fig,ax = plt.subplots(figsize=(2,5))
@@ -87,7 +89,7 @@ sns.barplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
             palette={'ctrl': 'slategray','vip': "red"},                
-            s=s,ax=ax,dodge=True)
+            s=s,ax=ax,dodge=True,alpha=a)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Performance (LEDoff-LEDon)')
@@ -95,7 +97,7 @@ ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
 ax.set_xlabel('')
 x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
 x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'rates_diff'].values
-t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46
 ii=0.5; y=.05; pshift=.07
@@ -107,26 +109,29 @@ elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 # Step 1: Calculate the means and standard deviations
-mean1 = np.mean(group1)
-mean2 = np.mean(group2)
-std1 = np.std(group1, ddof=1)
-std2 = np.std(group2, ddof=1)
-# Step 2: Calculate pooled standard deviation
-n1, n2 = len(group1), len(group2)
-pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
-# Step 3: Calculate Cohen's d
-cohens_d = (mean1 - mean2) / pooled_std
-# Step 4: Perform Power Analysis using the calculated Cohen's d
-alpha = 0.05  # Significance level
-power = 0.8   # Desired power
-analysis = smp.TTestIndPower()
-sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=power, alternative='two-sided')
-print(f"Cohen's d: {cohens_d:.4f}")
-print(f"Required sample size per group: {sample_size:.2f}")
-# plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
+# mean1 = np.mean(group1)
+# mean2 = np.mean(group2)
+# std1 = np.std(group1, ddof=1)
+# std2 = np.std(group2, ddof=1)
+# # Step 2: Calculate pooled standard deviation
+# n1, n2 = len(group1), len(group2)
+# pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
+# # Step 3: Calculate Cohen's d
+# cohens_d = (mean1 - mean2) / pooled_std
+# # Step 4: Perform Power Analysis using the calculated Cohen's d
+# alpha = 0.05  # Significance level
+# power = 0.8   # Desired power
+# analysis = smp.TTestIndPower()
+# sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=power, alternative='two-sided')
+# print(f"Cohen's d: {cohens_d:.4f}")
+# print(f"Required sample size per group: {sample_size:.2f}")
+# export to combine w/ excitation
+df.to_csv(os.path.join(savedst,'inhib_successrate.csv'))
+plt.savefig(os.path.join(savedst, 'vip_inhib_successrate.svg'),  bbox_inches='tight')
 #%%
 # plot lick selectivity and lick com
-s=14
+s=12
+a=0.7
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 fig,ax = plt.subplots(figsize=(2,5))
 sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
@@ -134,7 +139,7 @@ sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
             palette={'ctrl': 'slategray','vip': "red"},                
-            s=s,ax=ax,dodge=True)
+            s=s,ax=ax,alpha=a)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Lick Selectivity, last 5 trials (LEDon)')
@@ -143,7 +148,7 @@ ax.set_xlabel('')
 
 x1 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='vip')&(bigdf_plot.index.get_level_values('opto')==True)), 'lick_selectivity'].values
 x2 = bigdf_plot.loc[((bigdf_plot.index.get_level_values('condition')=='ctrl')&(bigdf_plot.index.get_level_values('opto')==True)), 'lick_selectivity'].values
-t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46
 ii=0.5; y=1; pshift=.2
@@ -154,6 +159,7 @@ elif pval < 0.01:
 elif pval < 0.05:
         ax.text(ii, y, "*", ha='center', fontsize=fs)
 ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+df.to_csv(os.path.join(savedst,'inhib_licks.csv'))
 plt.savefig(os.path.join(savedst, 'lick_selectivity.svg'),  bbox_inches='tight')
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 #%%

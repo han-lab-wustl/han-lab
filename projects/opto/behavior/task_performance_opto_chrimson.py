@@ -1,3 +1,6 @@
+"""
+TODO: lick rate
+"""
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
@@ -16,8 +19,6 @@ get_performance, get_rewzones
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
-# days = np.arange(2,21)
-# optoep = [-1,-1,-1,-1,2,3,2,0,3,0,2,0,2, 0,0,0,0,0,2]
 # corresponding to days analysing
 
 bin_size = 3
@@ -66,58 +67,99 @@ for dd,day in enumerate(conddf.days.values):
 #%%
 # plot performance 
 s = 12 # pontsize
+a=0.7
 dcts_opto = np.array(dcts)
 df = conddf
 df['rates_diff'] = [np.diff(dct['rates'])[0] for dct in dcts]
+df['rates_diff']=df['rates_diff']*100
 # df['rates_diff'] = [dct['rates'][1] for dct in dcts]
 df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
 df['velocity'] = [dct['velocity'][0] for dct in dcts]
 # com opto
 df['com'] = [dct['com'][1] for dct in dcts]
-df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1]) for dct in dcts]
+df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1])-np.nanmean(dct['lick_selectivity'][0]) for dct in dcts]
 df['rewzone_transition'] = [str(tuple(dct['rewzones'])) for dct in dcts]
 df['opto'] = conddf.optoep.values>1
-df['condition'] = ['vip' if xx=='vip_ex' else 'ctrl' for xx in conddf.in_type.values]
-# plot rates vip vs. ctl led off and on
-color = 'darkgoldenrod'
+df['condition'] = ['vip_ex' if xx=='vip_ex' else 'ctrl' for xx in conddf.in_type.values]
+df2 =pd.read_csv(os.path.join(savedst,'inhib_successrate.csv'),index_col=None)
+df2['condition'] = ['vip_in' if xx=='vip' else 'ctrl' for xx in df2.condition.values]
 df = df[(df.animals!='e189') & (df.animals!='e190')]
 df=df[(df.optoep.values>1)]
-df=df.drop([17,18,24]) # z17 excluded days
+df=df.drop([2,3,5,7,17,18,24,35,37]) # z14, z15, z17 excluded days
+# df2=df2.drop([12]) # e217 excluded days
+df2=df2[df2.condition=='vip_in']
+df = pd.concat([df,df2])
+# plot rates vip vs. ctl led off and on
+pl = {'ctrl': "slategray", 'vip_in': 'red', 'vip_ex':'darkgoldenrod'}
 # df=df[(df.rewzone_transition=='(2.0, 1.0)')]
-bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
+bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 bigdf_plot = bigdf_plot.reset_index()
 # bigdf_plot = pd.DataFrame()
 # bigdf_plot['rates_diff'] = bigdf.loc[(bigdf.opto==True),'rates_diff'].values-bigdf.loc[(bigdf.opto==False),'rates_diff'].values
 # bigdf = df.groupby(['animals', 'condition']).median(numeric_only=True)
 # bigdf = bigdf.reset_index()
 # bigdf_plot['condition'] = bigdf.condition
-fig,ax = plt.subplots(figsize=(2,5))
-sns.barplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
-    palette={'ctrl': "slategray", 'vip': color},                
-            errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="rates_diff",hue='condition', data=bigdf_plot,
-            palette={'ctrl': 'slategray','vip': color},                
-            s=s,ax=ax)
-ax.spines[['top','right']].set_visible(False)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Performance (LEDoff-LEDon)')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nExcitation'])
+from statsmodels.formula.api import ols
+import scipy.stats as stats
+from statsmodels.stats.multitest import multipletests
+import itertools
+
+model = ols('rates_diff ~ C(condition)', data=bigdf_plot).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+print(anova_table)
+
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip_in', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['rates_diff'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['rates_diff'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+
+# Plot
+fig, ax = plt.subplots(figsize=(4, 6))
+sns.barplot(x="condition", y="rates_diff", hue='condition', data=bigdf_plot,
+            palette=pl, errorbar='se', fill=False, ax=ax)
+sns.stripplot(x="condition", y="rates_diff", hue='condition', data=bigdf_plot,
+              palette=pl, alpha=a, s=s, ax=ax)
+
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_xticks([0, 1, 2])
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
+ax.set_ylabel('% Correct trials (LEDoff-LEDon)')
 ax.set_xlabel('')
-x1 = bigdf_plot.loc[(bigdf_plot.condition=='vip'), 'rates_diff'].values
-x2 = bigdf_plot.loc[(bigdf_plot.condition=='ctrl'), 'rates_diff'].values
-t,pval = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-ax.set_ylim([-.3,.1])
-# statistical annotation    
-fs=46
-ii=0.5; y=.1; 
-pshift=.01
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + 1, y_pos + 1, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos-3, sig, ha='center', va='bottom', fontsize=40)
+    plt.text(x_center, y_pos-2, f'p={pval:.3g}', ha='center', fontsize=8)
+
+# Plot all pairwise comparisons
+y_start = bigdf_plot['rates_diff'].max() + 1
+gap = 5
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i])
+    y_start += gap
+# ax.set_ylim([-35,10])
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'vip_opto_successrate.svg'),bbox_inches='tight')
 #%%
 # Step 1: Calculate the means and standard deviations
 group1=x1;group2=x2
@@ -162,18 +204,18 @@ print(f"Required sample size per group: {sample_size:.2f}")
 # plt.savefig(os.path.join(savedst, 'behavior.svg'),  bbox_inches='tight')
 #%%
 # plot lick selectivity and lick com
-
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
-fig,ax = plt.subplots(figsize=(2,5))
+a=0.7
+fig,ax = plt.subplots(figsize=(3,5))
 sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
-    palette={'ctrl': "slategray", 'vip': color},                
+    palette=pl,                
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
-            palette={'ctrl': 'slategray','vip': color},                
+            palette=pl,alpha=a,                
             s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Lick Selectivity, last 5 trials (LEDon)')
+ax.set_ylabel(f'Lick Selectivity, last 5 trials (LEDon-LEDoff)')
 ax.set_xticks([0,1], labels=['Control', 'VIP\nExcitation'])
 ax.set_xlabel('')
 
@@ -182,7 +224,7 @@ x2 = bigdf_plot.loc[((bigdf_plot.condition=='ctrl')&(bigdf_plot.opto==True)), 'l
 t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 # statistical annotation    
 fs=46
-ii=0.5; y=1; pshift=.2
+ii=0.5; y=.02; pshift=.2
 if pval < 0.001:
         ax.text(ii, y, "***", ha='center', fontsize=fs)
 elif pval < 0.01:
@@ -228,13 +270,15 @@ for rz in df.rewzone_transition.unique():
         pvals.append([rz,pval])
     except Exception as e:
         print(e)
-# plt.savefig(os.path.join(savedst, 'com.svg'),  bbox_inches='tight')
-
-# only 3 to 1
 bigdf_plot = bigdf_plot.reset_index()
-# bigdf_plot=bigdf_plot[bigdf_plot.animals!='e190']
 
-df2plt = bigdf_plot[bigdf_plot.rewzone_transition=='reward_zone (3, 1)']
+# plt.savefig(os.path.join(savedst, 'com.svg'),  bbox_inches='tight')
+#%%
+# only 3 to 1
+# bigdf_plot=bigdf_plot[bigdf_plot.animals!='e190']
+bigdf_plot = df.groupby(['animals', 'condition', 'opto','rewzone_transition']).mean(numeric_only=True)
+bigdf_plot = bigdf_plot.reset_index()
+df2plt = bigdf_plot[bigdf_plot.rewzone_transition=='reward_zone (2, 1)']
 fig,ax = plt.subplots(figsize=(2,6))
 sns.barplot(x="condition", y="com",hue='condition', data=df2plt, 
             palette={'ctrl': "slategray", 'vip': color},                     
@@ -244,24 +288,10 @@ sns.stripplot(x="condition", y="com",hue='condition', data=df2plt,
             s=s,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Center of Mass Licks-Reward Loc. (cm) \n(Far to Near)')
+ax.set_ylabel(f'Center of Mass Licks-Reward Loc. (cm)')
 ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
 ax.set_xlabel('')
 # fig.tight_layout()
-x1 = bigdf_plot.loc[((bigdf_plot.condition=='vip')&(bigdf_plot.opto==True)&(bigdf_plot.rewzone_transition=='reward_zone (3, 1)')), 'com'].values
-x2 = bigdf_plot.loc[((bigdf_plot.condition=='ctrl')&(bigdf_plot.opto==True)&(bigdf_plot.rewzone_transition=='reward_zone (3, 1)')), 'com'].values
-t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-# statistical annotation    
-fs=46
-ii=0.5; y=15; pshift=.2
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
-
 # plt.savefig(os.path.join(savedst, 'far2near_com.svg'),  bbox_inches='tight')
 
 #%%

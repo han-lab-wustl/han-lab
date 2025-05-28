@@ -2597,7 +2597,7 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     trialstates, licks, tcs, coms = make_tuning_curves_trial_by_trial(eps, rewlocs, lick, ybinned, rad, Fc3,
                                                 trialnum, rewards, forwardvel, rewsize, bin_size)
     # amplitude greater than 0.1
-    trialsactive = np.array([[[xx > 0.1 for xx in cll] for cll in np.nanmax(tcs[ep], axis=2)] for ep in range(len(tcs))])
+    trialsactive = [[[xx > 0.1 for xx in cll] for cll in np.nanmax(tcs[ep], axis=2)] for ep in range(len(tcs))]
     df['percent_trials_active'] = np.concatenate([[np.nansum(xx) / len(xx) for xx in ep] for ep in trialsactive[:coms_rewrel.shape[0]]])
     
     return df

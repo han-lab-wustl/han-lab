@@ -19,13 +19,13 @@ plt.rcParams["font.family"] = "Arial"
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e242'
+animal = 'e241'
 src = r"Y:\halo_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [77,78,79,80,81]
-range_val=7; binsize=0.2
+days = np.arange(27,29)
+range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs
@@ -99,6 +99,7 @@ for day in days:
         #TODO: peri reward catch trials
         # all subsequent rews   
         # only ep3?
+        # aligned to CS
         changeRewLoc = np.hstack(params['changeRewLoc'])     
         scalingf=2/3
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))        
@@ -173,11 +174,10 @@ pdf.close()
 
 #%%
 # heatmap across days
-pln_mean = np.squeeze(np.array([[np.nanmean(v[i],axis=0) for i in range(4)] for k,v in day_date_dff.items()]))
 alltr = np.array([np.concatenate([v[i] for k,v in day_date_dff.items()]) for i in range(4)])
 # all trials
 for pln in range(4): 
-    fig, axes = plt.subplots(ncols=2,width_ratios=[1,2],sharex=True,figsize=(6,3))
+    fig, axes = plt.subplots(ncols=2,width_ratios=[1,1.5],sharex=True,figsize=(6,3))
     ax=axes[0]
     cax=ax.imshow(alltr[pln,:,:])    
     ax.set_xlabel('Time from CS (s)')
@@ -196,32 +196,3 @@ for pln in range(4):
     ax.set_xticklabels(range(-range_val, range_val+1, 2))
     ax.axvline(int(range_val/binsize),linestyle='--',color='k')
     fig.tight_layout()
-
-#%%
-pln_mean = np.squeeze(np.array([[v[i] for i in range(4)] for k,v in day_date_dff.items()]))
-fig, axes = plt.subplots(nrows = 4, sharex=True,sharey=True,
-                        figsize=(3,6))
-ymin, ymax = .98, 1.01
-for pln in range(4):    
-    ax = axes[pln]
-    ax.plot(np.nanmean(pln_mean[pln,:,:], axis=0), 
-            color='slategray')
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-                np.nanmean(pln_mean[pln,:,:],axis=0)-scipy.stats.sem(pln_mean[pln,:,:],
-                                axis=0,nan_policy='omit'),
-                np.nanmean(pln_mean[pln,:,:],axis=0)+scipy.stats.sem(pln_mean[pln,:,:],
-                                axis=0,nan_policy='omit'), 
-                alpha=0.5, color='slategray')
-    ax.set_ylim(ymin, ymax)
-    if pln==3: ax.set_xlabel('Time from CS (s)')
-    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-    ax.set_xticklabels(range(-range_val, range_val+1, 2))
-    ax.set_title(f'Plane {planelut[pln]}')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-fig.suptitle('per day per + mouse averages')
-fig.tight_layout()
-pdf.savefig(fig)
-pdf.close()

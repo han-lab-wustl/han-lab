@@ -36,19 +36,22 @@ lasttr=8 #  last trials
 bins=90
 
 # iterate through all animals
-for ii in range(len(conddf)):
+for ii in range(99,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (conddf.optoep.values[ii]>1):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        df=extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
-                    goal_cm_window, pdf, pln)
-        dfs.append(df)
+        try:
+            df=extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
+                        goal_cm_window, pdf, pln)
+            dfs.append(df)
+        except Exception as e:
+            print(e)
 #%%
 # concat bigdf
 bigdf=pd.concat(dfs)
-bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal_opto.csv',index=None)
+bigdf.to_csv(r'C:\Users\Han\Des ktop\cell_features_pyr_goal_opto.csv',index=None)
 #%%
 bigdf[(bigdf.animal=='e201')&(bigdf.tracked_cellid==2)] 

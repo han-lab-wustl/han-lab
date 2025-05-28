@@ -41,10 +41,10 @@ end
 % 2 planes
 % has to have combined cells
 clear all;
-mouse_name = "z9";
-days = [28];
+mouse_name = "e217";
+days = [12];
 src = "X:\vipcre";
-planes = 2;
+planes = 1;
 for day=days
     daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
