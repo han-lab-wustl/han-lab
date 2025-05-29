@@ -12,7 +12,7 @@ pr_dir0 = uipickfiles;
 oldbatch=0;%input('if oldbatch press 1 else 0=');
 % dop_allsuc_stop_no_reward = NaN(length(pr_dir0),4,79);
 
-exclude = [9,10,11,12,13,14,15,16,17,18,19,20];
+exclude = [];
 
 
 for alldays = 1:length(pr_dir0)%[3:1
@@ -70,7 +70,7 @@ for alldays = 1:length(pr_dir0)%[3:1
             Stopped_frame = 15;%frame_rate; %number of seconds for it to be considered a stop;
             max_reward_stop = 5*frame_rate; %number of seconds after reward for a stop to be considered a reward related stop * frame rate.
             frame_tol = 5; %number of frames prior to reward to check for stopping points as a tolerance for defining stopped.
-            CSUStimelag = 0.5; %seconds between
+            CSUStimelag = 0; %seconds between
             frame_time=1/frame_rate;
             num_rew_win_frames=round(num_rew_win_sec/frame_time);%window in frames
             rew_lick_win_frames=round(rew_lick_win/frame_time);%window in frames
