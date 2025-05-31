@@ -3,21 +3,156 @@ plt transition data
 """
 #%%
 import pickle, os, numpy as np, pandas as pd, seaborn as sns, matplotlib.pyplot as plt,scipy
-import matplotlib.backends.backend_pdf, matplotlib as mpl
+import matplotlib.backends.backend_pdf, matplotlib as mpl, sys
 from statsmodels.stats.multitest import multipletests
 import matplotlib.patches as mpatches
-
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype, make_tuning_curves
+from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 
+#%%
+# get cell eg
+fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\TransitionMatrix\NeuronType"
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+with open(fl, "rb") as fp: #unpickle
+    dct = pickle.load(fp)
+# [RR_List, PP_List, NL_List] 
+#eg
+lst = dct['z8_21']
+day = 21
+animal='z8'
+params_pth = rf'Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat'
+print(params_pth)
+fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+        'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+        'licks','stat', 'timedFF'])
+VR = fall['VR'][0][0][()]
+scalingf = VR['scalingFACTOR'][0][0]
+try:
+    rewsize = VR['settings']['rewardZone'][0][0][0][0] / scalingf        
+except:
+    rewsize = 10
+ybinned = fall['ybinned'][0] / scalingf
+track_length = 180 / scalingf    
+forwardvel = fall['forwardvel'][0]    
+changeRewLoc = np.hstack(fall['changeRewLoc'])
+trialnum = fall['trialnum'][0]
+rewards = fall['rewards'][0]
+lick = fall['licks'][0]
+# set vars
+eps = np.where(changeRewLoc > 0)[0]
+rewlocs = changeRewLoc[eps] / scalingf
+eps = np.append(eps, len(changeRewLoc))
+bins = 90
+fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+Fc3 = fall_fc3['Fc3']
+dFF = fall_fc3['dFF']
+# from celldf sent to bo
+Fc3 = Fc3[:, ((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
+dFF = dFF[:, ((fall['iscell'][:, 0]).astype(bool)) & (~(fall['bordercells'][0]).astype(bool))]
+skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+# important for mapping tracked ids
+Fc3 = Fc3[:, skew > 2]  # only keep cells with skew greater than 2
+pc_bool = fall['putative_pcs'][0][0][0]
+pc_bool = pc_bool[skew > 2]  # remember that pc bool removes bordercells
+Fc3=Fc3[:,pc_bool.astype(bool)]
+# circularly aligned
+rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize, rewlocs,
+                                                trialnum, track_length)  # get radian coordinates
+track_length_rad = track_length * (2 * np.pi / track_length)
+bin_size = track_length_rad / bins 
+# tcs
+tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(
+    eps, rewlocs, ybinned, rad, Fc3, trialnum, rewards, forwardvel, rewsize, bin_size)          
+# allocentric ref
+bin_size = track_length / bins 
+tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum,
+                                                        rewards, forwardvel, rewsize, bin_size)
+
+#%%
+def moving_average(x, window_size):
+    return np.convolve(x, np.ones(window_size)/window_size, mode='same')
+lw=2
+colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+# reward-reward
+common = np.intersect1d(lst['1_2'][0], lst['2_3'][0])
+rr = common[0] # cell id
+fig, axes = plt.subplots(ncols=2,figsize=(7,5), sharex=True)
+for i,tc in enumerate(tcs_correct[:2,:,:]):
+    ax=axes[i]
+    ax.plot(moving_average(tc[rr], window_size=5), color=colors[i],linewidth=lw)
+    if i==0: ax.set_ylabel('$\Delta F/F$')
+    ax.spines[['top','right']].set_visible(False)
+    ax.axvline(45, linewidth=2, linestyle='--', color='grey')
+    ax.set_xticks([0,45,90])
+    ax.set_xticklabels(['-$\\pi$',0,'$\\pi$'])
+    ax.set_title(f'Epoch {i+1}')
+ax.set_xlabel('Reward-relative distance ($\Theta$)')
+fig.suptitle('Reward-Reward')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'reward_reward_eg.svg'), bbox_inches='tight')
+
+# place-place
+common = np.intersect1d(lst['1_2'][1], lst['2_3'][1])
+rr = common[0] # cell id
+fig, axes = plt.subplots(ncols=2,figsize=(7,5), sharex=True)
+for i,tc in enumerate(tcs_correct_abs[:2,:,:]):
+    ax=axes[i]
+    ax.plot(moving_average(tc[rr], window_size=5), color=colors[i],linewidth=lw)
+    if i==0: ax.set_ylabel('$\Delta F/F$')
+    ax.spines[['top','right']].set_visible(False)
+    ax.axvline(rewlocs[i]/3, linewidth=2, linestyle='--', color='grey')
+    ax.set_xticks([0,45,90])
+    ax.set_xticklabels([0,135,270])
+    ax.set_title(f'Epoch {i+1}')
+ax.set_xlabel('Track position (cm)')
+fig.suptitle('Place-Place')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'place_place_eg.svg'), bbox_inches='tight')
+
+# reward-place
+common = np.intersect1d(lst['1_2'][0], lst['2_3'][1])
+rr = common[3] # cell id
+fig, axes = plt.subplots(ncols=3,nrows=2,figsize=(11,8))
+# place
+for i,tc in enumerate(tcs_correct_abs[:3,:]):
+    ax=axes[0,i]
+    ax.plot(moving_average(tc[rr], window_size=5), color=colors[i],linewidth=lw)
+    if i==0: ax.set_ylabel('$\Delta F/F$')
+    ax.spines[['top','right']].set_visible(False)
+    ax.axvline(rewlocs[i]/3, linewidth=2, linestyle='--', color='grey')
+    ax.set_xticks([0,45,90])
+    ax.set_xticklabels([0,135,270])
+    if i!=2:ax.set_title(f'Reward cell, Epoch {i+1}')
+    else: ax.set_title(f'Place cell, Epoch {i+1}')
+ax.set_xlabel('Track position (cm)')
+# rew
+for i,tc in enumerate(tcs_correct[:3,:]):
+    ax=axes[1,i]
+    ax.plot(moving_average(tc[rr], window_size=5), color=colors[i],linewidth=lw)
+    if i==0: ax.set_ylabel('$\Delta F/F$')
+    ax.spines[['top','right']].set_visible(False)
+    ax.axvline(45, linewidth=2, linestyle='--', color='grey')
+    ax.set_xticks([0,45,90])
+    ax.set_xticklabels(['-$\\pi$',0,'$\\pi$'])
+    if i!=2:ax.set_title(f'Reward cell, Epoch {i+1}')
+    else: ax.set_title(f'Place cell, Epoch {i+1}')
+ax.set_xlabel('Reward-relative distance ($\Theta$)')
+
+fig.suptitle('Reward-Place')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'reward_place_eg.svg'), bbox_inches='tight')
+#%%
 fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\TransitionMatrix\Per_Animial_Mean_Transition"
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
-#%%
+
 df = pd.DataFrame(dct)
 # RR2RR_m	RR2PP_m	RR2NL_m	PP2RR_m	PP2PP_m	PP2NL_m	NL2RR_m	NL2PP_m	NL2NL_m
 df.columns = ['Reward-Reward', 'Reward-Place', 'Reward-Untuned', 'Place-Reward', 'Place-Place','Place-Untuned', 'Untuned-Reward', 'Untuned-Place', 'Untuned-Untuned']

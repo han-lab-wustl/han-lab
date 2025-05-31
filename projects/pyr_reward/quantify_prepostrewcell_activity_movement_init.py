@@ -40,6 +40,10 @@ for k,v in radian_alignment_saved.items():
     tcs_correct, coms_correct, tcs_fail, coms_fail,\
             com_goal, goal_cell_shuf_ps_per_comp_av,\
                     goal_cell_shuf_ps_av=radian_alignment[k]
+    animal,day,trash = k.split('_'); day=int(day)
+    if animal=='e145': pln=2
+    else: pln=0
+
     track_length=270
     goal_window = goal_window_cm*(2*np.pi/track_length) 
     # change to relative value 
@@ -50,22 +54,12 @@ for k,v in radian_alignment_saved.items():
     # tuning curves that are close to each other across epochs
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
     # in addition, com near but after goal
-    upperbound=np.pi/4
-    com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>0))] for com in com_goal if len(com)>0]
-    # get goal cells across all epochs        
-    goal_cells = intersect_arrays(*com_goal)
-
-    goal_cell_iind = goal_cells
-    tc = tcs_correct
-    animal,day,trash = k.split('_'); day=int(day)
-    if animal=='e145': pln=2
-    else: pln=0
+    # do same quantification for both pre and post rew cells 
+    cell_types = ['pre', 'post']
     params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"        
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'licks',
-    'pyr_tc_s2p_cellind', 'timedFF','ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+    'timedFF','ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
             'stat'])
     fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
     Fc3 = fall_fc3['Fc3']
@@ -76,12 +70,9 @@ for k,v in radian_alignment_saved.items():
         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
     except:
         rewsize = 10
-
     Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-    # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-    # skew_mask = skew_filter>2
     Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
     dFF = dFF[:, skew>2]
     scalingf=2/3
@@ -128,40 +119,60 @@ for k,v in radian_alignment_saved.items():
     move_start = np.zeros_like(changeRewLoc)
     move_start[movement_starts.astype(int)] = 1
     range_val=8;binsize=0.1
-    # instead of latencies quantify dff
-    gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
-    # get latencies based on average of trials
-    for gc in goal_cell_iind:
-        # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
-        #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
-        #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
-            timedFF, trialnum, range_val,binsize)
-        if np.nanmax(meanrew)>1: # only get highly active cells?
-            _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-            timedFF, trialnum, range_val,binsize)
-            # quantify dff
-            transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
-            gc_latencies_rew.append(transient_around_rew)
-            transient_after_rew = np.nanmean(meanrstops[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
-            gc_latencies_mov.append(transient_after_rew)
-            cellid.append(gc)
+    # per cell
+    celltydf = []
+    bound= np.pi/4
+    for cell_type in cell_types:
+        if cell_type=='post':
+            com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                    xx], axis=0)<=bound) & (np.nanmedian(coms_rewrel[:,
+                    xx], axis=0)>0))] for com in com_goal if len(com)>0]
+        else: # pre
+            com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                    xx], axis=0)>=-bound) & (np.nanmedian(coms_rewrel[:,
+                    xx], axis=0)<0))] for com in com_goal if len(com)>0]
+        # get goal cells across all epochs        
+        goal_cells = intersect_arrays(*com_goal) if len(com_goal)>0 else []
 
-        # fig,ax=plt.subplots()
-        # ax.scatter(range(len(latencies_to_movement)),latencies_to_movement,color='k')
-        # ax2 = ax.twinx()
-        # ax2.scatter(range(len(latencies_to_rewards)),latencies_to_rewards,color='orchid')
-    # concat by cell
-    df=pd.DataFrame()
-    df['dff']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
-    df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
-                    ['Movement Start']*len(gc_latencies_mov)])
-    df['animal']=[animal]*len(df)
-    df['day']=[day]*len(df)
-    df['cellid']=np.concatenate([cellid]*2)
+        goal_cell_iind = goal_cells
+        tc = tcs_correct
+        # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        # skew_mask = skew_filter>2
+        # instead of latencies quantify dff
+        gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
+        # get latencies based on average of trials
+        for gc in goal_cell_iind:
+            # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+            #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+            #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
+                timedFF, trialnum, range_val,binsize)
+            if np.nanmax(meanrew)>1: # only get highly active cells?
+                _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
+                timedFF, trialnum, range_val,binsize)
+                # quantify dff
+                transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
+                gc_latencies_rew.append(transient_around_rew)
+                transient_after_rew = np.nanmean(meanrstops[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
+                gc_latencies_mov.append(transient_after_rew)
+                cellid.append(gc)
 
-    dfs.append(df)
+            # fig,ax=plt.subplots()
+            # ax.scatter(range(len(latencies_to_movement)),latencies_to_movement,color='k')
+            # ax2 = ax.twinx()
+            # ax2.scatter(range(len(latencies_to_rewards)),latencies_to_rewards,color='orchid')
+        # concat by cell
+        df=pd.DataFrame()
+        df['dff']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
+        df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
+                        ['Movement Start']*len(gc_latencies_mov)])
+        df['animal']=[animal]*len(df)
+        df['day']=[day]*len(df)
+        df['cellid']=np.concatenate([cellid]*2)
+        df['cell_type'] = [cell_type]*len(df)
+        celltydf.append(df)
+    dfs.append(pd.concat(celltydf))
 
 #%%
 #plot all cells

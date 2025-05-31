@@ -174,6 +174,8 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     else:
         goal_cells=[]
     goal_all = np.unique(np.concatenate(com_goal_postrew)).astype(int)        
+    # dedicated
+    goal_cells = goal_all
     # example:
     plt.close('all')
     # rectangular method
@@ -181,6 +183,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     widths_per_ep = []
     peak_per_ep = []
     # adjusted binsize to cm?
+    # TODO - test only on dedicated cells?
     bin_size = track_length_dt/bins_dt
     for ep in range(len(tcs_correct)):
         sigma = 1   # in bin-units; start small (0.5–2 bins)
@@ -221,6 +224,8 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     else:
         goal_cells=[]
     goal_all = np.unique(np.concatenate(com_goal_postrew)).astype(int)        
+    # dedicated
+    goal_all = goal_cells
     widths_per_ep = []
     peak_per_ep = []
     for ep in range(len(tcs_correct)):

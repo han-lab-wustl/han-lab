@@ -32,7 +32,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 radian_alignment_saved = {} # overwrite
 dfs = []
 radian_alignment = {}
-lasttr=8 #  last trials
+lasttr=8 #  last trials 
 bins=90
 
 # iterate through all animals
@@ -52,6 +52,6 @@ for ii in range(99,len(conddf)):
 #%%
 # concat bigdf
 bigdf=pd.concat(dfs)
-bigdf.to_csv(r'C:\Users\Han\Des ktop\cell_features_pyr_goal_opto.csv',index=None)
+bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal_opto.csv',index=None)
 #%%
 bigdf[(bigdf.animal=='e201')&(bigdf.tracked_cellid==2)] 
