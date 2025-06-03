@@ -272,6 +272,12 @@ rzdf2 = bigdf[(bigdf.epoch.str.contains('epoch2_rz1') | bigdf.epoch.str.contains
 rzdf3 = bigdf[(bigdf.epoch.str.contains('epoch3_rz1') | bigdf.epoch.str.contains('epoch4_rz3'))]
 rzdf4 = bigdf[(bigdf.epoch.str.contains('epoch4_rz1') | bigdf.epoch.str.contains('epoch5_rz3'))]
 rzdf = pd.concat([rzdf,rzdf2,rzdf3,rzdf4])
+rzdf5 = bigdf[(bigdf.epoch.str.contains('epoch1_rz3') | bigdf.epoch.str.contains('epoch2_rz1'))]
+rzdf2 = bigdf[(bigdf.epoch.str.contains('epoch2_rz3') | bigdf.epoch.str.contains('epoch3_rz1'))]
+rzdf3 = bigdf[(bigdf.epoch.str.contains('epoch3_rz3') | bigdf.epoch.str.contains('epoch4_rz1'))]
+rzdf4 = bigdf[(bigdf.epoch.str.contains('epoch4_rz3') | bigdf.epoch.str.contains('epoch5_rz1'))]
+rzdf2 = pd.concat([rzdf5,rzdf2,rzdf3,rzdf4])
+rzdf = pd.concat([rzdf,rzdf2])
 rzdf = rzdf.groupby(['animal','day','epoch','cell_type']).median(numeric_only=True)
 rzdf=rzdf.reset_index()
 # only pre
@@ -285,6 +291,12 @@ rzdf2 = lickbigdf[(lickbigdf.epoch.str.contains('epoch2_rz1') | lickbigdf.epoch.
 rzdf3 = lickbigdf[(lickbigdf.epoch.str.contains('epoch3_rz1') | lickbigdf.epoch.str.contains('epoch4_rz3'))]
 rzdf4 = lickbigdf[(lickbigdf.epoch.str.contains('epoch4_rz1') | lickbigdf.epoch.str.contains('epoch5_rz3'))]
 lrzdf = pd.concat([lrzdf,rzdf2,rzdf3,rzdf4])
+rzdf5 = lickbigdf[(lickbigdf.epoch.str.contains('epoch1_rz3') | lickbigdf.epoch.str.contains('epoch2_rz1'))]
+rzdf2 = lickbigdf[(lickbigdf.epoch.str.contains('epoch2_rz3') | lickbigdf.epoch.str.contains('epoch3_rz1'))]
+rzdf3 = lickbigdf[(lickbigdf.epoch.str.contains('epoch3_rz3') | lickbigdf.epoch.str.contains('epoch4_rz1'))]
+rzdf4 = lickbigdf[(lickbigdf.epoch.str.contains('epoch4_rz3') | lickbigdf.epoch.str.contains('epoch5_rz1'))]
+lrzdf2 = pd.concat([rzdf5,rzdf2,rzdf3,rzdf4])
+lrzdf = pd.concat([lrzdf,lrzdf2])
 lrzdf = lrzdf.groupby(['animal','day','epoch']).median(numeric_only=True)
 lrzdf=lrzdf.reset_index()
 lrzdf['day']=lrzdf['day'].astype(int)
@@ -292,16 +304,20 @@ alldf = pd.merge(lrzdf, rzdf, on=['animal', 'day', 'epoch'], how='inner')
 alldf['lick_dist'] = np.array(alldf['last_lick_loc_cm']-alldf['first_lick_loc_cm']).astype(float)
 alldf['width_cm'] = alldf['width_cm'].astype(float)
 alldf = alldf.dropna(subset=['width_cm'])
+alldf = alldf[alldf['width_cm']>0]
 a=0.5
-sns.regplot(x='lick_dist', y='width_cm', data=alldf, scatter=True, line_kws={"color": "dodgerblue"},color='k')
+s=50
+fig,ax = plt.subplots(figsize=(6,5))
+sns.regplot(x='lick_dist', y='width_cm', data=alldf, scatter=True, line_kws={"color": "dodgerblue"},color='k',scatter_kws={'alpha':a,'s':s})
 r, p = scipy.stats.pearsonr(alldf['lick_dist'], alldf['width_cm'])
-plt.text(0.05, 0.95, f'r = {r:.2g}\np = {p:.3g}', transform=plt.gca().transAxes,
+ax.text(0.05, 0.95, f'r = {r:.2g}\np = {p:.3g}', transform=plt.gca().transAxes,
          fontsize=17, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.6))
 
-plt.xlabel('Lick Distance (cm)')
-plt.ylabel('Field Width (cm)')
-plt.title('Correlation Between Lick Distance and Field Width')
+ax.set_xlabel('Lick Distance (cm)')
+ax.set_ylabel('Field Width (cm)')
+ax.spines[['top','right']].set_visible(False)
 plt.tight_layout()
+plt.savefig(os.path.join(os.path.join(savedst, 'lick_field_width.svg')))
 
 #%%
 import scipy.stats as stats
