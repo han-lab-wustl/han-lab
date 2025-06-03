@@ -52,6 +52,7 @@ for ii in range(len(conddf)):
 #%%
 # get all cells width cm 
 bigdf = pd.concat(dfs)
+# bigdf = bigdf[bigdf['75_quantile']>0]
 # exclude some animals 
 # bigdf = bigdf[(bigdf.animal!='e139') & (bigdf.animal!='e145') & (bigdf.animal!='e200')]
 
@@ -265,6 +266,44 @@ plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_widt
 
 #%%
 # get corresponding licking behavior 
+# scatterplot of lick distance vs. field width
+rzdf = bigdf[(bigdf.epoch.str.contains('epoch1_rz1') | bigdf.epoch.str.contains('epoch2_rz3'))]
+rzdf2 = bigdf[(bigdf.epoch.str.contains('epoch2_rz1') | bigdf.epoch.str.contains('epoch3_rz3'))]
+rzdf3 = bigdf[(bigdf.epoch.str.contains('epoch3_rz1') | bigdf.epoch.str.contains('epoch4_rz3'))]
+rzdf4 = bigdf[(bigdf.epoch.str.contains('epoch4_rz1') | bigdf.epoch.str.contains('epoch5_rz3'))]
+rzdf = pd.concat([rzdf,rzdf2,rzdf3,rzdf4])
+rzdf = rzdf.groupby(['animal','day','epoch','cell_type']).median(numeric_only=True)
+rzdf=rzdf.reset_index()
+# only pre
+rzdf=rzdf[rzdf.cell_type=='Pre']
+rzdf=rzdf.drop(columns=['cell_type'])
+rzdf['day']=rzdf['day'].astype(int)
+rzdf=rzdf.reset_index()
+# rzdf['epoch'] = [xx[-3:] for xx in rzdf.epoch.values]
+lrzdf = lickbigdf[(lickbigdf.epoch.str.contains('epoch1_rz1') | lickbigdf.epoch.str.contains('epoch2_rz3'))]
+rzdf2 = lickbigdf[(lickbigdf.epoch.str.contains('epoch2_rz1') | lickbigdf.epoch.str.contains('epoch3_rz3'))]
+rzdf3 = lickbigdf[(lickbigdf.epoch.str.contains('epoch3_rz1') | lickbigdf.epoch.str.contains('epoch4_rz3'))]
+rzdf4 = lickbigdf[(lickbigdf.epoch.str.contains('epoch4_rz1') | lickbigdf.epoch.str.contains('epoch5_rz3'))]
+lrzdf = pd.concat([lrzdf,rzdf2,rzdf3,rzdf4])
+lrzdf = lrzdf.groupby(['animal','day','epoch']).median(numeric_only=True)
+lrzdf=lrzdf.reset_index()
+lrzdf['day']=lrzdf['day'].astype(int)
+alldf = pd.merge(lrzdf, rzdf, on=['animal', 'day', 'epoch'], how='inner')
+alldf['lick_dist'] = np.array(alldf['last_lick_loc_cm']-alldf['first_lick_loc_cm']).astype(float)
+alldf['width_cm'] = alldf['width_cm'].astype(float)
+alldf = alldf.dropna(subset=['width_cm'])
+a=0.5
+sns.regplot(x='lick_dist', y='width_cm', data=alldf, scatter=True, line_kws={"color": "dodgerblue"},color='k')
+r, p = scipy.stats.pearsonr(alldf['lick_dist'], alldf['width_cm'])
+plt.text(0.05, 0.95, f'r = {r:.2g}\np = {p:.3g}', transform=plt.gca().transAxes,
+         fontsize=17, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.6))
+
+plt.xlabel('Lick Distance (cm)')
+plt.ylabel('Field Width (cm)')
+plt.title('Correlation Between Lick Distance and Field Width')
+plt.tight_layout()
+
+#%%
 import scipy.stats as stats
 from statsmodels.stats.multitest import multipletests
 

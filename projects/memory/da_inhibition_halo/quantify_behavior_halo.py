@@ -26,6 +26,13 @@ animals = ['e241','e242','e243']#,'e242','e243']
 days_all = [[44,45,48,49,52,53,54,55,59,61,62,65,66,67,68,69,70,71,72],
             [44,45,46,47,52,53,54,55,57,59,60,61,62,63],
             [46,49,50,54,55,56,59,60,61,62,63,66,67,68,69,71,72,73]]#,[29,30],[36,37]]
+days_all = [[59,61,62,65,66,67,68,69,70,71,72],
+            [44,45,46,47,52,53,54,55,57,59,60,61,62,63],
+            [59,60,61,62,63,66,67,68,69,71,72,73]]#,[29,30],[36,37]]
+# days_all = [[59,61,62,65,66,67,68],
+#             [44,45,46,47,52,53,54,55,57,59],
+#             [59,60,61,62,63,66,67,68]]#,[29,30],[36,37]]
+
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # all days to quantify for stim @ reward memory analysis
 # days to quantify for stim @ reward memory analysis
@@ -211,7 +218,7 @@ df['animal'] = list(itertools.chain(*[[xx]*len(days_all[ii]) for ii,xx in enumer
 lds = [[condrewloc.loc[((condrewloc.Day==dy)&(condrewloc.Animal==animals[ii])), 'learning_day'].values[0] for dy in dys] 
     for ii,dys in enumerate(days_all)]
 df['learning_day'] = list(itertools.chain(*lds))
-df['opto_day_before'] = [True if xx=='TRUE' else False for xx in list(itertools.chain(*optodays_before_per_an))]
+df['opto_day_before'] = [True if xx==True else False for xx in list(itertools.chain(*optodays_before_per_an))]
 df['opto'] = [True if xx=='TRUE' else False for xx in list(itertools.chain(*optodays_per_an))]
 df['lick_selectivity_near_rewardloc_mean'] = [np.nanmean(xx[0]) for xx in near_reward_per_day]
 df['velocity_near_rewardloc_mean'] = [np.nanmean(xx[1]) for xx in near_reward_per_day]
@@ -261,7 +268,7 @@ ax = sns.barplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean',
 ax = sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
                 hue='opto_day_before', data=df,
                 palette={False: "slategray", True: "crimson"},
-                s=12, alpha=0.4)
+                s=12, alpha=0.3)
 sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
                 hue='opto_day_before', data=dfagg,
                 palette={False: "slategray", True: "crimson"},
@@ -274,10 +281,48 @@ for i in range(len(ans)):
     errorbar=None, color='dimgray', linewidth=2)
     
 ax.get_legend().set_visible(False)
-ax.set_ylabel('Memory lick selectivity')
+ax.set_ylabel('Recall lick selectivity')
 ax.spines[['top','right']].set_visible(False)
 plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
-# plt.savefig(os.path.join(dst, 'memory_lick_selectivity.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'memory_lick_selectivity_inhib.svg'), bbox_inches='tight')
+
+#%%
+
+#per session vs. per animal plot
+# lick_selectivity_near_rewardloc_mean
+plt.figure(figsize=(2.2,5))
+ax = sns.barplot(x='opto_day_before', y='success_rate', 
+                hue='opto_day_before', data=df, fill=False,errorbar='se',
+                palette={False: "slategray", True: "crimson"})
+ax = sns.stripplot(x='opto_day_before', y='success_rate', 
+                hue='opto_day_before', data=df,
+                palette={False: "slategray", True: "crimson"},
+                s=12, alpha=0.3
+                )
+sns.stripplot(x='opto_day_before', y='success_rate', 
+                hue='opto_day_before', data=dfagg,
+                palette={False: "slategray", True: "crimson"},
+                s=15,ax=ax)
+
+ans = dfagg.index.get_level_values('animal').unique().values
+for i in range(len(ans)):
+    ax = sns.lineplot(x='opto_day_before', y='success_rate', 
+    data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
+
+x1 = df.loc[(df.opto==1), 'success_rate'].values
+x2 = df.loc[df.opto==False, 'success_rate'].values
+t,pval1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+dfagg = df.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
+x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'success_rate'].values
+x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'success_rate'].values
+t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
+
+ax.get_legend().set_visible(False)
+ax.set_ylabel('Performance')
+ax.spines[['top','right']].set_visible(False)
+plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
+plt.savefig(os.path.join(dst, 'nextday_performance_inhib.svg'), bbox_inches='tight')
 
 #%%
 # lick selectivity last 8 trials

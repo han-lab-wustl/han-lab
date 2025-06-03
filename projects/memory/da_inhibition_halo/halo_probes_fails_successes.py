@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones, extract_vars
-# plt.rc('font', size=12)          # controls default text sizes
+plt.rc('font', size=12)          # controls default text sizes
 
 plt.close('all')
 # save to pdf
@@ -38,9 +38,11 @@ condrewloc['Opto'] = [1 if xx=='TRUE' else 0 for xx in condrewloc['Opto'].values
 src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
-days_all = [[46,49,50,54,55,56,59,60,61,62,63,66,67,68,69,71,72,73]]
+# days_all = [[46,49,50,54,55,56,59,60,61,62,63,66,67,68,69,71,72,73]]
+days_all = [[45,46,54,67,68,69,71]]
+
 opto_cond = 'Opto' # experiment condition
-rolling_win = 3 # 3 for significance in 10 trial on/ 1 off
+rolling_win = 4 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
 #%%
 day_date_dff = {}
@@ -49,7 +51,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         # extract variables and makes plots into pdf
         plndff = extract_vars(src, animal, day, condrewloc, opto_cond, dst,
-        pdf, rolling_win=5, planes=4,range_val=8)
+        pdf, rolling_win=rolling_win, planes=4,range_val=8,reward_var='us')
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
@@ -82,8 +84,6 @@ learning_day = np.concatenate([condrewloc.loc[((condrewloc.Animal==an)&(condrewl
 # rewzone_learning = np.concatenate([get_rewzones(condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all[ii]))), 'RewLoc'].values[0], 1/gainf) for ii,an in enumerate(animals)])
 learning_day_opto = learning_day[opto_condition].astype(int)
 learning_day_nonopto = learning_day[~opto_condition].astype(int)
-# rewzone_learning_opto = rewzone_learning[opto_condition]
-# rewzone_learning_nonopto = rewzone_learning[~opto_condition]
 #%%
 # 2 -quantify so transients 
 # get time period around stim
@@ -104,7 +104,7 @@ so_transients_nonopto = [so_traces[ii,:]-np.nanmean(so_traces[ii,before_time_rng
 so_transients_nonopto = [np.nanmax(xx[time_rng]) for xx in so_transients_nonopto]
 
 fig, ax = plt.subplots(figsize=(2.2,5))
-df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto]),columns=['so_transient_dff_difference'])
+df = pd.DataFrame(np.concatenate([so_transients_opto, ]),columns=['so_transient_dff_difference'])
 df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
 df['animal'] = np.concatenate([animal_opto, animal_nonopto])
 df = df.sort_values('condition')
@@ -285,9 +285,10 @@ fig.tight_layout()
 # 4-combine days and split by trials
 # transient trace of so
 # per trial
-height=.02
-ymin=-.02
-fig, ax = plt.subplots(figsize=(8,5))
+height=.015
+ymin=-.01
+fig, ax = plt.subplots(figsize=(5,4))
+plt.rc('font', size=16)          # controls default text sizes
 pln=3
 trialtype = 0# odd bc red laser
 stimsec=4
@@ -296,13 +297,20 @@ opto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in \
 # subset of trials
 # color part of trace turqoise, the other part grey
 # normalize to before 1 s
-pre_window = 2 #s
+# smooth
+def smooth_trace(trace, window_size=2):
+    return np.convolve(trace, np.ones(window_size)/window_size, mode='same')
+
+pre_window = 4 #s
 opto_all_trial = np.array([xx-np.nanmean(xx[int((range_val/binsize)-(pre_window/binsize)):int(range_val/binsize)]) for xx in opto_all_trial])
+opto_all_trial = np.array([smooth_trace(xx) for xx in opto_all_trial])
+
 opto_all_trial_ledon = np.ones_like(opto_all_trial)*np.nan
 opto_all_trial_ledoff = opto_all_trial
 rng1, rng2 = int(range_val/binsize), int(range_val/binsize+stimsec/binsize)+1
 opto_all_trial_ledon[:,rng1:rng2]=opto_all_trial[:,rng1:rng2]
 opto_all_trial_ledoff[:,rng1+1:rng2-1]=np.nan
+
 ax.plot(np.nanmean(opto_all_trial_ledon,axis=0), 
         color='crimson',label='LED on', linewidth=4)
 ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -330,7 +338,8 @@ ax.set_ylabel('$\Delta$ F/F')
 nonopto_all_trial = np.hstack([xx[pln][trialtype] for ii,xx in enumerate(day_date_dff_arr_nonopto_all_tr)]).T
 # subset of trials
 # normalize to before 1 s
-nonopto_all_trial = np.array([xx-np.nanmean(xx[int((range_val/binsize)-(pre_window/binsize)):int((range_val/binsize))]) for xx in nonopto_all_trial])
+nonopto_all_trial = np.array([xx-np.nanmean(xx[int((range_val/binsize)-(pre_window/binsize)):int((range_val/binsize))+5]) for xx in nonopto_all_trial])
+nonopto_all_trial = np.array([smooth_trace(xx) for xx in nonopto_all_trial])
 ax.plot(np.nanmean(nonopto_all_trial,axis=0), 
         color='slategray',label='LED off', linewidth=4)
 ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -354,7 +363,7 @@ ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
 # fig.suptitle('Basal dendrite layer (stratum oriens)')
-fig.tight_layout()
+# fig.tight_layout()
 plt.savefig(os.path.join(dst, 'halo_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
 
 #%%

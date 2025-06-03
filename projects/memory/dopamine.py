@@ -13,7 +13,7 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 
 
 def extract_vars(src, animal, day, condrewloc, opto_cond, dst, 
-        pdf, rolling_win=3, planes=4,range_val = 5, binsize=0.2):
+        pdf, rolling_win=3, planes=4,range_val = 5, binsize=0.2, reward_var='cs'):
     # set vars
     print(f'*******Animal: {animal}, Day: {day}*******\n')
     # day=str(day)
@@ -52,16 +52,18 @@ def extract_vars(src, animal, day, condrewloc, opto_cond, dst,
         
         dffdf = pd.DataFrame({'dff': dff})
         dff = np.hstack(dffdf.rolling(rolling_win).mean().values)
-        rewards = np.hstack(params['solenoid2'])
+        if reward_var=='cs':
+            rewards = np.hstack(params['solenoid2'])
+        else:
+            rewards = np.hstack(params['rewards'])
         if dff.shape[0]<rewards.shape[0]:
-            rewards = np.hstack(params['solenoid2'])[:-1]
+            rewards = rewards[:-1]
             trialnum = np.hstack(params['trialnum'])[:-1]
             ybinned = np.hstack(params['ybinned'])[:-1]/gainf
             licks = np.hstack(params['licks'])[:-1]
             timedFF = np.hstack(params['timedFF'])[:-1]
             forwardvel = np.hstack(params['forwardvel'])[:-1]
         else:
-            rewards = np.hstack(params['solenoid2'])
             trialnum = np.hstack(params['trialnum'])
             ybinned = np.hstack(params['ybinned'])/gainf
             licks = np.hstack(params['licks'])
