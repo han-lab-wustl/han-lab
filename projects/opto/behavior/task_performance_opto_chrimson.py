@@ -103,14 +103,14 @@ from statsmodels.formula.api import ols
 import scipy.stats as stats
 from statsmodels.stats.multitest import multipletests
 import itertools
-
+from statsmodels.stats.anova import anova_lm  # <-- Correct import
 model = ols('rates_diff ~ C(condition)', data=bigdf_plot).fit()
-anova_table = sm.stats.anova_lm(model, typ=2)
+anova_table = anova_lm(model, typ=2)
 print(anova_table)
 
 # Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
 conds = ['ctrl', 'vip_in', 'vip_ex']
-comparisons = list(itertools.combinations(conds, 2))
+comparisons = list(itertools.combinations(conds, 2))[:-1]
 p_vals = []
 for c1, c2 in comparisons:
     x1 = bigdf_plot[bigdf_plot['condition'] == c1]['rates_diff'].dropna()
@@ -206,7 +206,7 @@ print(f"Required sample size per group: {sample_size:.2f}")
 # plot lick selectivity and lick com
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 a=0.7
-fig,ax = plt.subplots(figsize=(3,5))
+fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
     palette=pl,                
             errorbar='se', fill=False,ax=ax)
@@ -214,25 +214,52 @@ sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_pl
             palette=pl,alpha=a,                
             s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Lick Selectivity, last 5 trials (LEDon-LEDoff)')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nExcitation'])
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
+ax.set_ylabel(f'Lick Selectivity (LEDon-LEDoff)')
 ax.set_xlabel('')
 
-x1 = bigdf_plot.loc[((bigdf_plot.condition=='vip')&(bigdf_plot.opto==True)), 'lick_selectivity'].values
-x2 = bigdf_plot.loc[((bigdf_plot.condition=='ctrl')&(bigdf_plot.opto==True)), 'lick_selectivity'].values
-t,pval = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-# statistical annotation    
-fs=46
-ii=0.5; y=.02; pshift=.2
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
-# plt.savefig(os.path.join(savedst, 'lick_selectivity.svg'),  bbox_inches='tight')
+model = ols('lick_selectivity ~ C(condition)', data=bigdf_plot).fit()
+anova_table = anova_lm(model, typ=2)
+print(anova_table)
+
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip_in', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['lick_selectivity'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['lick_selectivity'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + height, y_pos + height, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+
+# Plot all pairwise comparisons
+y_start = bigdf_plot['lick_selectivity'].max() + .01
+gap = .05
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i])
+    y_start += gap
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'lick_selectivity_opto_all.svg'),  bbox_inches='tight')
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 #%%
 # lick com by rewzone

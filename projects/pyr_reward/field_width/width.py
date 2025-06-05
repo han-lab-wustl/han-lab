@@ -16,7 +16,178 @@ from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtyp
     make_tuning_curves_by_trialtype_w_darktime
 from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_coordinates,pairwise_distances,extract_data_rewcentric,\
     get_radian_position_first_lick_after_rew, get_rewzones
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_by_trialtype_w_darktime, make_tuning_curves_time_trial_by_trial_w_darktime, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
+from scipy.ndimage import gaussian_filter1d
+import numpy as np
+from scipy.ndimage import gaussian_filter1d
+
+def compute_field_width(Fc3_trial, ybinned_trial, bins=150, smooth_sigma=1.5, threshold_ratio=0.5):
+    """
+    Compute place field width for each neuron in a single trial.
+    
+    Parameters:
+    - Fc3_trial: np.ndarray of shape (T, N), neural activity over time (T) for N cells
+    - ybinned_trial: np.ndarray of shape (T,), position over time
+    - bins: number of spatial bins
+    - smooth_sigma: std for Gaussian smoothing
+    - threshold_ratio: threshold for field width (e.g., 0.5 = half max)
+    
+    Returns:
+    - widths: np.ndarray of shape (N,), field widths in cm (or same units as ybinned)
+              NaN for neurons with no activity
+    """
+    T, N = Fc3_trial.shape
+    widths = np.full(N, np.nan)
+    bin_edges = np.linspace(np.nanmin(ybinned_trial), np.nanmax(ybinned_trial), bins+1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    tcs = []
+    for cell in range(N):
+        # Get activity and position
+        activity = Fc3_trial[:, cell]
+        if np.all(np.isnan(activity)) or np.nanmax(activity) == 0:
+            continue
+
+        # Bin activity
+        binned_activity = np.zeros(bins)
+        counts = np.zeros(bins)
+        for i in range(T):
+            pos = ybinned_trial[i]
+            if np.isnan(pos) or np.isnan(activity[i]):
+                continue
+            bin_idx = np.digitize(pos, bin_edges) - 1
+            if bin_idx < 0 or bin_idx >= bins:
+                continue
+            binned_activity[bin_idx] += activity[i]
+            counts[bin_idx] += 1
+        with np.errstate(divide='ignore', invalid='ignore'):
+            tuning_curve = np.divide(binned_activity, counts)
+        
+        # Smooth and normalize
+        tuning_curve = gaussian_filter1d(tuning_curve, sigma=smooth_sigma, mode='wrap')
+        if np.nanmax(tuning_curve) == 0:
+            continue
+        norm_curve = tuning_curve / np.nanmax(tuning_curve)
+
+        # Find field width: count bins above threshold
+        field_bins = np.where(norm_curve >= threshold_ratio)[0]
+        if len(field_bins) == 0:
+            continue
+
+        # Handle wrap-around fields
+        diff_bins = np.diff(np.concatenate([[field_bins[-1]-bins], field_bins]))
+        gaps = np.where(diff_bins > 1)[0]
+        if len(gaps) > 0:
+            # split into separate fields
+            split_fields = np.split(field_bins, gaps + 1)
+            main_field = max(split_fields, key=len)
+        else:
+            main_field = field_bins
+
+        # Width = number of bins × bin size
+        bin_size = np.nanmean(np.diff(bin_edges))
+        widths[cell] = len(main_field) * bin_size
+        tcs.append(tuning_curve)
+    return widths,tcs
+
+
+def check_reward_in_bouts(lick_bout_starts, lick_bout_ends, reward, time):
+    """
+    Check whether each lick bout contains a reward event.
+
+    Parameters:
+        lick_bout_starts (list or np.ndarray): Start times of lick bouts.
+        lick_bout_ends (list or np.ndarray): End times of lick bouts.
+        reward (np.ndarray): Binary vector, 1 if reward occurs at that time.
+        time (np.ndarray): Time vector corresponding to reward.
+
+    Returns:
+        np.ndarray of booleans: True if reward is present in the bout.
+    """
+    reward_in_bout = []
+    reward_times = time[reward == 1]
+
+    for start, end in zip(lick_bout_starts, lick_bout_ends):
+        in_bout = np.any((reward_times >= start) & (reward_times <= end))
+        reward_in_bout.append(in_bout)
+
+    return np.array(reward_in_bout)
+
+def detect_lick_bouts(lickrate, time, threshold=1.0, min_duration=0.2, smooth_sigma_sec=0.2):
+    """
+    Detects lick bouts from a lick rate vector using a low-pass filter.
+    
+    Parameters:
+        lickrate (np.ndarray): Instantaneous lick rate vector.
+        time (np.ndarray): Time vector corresponding to lickrate.
+        threshold (float): Minimum lick rate to define a bout (licks/sec).
+        min_duration (float): Minimum bout duration (in seconds).
+        smooth_sigma_sec (float): Standard deviation of Gaussian filter (in seconds).
+        
+    Returns:
+        bout_starts (list of float): Start times of lick bouts.
+        bout_ends (list of float): End times of lick bouts.
+    """
+    dt = np.median(np.diff(time))  # Time step
+    sigma_samples = smooth_sigma_sec / dt
+
+    # Smooth the lickrate
+    # skip smoothing
+    lickrate_smooth = lickrate#gaussian_filter1d(lickrate.astype(float), sigma=sigma_samples)
+
+    # Thresholding
+    above_thresh = lickrate_smooth > threshold
+    min_samples = int(min_duration / dt)
+
+    bout_starts = []
+    bout_ends = []
+
+    i = 0
+    while i < len(above_thresh):
+        if above_thresh[i]:
+            bout_start_idx = i
+            while i < len(above_thresh) and above_thresh[i]:
+                i += 1
+            bout_end_idx = i - 1
+            if (bout_end_idx - bout_start_idx + 1) >= min_samples:
+                bout_starts.append(time[bout_start_idx])
+                bout_ends.append(time[bout_end_idx])
+        else:
+            i += 1
+
+    return bout_starts, bout_ends
+
+def check_reward_in_bouts(lick_bout_starts, lick_bout_ends, reward, time):
+    """
+    Check whether each lick bout contains a reward event.
+
+    Parameters:
+        lick_bout_starts (list or np.ndarray): Start times of lick bouts.
+        lick_bout_ends (list or np.ndarray): End times of lick bouts.
+        reward (np.ndarray): Binary vector, 1 if reward occurs at that time.
+        time (np.ndarray): Time vector corresponding to reward.
+
+    Returns:
+        np.ndarray of booleans: True if reward is present in the bout.
+    """
+    reward_in_bout = []
+    reward_times = time[reward == 1]
+
+    for start, end in zip(lick_bout_starts, lick_bout_ends):
+        in_bout = np.any((reward_times >= start) & (reward_times <= end))
+        reward_in_bout.append(in_bout)
+
+    return np.array(reward_in_bout)
+
+def smooth_lick_rate(licks, dt, sigma_sec=0.05):
+    # Convert sigma from seconds to samples
+    sigma_samples = sigma_sec / dt
+    # Smooth the binary lick vector
+    lick_rate = gaussian_filter1d(licks.astype(float), sigma=sigma_samples)
+    # Units: licks/sec
+    lick_rate = lick_rate / dt
+    return lick_rate
+
 def circular_arc_length(start_idx, end_idx, nbins):
     """
     Return the number of bins in the forward arc from start_idx to end_idx
@@ -212,6 +383,93 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
         plt.show()
     except Exception as e:
         print(e)
+
+#%%        
+#     # # trial by trial raster
+#     trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_all],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
+#     # # eg
+# #%%
+#     cll=3
+#     fig, axes_all = plt.subplots(nrows=len(tcs_dist), ncols=3,figsize=(15,10), sharex=True,width_ratios=[1.5,1.5,1])
+#     from mpl_toolkits.axes_grid1 import make_axes_locatable
+#     from matplotlib.colors import ListedColormap, BoundaryNorm
+#     cmap = ListedColormap(['gray', 'red', 'lime'])  # -1 = gray, 0 = red, 1 = green
+#     colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']        
+#     bounds = [-1.5, -0.5, 0.5, 1.5]  # boundaries between categories
+#     norm = BoundaryNorm(bounds, cmap.N)
+#     # Normalize activity by row
+#     # per epoch
+#     vmin = 0
+#     lw=1.5
+#     vmax = np.nanmax(tcs_correct[:, goal_all[cll]])
+#     for ep in range(len(tcs_dist)):
+#         axes=axes_all[ep,:]
+#         data = tcs_dist[ep][cll]
+#         norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
+#                 (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+
+#         # Add divider to move colorbar outside of axes[0]
+#         divider = make_axes_locatable(axes[0])
+#         cax = divider.append_axes("right", size="5%", pad=0.05)
+#         im = axes[0].imshow(norm_data, aspect='auto',cmap='Greys')
+#         fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. $\Delta F/F$')
+#         trial_mask = np.array(trialstates[ep])  # shape (n_trials,)
+#         trial_mask_2d = trial_mask[:, np.newaxis] * np.ones((1, data.shape[1]))  # shape (n_trials, n_timebins)
+#         a=0.4
+#         axes[0].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
+#         # plot com
+#         bin_size_dt = [ypos/bins_dt for ypos in ypos_max[ep]]
+#         axes[0].scatter(coms_dist[ep][cll]/bin_size_dt, np.arange(len(coms_dist[ep][cll])),color='w',marker='|')
+#         axes[2].plot(tcs_correct[ep, goal_all[cll]].T, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm')  
+#         axes[2].set_ylim([vmin,vmax])
+#         axes[2].legend()
+#         axes[2].set_ylabel('$\Delta F/F$')              
+#         # lick com
+#         com_trial = []
+#         for lick_trial in licks_all_dist[ep]:
+#             arr = np.nan_to_num(lick_trial, nan=0.0)  # Replace NaNs with 0    
+#             bins = np.arange(len(arr))
+#             total = np.sum(arr)
+#             if total == 0:
+#                 com= np.nan  # Avoid divide-by-zero
+#             else: com = np.sum(bins * arr) / total
+#             com_trial.append(com)
+#         # norm licks
+#         data = licks_all_dist[ep]
+#         norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
+#                 (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+#         axes[1].imshow(norm_data, aspect='auto', cmap='Blues')      
+#         axes[1].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
+#         axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
+#         center_bin = bins_dt/2                              
+#         for ax in axes:
+#                 ax.axvline(center_bin,color='k',linestyle='--',linewidth=lw)
+#         axes[0].axvline(center_bin, color='k',linestyle='--',linewidth=lw)  # for contrast on heatmap                
+#         axes[0].set_title(f'{animal}, {day}, cell: {goal_all[cll]}')        
+#         ticks = [0, bins_dt/2, bins_dt - 1]
+#         # Set x-ticks on both the heatmap and the licks plot
+#         axes[2].set_xticks(ticks)
+#         axes[2].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
+#         axes[2].set_xlabel('Reward-relative distance ($\Theta$)')
+#         axes[1].set_ylabel('Norm. Licks')
+#         axes[0].set_ylabel('Trial #')
+#         axes[2].spines[['top','right']].set_visible(False)
+#         axes[2].set_title(f"Field width={df.loc[df.cellid==goal_all[cll], 'width_cm'].values[ep]:.0f} cm")
+#     from matplotlib.patches import Patch
+#     # Custom legend for trial states
+#     trial_legend = [
+#         Patch(facecolor='gray', edgecolor='black', label='Probe'),
+#         Patch(facecolor='red', edgecolor='black', label='Incorrect'),
+#         Patch(facecolor='lime', edgecolor='black', label='Correct')
+#     ]
+#     # Add to figure
+#     fig.legend(handles=trial_legend, loc='upper right', title='Trial Type', frameon=True)
+#     plt.tight_layout()
+#     savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
+#     plt.savefig(os.path.join(os.path.join(savedst, f'eg_prerew_lick_cell_{animal}_{day}.svg')))
+
+#%%
+
     alldf.append(df)
     # ppost reward
     com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:,

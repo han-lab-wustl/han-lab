@@ -6,7 +6,7 @@ from scipy.stats import pearsonr, ranksums
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
-from scipy.signal import gaussian
+from scipy.signal.windows import gaussian
 from scipy.ndimage import label
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import get_success_failure_trials
