@@ -931,17 +931,28 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
                     # rewsize,ybinned,time,lick,
                     # Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
                     # bins=bins_dt)
-                    # normal tc
-                    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                    rewards,forwardvel,rewsize,bin_size)      
+                    # tc w/ dark time
+                    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+                    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+                    bins_dt=150 
+                    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+                    tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+                        Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                        bins=bins_dt)
 
             else: # if no skewed cells
                     print('************************0 cells skew > 2************************')
                     Fc3 = fall_fc3['Fc3']                        
                     Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
                     Fc3 = Fc3[:, skew>1]
-                    tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                    rewards,forwardvel,rewsize,bin_size)      
+                    # tc w/ dark time
+                    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+                    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+                    bins_dt=150 
+                    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+                    tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+                        Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                        bins=bins_dt)
 
     # only get opto vs. ctrl epoch comparisons
     tcs_correct = tcs_correct[[eptest-2, eptest-1]] 
