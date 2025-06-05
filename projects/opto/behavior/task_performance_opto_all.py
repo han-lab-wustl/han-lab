@@ -58,11 +58,12 @@ for dd,day in enumerate(conddf.days.values):
     lick_prob_prev, trials_bwn_success_opto, \
     trials_bwn_success_prev, vel_opto, vel_prev, lick_selectivity_per_trial_opto,\
     lick_selectivity_per_trial_prev, lick_rate_opto, lick_rate_prev, com_opto, com_prev,\
-        lick_rate_opto_late, lick_rate_prev_late= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr = 8)
+        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr = 8)
     rewzones = get_rewzones(rewlocs, 1.5)
     
     dct['velocity'] = [vel_prev, vel_opto]
     dct['lick_selectivity'] = [lick_selectivity_per_trial_prev, lick_selectivity_per_trial_opto]
+    dct['lick_selectivity_early'] = [lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early]
     dct['com'] = [com_prev, com_opto]
     dct['rates'] = [rates_prev, rates_opto]    
     dct['lick_p'] = [lick_prob_prev, lick_prob_opto]
@@ -72,7 +73,7 @@ for dd,day in enumerate(conddf.days.values):
     dct['lick_rate'] = [lick_rate_prev, lick_rate_opto]
     dct['lick_rate_late'] = [lick_rate_prev_late, lick_rate_opto_late]
     dcts.append(dct)
-
+#%%
 # plot performance 
 s = 12 # pontsize
 a=0.7
@@ -86,11 +87,11 @@ df['velocity'] = [dct['velocity'][0] for dct in dcts]
 df['lick_rate'] = [np.nanmean(dct['lick_rate'][1]) for dct in dcts] # opto
 df['lick_rate_diff'] = [np.nanmean(dct['lick_rate'][1])-np.nanmean(dct['lick_rate'][0]) for dct in dcts] # opto
 df['lick_rate_late'] = [np.nanmean(dct['lick_rate_late'][1]) for dct in dcts] # opto
-
 df['lick_rate_diff_late'] = [np.nanmean(dct['lick_rate_late'][1])-np.nanmean(dct['lick_rate_late'][0]) for dct in dcts] # opto
 # com opto
 df['com'] = [dct['com'][1] for dct in dcts]
 df['lick_selectivity']=[np.nanmean(dct['lick_selectivity'][1])-np.nanmean(dct['lick_selectivity'][0]) for dct in dcts]
+df['lick_selectivity_early']=[np.nanmean(dct['lick_selectivity_early'][1])-np.nanmean(dct['lick_selectivity_early'][0]) for dct in dcts]
 df['rewzone_transition'] = [str(tuple(dct['rewzones'])) for dct in dcts]
 df['opto'] = conddf.optoep.values>1
 df['condition'] = ['ctrl' if 'vip' not in xx else xx for xx in conddf.in_type.values]
@@ -359,6 +360,42 @@ ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=3
 ax.set_xlabel('')
 fig.tight_layout()
 
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['lick_rate_diff'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['lick_rate_diff'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + height, y_pos + height, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=46)
+    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+
+# Plot all pairwise comparisons
+y_start = bigdf_plot['lick_rate_diff'].max()
+gap = .2
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],xoffset=2,height=.1)
+    y_start += gap
+
+
 model = ols('lick_rate_diff ~ C(condition)', data=bigdf_plot).fit()
 anova_table = anova_lm(model, typ=2)
 print(anova_table)
@@ -386,3 +423,61 @@ model = ols('lick_rate_diff_late ~ C(condition)', data=bigdf_plot).fit()
 anova_table = anova_lm(model, typ=2)
 print(anova_table)
 plt.savefig(os.path.join(savedst, 'late_lick_rate_opto.svg'),  bbox_inches='tight')
+
+#%%
+# early lick selectivity
+
+# plot lick selectivity and lick com
+# bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
+a=0.7
+fig,ax = plt.subplots(figsize=(4,6))
+sns.barplot(x="condition", y="lick_selectivity_early",hue='condition', data=bigdf_plot,
+    palette=pl,                
+            errorbar='se', fill=False,ax=ax)
+sns.stripplot(x="condition", y="lick_selectivity_early",hue='condition', data=bigdf_plot,
+            palette=pl,alpha=a,                
+            s=s,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
+ax.set_ylabel(f'Early lick Selectivity (LEDon-LEDoff)')
+ax.set_xlabel('')
+
+model = ols('lick_selectivity_early ~ C(condition)', data=bigdf_plot).fit()
+anova_table = anova_lm(model, typ=2)
+print(anova_table)
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['lick_selectivity_early'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['lick_selectivity_early'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + height, y_pos + height, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+
+# Plot all pairwise comparisons
+y_start = bigdf_plot['lick_selectivity_early'].max() + .01
+gap = .02
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],height=0.007)
+    y_start += gap
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'lick_selectivity_early_opto_all.svg'),  bbox_inches='tight')

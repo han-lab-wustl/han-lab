@@ -327,12 +327,19 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     # get lick prob
     pos_bin_opto, lick_probability_opto = get_behavior_tuning_curve(ybinned_, licks_)
     # get lick rate / trial
-    # only in the first 5 trials
+    # only in the first x trials
     mask = np.array([xx in ttr[:firsttr] for xx in trialnum_])    
     t = time_[mask][(ybinned_<rewloc)[mask]]
     dt = np.nanmedian(np.diff(t))
     lick_rate_opto = smooth_lick_rate(licks_[mask][(ybinned_<rewloc)[mask]], dt)
+    # early lick selectivity
+    mask = np.array([xx in strials[:firsttr] for xx in trialnum_])
+    lick_selectivity_per_trial_opto_early = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                licks_[mask], rewloc, rewsize,
+                fails_only = False)
+
     # lick selectivity - only success 
+    # last x trials 
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
     # optional - fails
     # mask = np.array([xx in ftrials for xx in trialnum_])
@@ -366,6 +373,11 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     t = time_[mask][(ybinned_<rewloc)[mask]]
     dt = np.nanmedian(np.diff(t))
     lick_rate_prev = smooth_lick_rate(licks_[mask][(ybinned_<rewloc)[mask]], dt)
+    # early lick selectivity
+    mask = np.array([xx in strials[:firsttr] for xx in trialnum_])
+    lick_selectivity_per_trial_prev_early = get_lick_selectivity(ybinned_[mask], trialnum_[mask], 
+                licks_[mask], rewloc, rewsize,
+                fails_only = False)
     # lick selectivity
     mask = np.array([xx in strials[-lasttr:] for xx in trialnum_])
     # optional - fails
@@ -386,7 +398,8 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     return rate_opto, rate_prev, lick_prob_opto, \
     lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev, \
     vel_opto, vel_prev, lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev, \
-    lick_rate_opto, lick_rate_prev, com_opto, com_prev, lick_rate_opto_late, lick_rate_prev_late
+    lick_rate_opto, lick_rate_prev, com_opto, com_prev, lick_rate_opto_late, lick_rate_prev_late,\
+        lick_selectivity_per_trial_prev_early,lick_selectivity_per_trial_opto_early
 
 
 def get_success_failure_trials(trialnum, reward):

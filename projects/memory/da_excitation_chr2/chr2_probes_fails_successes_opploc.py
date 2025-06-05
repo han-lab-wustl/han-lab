@@ -9,7 +9,7 @@ from projects.DLC_behavior_classification import eye
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib, seaborn as sns
-from behavior import get_success_failure_trials, consecutive_stretch
+from projects.memory.behavior import get_success_failure_trials, consecutive_stretch
 import matplotlib as mpl
 # formatting for figs
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -18,7 +18,7 @@ mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
-from dopamine import extract_vars, get_rewzones
+from projects.memory.dopamine import extract_vars, get_rewzones
 # plt.rc('font', size=12)          # controls default text sizes
 plt.close('all')
 # save to pdf
@@ -39,15 +39,18 @@ range_val = 8; binsize=0.2 # peri stimulus before/after in s
 opto_cond = 'Opto_opp_loc' # experiment condition
 day_date_dff = {}
 day_date_dff_stim = {}
+planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
+rolling_win=5
+reward_var='cs'
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
     for day in days: 
         print(f'*******Animal: {animal}, Day: {day}*******\n')
         # set conditions
-        newrewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
-        rewloc = condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0]
+        newrewloc = condrewloc.loc[((condrewloc.Day==str(day))&(condrewloc.Animal==animal)), 'RewLoc'].values[0]
+        rewloc = float(condrewloc.loc[((condrewloc.Day==str(day))&(condrewloc.Animal==animal)), 'PrevRewLoc'].values[0])
         plndff = []; stimdff = []
-        optoday = (condrewloc.loc[((condrewloc.Day==day)&(condrewloc.Animal==animal)), opto_cond].values[0])
+        optoday = (condrewloc.loc[((condrewloc.Day==str(day))&(condrewloc.Animal==animal)), opto_cond].values[0])
         optoday = optoday==1
         # for each plane
         stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*ZD_000*.mat'))[0]
@@ -55,8 +58,43 @@ for ii,animal in enumerate(animals):
         stims = np.hstack(stims['stims']) # nan out stims
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             # get vars
-            dff, rewards, trialnum, ybinned, licks, \
-            timedFF, rews_centered, layer, firstrew, catchtrialsnum, gainf, rewsize = extract_vars(path, stims, rewloc, newrewloc)
+            params = scipy.io.loadmat(path)
+            stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
+            stims = scipy.io.loadmat(stimspth)        
+            if len(stims['stims']>0): stims = np.hstack(stims['stims']) # nan out stims
+            else: stims = np.zeros_like(params['forwardvelALL'][0])
+            VR = params['VR'][0][0]; gainf = VR[14][0][0]      
+            # adjust for gain
+            planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
+            pln = int(planenum[-1])
+            layer = planelut[pln]
+            params_keys = params.keys()
+            keys = params['params'].dtype
+            # dff is in row 7 - roibasemean3/average
+            dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))#/np.hstack(params['params'][0][0][9])
+            # nan out stims
+            dff[stims[pln::4].astype(bool)] = np.nan
+            
+            dffdf = pd.DataFrame({'dff': dff})
+            dff = np.hstack(dffdf.rolling(rolling_win).mean().values)
+            if reward_var=='cs':
+                rewards = np.hstack(params['solenoid2'])
+            else:
+                rewards = np.hstack(params['rewards'])
+            if dff.shape[0]<rewards.shape[0]:
+                rewards = rewards[:-1]
+                trialnum = np.hstack(params['trialnum'])[:-1]
+                ybinned = np.hstack(params['ybinned'])[:-1]/gainf
+                licks = np.hstack(params['licks'])[:-1]
+                timedFF = np.hstack(params['timedFF'])[:-1]
+                forwardvel = np.hstack(params['forwardvel'])[:-1]
+            else:
+                trialnum = np.hstack(params['trialnum'])
+                ybinned = np.hstack(params['ybinned'])/gainf
+                licks = np.hstack(params['licks'])
+                timedFF = np.hstack(params['timedFF'])
+                forwardvel = np.hstack(params['forwardvel'])
+
             ###################### plot behavior ######################
             fig, ax = plt.subplots()
             ax.plot(ybinned)
@@ -68,7 +106,15 @@ for ii,animal in enumerate(animals):
             ax.set_title(f'Animal {animal}, Day {day}, {layer}')
             fig.tight_layout()
             pdf.savefig(fig)
-            ###################### peri memory rew loc,  initial probes ######################
+            ###################### peri memory rew loc,  initial probes #####################
+            firstrew = np.where(rewards==1)[0][0]
+            rews_centered = np.zeros_like(ybinned[:firstrew])
+            rews_centered[(ybinned[:firstrew] >= rewloc-3) & (ybinned[:firstrew] <= rewloc+3)]=1
+            rews_iind = consecutive_stretch(np.where(rews_centered)[0])
+            min_iind = [min(xx) for xx in rews_iind if len(xx)>0]
+            rews_centered = np.zeros_like(ybinned[:firstrew])
+            rews_centered[min_iind]=1
+
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF = eye.perireward_binned_activity(dff[:firstrew], rews_centered, timedFF[:firstrew], range_val, binsize)                                
             clean_arr = rewdFF.T
@@ -98,10 +144,13 @@ for ii,animal in enumerate(animals):
             
             #TODO: peri reward catch trials
             ###################### peri learning rew loc, failed trials ######################             
-            success, fail, str_trials, ftr_trials, ttr, \
-            total_trials = get_success_failure_trials(trialnum, rewards)
             # split into opto vs. non opto
             # opto
+            trialnumvr = VR[8][0]
+            catchtrialsnum = trialnumvr[VR[16][0].astype(bool)]
+            success, fail, str_trials, ftr_trials, ttr, \
+            total_trials = get_success_failure_trials(trialnum, rewards)
+
             failtr_bool = np.array([(xx in ftr_trials) and 
                     (xx not in catchtrialsnum) and (xx%numtrialsstim==0) for xx in trialnum])
             failed_trialnum = trialnum[failtr_bool]
@@ -200,6 +249,7 @@ for ii,animal in enumerate(animals):
             pdf.savefig(fig2)              
             plndff.append([meanrewdFF_opto, meanrewdFF_nonopto])
             ###################### peri stim before vs. after 2s ######################
+            rewsize=20 # checked in vr
             stimzone = ((newrewloc*gainf-((rewsize*gainf)/2)+90)%180)/gainf
             rews_centered = np.zeros_like(ybinned[trialnum>2])
             rews_centered[(ybinned[trialnum>2] >= stimzone-5) & (ybinned[trialnum>2] <= stimzone+5)]=1
