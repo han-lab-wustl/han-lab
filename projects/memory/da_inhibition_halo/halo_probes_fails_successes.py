@@ -40,7 +40,7 @@ src = r"Y:\halo_grabda"
 animals = ['e243']
 # days_all = [[46,49,50,54,55,56,59,60,61,62,63,66,67,68,69,71,72,73]]
 days_all = [[45,46,54,67,68,69,71]]
-
+range_val=5;binsize=0.2
 opto_cond = 'Opto' # experiment condition
 rolling_win = 4 # 3 for significance in 10 trial on/ 1 off
 # optodays = [18, 19, 22, 23, 24]
@@ -51,7 +51,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         # extract variables and makes plots into pdf
         plndff = extract_vars(src, animal, day, condrewloc, opto_cond, dst,
-        pdf, rolling_win=rolling_win, planes=4,range_val=8,reward_var='us')
+        pdf, rolling_win=rolling_win, planes=4,range_val=range_val,reward_var='us')
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
@@ -87,7 +87,6 @@ learning_day_nonopto = learning_day[~opto_condition].astype(int)
 #%%
 # 2 -quantify so transients 
 # get time period around stim
-range_val=8;binsize=0.2
 time_rng = range(int(range_val/binsize-0/binsize),
             int(range_val/binsize+(1/binsize))) # during and after stim
 before_time_rng = range(int(range_val/binsize-2/binsize),
@@ -288,7 +287,7 @@ fig.tight_layout()
 height=.015
 ymin=-.01
 fig, ax = plt.subplots(figsize=(5,4))
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=14)          # controls default text sizes
 pln=3
 trialtype = 0# odd bc red laser
 stimsec=4
@@ -356,8 +355,8 @@ ax.fill_between(range(0,int(range_val/binsize)*2),
 
 ax.legend(bbox_to_anchor=(1.1, 1.05))
 # ax.get_legend().set_visible(False)
-ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,10))
-ax.set_xticklabels(np.arange(-range_val, range_val+1, 2))
+ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,5))
+ax.set_xticklabels(np.arange(-range_val, range_val+1))
 ax.set_ylim(ymin, height)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
