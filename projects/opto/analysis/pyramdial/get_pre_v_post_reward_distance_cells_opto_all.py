@@ -23,7 +23,7 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 goal_cell_iind = []
 goal_cell_prop = []
 goal_cell_null = []

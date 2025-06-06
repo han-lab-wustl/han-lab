@@ -8,6 +8,11 @@ import pickle, seaborn as sns, random, math
 from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
+from statsmodels.formula.api import ols
+import scipy.stats as stats
+from statsmodels.stats.multitest import multipletests
+import itertools
+from statsmodels.stats.anova import anova_lm  # <-- Correct import
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
@@ -17,7 +22,7 @@ from projects.pyr_reward.placecell import make_tuning_curves, intersect_arrays
 from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper\vip_r21'
 savepth = os.path.join(savedst, 'vip_opto_place.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
@@ -46,7 +51,7 @@ bins=90
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (conddf.optoep.values[ii]>1):
+    if True:#(conddf.optoep.values[ii]>1):
         if animal=='e145': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -97,8 +102,8 @@ for ii in range(len(conddf)):
                 Fc3 = fall_fc3['Fc3']
                 Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
                 # to avoid issues with e217?
-                pc_bool = np.sum(pcs,axis=0)>=1
-                Fc3 = Fc3[:,((skew>2)&pc_bool)]
+                # pc_bool = np.sum(pcs,axis=0)>=1
+                Fc3 = Fc3[:,((skew>2))]
         if Fc3.shape[1]>0:
                 # get abs dist tuning 
                 tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
@@ -169,7 +174,7 @@ df = df[(df.optoep>1)  & (df.index.isin(inds))]
 df['place_cell_prop'] = [xx[1] for xx in pc_prop]
 df['place_cell_prop']=df['place_cell_prop']*100
 df['opto'] = df.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
+df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['place_cell_prop_shuffle'] =  [xx[1] for xx in place_cell_null]
 df['place_cell_prop_shuffle']=df['place_cell_prop_shuffle']*100
@@ -182,19 +187,22 @@ sessions_sig = sum(df['p_value'].values<0.05)/len(df)
 ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
 ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
+#%%
 # number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(2,5))
+fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+
 df = df[(df.animals!='e200')&(df.animals!='e189')]
 df_plt = df
-df_plt = df_plt.groupby(['animals','condition']).mean(numeric_only=True)
+df_plt = df_plt.groupby(['animals','condition']).mean(numeric_only=True).reset_index()
 sns.stripplot(x='condition', y='place_cell_prop',
         hue='condition',data=df_plt,
-        palette={'ctrl': "slategray", 'vip': "red"},
+        palette=pl,
         s=s)
 sns.barplot(x='condition', y='place_cell_prop',
         data=df_plt,
-        palette={'ctrl': "slategray", 'vip': "red"},
+        palette=pl,
         fill=False,ax=ax, color='k', errorbar='se')
 sns.barplot(x='condition', y='place_cell_prop_shuffle',
         data=df_plt,ax=ax, color='dimgrey',label='shuffle',alpha=0.3,
@@ -202,20 +210,47 @@ sns.barplot(x='condition', y='place_cell_prop_shuffle',
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 ax.set_xlabel('')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'],rotation=45)
+ax.set_xticks([0,1,2], labels=['Control', 'VIP\nInhibition', 'VIP\nExcitation'],rotation=20)
 ax.set_ylabel('Place cell %\n(LEDon)')
-rewprop = df_plt.loc[(df_plt.index.get_level_values('condition')=='vip'), 'place_cell_prop']
-shufprop = df_plt.loc[(df_plt.index.get_level_values('condition')=='ctrl'), 'place_cell_prop']
-t,pval = scipy.stats.ranksums(rewprop, shufprop)
-# statistical annotation    
-fs=46
-ii=0.5; y=25; pshift=.5
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
+model = ols('place_cell_prop ~ C(condition)', data=df_plt).fit()
+anova_table = anova_lm(model, typ=2)
+print(anova_table)
+
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = df_plt[df_plt['condition'] == c1]['place_cell_prop'].dropna()
+    x2 = df_plt[df_plt['condition'] == c2]['place_cell_prop'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)    
+
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + 1, y_pos + 1, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos-3, sig, ha='center', va='bottom', fontsize=40)
+    plt.text(x_center, y_pos-2, f'p={pval:.3g}', ha='center', fontsize=8)
+
+# Plot all pairwise comparisons
+y_start = df_plt['place_cell_prop'].max() + 1
+gap = 5
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i])
+    y_start += gap
 plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto.svg'),bbox_inches='tight')

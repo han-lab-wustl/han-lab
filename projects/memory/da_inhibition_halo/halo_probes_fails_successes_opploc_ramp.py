@@ -489,6 +489,86 @@ for pln in range(4):
 fig.suptitle('halo per day per + mouse averages')
 plt.savefig(os.path.join(dst, 'halo_every10trials_peri_us_summary_opploc.svg'), bbox_inches='tight')
 #%%
+# learning 1 vs. 2
+# ---- Average across planes 0-2 and both learning days ---- #
+fig_avg, axes = plt.subplots(ncols=2,figsize=(9, 5),sharey=True,sharex=True)
+
+planes_to_avg = [[0, 1,2],[3]]
+lbls=['Superficial', 'Deep']
+for i in range(2):
+    ax=axes[i]
+    # OPTOTRIALS (trialtype=0)
+    # trialtype = 0
+    # dff_plot_opto = day_date_dff_arr_opto[ld_mask_opto][:, planes_to_avg[i], trialtype, :]
+    # dff_avg_opto = np.nanmean(dff_plot_opto, axis=1)  # avg over planes
+    # dff_avg_opto = np.nanmean(dff_avg_opto, axis=0)   # avg over learning days
+
+    # sem_opto = scipy.stats.sem(np.nanmean(dff_plot_opto, axis=1), axis=0, nan_policy='omit')
+
+    # ax.plot(dff_avg_opto, color='mediumturquoise', label='LEDon')
+    # ax.fill_between(range(0, int(range_val / binsize) * 2),
+    #                 dff_avg_opto - sem_opto,
+    #                 dff_avg_opto + sem_opto,
+    #                 alpha=0.5, color='mediumturquoise')
+
+    # LEDOFF (trialtype=1)
+    trialtype = 0
+    if i==1:
+        cs_idx = int(range_val / binsize)-20
+    else:
+        cs_idx =int(range_val / binsize)-20 # normalize to 0 for ramps
+    baseline_bins = int(2 / binsize)
+    baseline_window = slice(cs_idx - baseline_bins, cs_idx)
+    dff_plot_opto = np.array(ledon_tr)[planes_to_avg[i]]
+    dff_avg_opto = np.nanmean(dff_plot_opto, axis=0)  # avg over planes → shape: (n_trials, time)
+    # Normalize to pre-CS baseline (subtract)
+    baseline_opto = np.nanmean(dff_avg_opto[:, baseline_window], axis=1, keepdims=True)
+    dff_avg_opto = dff_avg_opto - baseline_opto
+    # Now average over trials
+    dff_mean_opto = np.nanmean(dff_avg_opto, axis=0)
+    sem_opto = scipy.stats.sem(dff_avg_opto, axis=0, nan_policy='omit')
+    ax.plot(dff_mean_opto, color='crimson', label='LEDon')
+    ax.fill_between(range(0, dff_mean_opto.shape[0]),
+                    dff_mean_opto - sem_opto,
+                    dff_mean_opto + sem_opto,
+                    alpha=0.5, color='crimson')
+    # NON-OPTO (trialtype=0)
+    trialtype = 0
+    dff_plot_nonopto = np.array(nonopto_tr)[planes_to_avg[i]]
+    dff_avg_nonopto = np.nanmean(dff_plot_nonopto, axis=0)  # avg over planes → shape: (n_trials, time)
+    # Normalize to pre-CS baseline (subtract)    
+    baseline_opto = np.nanmean(dff_avg_nonopto[:, baseline_window], axis=1, keepdims=True)
+    dff_avg_nonopto = dff_avg_nonopto - baseline_opto
+    # Now average over trials
+    dff_mean_nonopto = np.nanmean(dff_avg_nonopto, axis=0)
+    sem_nonopto = scipy.stats.sem(dff_avg_nonopto, axis=0, nan_policy='omit')
+    ax.plot(dff_mean_nonopto, color='k', label='LEDoff')
+    ax.fill_between(range(0, int(range_val / binsize) * 2),
+                    dff_mean_nonopto - sem_nonopto,
+                    dff_mean_nonopto + sem_nonopto,
+                    alpha=0.5, color='k')
+    # Decorations
+    ax.axvline(int(range_val / binsize), color='slategray', linestyle='--',linewidth=2)
+    ax.add_patch(
+        patches.Rectangle(
+            xy=(0,-0.02),  # point of origin.
+            width=2/binsize_stim, height=.05, linewidth=1, # width is s
+            color='lightcoral', alpha=0.2))
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_title(lbls[i])
+
+ax.set_xticks(range(0, (int(range_val / binsize) * 2) + 1, 10))
+ax.set_xticklabels(range(-range_val, range_val + 1, 2))
+ax.set_ylim(-.02, .02)
+ax.set_xlabel('Time from CS (s)')
+ax.set_ylabel('Norm. $\Delta F/F$')
+ax.legend()
+fig_avg.suptitle('SNc axon inhibition before reward zone\n(n=1 animal, GRABDA3m)')
+plt.tight_layout()
+plt.savefig(os.path.join(dst, 'halo_every10trials_peri_cs_w_stim_opp_loc.svg'), bbox_inches='tight')
+
+#%%
 # plot peri stim mean and sem of opto days vs. control days
 # learning 1 vs. 2
 rz=3

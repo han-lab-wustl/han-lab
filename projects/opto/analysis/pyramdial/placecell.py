@@ -6,7 +6,7 @@ from scipy.stats import pearsonr, ranksums
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 from sklearn.cluster import KMeans
-from scipy.signal import gaussian
+from scipy.signal.windows import gaussian
 from scipy.ndimage import label
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -916,43 +916,40 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
                     com_goal,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
     else:# remake tuning curves relative to reward        
     # takes time
-            fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-            Fc3 = fall_fc3['Fc3']
-            dFF = fall_fc3['dFF']
-            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-            dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-            skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-            # if animal!='z14' and animal!='e200' and animal!='e189':                
-            Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-            if Fc3.shape[1]>0:                        
-                    # 9/19/24
-                    # find correct trials within each epoch!!!!
-                    # tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
-                    # rewsize,ybinned,time,lick,
-                    # Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-                    # bins=bins_dt)
-                    # tc w/ dark time
-                    track_length_dt = 550 # cm estimate based on 99.9% of ypos
-                    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-                    bins_dt=150 
-                    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-                    tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
-                        Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-                        bins=bins_dt)
+        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # if animal!='z14' and animal!='e200' and animal!='e189':                
+        Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+        track_length_dt = 550 # cm estimate based on 99.9% of ypos
+        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+        bins_dt=150 
+        if Fc3.shape[1]>0:                        
+                # 9/19/24
+                # find correct trials within each epoch!!!!
+                # tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+                # rewsize,ybinned,time,lick,
+                # Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                # bins=bins_dt)
+                # tc w/ dark time
+                bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+                tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,
+                    Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                    bins=bins_dt)
 
-            else: # if no skewed cells
-                    print('************************0 cells skew > 2************************')
-                    Fc3 = fall_fc3['Fc3']                        
-                    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-                    Fc3 = Fc3[:, skew>1]
-                    # tc w/ dark time
-                    track_length_dt = 550 # cm estimate based on 99.9% of ypos
-                    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-                    bins_dt=150 
-                    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-                    tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
-                        Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-                        bins=bins_dt)
+        else: # if no skewed cells
+                print('************************0 cells skew > 2************************')
+                Fc3 = fall_fc3['Fc3']                        
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+                Fc3 = Fc3[:, skew>1]
+                # tc w/ dark time
+                bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+                tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,
+                    Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                    bins=bins_dt)
 
     # only get opto vs. ctrl epoch comparisons
     tcs_correct = tcs_correct[[eptest-2, eptest-1]] 

@@ -248,7 +248,7 @@ for ii,animal in enumerate(animals):
             fig2.tight_layout() 
             pdf.savefig(fig)
             pdf.savefig(fig2)              
-            plndff.append([meanrewdFF_opto, meanrewdFF_nonopto])
+            plndff.append([rewdFF_opto, rewdFF_nonopto])
             ###################### peri stim before vs. after 2s ######################
             rewsize=20 # checked in vr
             stimzone = ((newrewloc*gainf-((rewsize*gainf)/2)+90)%180)/gainf
@@ -300,7 +300,7 @@ for ii,animal in enumerate(animals):
             fig3.tight_layout()   
             pdf.savefig(fig3)     
             plt.close('all')
-            stimdff.append([meanrewdFF_opto, meanrewdFF_nonopto])
+            stimdff.append([rewdFF_opto, rewdFF_nonopto])
             
         day_date_dff[str(day)] = plndff
         day_date_dff_stim[str(day)] = stimdff
@@ -309,121 +309,158 @@ pdf.close()
 plt.rc('font', size=20)          # controls default text sizes
 # on same plane
 # 1 - set conditions
+days_all_str = [[str(yy) for yy in xx] for xx in days_all]
+days_all=[[int(yy) for yy in xx] for xx in days_all]
+animals_days=[[f'{yy}' for yy in xx] for ii,xx in enumerate(days_all_str)]
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-days_all_str = [[str(xx) for xx in day] for day in days_all]
-opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all_str[ii])) & (condrewloc.Animal==animal)), opto_cond].values for ii,animal in enumerate(animals)])
+opto_condition = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all_str[ii])) & \
+    (condrewloc.Animal==animal)), opto_cond].values.astype(float) for ii,animal in enumerate(animals)])
 animal = np.concatenate([condrewloc.loc[((condrewloc.Day.isin(days_all_str[ii])) & (condrewloc.Animal==animal)), 
             'Animal'].values for ii,animal in enumerate(animals)])
 opto_condition = np.array([True if xx==1 else False for xx in opto_condition])
-day_date_dff_arr = np.array([v for k,v in day_date_dff.items()])
+opto_days = np.concatenate(animals_days)[opto_condition]
+# all trials
+# opto on and off trials
+day_date_dff_arr = np.array([[[np.nanmean(vv[0],axis=1),np.nanmean(vv[1],axis=1)] for vv in v] for k,v in day_date_dff.items()])
+day_date_dff_arr_all_tr = [v for k,v in day_date_dff.items()]
+day_date_dff_arr_opto_ledon_tr = [[pln[0] for pln in v] for k,v in day_date_dff.items() \
+    if k in opto_days]
+day_date_dff_arr_opto_ledoff_tr = [[pln[1] for pln in v] for k,v in day_date_dff.items() \
+    if k in opto_days]
+day_date_dff_arr_nonopto_all_tr = [[pln[0] for pln in v] for k,v in day_date_dff.items() \
+    if k not in opto_days]
+# stim
+day_date_dff_stim_tr = [v for k,v in day_date_dff_stim.items()]
+day_date_dff_stim_opto_ledon_tr = [[pln[0] for pln in v] for k,v in day_date_dff_stim.items() \
+    if k in opto_days]
+day_date_dff_stim_opto_ledoff_tr = [[pln[1] for pln in v] for k,v in day_date_dff_stim.items() \
+    if k in opto_days]
+day_date_dff_stim_nonopto_all_tr = [[pln[0] for pln in v] for k,v in day_date_dff_stim.items() \
+    if k not in opto_days]
 day_date_dff_arr_opto = day_date_dff_arr[opto_condition]
+
 animal_opto = animal[opto_condition]
+animal_opto_tr = np.concatenate([[animal_opto[jj]]*dy[0].shape[1] for jj,dy in enumerate(day_date_dff_arr_opto_ledoff_tr)])
 animal_nonopto = animal[~opto_condition]
+animal_nonopto_tr = np.concatenate([[animal_nonopto[jj]]*dy[0].shape[1] for jj,dy in enumerate(day_date_dff_arr_nonopto_all_tr)])
+
 day_date_dff_arr_nonopto = day_date_dff_arr[~opto_condition]
-day_date_dff_stim_arr = np.array([v for k,v in day_date_dff_stim.items()])
-day_date_dff_stim_opto = day_date_dff_stim_arr[opto_condition]
-day_date_dff_stim_nonopto = day_date_dff_stim_arr[~opto_condition]
 learning_day = np.concatenate([condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all_str[ii]))), 'learning_date'].values-1 for ii,an in enumerate(animals)])
 rewzone_learning = np.concatenate([get_rewzones(condrewloc.loc[((condrewloc.Animal==an)&(condrewloc.Day.isin(days_all_str[ii]))), 'RewLoc'].values, 1/gainf) for ii,an in enumerate(animals)])
-learning_day_opto = learning_day[opto_condition]
-learning_day_nonopto = learning_day[~opto_condition]
+learning_day_opto = learning_day[opto_condition].astype(int)
+learning_day_nonopto = learning_day[~opto_condition].astype(int)
 rewzone_learning_opto = rewzone_learning[opto_condition]
+rewzone_learning_opto_tr = np.concatenate([[rewzone_learning_opto[jj]]*dy[0].shape[1] for jj,dy in enumerate(day_date_dff_arr_opto_ledoff_tr)])
 rewzone_learning_nonopto = rewzone_learning[~opto_condition]
+rewzone_learning_nonopto_tr = np.concatenate([[rewzone_learning_nonopto[jj]]*dy[0].shape[1] for jj,dy in enumerate(day_date_dff_arr_nonopto_all_tr)])
 height = 1.035 # ylim
+
 #%%
 # 2 -quantify so transients
 # get time period around stim
-time_rng = range(int(range_val/binsize),
-            int(range_val/binsize+2/binsize_stim)) # during and after stim
-before_time_rng = range(int(range_val/binsize-1/binsize_stim),
-            int(range_val/binsize)) # during and after stim
+# time_rng = range(int(range_val/binsize),
+#             int(range_val/binsize+2/binsize_stim)) # during and after stim
+# before_time_rng = range(int(range_val/binsize-1/binsize_stim),
+#             int(range_val/binsize)) # during and after stim
 
-# normalize pre-window to 1
-so_transients_opto = [day_date_dff_arr_opto[ii,3,
-            0,:]/np.nanmean(day_date_dff_arr_opto[ii,3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
-so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
-so_transients_nonopto = [day_date_dff_arr_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_arr_nonopto[ii,
-                    3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]
-so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
-fig, ax = plt.subplots(figsize=(2.5,5))
-df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
-df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
-df['animal'] = np.concatenate([animal_opto, animal_nonopto])
-df = df.sort_values('condition')
-df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
-ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"},)
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
-    alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-# ax.set_ylim(0.985, 1.04)
-ax.spines[['top','right']].set_visible(False)
+# # normalize pre-window to 1
+# so_transients_opto = [day_date_dff_arr_opto[ii,3,
+#             0,:]/np.nanmean(day_date_dff_arr_opto[ii,3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_opto.shape[0]))]
+# so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
+# so_transients_nonopto = [day_date_dff_arr_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_arr_nonopto[ii,
+#                     3,0,:int(range_val/binsize)]) for ii,xx in enumerate(range(day_date_dff_arr_nonopto.shape[0]))]
+# so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
+# fig, ax = plt.subplots(figsize=(2.5,5))
+# df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
+# df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
+# df['animal'] = np.concatenate([animal_opto, animal_nonopto])
+# df = df.sort_values('condition')
+# df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
+# ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
+#     palette={'LED off': "slategray", 'LED on': "mediumturquoise"},)
+# ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
+#     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+# ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
+#     alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+# # ax.set_ylim(0.985, 1.04)
+# ax.spines[['top','right']].set_visible(False)
 
-ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 'so_transient_dff_difference'].values
-t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
-ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
-                'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
-t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
+# ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 'so_transient_dff_difference'].values
+# t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
+# ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
+#                 'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
+# t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
 
-ax.set_title(f'Opposite rew. loc. stim at reward\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
-#%%# during stim
-# get time period around stim
-time_rng = range(int(range_val_stim/binsize_stim-1/binsize_stim),
-        int(range_val_stim/binsize_stim+.5/binsize_stim)) # during and after stim
-before_time_rng = range(int(range_val_stim/binsize_stim-2/binsize_stim),
-            int(range_val_stim/binsize_stim-1/binsize_stim)) # during and after stim
+# ax.set_title(f'Opposite rew. loc. stim at reward\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
+# #%%# during stim
+# # get time period around stim
+# time_rng = range(int(range_val_stim/binsize_stim-1/binsize_stim),
+#         int(range_val_stim/binsize_stim+.5/binsize_stim)) # during and after stim
+# before_time_rng = range(int(range_val_stim/binsize_stim-2/binsize_stim),
+#             int(range_val_stim/binsize_stim-1/binsize_stim)) # during and after stim
 
-# normalize pre-window to 1
-so_transients_opto = [day_date_dff_stim_opto[ii,3,
-            0,:]/np.nanmean(day_date_dff_stim_opto[ii,3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
-so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
-so_transients_nonopto = [day_date_dff_stim_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_stim_nonopto[ii,
-                    3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
-so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
+# # normalize pre-window to 1
+# so_transients_opto = [day_date_dff_stim_opto[ii,3,
+#             0,:]/np.nanmean(day_date_dff_stim_opto[ii,3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_opto.shape[0]))]
+# so_transients_opto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_opto]
+# so_transients_nonopto = [day_date_dff_stim_nonopto[ii,3,0,:]/np.nanmean(day_date_dff_stim_nonopto[ii,
+#                     3,0,:int(range_val_stim/binsize_stim)]) for ii,xx in enumerate(range(day_date_dff_stim_nonopto.shape[0]))]
+# so_transients_nonopto = [np.nanmax(xx[time_rng])/np.nanmean(xx[before_time_rng]) for xx in so_transients_nonopto]
 
-fig, ax = plt.subplots(figsize=(2.5,5))
-df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
-df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
-df['animal'] = np.concatenate([animal_opto, animal_nonopto])
+# fig, ax = plt.subplots(figsize=(2.5,5))
+# df = pd.DataFrame(np.concatenate([so_transients_opto,so_transients_nonopto])-1,columns=['so_transient_dff_difference'])
+# df['condition'] = np.concatenate([['LED on']*len(so_transients_opto), ['LED off']*len(so_transients_nonopto)])
+# df['animal'] = np.concatenate([animal_opto, animal_nonopto])
 
-df = df.sort_values('condition')
-df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
-ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
-    palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
-ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
-    alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+# df = df.sort_values('condition')
+# df_plt = df.groupby(['animal', 'condition']).mean(numeric_only=True)
+# ax = sns.barplot(x='condition', y='so_transient_dff_difference',hue='condition', data=df_plt, fill=False,
+#     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+# ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df_plt,s=10,
+#     palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
+# ax = sns.stripplot(x='condition', y='so_transient_dff_difference', hue='condition', data=df,s=8,
+#     alpha=0.5,palette={'LED off': "slategray", 'LED on': "mediumturquoise"})
 
-ax.spines[['top','right']].set_visible(False)
-ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 
-                        'so_transient_dff_difference'].values
-t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
-ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
-                'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
-t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
+# ax.spines[['top','right']].set_visible(False)
+# ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 
+#                         'so_transient_dff_difference'].values
+# t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
+# ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
+#                 'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
+# t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
 
-ax.set_title(f'Opposite rew. loc. stim\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
+# ax.set_title(f'Opposite rew. loc. stim\n per session p={pval:.3f}\n per animal p={pval_an:.3f}')
 #%%
 # plot peri rew mean and sem of opto days vs. control days
-# learning 1 vs. 2
+# concatenate trials across days
 rz=3
-fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
-                        figsize=(12,10))
+ledon_tr = [[dy[pln] for dd,dy in enumerate(day_date_dff_arr_opto_ledon_tr) if rewzone_learning_opto[dd]==rz] for pln in range(4)]
+ledon_tr=[np.hstack(ledon_tr[pln]).T for pln in range(4)]
+ledoff_tr = [[dy[pln] for dd,dy in enumerate(day_date_dff_arr_opto_ledoff_tr) if rewzone_learning_opto[dd]==rz] for pln in range(4)]
+ledoff_tr=[np.hstack(ledoff_tr[pln]).T for pln in range(4)]
+nonopto_tr = [[dy[pln] for dd,dy in enumerate(day_date_dff_arr_nonopto_all_tr) if rewzone_learning_nonopto[dd]==rz] for pln in range(4)]
+nonopto_tr=[np.hstack(nonopto_tr[pln]).T for pln in range(4)]
+# make sure same num trials
+min_tr = min([xx.shape[0] for xx in nonopto_tr])
+nonopto_tr=[xx[:min_tr,:] for xx in nonopto_tr]
+ymin, ymax= .98, 1.02
+
+fig, axes = plt.subplots(nrows = 4, sharex=True,
+                        figsize=(6,10))
 for pln in range(4):
-    for ld in range(2): # per learning day
+    # for ld in range(2): # per learning day
         trialtype = 0 # opto trials
-        ax = axes[pln,ld]
-        dff_plot=day_date_dff_arr_opto[((learning_day_opto==ld)&(rewzone_learning_opto==rz)),pln,trialtype,:]
+        ax = axes[pln]
+        dff_plot=ledon_tr[pln]
+        color='mediumturquoise'
         ax.plot(np.nanmean(dff_plot,axis=0), 
-                color='mediumturquoise', label='LEDon')
+                color=color, label='LEDon')
         ax.fill_between(range(0,int(range_val/binsize)*2), 
                     np.nanmean(dff_plot,axis=0)-scipy.stats.sem(dff_plot,axis=0,nan_policy='omit'),
                     np.nanmean(dff_plot,axis=0)+scipy.stats.sem(dff_plot,axis=0,nan_policy='omit'), 
-                    alpha=0.5, color='mediumturquoise')
+                    alpha=0.5, color=color)
         trialtype = 1 # even
-        dff_plot=day_date_dff_arr_opto[((learning_day_opto==ld)&(rewzone_learning_opto==rz)),pln,trialtype,:]
+        dff_plot=ledoff_tr[pln]
         ax.plot(np.nanmean(dff_plot,axis=0), 
                 color='k',label='LEDoff')
         ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -432,11 +469,11 @@ for pln in range(4):
                     alpha=0.5, color='k')
         ax.legend()
         ax.axvline(int(range_val/binsize), color='slategray', linestyle='--')
-        ax.set_ylim(.97, height)
+        ax.set_ylim(ymin, ymax)
         if pln==3: ax.set_xlabel('Time from CS (s)')
         trialtype = 0 # odd
-        ax = axes[pln,ld]
-        dff_plot=day_date_dff_arr_nonopto[((learning_day_nonopto==ld)&(rewzone_learning_nonopto==rz)),pln,trialtype,:]
+        ax = axes[pln]
+        dff_plot=nonopto_tr[pln]
         ax.plot(np.nanmean(dff_plot,axis=0), 
                 color='peru', label='Nonopto day odd trials (stim in opto days)')
         ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -455,14 +492,160 @@ for pln in range(4):
         else: ax.get_legend().set_visible(False)
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
-        if pln==0: ax.set_title(f'Learning day {ld+1}\nPlane {planelut[pln]}')
-        else: ax.set_title(f'Plane {planelut[pln]}')
-        ax.set_ylim(.97, height)
+        ax.set_title(f'Plane {planelut[pln]}')
+        ax.set_ylim(ymin, ymax)
         if pln==3: ax.set_xlabel('Time from CS (s)')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
-fig.suptitle('ChR2 per day per + mouse averages')
+fig.suptitle('chr2 per day per + mouse averages')
+
+# plt.savefig(os.path.join(dst, 'halo_every10trials_peri_us_summary_opploc.svg'), bbox_inches='tight')
+#%%
+# learning 1 vs. 2
+# ---- Average across planes 0-2 and both learning days ---- #
+fig_avg, axes = plt.subplots(ncols=2,figsize=(9, 5),sharey=True,sharex=True)
+
+planes_to_avg = [[0, 1,2],[3]]
+lbls=['Superficial', 'Deep']
+# ledon_tr = [[dy[pln] for dd,dy in enumerate(day_date_dff_arr_opto_ledon_tr) if rewzone_learning_opto[dd]==rz] for pln in range(4)]
+# ledon_tr=[np.hstack(ledon_tr[pln]).T for pln in range(4)]
+# ledoff_tr = [[dy[pln] for dd,dy in enumerate(day_date_dff_arr_opto_ledoff_tr) if rewzone_learning_opto[dd]==rz] for pln in range(4)]
+# ledoff_tr=[np.hstack(ledoff_tr[pln]).T for pln in range(4)]
+# nonopto_tr = [[dy[pln] for dd,dy in enumerate(day_date_dff_arr_nonopto_all_tr) if rewzone_learning_nonopto[dd]==rz] for pln in range(4)]
+# nonopto_tr=[np.hstack(nonopto_tr[pln]).T for pln in range(4)]
+for i in range(2):
+    ax=axes[i]
+    # OPTOTRIALS (trialtype=0)
+    # trialtype = 0
+    # dff_plot_opto = day_date_dff_arr_opto[ld_mask_opto][:, planes_to_avg[i], trialtype, :]
+    # dff_avg_opto = np.nanmean(dff_plot_opto, axis=1)  # avg over planes
+    # dff_avg_opto = np.nanmean(dff_avg_opto, axis=0)   # avg over learning days
+
+    # sem_opto = scipy.stats.sem(np.nanmean(dff_plot_opto, axis=1), axis=0, nan_policy='omit')
+
+    # ax.plot(dff_avg_opto, color='mediumturquoise', label='LEDon')
+    # ax.fill_between(range(0, int(range_val / binsize) * 2),
+    #                 dff_avg_opto - sem_opto,
+    #                 dff_avg_opto + sem_opto,
+    #                 alpha=0.5, color='mediumturquoise')
+
+    # LEDOFF (trialtype=1)
+    trialtype = 0
+    if i==1:
+        cs_idx = int(range_val / binsize)-20
+    else:
+        cs_idx =int(range_val / binsize)-20 # normalize to 0 for ramps
+    baseline_bins = int(2 / binsize)
+    baseline_window = slice(cs_idx - baseline_bins, cs_idx)
+    dff_plot_opto = np.array(ledoff_tr)[planes_to_avg[i]]
+    dff_avg_opto = np.nanmean(dff_plot_opto, axis=0)  # avg over planes → shape: (n_trials, time)
+    # Normalize to pre-CS baseline (subtract)
+    baseline_opto = np.nanmean(dff_avg_opto[:, baseline_window], axis=1, keepdims=True)
+    dff_avg_opto = dff_avg_opto - baseline_opto
+    # Now average over trials
+    dff_mean_opto = np.nanmean(dff_avg_opto, axis=0)
+    sem_opto = scipy.stats.sem(dff_avg_opto, axis=0, nan_policy='omit')
+    ax.plot(dff_mean_opto, color=color, label='LEDon')
+    ax.fill_between(range(0, dff_mean_opto.shape[0]),
+                    dff_mean_opto - sem_opto,
+                    dff_mean_opto + sem_opto,
+                    alpha=0.5, color=color)
+    # NON-OPTO (trialtype=0)
+    trialtype = 0
+    dff_plot_nonopto = np.array(nonopto_tr)[planes_to_avg[i]]
+    dff_avg_nonopto = np.nanmean(dff_plot_nonopto, axis=0)  # avg over planes → shape: (n_trials, time)
+    # Normalize to pre-CS baseline (subtract)    
+    baseline_opto = np.nanmean(dff_avg_nonopto[:, baseline_window], axis=1, keepdims=True)
+    dff_avg_nonopto = dff_avg_nonopto - baseline_opto
+    # Now average over trials
+    dff_mean_nonopto = np.nanmean(dff_avg_nonopto, axis=0)
+    sem_nonopto = scipy.stats.sem(dff_avg_nonopto, axis=0, nan_policy='omit')
+    ax.plot(dff_mean_nonopto, color='k', label='LEDoff')
+    ax.fill_between(range(0, int(range_val / binsize) * 2),
+                    dff_mean_nonopto - sem_nonopto,
+                    dff_mean_nonopto + sem_nonopto,
+                    alpha=0.5, color='k')
+    # Decorations
+    ax.axvline(int(range_val / binsize), color='slategray', linestyle='--',linewidth=2)
+    ax.add_patch(
+        patches.Rectangle(
+            xy=(0,-0.03),  # point of origin.
+            width=2/binsize_stim, height=.06, linewidth=1, # width is s
+            color='mediumspringgreen', alpha=0.2))
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_title(lbls[i])
+
+ax.set_xticks(range(0, (int(range_val / binsize) * 2) + 1, 10))
+ax.set_xticklabels(range(-range_val, range_val + 1, 2))
+ax.set_ylim(-.03, .03)
+ax.set_xlabel('Time from CS (s)')
+ax.set_ylabel('Norm. $\Delta F/F$')
+ax.legend()
+fig_avg.suptitle('SNc axon excitation before reward zone\n(n=2 animals)')
+plt.tight_layout()
+plt.savefig(os.path.join(dst, 'chr_every10trials_peri_cs_w_stim_opp_loc.svg'), bbox_inches='tight')
+
+#%%
+from scipy.stats import linregress, ttest_rel
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+planes_to_avg = [0, 1, 2]  # superficial
+cs_idx = int(range_val / binsize) - 20  # CS time index
+pre_cs_bins = int(8 / binsize)  # 8s before CS
+slope_window = slice(cs_idx - pre_cs_bins, cs_idx)  # -8s to 0s window
+frame_win = np.arange(0,40)
+time_vec = np.arange(-8, 0, binsize)[:slope_window.stop - slope_window.start]  # actual x-values for regression
+animals_opto = animal_opto_tr[rewzone_learning_opto_tr==3]
+animals_nonopto = animal_nonopto_tr[rewzone_learning_nonopto_tr==3]
+# LEDoff
+dff_plot_opto = np.array(ledoff_tr)[planes_to_avg]  # shape: [3, trials, time]
+dff_avg_opto = np.nanmean(dff_plot_opto, axis=0)    # shape: [trials, time]
+slopes_opto = [linregress(time_vec, tr[frame_win])[0] for tr in dff_avg_opto if not np.isnan(tr[frame_win]).any()]
+
+# Non-opto
+dff_plot_nonopto = np.array(nonopto_tr)[planes_to_avg]
+dff_avg_nonopto = np.nanmean(dff_plot_nonopto, axis=0)
+slopes_nonopto = [linregress(time_vec, tr[frame_win])[0] for tr in dff_avg_nonopto if not np.isnan(tr[frame_win]).any()]
+
+# Plot slope comparison
+df=pd.DataFrame()
+df['animal']=np.concatenate([animals_opto,animals_nonopto])
+df['slope']=np.concatenate([slopes_opto,slopes_nonopto])
+df['condition']=np.concatenate([['LEDon']*len(slopes_opto),['LEDoff']*len(slopes_nonopto)])
+dfg=df.groupby(['animal', 'condition']).mean(numeric_only=True).reset_index()
+fig, ax = plt.subplots(figsize=(4, 5))
+
+order=['LEDoff', 'LEDon']
+pl=['slategrey','mediumturquoise']
+sns.barplot(x='condition',y='slope',data=df, palette=pl, ax=ax, fill=False,order=order)
+sns.stripplot(x='condition',y='slope',data=df, palette=pl, ax=ax, size=10, jitter=True, alpha=0.2,order=order)
+sns.stripplot(x='condition',y='slope',data=dfg, palette=pl, ax=ax, size=15, jitter=True,order=order)
+
+ax.set_xticks([0, 1])
+# ax.set_xticklabels(['LEDon', 'LEDoff'])
+ax.set_ylabel('Pre-CS slope ($\\Delta F/F$)')
+ax.set_title('Superficial')
+
+df_pivot = dfg.pivot(index='animal', columns='condition', values='slope').reset_index()
+# Add paired lines
+for _, row in df_pivot.iterrows():
+    ax.plot([0, 1], [row['LEDoff'], row['LEDon']], color='gray', lw=2, zorder=1,alpha=0.5)
+# Use scientific (exponent) notation
+ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+
+
+# Paired t-test
+tval, pval = ttest_rel(dfg.loc[dfg.condition=='LEDoff', 'slope'], dfg.loc[dfg.condition=='LEDon', 'slope'])
+ax.text(0.5, max(slopes_opto + slopes_nonopto) * 0.9, f'p = {pval:.3f}', ha='center')
+
+sns.despine()
+plt.tight_layout()
+plt.savefig(os.path.join(dst, 'precs_slope_comparison_planes_0to2.svg'))
+
 #%%
 # plot peri stim mean and sem of opto days vs. control days
 # learning 1 vs. 2
