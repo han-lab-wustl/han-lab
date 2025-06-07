@@ -188,7 +188,7 @@ ax.set_xlabel('P-value')
 ax.set_ylabel('Sessions')
 #%%
 # number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,ax = plt.subplots(figsize=(5,5))
 # av across mice
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
@@ -202,15 +202,18 @@ sns.stripplot(x='opto', y='place_cell_prop',
 sns.barplot(x='opto', y='place_cell_prop',hue='condition',
         data=df_plt,
         palette=pl,
-        fill=False,ax=ax, color='k', errorbar='se')
-sns.barplot(x='opto', y='place_cell_prop_shuffle',
-        data=df_plt,ax=ax, color='dimgrey',label='shuffle',alpha=0.3,
-        err_kws={'color': 'grey'},errorbar=None)
+        fill=False,ax=ax, color='k', errorbar='se',legend=False)
+sns.barplot(x='opto', y='place_cell_prop_shuffle',hue='condition',
+        data=df_plt,ax=ax, color='dimgrey',alpha=0.3,
+        err_kws={'color': 'grey'},errorbar=None,legend=False)
 ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
+new_labels = {'ctrl': 'Control', 'vip': 'VIP\nInhibition', 'vip_ex': 'VIP\nExcitation'}
+handles, labels = ax.get_legend_handles_labels()
+labels = [new_labels.get(label, label) for label in labels]
+ax.legend(handles, labels, bbox_to_anchor=(.95, 1.0))
 ax.set_xlabel('')
-# ax.set_xticks([0,1,2], labels=['Control', 'VIP\nInhibition', 'VIP\nExcitation'],rotation=20)
-ax.set_ylabel('Place cell %\n(LEDon)')
+ax.set_xticks([0,1], labels=['LEDoff', 'LEDon'])
+ax.set_ylabel('Place cell %')
 
 model = ols('place_cell_prop ~ C(condition)', data=df_plt).fit()
 anova_table = anova_lm(model, typ=2)

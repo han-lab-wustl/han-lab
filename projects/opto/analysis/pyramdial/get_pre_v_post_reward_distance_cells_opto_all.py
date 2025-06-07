@@ -14,6 +14,9 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.analysis.pyramdial.placecell import get_rew_cells_opto
+import warnings
+warnings.filterwarnings("ignore")
+
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
@@ -24,15 +27,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 radian_alignment_saved = {} # overwrite
-goal_cell_iind = []
-goal_cell_prop = []
-goal_cell_null = []
-dist_to_rew = [] # per epoch
-num_epochs = [] 
-pvals = []
-rates_all = []
-total_cells = []
-epoch_perm = []
+results_all=[]
 radian_alignment = {}
 cm_window = 20
 #%%
@@ -47,8 +42,9 @@ for ii in range(len(conddf)):
         print(params_pth)
         radian_alignment, results_pre, results_post, results_pre_early, results_post_early = get_rew_cells_opto(
             params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
-            radian_alignment, cm_window=cm_window
-)
+            radian_alignment, cm_window=cm_window)
+        results_all.append([results_pre, results_post, results_pre_early, results_post_early])
+
 pdf.close()
 # # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling

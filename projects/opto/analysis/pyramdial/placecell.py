@@ -1014,7 +1014,6 @@ def process_goal_cell_proportions(
     animal, day, pdf, rz, scalingf, bins, goal_window, epsilon=0.7,
     num_iterations=1000
 ):
-    print(cell_type)
     """
     Process goal cell proportions and shuffled null distribution for a given cell type ('pre' or 'post').
 

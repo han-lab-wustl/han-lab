@@ -1249,7 +1249,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 trial_ind = 1
             elif sum(trial_mask)==1:
                 trial_ind=0
-            ypos_num = 3#ypos_ep[trial_mask][trial_ind]
+            ypos_num = ypos_ep[trial_mask][trial_ind]
             ypos_trial = ypos_ep[trial_mask]
             # remove random end of track value            
             ypos_trial[:trial_ind] = ypos_num
@@ -1293,7 +1293,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 try:
                     rl_bool[rew_idx] = 1
                 except Exception as e: # if trial does not reach rew zone
-                    print(e)
+                    # print(e)
                     rl_bool[int(len(rl_bool)/2)] = 1
                 rewloc_bool.append(rl_bool)
             else:
@@ -1310,7 +1310,6 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
         # test
         # plt.plot(ypos_w_dt)
         # plt.plot(rewloc_bool*400)        
-        print(f'Binsize: {bin_size}')
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
                 reward_ep, rewsize, rewloc_per_trial,
                 trial_ep)
@@ -1394,7 +1393,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
                 trial_ind = 1
             elif sum(trial_mask)==1:
                 trial_ind=0
-            ypos_num = 3#ypos_ep[trial_mask][trial_ind]
+            ypos_num = ypos_ep[trial_mask][trial_ind]
             ypos_trial = ypos_ep[trial_mask]
             # remove random end of track value            
             ypos_trial[:trial_ind] = ypos_num
@@ -1438,7 +1437,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
                 try:
                     rl_bool[rew_idx] = 1
                 except Exception as e: # if trial does not reach rew zone
-                    print(e)
+                    # print(e)
                     rl_bool[int(len(rl_bool)/2)] = 1
                 rewloc_bool.append(rl_bool)
             else:
@@ -1454,8 +1453,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
         rewloc_bool = np.concatenate(rewloc_bool)
         # test
         # plt.plot(ypos_w_dt)
-        # plt.plot(rewloc_bool*400)        
-        print(f'Binsize: {bin_size}')
+        # plt.plot(rewloc_bool*400)    
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
                 reward_ep, rewsize, rewloc_per_trial,
                 trial_ep)
@@ -1501,7 +1499,6 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
                 coms_fail[ep, :] = com
         rewlocs_w_dt.append(rewloc_per_trial)
     return tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt
-
 
 def make_time_tuning_curves(eps, time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
                             lasttr=8, bins=90, velocity_filter=False):
