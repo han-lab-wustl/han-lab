@@ -471,7 +471,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
 #%%
 
     alldf.append(df)
-    # ppost reward
+    # post reward
     com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
         xx], axis=0)>0)] if len(com)>0 else [] for com in com_goal]
     # get goal cells across all epochs        

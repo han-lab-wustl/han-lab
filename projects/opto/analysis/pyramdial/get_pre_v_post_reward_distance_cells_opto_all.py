@@ -45,46 +45,14 @@ for ii in range(len(conddf)):
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
-        radian_alignment, goal_cell_iind, goal_cell_prop, goal_cell_null, dist_to_rew,\
-                num_epochs, pvals, rates_all, total_cells, epoch_perm = get_rew_cells_opto(params_pth, pdf, \
-                radian_alignment_saved, animal, day, ii, conddf, goal_cell_iind, goal_cell_prop, \
-                goal_cell_null, dist_to_rew, num_epochs, pvals, rates_all, total_cells, \
-                        epoch_perm, radian_alignment)
+        radian_alignment, results_pre, results_post, results_pre_early, results_post_early = get_rew_cells_opto(
+            params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
+            radian_alignment, cm_window=cm_window
+)
 pdf.close()
 # # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
-
-#%%
-#%%
-plt.rc('font', size=20)          # controls default text sizes
-# plot goal cells across epochs
-# just opto days
-s=12
-inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
-df = conddf.copy()
-df = df[(df.index.isin(inds))]
-df['goal_cell_prop'] = goal_cell_prop
-df['goal_cell_prop']=df['goal_cell_prop']*100
-df['opto'] = df.optoep.values>1
-df['opto'] = ['stim' if xx==True else 'no_stim' for xx in df.opto.values]
-df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = pvals
-df['goal_cell_prop_shuffle'] = goal_cell_null
-df['goal_cell_prop_shuffle']=df['goal_cell_prop_shuffle']*100
-# df=df[df.p_value<0.5]
-# remove 0 goal cell prop
-df = df[df.goal_cell_prop>0]
-# df=df[df.days>2]
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df, x='p_value', 
-                hue='animals', bins=40)
-ax.spines[['top','right']].set_visible(False)
-ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df['p_value'].values<0.05)/len(df)
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
-ax.set_xlabel('P-value')
-ax.set_ylabel('Sessions')
 
 #%%
 ##########################  per animal paired comparison ##########################
