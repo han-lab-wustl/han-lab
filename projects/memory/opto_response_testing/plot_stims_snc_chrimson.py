@@ -34,7 +34,8 @@ days_all = [[1],[1]]
 range_val = 3; binsize=0.2 #s
 dur=1# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 2 # for which to normalize
+prewin = 1 # for which to normalize
+win=2 # smoothing
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -74,7 +75,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(3).mean().values)
+            dff = np.hstack(dffdf.rolling(win).mean().values)
             # get off plane stim
             # offpln=pln+1 if pln<3 else pln-1
             # startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
