@@ -37,7 +37,7 @@ radian_alignment = {}
 cm_window = 20
 #%%
 # iterate through all animals
-for ii in range(160, len(conddf)):
+for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
     animal = conddf.animals.values[ii]
     if True:#(conddf.optoep.values[ii]>1):

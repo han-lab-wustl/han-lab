@@ -44,7 +44,6 @@ num_iterations=1000
 bin_size=3 # cm
 lasttr=8 # last trials
 bins=90
-
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 #%%
 # iterate through all animals
@@ -170,7 +169,7 @@ plt.rc('font', size=18)          # controls default text sizes
 s=12
 df = conddf.copy()
 inds = [int(xx[-3:]) for xx in datadct.keys()]
-df = df[(df.optoep>1)  & (df.index.isin(inds))]
+df = df[(df.index.isin(inds))]
 df['place_cell_prop'] = [xx[1] for xx in pc_prop]
 df['place_cell_prop']=df['place_cell_prop']*100
 df['opto'] = df.optoep.values>1
@@ -193,64 +192,83 @@ fig,ax = plt.subplots(figsize=(3,5))
 # av across mice
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
-df = df[(df.animals!='e200')&(df.animals!='e189')]
+df = df[(df.animals!='e189')]
 df_plt = df
-df_plt = df_plt.groupby(['animals','condition']).mean(numeric_only=True).reset_index()
-sns.stripplot(x='condition', y='place_cell_prop',
+df_plt = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True).reset_index()
+sns.stripplot(x='opto', y='place_cell_prop',
         hue='condition',data=df_plt,
-        palette=pl,
+        palette=pl,dodge=True,
         s=s)
-sns.barplot(x='condition', y='place_cell_prop',
+sns.barplot(x='opto', y='place_cell_prop',hue='condition',
         data=df_plt,
         palette=pl,
         fill=False,ax=ax, color='k', errorbar='se')
-sns.barplot(x='condition', y='place_cell_prop_shuffle',
+sns.barplot(x='opto', y='place_cell_prop_shuffle',
         data=df_plt,ax=ax, color='dimgrey',label='shuffle',alpha=0.3,
         err_kws={'color': 'grey'},errorbar=None)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05))
 ax.set_xlabel('')
-ax.set_xticks([0,1,2], labels=['Control', 'VIP\nInhibition', 'VIP\nExcitation'],rotation=20)
+# ax.set_xticks([0,1,2], labels=['Control', 'VIP\nInhibition', 'VIP\nExcitation'],rotation=20)
 ax.set_ylabel('Place cell %\n(LEDon)')
 
 model = ols('place_cell_prop ~ C(condition)', data=df_plt).fit()
 anova_table = anova_lm(model, typ=2)
 print(anova_table)
 
-# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
-conds = ['ctrl', 'vip', 'vip_ex']
-comparisons = list(itertools.combinations(conds, 2))[:-1]
-p_vals = []
-for c1, c2 in comparisons:
-    x1 = df_plt[df_plt['condition'] == c1]['place_cell_prop'].dropna()
-    x2 = df_plt[df_plt['condition'] == c2]['place_cell_prop'].dropna()
-    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
-    p_vals.append(p)    
-
-# Correct for multiple comparisons
-reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
-
-# Add significance annotations
-def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05):
-    x1 = conds.index(group1)
-    x2 = conds.index(group2)
-    x_center = (x1 + x2) / 2
-    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + 1, y_pos + 1, y_pos], lw=1.5, color='black')
-    if pval < 0.001:
-        sig = '***'
-    elif pval < 0.01:
-        sig = '**'
-    elif pval < 0.05:
-        sig = '*'
-    else:
-        sig = ''
-    plt.text(x_center, y_pos-3, sig, ha='center', va='bottom', fontsize=40)
-    plt.text(x_center, y_pos-2, f'p={pval:.3g}', ha='center', fontsize=8)
-
-# Plot all pairwise comparisons
-y_start = df_plt['place_cell_prop'].max() + 1
-gap = 5
-for i, (c1, c2) in enumerate(comparisons):
-    add_sig(ax, c1, c2, y_start, p_vals_corrected[i])
-    y_start += gap
 plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto.svg'),bbox_inches='tight')
+# %%
+
+#%%
+# subtract by led off sessions
+# ----------------------------------------
+# Plotting Stim - No Stim per Animal
+# ----------------------------------------
+df_an = df_plt
+fig2, ax2 = plt.subplots(figsize=(3, 5))
+df_diff = (
+    df_an[df_an.opto ==True]
+    .set_index(['animals', 'condition'])[['place_cell_prop']]
+    .rename(columns={'place_cell_prop': 'stim'})
+)
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+
+df_diff['no_stim'] = df_an[df_an.opto == False].set_index(['animals', 'condition'])['place_cell_prop']
+df_diff['delta'] = df_diff['stim']-df_diff['no_stim']
+df_diff = df_diff.reset_index()
+df_diff = df_diff[(df_diff.animals!='e190')&(df_diff.animals!='e189')&(df_diff.animals!='e200')]
+# Plot
+a=0.7
+sns.stripplot(data=df_diff, x='condition', y='delta', ax=ax2, 
+             palette=pl, size=s,alpha=a)
+sns.barplot(data=df_diff, x='condition', y='delta', ax=ax2, 
+             palette=pl, fill=False)
+
+# Aesthetics
+ax2.axhline(0, color='black', linestyle='--')
+ax2.set_ylabel('Δ Place cell % (LEDon-LEDoff)')
+ax2.set_xlabel('')
+
+ax2.set_xticklabels(['Control', 'VIP\nInhibition','VIP\nExcitation'], rotation=20)
+ax2.set_title('Per-animal difference\n\n')
+ax2.spines[['top', 'right']].set_visible(False)
+rewprop = df_diff.loc[((df_diff.condition=='vip')), 'delta']
+shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
+t,pval = scipy.stats.ranksums(rewprop, shufprop)
+rewprop = df_diff.loc[((df_diff.condition=='vip_ex')), 'delta']
+shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
+t,pval2 = scipy.stats.ranksums(rewprop, shufprop)
+
+# statistical annotation    
+y = 12
+ii=0
+if pval < 0.001:
+        ax2.text(ii, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+        ax2.text(ii, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+        ax2.text(ii, y, "*", ha='center', fontsize=fs)
+ax2.text(ii, y, f'{pval:.2g}', ha='center', fontsize=12)
+
+plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
+

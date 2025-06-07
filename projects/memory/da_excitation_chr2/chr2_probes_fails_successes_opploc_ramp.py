@@ -561,13 +561,13 @@ for i in range(2):
     # Now average over trials
     dff_mean_nonopto = np.nanmean(dff_avg_nonopto, axis=0)
     sem_nonopto = scipy.stats.sem(dff_avg_nonopto, axis=0, nan_policy='omit')
-    ax.plot(dff_mean_nonopto, color='k', label='LEDoff')
+    ax.plot(dff_mean_nonopto, color='slategray', label='LEDoff')
     ax.fill_between(range(0, int(range_val / binsize) * 2),
                     dff_mean_nonopto - sem_nonopto,
                     dff_mean_nonopto + sem_nonopto,
-                    alpha=0.5, color='k')
+                    alpha=0.5, color='slategray')
     # Decorations
-    ax.axvline(int(range_val / binsize), color='slategray', linestyle='--',linewidth=2)
+    ax.axvline(int(range_val / binsize), color='k', linestyle='--',linewidth=2)
     ax.add_patch(
         patches.Rectangle(
             xy=(0,-0.03),  # point of origin.
@@ -583,7 +583,7 @@ ax.set_ylim(-.03, .03)
 ax.set_xlabel('Time from CS (s)')
 ax.set_ylabel('Norm. $\Delta F/F$')
 ax.legend()
-fig_avg.suptitle('SNc axon excitation before reward zone\n(n=2 animals)')
+fig_avg.suptitle('SNc axon excitation before reward zone\n(n=2 animals, GRABDA2h)')
 plt.tight_layout()
 plt.savefig(os.path.join(dst, 'chr_every10trials_peri_cs_w_stim_opp_loc.svg'), bbox_inches='tight')
 

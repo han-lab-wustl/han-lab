@@ -961,7 +961,6 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
     # print(eptest, perm)
     com_remap = np.array((coms_rewrel[1]-coms_rewrel[0]))        
     com_goal = [ii for ii,comr in enumerate(com_remap) if (comr<goal_window) & (comr>-goal_window) ]
-    dist_to_rew.append(coms_rewrel)
     # get goal cells across all epochs        
     goal_cells = com_goal
     # get per comparison
