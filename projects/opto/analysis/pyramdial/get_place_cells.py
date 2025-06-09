@@ -255,23 +255,44 @@ ax2.set_xlabel('')
 ax2.set_xticklabels(['Control', 'VIP\nInhibition','VIP\nExcitation'], rotation=20)
 ax2.set_title('Per-animal difference\n\n')
 ax2.spines[['top', 'right']].set_visible(False)
-rewprop = df_diff.loc[((df_diff.condition=='vip')), 'delta']
-shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
-t,pval = scipy.stats.ranksums(rewprop, shufprop)
-rewprop = df_diff.loc[((df_diff.condition=='vip_ex')), 'delta']
-shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
-t,pval2 = scipy.stats.ranksums(rewprop, shufprop)
 
-# statistical annotation    
-y = 12
-ii=0
-if pval < 0.001:
-        ax2.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax2.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax2.text(ii, y, "*", ha='center', fontsize=fs)
-ax2.text(ii, y, f'{pval:.2g}', ha='center', fontsize=12)
+model = ols('delta ~ C(condition)', data=df_diff).fit()
+anova_table = anova_lm(model, typ=2)
+print(anova_table)
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = df_diff[df_diff['condition'] == c1]['delta'].dropna()
+    x2 = df_diff[df_diff['condition'] == c2]['delta'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + height, y_pos + height, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
 
+# Plot all pairwise comparisons
+y_start = df_diff['delta'].max() + .01
+gap = 2
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],height=0.7)
+    y_start += gap
+    
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
 

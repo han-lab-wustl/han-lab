@@ -31,15 +31,31 @@ dfan = df.groupby(['animal','injection','hipp_layer']).mean(numeric_only=True)
 s=10
 a=0.4
 fig,ax=plt.subplots(figsize=(5,4))
-sns.stripplot(x='injection',y='num_axons',hue='hipp_layer',hue_order=order,data=df,dodge=True,jitter=True,s=s,alpha=a,palette=palette,legend=False)
+sns.stripplot(x='injection',y='num_axons',hue='hipp_layer',hue_order=order,data=df,dodge=True,jitter=True,s=s,alpha=a,palette=palette)
 # sns.stripplot(x='injection',y='num_axons',hue='hipp_layer',data=dfan,dodge=True,jitter=True,s=14,hue_order=order,palette=palette)
 dfsum = df.groupby(['injection', 'hipp_layer'])['num_axons'].sum().reset_index()
-sns.barplot(x='injection',y='num_axons',hue='hipp_layer',data=dfsum,hue_order=order,palette=palette,errorbar='se',fill=False)
-ax.legend(title='Hippocampal Layer', bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+sns.barplot(x='injection',y='num_axons',hue='hipp_layer',data=dfsum,hue_order=order,palette=palette,errorbar='se',fill=False,legend=False)
+ax.legend(title='Layer', bbox_to_anchor=(.8, 1), loc='upper left', borderaxespad=0.)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(['SNc','VTA'])
 ax.set_ylabel('Total # of axons')
 ax.set_xlabel('Injection site')
+
+# Map each bar's center using positions per group (e.g., SNc and VTA) and per hue (SO, SP, ...)
+group_positions = {'SNc': 0, 'VTA': 1}
+n_hues = len(order)
+group_width = 0.8  # default total width of a group in seaborn
+bar_width = group_width / n_hues
+for kk, inj in enumerate(['SNc', 'VTA']):
+    base_x = group_positions[inj] - group_width / 2 + bar_width / 2  # starting offset
+    for ll, ly in enumerate(order):
+        xpos = base_x + ll * bar_width
+        count = len(df[(df['hipp_layer'] == ly) &
+                       (df['injection'] == inj) &
+                       (df['stain'] == "eOPN3-mScarlet")])
+        ax.text(xpos, 50, f'{count}', ha='center', fontsize=14)
+
+ax.set_title('n=1 animal    n=2 animals')
 plt.savefig(os.path.join(dst, 'opn3_labeling.svg'),bbox_inches='tight')
 
 #%%

@@ -2,7 +2,7 @@
 """
 zahra
 get tuning curves with dark time
-get cells in 2, 3, or 4 epochs
+reward cell p vs. behavior
 """
 #%%
 import numpy as np, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -117,126 +117,225 @@ for ii in range(len(conddf)):
             bins=bins_dt)
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct)
+        # get null goal cells
+        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
+                    perm,num_iterations = 1000)
         goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]
         # behavioral metrics
         performance_per_comparison = [np.nanmean([rates[p[0]],rates[p[1]]]) for p in perm]
         lick_sel_per_comparison = [np.nanmean([ls_all[p[0]],ls_all[p[1]]]) for p in perm]
+        vel_per_comparison = [np.nanmean([forwardvel[eps[p[0]:p[0]+1]],forwardvel[eps[p[1]:p[1]+1]]]) for p in perm]
+        null_per_comparison = np.nanmean(goal_cell_shuf_ps_per_comp[:,:len(perm)],axis=(0))
         # save perm        
-        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct,goal_cells_p_per_comparison,performance_per_comparison,perm, rz_perm]
+        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct,goal_cells_p_per_comparison,performance_per_comparison,lick_sel_per_comparison, vel_per_comparison, null_per_comparison, perm, rz_perm]
 
 pdf.close()
 ####################################### RUN CODE #######################################
 #%%
 plt.rc('font', size=20)          # controls default text sizes
-color = 'cornflowerblue' # reward cell color
-sweep = list(datadct['e218_020_index000'][2].keys())
-# get values for each sweep per session
-sessions = list(datadct.keys())
-pvals_per_an = []
-sweep_labels = []
 
-for session in sessions:
-    pvals = [datadct[session][2][sw][5] for sw in sweep]
-    pvals_per_an.extend(pvals)
-    sweep_labels.extend(sweep)
+reward_cell_p_per_comp = [v[2] for k,v in datadct.items()]
+successrate_p_per_comp = [v[3] for k,v in datadct.items()]
+ls_p_per_comp = [v[4] for k,v in datadct.items()]
+vel_per_comp = [v[5] for k,v in datadct.items()]
+null_reward_cell_p_per_comp = [v[6] for k,v in datadct.items()]
 
-# Repeat sweep labels for each session
-# sweep_column = sweep_labels * len(sessions)
+animal_df = [k.split('_')[0] for k,v in datadct.items()]
+df=pd.DataFrame()
+df['reward_cell_p'] = np.concatenate(reward_cell_p_per_comp)
+df['null_reward_cell_p'] =  np.concatenate(null_reward_cell_p_per_comp)
+df['success_rate'] = np.concatenate(successrate_p_per_comp)
 
-# Create DataFrame
-df = pd.DataFrame({
-    'p_value': pvals_per_an,
-    'sweep': sweep_labels
-})
+df['reward_cell_p'] = df['reward_cell_p']*100
+df['success_rate'] =df['success_rate']*100
+df['lick_selectivity'] = np.concatenate(ls_p_per_comp)
+df['velocity'] = np.concatenate(vel_per_comp)
+df['animal'] = np.concatenate([[an]*len(reward_cell_p_per_comp[kk]) for kk,an in enumerate(animal_df)])
+df=df[(df.animal!='e189')&(df.animal!='e190')]
+a=0.4
+# Assume df is already defined with 'success_rate', 'reward_cell_p', 'animal'
 
-df = df[df.sweep<180]
-fig,axes=plt.subplots(ncols = 3,figsize=(15,5))
-ax=axes[0]
-sns.lineplot(x='sweep',y = 'p_value',data=df, color=color,ax=ax)
-ax.axhline(0.05, color='grey', linestyle='--',linewidth=3)
-ax.axvline(20, color='grey', linestyle='-.',linewidth=3)
-ax.set_ylabel('P-value \n(Reward cell % > shuffle)')
-ax.set_xlabel('')
-ax.text(
-    40,                           # x-position (same as vertical line)
-    ax.get_ylim()[1] * 1.02,      # y-position slightly above the top of y-axis
-    'Threshold = 20 cm',                      # text to display
-    ha='center', va='bottom',     # horizontal and vertical alignment
-)
+a = 0.4
+animals = df['animal'].unique()
+n_animals = len(animals)
 
-ax.spines[['top', 'right']].set_visible(False)
-# # of cells per threshold
-# 2 - rew cell indices
-goal_cells_per_an = []
-sweep_labels = []
-for session in sessions:
-    gcs = [len(datadct[session][2][sw][2]) for sw in sweep]
-    goal_cells_per_an.extend(gcs)
-    sweep_labels.extend(sweep)
-# Create DataFrame
-df = pd.DataFrame({
-    'numgc': goal_cells_per_an,
-    'sweep': sweep_labels
-})
+# Determine square-ish grid size
+n_cols = int(np.ceil(np.sqrt(n_animals)))
+n_rows = int(np.ceil(n_animals / n_cols))
 
-df = df[df.sweep<180]
-ax=axes[1]
-sns.lineplot(x='sweep',y = 'numgc',data=df, color=color,ax=ax)
-ax.axvline(20, color='grey', linestyle='-.',linewidth=3)
-ax.set_ylabel('# of Reward cells')
-ax.set_xlabel('')
-ax.text(
-    40,                           # x-position (same as vertical line)
-    ax.get_ylim()[1] * 1.02,      # y-position slightly above the top of y-axis
-    'Threshold = 20 cm',                      # text to display
-    ha='center', va='bottom',     # horizontal and vertical alignment
-)
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3* n_rows), sharex=True, sharey=True)
+axes = axes.flatten()
 
-ax.spines[['top', 'right']].set_visible(False)
-# % of cells per threshold
-# 0 - rew cell prop
-# 4 - shuffle prop
-goal_cells_per_an = []
-shuffle_per_an = []
-sweep_labels = []
-for session in sessions:
-    gcs = [datadct[session][2][sw][0] for sw in sweep]
-    shf = [datadct[session][2][sw][4] for sw in sweep]
-    goal_cells_per_an.extend(gcs)
-    shuffle_per_an.extend(shf)
-    sweep_labels.extend(sweep)
-# Create DataFrame
-df = pd.DataFrame({
-    'numgc': goal_cells_per_an,
-    'shufprop': shuffle_per_an,
-    'sweep': sweep_labels
-})
+for idx, animal in enumerate(animals):
+    ax = axes[idx]
+    subdf = df[df['animal'] == animal]
+    
+    sns.regplot(
+        x='success_rate',
+        y='reward_cell_p',
+        data=subdf,
+        scatter_kws={'color':'k','alpha': a,'s':70},
+        line_kws={'color': 'cornflowerblue'},
+        ax=ax
+    )    
+    r, p = scipy.stats.pearsonr(subdf['success_rate'], subdf['reward_cell_p'])
+    ax.set_title(f'{animal}\nr={r:.2f}, p={p:.3g}',fontsize=20)
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.spines[['top','right']].set_visible(False)
+    
+ax.set_xlabel('% Correct trials')
+ax.set_ylabel('% Reward cell')
 
-df = df[df.sweep<180]
-ax=axes[2]
-sns.lineplot(x='sweep',y = 'numgc',data=df,ax=ax,color=color,label='Real')
-sns.lineplot(x='sweep',y = 'shufprop',data=df, color='k',ax=ax,label='Shuffle')
-ax.axvline(20, color='grey', linestyle='-.',linewidth=3)
-ax.set_ylabel('Reward cell %')
-ax.set_xlabel('Distance between COM threshold (cm)')
-ax.text(
-    40,                           # x-position (same as vertical line)
-    ax.get_ylim()[1] * 1.02,      # y-position slightly above the top of y-axis
-    'Threshold = 20 cm',                      # text to display
-    ha='center', va='bottom',     # horizontal and vertical alignment
-)
-
-ax.spines[['top', 'right']].set_visible(False)
-ax.legend()
-panel_labels = ['A', 'B', 'C']
-for i, ax in enumerate(axes):
-    ax.text(
-        -0.3, 1.1,                      # x, y in axes coords (left-top outside corner)
-        panel_labels[i],               # label text
-        transform=ax.transAxes,
-        fontsize=26, 
-        va='top', ha='right'
-    )
-
+# Hide any unused subplots
+for ax in axes[n_animals:]:
+    ax.set_visible(False)
 plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'pvalue_per_threshold.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'reward_cell_v_successrate.svg'), 
+        bbox_inches='tight')
+#%%
+# Determine square-ish grid size
+n_cols = int(np.ceil(np.sqrt(n_animals)))
+n_rows = int(np.ceil(n_animals / n_cols))
+
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3* n_rows), sharex=True, sharey=True)
+axes = axes.flatten()
+
+for idx, animal in enumerate(animals):
+    ax = axes[idx]
+    subdf = df[df['animal'] == animal]
+    
+    sns.regplot(
+        x='lick_selectivity',
+        y='reward_cell_p',
+        data=subdf,
+        scatter_kws={'color':'k','alpha': a,'s':70},
+        line_kws={'color': 'cornflowerblue'},
+        ax=ax
+    )    
+    r, p = scipy.stats.pearsonr(subdf['lick_selectivity'], subdf['reward_cell_p'])
+    ax.set_title(f'{animal}\nr={r:.2f}, p={p:.3g}',fontsize=20)
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.spines[['top','right']].set_visible(False)
+    
+ax.set_xlabel('Lick selectivity\n(last 8 trials)')
+ax.set_ylabel('% Reward cell')
+
+# Hide any unused subplots
+for ax in axes[n_animals:]:
+    ax.set_visible(False)
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'reward_cell_v_lick_selectivity.svg'), 
+        bbox_inches='tight')
+#%%
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3* n_rows), sharex=True, sharey=True)
+axes = axes.flatten()
+
+for idx, animal in enumerate(animals):
+    ax = axes[idx]
+    subdf = df[df['animal'] == animal]
+    
+    sns.regplot(
+        x='velocity',
+        y='reward_cell_p',
+        data=subdf,
+        scatter_kws={'color':'k','alpha': a,'s':70},
+        line_kws={'color': 'cornflowerblue'},
+        ax=ax
+    )    
+    r, p = scipy.stats.pearsonr(subdf['velocity'], subdf['reward_cell_p'])
+    ax.set_title(f'{animal}\nr={r:.2f}, p={p:.3g}',fontsize=20)
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.spines[['top','right']].set_visible(False)
+    
+ax.set_xlabel('Velocity (cm/s)')
+ax.set_ylabel('% Reward cell')
+
+# Hide any unused subplots
+for ax in axes[n_animals:]:
+    ax.set_visible(False)
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'reward_cell_v_velocity.svg'), 
+        bbox_inches='tight')
+#%%
+from scipy.stats import ttest_rel
+from statsmodels.stats.multitest import multipletests
+
+test_results = []
+xvars = ['success_rate', 'lick_selectivity', 'velocity']
+labels = ['% Correct trials', 'Lick selectivity', 'Velocity']
+
+for xvar, label in zip(xvars, labels):
+    real_r, null_r = [], []
+
+    for animal in animals:
+        subdf = df[df['animal'] == animal]
+
+        # real r
+        r_real, _ = scipy.stats.pearsonr(subdf[xvar], subdf['reward_cell_p'])
+
+        # null r
+        r_null, _ = scipy.stats.pearsonr(subdf[xvar], subdf['null_reward_cell_p'])
+
+        real_r.append(r_real)
+        null_r.append(r_null)
+
+    # Paired t-test
+    tval, pval = scipy.stats.wilcoxon(real_r, null_r)
+    test_results.append((label, pval, real_r, null_r))
+
+# Bonferroni correction
+labels, raw_pvals, real_r_all, null_r_all = zip(*test_results)
+_, pvals_corr, _, _ = multipletests(raw_pvals, method='bonferroni')
+
+pl = ['cornflowerblue', 'grey']
+s=12
+a=0.7
+# Plotting
+fig, axes = plt.subplots(ncols=3,figsize=(9,5),sharex=True)
+for i, label in enumerate(labels):
+    real_r = real_r_all[i]
+    null_r = null_r_all[i]
+    pval = pvals_corr[i]
+    if label=='% Correct trials':
+        real_r=[r*100 for r in real_r]
+        null_r=[n*100 for n in null_r]
+    plot_df = pd.DataFrame({
+        'animal': animals.tolist() * 2,
+        'r_value': real_r + null_r,
+        'type': ['Real'] * len(real_r) + ['Shuffle'] * len(null_r)
+    })
+
+    ax=axes[i]
+    sns.barplot(data=plot_df, x='type', y='r_value',hue='type', errorbar='se', palette=pl, fill=False,ax=ax)
+    sns.stripplot(data=plot_df, x='type', y='r_value', hue='type',palette=pl, alpha=a, jitter=True,s=s,ax=ax)
+    # Add connecting lines
+    plot_df_l = pd.DataFrame({
+    'animal': animals.tolist(),
+    'real': real_r,
+    'null': null_r
+})
+    for _, row in plot_df_l.iterrows():
+        ax.plot([0,1], [row['real'], row['null']], color='gray', alpha=0.5, zorder=1,linewidth=1.5)
+
+    # Significance star
+    if pval < 0.001:
+        star = '***'
+    elif pval < 0.01:
+        star = '**'
+    elif pval < 0.05:
+        star = '*'
+    else:
+        star = 'n.s.'
+
+    ymax = plot_df['r_value'].max()
+    ax.text(0.5, ymax - 0.02, f'{pval:.2g}', ha='center', va='bottom', fontsize=12)
+    ax.set_title(f'{label}')
+    ax.set_ylabel('Pearson r')
+    ax.set_xlabel('')
+    sns.despine()
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, f'real_vs_null_r.svg'), bbox_inches='tight')
+plt.show()

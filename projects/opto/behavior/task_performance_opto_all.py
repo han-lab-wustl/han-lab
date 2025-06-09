@@ -58,7 +58,7 @@ for dd,day in enumerate(conddf.days.values):
     lick_prob_prev, trials_bwn_success_opto, \
     trials_bwn_success_prev, vel_opto, vel_prev, lick_selectivity_per_trial_opto,\
     lick_selectivity_per_trial_prev, lick_rate_opto, lick_rate_prev, com_opto, com_prev,\
-        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr = 8)
+        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr = 8,lasttr = 5)
     rewzones = get_rewzones(rewlocs, 1.5)
     
     dct['velocity'] = [vel_prev, vel_opto]
@@ -103,7 +103,6 @@ df=df.drop([2,3,5,7,17,18,24,35,37]) # z14, z15, z17 excluded days
 # df = pd.concat([df,df2])
 # plot rates vip vs. ctl led off and on
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
-# df=df[(df.rewzone_transition=='(2.0, 1.0)')]
 bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 bigdf_plot = bigdf_plot.reset_index()
 # bigdf_plot = pd.DataFrame()
@@ -205,7 +204,7 @@ sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_pl
             s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
-ax.set_ylabel(f'Lick Selectivity (LEDon-LEDoff)')
+ax.set_ylabel(f'Late lick Selectivity (LEDon-LEDoff)')
 ax.set_xlabel('')
 
 model = ols('lick_selectivity ~ C(condition)', data=bigdf_plot).fit()
@@ -218,7 +217,7 @@ p_vals = []
 for c1, c2 in comparisons:
     x1 = bigdf_plot[bigdf_plot['condition'] == c1]['lick_selectivity'].dropna()
     x2 = bigdf_plot[bigdf_plot['condition'] == c2]['lick_selectivity'].dropna()
-    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    stat, p = stats.ranksums(x1, x2)
     p_vals.append(p)
 # Correct for multiple comparisons
 reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
@@ -262,12 +261,11 @@ fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="com",hue='condition', data=df2plt, 
             palette=pl,                     
             errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="com",hue='condition', data=df2plt,                
-              palette=pl, alpha=a,
-            s=s,ax=ax,dodge=True)
+sns.stripplot(x="condition", y="com",hue='condition', data=df2plt, palette=pl, alpha=a,
+            s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'COM Licks-Reward Loc. (cm)')
+ax.set_ylabel(f'Late COM Licks-Reward Loc. (cm)')
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
 ax.set_title('Far to Near')
 ax.set_xlabel('')
@@ -326,9 +324,8 @@ fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="com",hue='condition', data=df2plt, 
             palette=pl,                     
             errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="com",hue='condition', data=df2plt,                
-              palette=pl, alpha=a,
-            s=s,ax=ax,dodge=True)
+sns.stripplot(x="condition", y="com",hue='condition', data=df2plt, palette=pl, alpha=a,
+            s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'COM Licks-Reward Loc. (cm)')
@@ -352,7 +349,7 @@ sns.barplot(x="condition", y="lick_rate_diff",hue='condition', data=bigdf_plot,
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="lick_rate_diff",hue='condition', data=bigdf_plot,                
               palette=pl, alpha=a,
-            s=s,ax=ax,dodge=True)
+            s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Initial lick rate (licks/s)')
@@ -411,7 +408,7 @@ sns.barplot(x="condition", y="lick_rate_diff_late",hue='condition', data=bigdf_p
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="lick_rate_diff_late",hue='condition', data=bigdf_plot,                
               palette=pl, alpha=a,
-            s=s,ax=ax,dodge=True)
+            s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Late lick rate (licks/s)')

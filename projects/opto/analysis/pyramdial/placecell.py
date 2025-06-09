@@ -928,11 +928,14 @@ def get_rew_cells_opto(
         track_length_dt = 550 # cm estimate based on 99.9% of ypos
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
-        if Fc3.shape[1]==0:      
+        skew_thres_range=np.arange(0,1.1,0.1)[::-1]
+        iii=0
+        while Fc3.shape[1]==0:      
+            iii+=1
             print('************************0 cells skew > 2************************')
             Fc3 = fall_fc3['Fc3']                        
             Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-            Fc3 = Fc3[:, skew>1]
+            Fc3 = Fc3[:, skew>skew_thres_range[iii]]
         # 9/19/24
         # find correct trials within each epoch!!!!
         # tc w/ dark time
@@ -1015,16 +1018,30 @@ def process_goal_cell_proportions(
     num_iterations=1000
 ):
     """
-    Process goal cell proportions and shuffled null distribution for a given cell type ('pre' or 'post').
+    Parameters:
+        eptest: tuple of two epoch indices (ctrl_ep, opto_ep)
+        cell_type: 'pre' or 'post'
+        coms_correct: array of shape (n_epochs, n_cells)
+        tcs_correct: tuning curves (n_epochs, n_cells, bins)
+        rewlocs: reward location per epoch
+        goal_window: window for goal definition (radians)
+        epsilon: wraparound window around π
+        pdf: PDF object for saving figures (optional)
 
     Returns:
-        dict with keys: goal_cell_prop, epoch_perm, goal_cell_shuf_ps
+        dict with:
+            - goal_cell_prop: real goal cell proportion
+            - goal_cell_shuf_ps: list of shuffled proportions
     """
+    from numpy import abs, pi
+    from itertools import combinations
+
     # only get opto vs. ctrl epoch comparisons
     # change to relative value 
+    coms_correct=coms_correct[[eptest-2,eptest-1],:]
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
     perm = list(combinations(range(len(coms_correct)), 2)) 
-    perm_opto = (eptest-2,eptest-1)
+    print(perm)
     rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
     # account for cells that move to the end/front
     # Define a small window around pi (e.g., epsilon)
@@ -1051,7 +1068,6 @@ def process_goal_cell_proportions(
         com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:, xx], axis=0) > 0)] if len(com) > 0 else [] for com in com_goal]
     else:
         raise ValueError("cell_type must be 'pre' or 'post'")
-
     # Get goal cells across epochs
     com_goal_postrew=[xx for xx in com_goal_postrew if len(xx) > 0]
     goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
@@ -1091,9 +1107,7 @@ def process_goal_cell_proportions(
         com_shufs = np.zeros_like(coms_correct)
         com_shufs[0, :] = coms_correct[0]
         com_shufs[1:1+len(shufs), :] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
-
         coms_rewrel_shuf = np.array([com - np.pi for com in com_shufs])
-
         # Wraparound correction near pi
         for p in perm:
             for cll in range(coms_rewrel_shuf.shape[1]):

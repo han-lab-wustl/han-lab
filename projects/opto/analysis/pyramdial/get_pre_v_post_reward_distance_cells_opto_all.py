@@ -1,5 +1,8 @@
-"""get reward distance cells between opto and non opto conditions
+"""
+get reward distance cells between opto and non opto conditions
 oct 2024
+mods in june 2025
+control vs. opto epoch only
 """
 
 #%%
@@ -16,7 +19,6 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.opto.analysis.pyramdial.placecell import get_rew_cells_opto
 import warnings
 warnings.filterwarnings("ignore")
-
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
@@ -51,371 +53,120 @@ with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 
 #%%
-##########################  per animal paired comparison ##########################
-
-# number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(5,5))
-# av across mice
-# df = df[(df.animals!='e200')&(df.animals!='e189')]
-# only get -1 pre opto values
-# df=df[(df.optoep==-1) | (df.optoep>1)]
-df_plt = df
-color = 'mediumvioletred'
-df_an = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True).reset_index()
-
-order = ['no_stim', 'stim']
-sns.stripplot(x='condition', y='goal_cell_prop',
-        hue='opto',data=df_plt,hue_order=order,
-        palette={'no_stim': "slategray", 'stim': color},
-        s=9, dodge=True,alpha=.5)
-sns.stripplot(x='condition', y='goal_cell_prop',
-        hue='opto',data=df_an,hue_order=order,
-        palette={'no_stim': "slategray", 'stim': color},
-        s=s, dodge=True)
-sns.barplot(x='condition', y='goal_cell_prop',hue='opto',
-        data=df_plt,hue_order=order,
-        palette={'no_stim': "slategray", 'stim': color},
-        fill=False,ax=ax, errorbar='se')
-sns.barplot(x='condition', y='goal_cell_prop_shuffle',
-        data=df_plt,ax=ax, color='dimgrey',label='shuffle',alpha=0.3,
-        err_kws={'color': 'grey'},errorbar=None)
-rewprop = df_an.loc[((df_an.condition=='vip')), 'goal_cell_prop']
-shufprop = df_an.loc[((df_an.condition=='ctrl')), 'goal_cell_prop']
-t,pval = scipy.stats.ranksums(rewprop, shufprop)
-
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-ax.set_xlabel('')
-# plt.savefig(os.path.join(savedst, 'reward_cell_prop_ctrlvopto_inhib.svg'),bbox_inches='tight')
-#%%
-# subtract by led off sessions
-# ----------------------------------------
-# Plotting Stim - No Stim per Animal
-# ----------------------------------------
-fig2, ax2 = plt.subplots(figsize=(4, 5))
-df_diff = (
-    df_an[df_an.opto == 'stim']
-    .set_index(['animals', 'condition'])[['goal_cell_prop']]
-    .rename(columns={'goal_cell_prop': 'stim'})
-)
-pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
-
-df_diff['no_stim'] = df_an[df_an.opto == 'no_stim'].set_index(['animals', 'condition'])['goal_cell_prop']
-df_diff['delta'] = df_diff['stim']-df_diff['no_stim']
-df_diff = df_diff.reset_index()
-df_diff = df_diff[(df_diff.animals!='e190')&(df_diff.animals!='e189')&(df_diff.animals!='e200')]
-# Plot
-sns.stripplot(data=df_diff, x='condition', y='delta', ax=ax2, 
-             palette=pl, size=s )
-sns.barplot(data=df_diff, x='condition', y='delta', ax=ax2, 
-             palette=pl, fill=False)
-
-# Aesthetics
-ax2.axhline(0, color='black', linestyle='--')
-ax2.set_ylabel('Δ Reward cell % (LEDon-LEDoff)')
-# ax2.set_xticklabels(['Control', 'VIP'], rotation=45)
-ax2.set_title('Per-animal difference\n\n')
-ax2.spines[['top', 'right']].set_visible(False)
-rewprop = df_diff.loc[((df_diff.condition=='vip')), 'delta']
-shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
-t,pval = scipy.stats.ranksums(rewprop, shufprop)
-rewprop = df_diff.loc[((df_diff.condition=='vip_ex')), 'delta']
-shufprop = df_diff.loc[((df_diff.condition=='ctrl')), 'delta']
-t,pval2 = scipy.stats.ranksums(rewprop, shufprop)
-
-# statistical annotation    
-y = 12
-ii=0
-if pval < 0.001:
-        ax2.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax2.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax2.text(ii, y, "*", ha='center', fontsize=fs)
-ax2.text(ii, y, f'{pval:.2g}', ha='center', fontsize=12)
-
-plt.savefig(os.path.join(savedst, 'reward_cell_prop_difference_all.svg'), bbox_inches='tight')
-
-#%%
-############################## OLD ##############################
-############################## OLD ##############################
-############################## OLD ##############################
-
-
-plt.rc('font', size=18)          # controls default text sizes
-# plot goal cells across epochs
-# just opto days
-s=12
-inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
+# separate out variables
 df = conddf.copy()
-# df = df[df.optoep>1]
-df['goal_cell_prop'] = goal_cell_prop
-df['goal_cell_prop'] = df['goal_cell_prop']*100
-df['opto'] = df.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
-df['p_value'] = pvals
-df['goal_cell_prop_shuffle'] = goal_cell_null
-df['goal_cell_prop_shuffle']=df['goal_cell_prop_shuffle']*100
-fig,ax = plt.subplots(figsize=(4,5))
-ax = sns.histplot(data = df, x='p_value', 
-                hue='animals', bins=40)
-ax.spines[['top','right']].set_visible(False)
-ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df['p_value'].values<0.05)/len(df)
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
-ax.set_xlabel('P-value')
-ax.set_ylabel('Sessions')
-# number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(2,5))
-# av across mice
-df = df[(df.animals!='e200')&(df.animals!='e189')]
-df_plt = df
-df_plt = df_plt.groupby(['animals','condition']).mean(numeric_only=True)
-sns.stripplot(x='condition', y='goal_cell_prop',
-        hue='condition',data=df_plt,
-        palette={'ctrl': "slategray", 'vip': "red"},
-        s=s)
-sns.barplot(x='condition', y='goal_cell_prop',
-        data=df_plt,
-        palette={'ctrl': "slategray", 'vip': "red"},
-        fill=False,ax=ax, color='k', errorbar='se')
-sns.barplot(x='condition', y='goal_cell_prop_shuffle',
-        data=df_plt,ax=ax, color='dimgrey',label='shuffle',alpha=0.3,
-        err_kws={'color': 'grey'},errorbar=None)
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-ax.set_xlabel('')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'],rotation=45)
-ax.set_ylabel('Reward cell %\n(LEDon)')
-rewprop = df_plt.loc[(df_plt.index.get_level_values('condition')=='vip'), 'goal_cell_prop']
-shufprop = df_plt.loc[(df_plt.index.get_level_values('condition')=='ctrl'), 'goal_cell_prop']
-t,pval = scipy.stats.ranksums(rewprop, shufprop)
-# statistical annotation    
-fs=46
-ii=0.5; y=35; pshift=.05
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+df = df.drop([179]) # skipped e217 dau
+pre_late = [xx[0] for xx in results_all]
+post_late = [xx[1] for xx in results_all]
+pre_early = [xx[2] for xx in results_all]
+post_early = [xx[3] for xx in results_all]
 
-df_plt=df_plt.reset_index()
-df_plt.to_csv(r'Z:\saved_datasets\vip_inhibition_rew_cells.csv')
-plt.savefig(os.path.join(savedst, 'raw_reward_cell_prop_ctrlvopto.svg'),bbox_inches='tight')
+# concat all cell type goal cell prop
+all_cells = [pre_late, post_late, pre_early, post_early]
+goal_cell_prop = np.concatenate([[xx['goal_cell_prop'] for xx in cll] for cll in all_cells])
+realdf= pd.DataFrame()
+realdf['goal_cell_prop']=goal_cell_prop
+lbl = ['pre_late', 'post_late', 'pre_early', 'post_early']
+realdf['cell_type']=np.concatenate([[lbl[kk]]*len(cll) for kk,cll in enumerate(all_cells)])
+realdf['animal']=np.concatenate([df.animals]*len(all_cells))
+realdf['optoep']=np.concatenate([df.optoep]*len(all_cells))
+realdf['opto']=realdf['optoep']>1
+realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
+realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
+# realdf=realdf.drop([2,3,5,7,17,18,24,35,37]) # z14, z15, z17 excluded days
+realdf=realdf[realdf['goal_cell_prop']>0]
+realdf=realdf[(realdf.animal!='e189')]
 
-#%%    
-# include all comparisons 
-df_perms = pd.DataFrame()
-df_perms['epoch_comparison'] = [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
-goal_cell_perm = [xx[0] for xx in goal_cell_prop]
-goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
-df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
-df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
-df_perms['animals'] = np.concatenate(df_perm_animals)
-df_perms['condition'] = ['vip' if (xx=='e218') or (xx=='e216') else 'ctrl' for xx in df_perms['animals'].values]
-df_perms = df_perms[df_perms.animals!='e189']
-df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
-
-fig,ax = plt.subplots(figsize=(7,5))
-sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
-        hue='animals',data=df_permsav,
-        s=8,ax=ax)
-sns.barplot(x='epoch_comparison', y='goal_cell_prop',
-        data=df_permsav,
-        fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.lineplot(data=df_permsav, # correct shift
-        x='epoch_comparison', y='goal_cell_prop_shuffle',
-        color='grey', label='shuffle')
-
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-
-eps = df_permsav.index.get_level_values("epoch_comparison").unique()
-for ep in eps:
-    # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-    rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop'].values
-    shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
-    t,pval = scipy.stats.ranksums(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
-
-# take a mean of all epoch comparisons
-df_perms['num_epochs'] = [2]*len(df_perms)
-df_permsav2 = df_perms.groupby(['animals', 'condition','num_epochs']).mean(numeric_only=True)
+dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
+fig,axes=plt.subplots(ncols=4,figsize=(12,5))
+for cl,cll in enumerate(dfagg.cell_type.unique()):
+    ax=axes[cl]
+    sns.barplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],fill=False,ax=ax)
+    ax.set_title(cll)
 #%%
-# quantify reward cells vip vs. opto
-df_plt2 = pd.concat([df_permsav2,df_plt])
-# df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
-df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
-df_plt2 = df_plt2.groupby(['animals','condition','num_epochs']).mean(numeric_only=True)
-# number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(5,5))
-# av across mice
-cmap = ['slategray','crimson']
-sns.stripplot(x='num_epochs', y='goal_cell_prop',hue='condition',
-        data=df_plt2,palette=cmap,
-        s=12, dodge=True, alpha=.8)
-sns.barplot(x='num_epochs', y='goal_cell_prop',hue='condition',
-        data=df_plt2,palette=cmap,
-        fill=False,ax=ax, errorbar='se')
-ax = sns.lineplot(data=df_plt2, # correct shift
-        x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, y='goal_cell_prop_shuffle',color='grey', 
-        label='shuffle')
-ax.spines[['top','right']].set_visible(False)
-# ax.legend().set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('Reward cell proportion')
-eps = [2,3,4]
-y = 0.16
-pshift = 0.02
-fs=36
-for con in ['vip', 'ctrl']:
-    for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[((df_plt2.index.get_level_values('num_epochs')==ep) & \
-            (df_plt2.index.get_level_values('condition')==con)), 'goal_cell_prop']
-        shufprop = df_plt2.loc[((df_plt2.index.get_level_values('num_epochs')==ep)\
-            & (df_plt2.index.get_level_values('condition')==con)), 'goal_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{con}, {ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'{con},p={pval:.3g}',fontsize=10)
-    y+=.02
+# Pivot to get a DataFrame with separate columns for opto==False and opto==True
+plt.rc('font', size=20)          # controls default text sizes
 
-# plt.savefig(os.path.join(savedst, 'reward_cell_prop_per_an.png'), 
-#         bbox_inches='tight')
+pivoted = dfagg.pivot_table(
+    index=['animal', 'cell_type', 'condition'],
+    columns='opto',
+    values='goal_cell_prop'
+).reset_index()
+
+# Rename the columns for clarity
+pivoted.columns.name = None  # remove multiindex name
+pivoted = pivoted.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
+
+# Calculate difference
+pivoted['difference'] = pivoted['goal_cell_prop_on'] - pivoted['goal_cell_prop_off']
+pivoted['difference'] =pivoted['difference']*100
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+a=0.7;s=12
+fig, axes = plt.subplots(ncols=4, figsize=(13,5), sharey=True,sharex=True)
+cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
+cellty = ['pre_early', 'post_early', 'pre_late', 'post_late']
+for cl, cll in enumerate(cellty):
+    ax = axes[cl]
+    sns.barplot(
+        x='condition', y='difference', data=pivoted[pivoted['cell_type'] == cll],
+        ax=ax, palette=pl, errorbar='se',fill=False,
+    )
+    sns.stripplot(
+        x='condition', y='difference', data=pivoted[pivoted['cell_type'] == cll],
+        ax=ax, palette=pl, alpha=a, s=s
+    )
+    ax.set_title(cllty[cl])
+    ax.set_xlabel('')
+    ax.set_ylabel('$\\Delta$ % Reward cell \n(LEDon-LEDoff)')
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=30)
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'early_v_late_cell_type_reward_cellp_opto.svg'), bbox_inches='tight')
 #%%
+# Map old cell types to new ones
+cell_type_map = {
+    'pre_late': 'pre',
+    'pre_early': 'pre',
+    'post_late': 'post',
+    'post_early': 'post'
+}
+# Copy and remap
+realdf_avg = realdf.copy()
+realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
 
-df['recorded_neurons_per_session'] = total_cells
-df_plt_ = df[(df.opto==False)&(df.p_value<0.05)]
-df_plt_= df_plt_[(df_plt_.animals!='e200')&(df_plt_.animals!='e189')]
-df_plt_ = df_plt_.groupby(['animals']).mean(numeric_only=True)
+# Average across pre_early/late and post_early/late per animal/condition/opto
+dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
+pivoted_avg = dfagg_avg.pivot_table(
+    index=['animal', 'cell_type', 'condition'],
+    columns='opto',
+    values='goal_cell_prop'
+).reset_index()
 
-fig,ax = plt.subplots(figsize=(7,5))
-sns.scatterplot(x='recorded_neurons_per_session', y='goal_cell_prop',hue='animals',
-        data=df_plt_,
-        s=150, ax=ax)
-sns.regplot(x='recorded_neurons_per_session', y='goal_cell_prop',
-        data=df_plt_,
-        ax=ax, scatter=False, color='k'
-)
-r, p = scipy.stats.pearsonr(df_plt_['recorded_neurons_per_session'], 
-        df_plt_['goal_cell_prop'])
-ax = plt.gca()
-ax.text(.5, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
-        transform=ax.transAxes)
+pivoted_avg.columns.name = None
+pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
 
-ax.spines[['top','right']].set_visible(False)
-ax.legend(bbox_to_anchor=(1.01, 1.05))
-ax.set_xlabel('Av. # of neurons per session')
-ax.set_ylabel('Reward cell proportion')
-
-plt.savefig(os.path.join(savedst, 'rec_cell_rew_prop_per_an.svg'), 
-        bbox_inches='tight')
-
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+a = 0.7
+s = 12
+fig, axes = plt.subplots(ncols=2, figsize=(8, 5), sharey=True)
+for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
+    ax = axes[cl]
+    sns.barplot(
+        x='condition', y='difference', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        ax=ax, palette=pl, errorbar='se', fill=False
+    )
+    sns.stripplot(
+        x='condition', y='difference', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        ax=ax, palette=pl, alpha=a, s=s
+    )
+    ax.set_title(cll)
+    ax.set_ylabel('Δ % Reward cell\n(LEDon - LEDoff)')
+    ax.spines[['top', 'right']].set_visible(False)
+plt.tight_layout()
 #%%
-df['success_rate'] = rates_all
-
-an_nms = df.animals.unique()
-rows = int(np.ceil(np.sqrt(len(an_nms))))
-cols = int(np.ceil(np.sqrt(len(an_nms))))
-fig,axes = plt.subplots(nrows=rows, ncols=cols,
-            figsize=(10,10))
-rr=0;cc=0
-for an in an_nms:        
-    ax = axes[rr,cc]
-    sns.scatterplot(x='success_rate', y='goal_cell_prop',
-            data=df[(df.animals==an)&(df.opto==False)&(df.p_value<0.05)],
-            s=200, ax=ax)
-    ax.spines[['top','right']].set_visible(False)
-    ax.set_title(an)
-    rr+=1
-    if rr>=rows: rr=0; cc+=1    
-fig.tight_layout()
-
-# #%%
-# # #examples
-fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-Fc3 = fall_fc3['Fc3']
-dFF = fall_fc3['dFF']
-Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-Fc3 = Fc3[:,(skew>2)] # only keep cells with skew greateer than 2
-bin_size=3 # cm
-# get abs dist tuning 
-tcs_correct_abs, coms_correct_abs, tcs_fail, coms_fail = make_tuning_curves_by_trialtype(eps,rewlocs,ybinned,
-Fc3,trialnum,rewards,forwardvel,rewsize,bin_size)
-
-# # #plot example tuning curve
-plt.rc('font', size=30)  
-fig,axes = plt.subplots(1,3,figsize=(20,20), sharex = True)
-for ep in range(3):
-        axes[ep].imshow(tcs_correct_abs[ep,com_goal[0]][np.argsort(coms_correct_abs[0,com_goal[0]])[:60],:]**.3)
-        axes[ep].set_title(f'Epoch {ep+1}')
-        axes[ep].axvline((rewlocs[ep]-rewsize/2)/bin_size, color='w', linestyle='--', linewidth=4)
-        axes[ep].set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
-        axes[ep].set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
-axes[0].set_ylabel('Reward-distance cells')
-axes[2].set_xlabel('Absolute distance (cm)')
-plt.savefig(os.path.join(savedst, 'abs_dist_tuning_curves_3_ep.svg'), bbox_inches='tight')
-
-# fig,axes = plt.subplots(1,4,figsize=(15,20), sharey=True, sharex = True)
-# axes[0].imshow(tcs_correct[0,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[0].set_title('Epoch 1')
-# im = axes[1].imshow(tcs_correct[1,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[1].set_title('Epoch 2')
-# im = axes[2].imshow(tcs_correct[2,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[2].set_title('Epoch 3')
-# im = axes[3].imshow(tcs_correct[3,com_goal[0]][np.argsort(coms_correct[0,com_goal[0]])[:60],:]**.5)
-# axes[3].set_title('Epoch 4')
-# ax = axes[1]
-# ax.set_xticks(np.arange(0,bins+1,10))
-# ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+np.pi/4.5, np.pi/4.5),1))
-# ax.axvline((bins/2), color='w', linestyle='--')
-# axes[0].axvline((bins/2), color='w', linestyle='--')
-# axes[2].axvline((bins/2), color='w', linestyle='--')
-# axes[3].axvline((bins/2), color='w', linestyle='--')
-# axes[0].set_ylabel('Reward distance cells')
-# axes[3].set_xlabel('Reward-relative distance (rad)')
-# fig.tight_layout()
-# plt.savefig(os.path.join(savedst, 'tuning_curves_4_ep.png'), bbox_inches='tight')
-# for gc in goal_cells:
-#%%
-gc = 51
-plt.rc('font', size=24)  
-fig2,ax2 = plt.subplots(figsize=(5,5))
-
-for ep in range(3):        
-        ax2.plot(tcs_correct_abs[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
-        ax2.axvline(rewlocs[ep]/bin_size, color=colors[ep], linestyle='--',linewidth=3)
-        
-        ax2.spines[['top','right']].set_visible(False)
-ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-ax2.set_xticks(np.arange(0,(track_length/bin_size)+bin_size,30))
-ax2.set_xticklabels(np.arange(0,track_length+bin_size*30,bin_size*30).astype(int))
-ax2.set_xlabel('Absolute position (cm)')
-ax2.set_ylabel('$\Delta$ F/F')
-        
-plt.savefig(os.path.join(savedst, f'rewardd_cell_{gc}_tuning_per_ep.svg'), bbox_inches='tight')
-
-fig2,ax2 = plt.subplots(figsize=(5,5))
-for ep in range(3):        
-        ax2.plot(tcs_correct[ep,gc,:], label=f'rewloc {rewlocs[ep]}', color=colors[ep],linewidth=3)
-        ax2.axvline(bins/2, color="k", linestyle='--',linewidth=3)
-        
-        ax2.spines[['top','right']].set_visible(False)
-ax2.set_title(f'animal: {animal}, day: {day}\ncell # {gc}')
-ax2.set_xticks(np.arange(0,bins+1,30))
-ax2.set_xticklabels(np.round(np.arange(-np.pi, 
-        np.pi+np.pi/1.5, np.pi/1.5),1))
-ax2.set_xlabel('Radian position ($\Theta$)')
-ax2.set_ylabel('$\Delta$ F/F')
-plt.savefig(os.path.join(savedst, f'rewardd_cell_{gc}_aligned_tuning_per_ep.svg'), bbox_inches='tight')
+cll='post'
+x1=pivoted_avg.loc[(pivoted_avg['cell_type'] == cll) & (pivoted_avg['condition']=='ctrl'), 'difference'].values
+x2=pivoted_avg.loc[(pivoted_avg['cell_type'] == cll) & (pivoted_avg['condition']=='vip_ex'),'difference'].values
+_,pval = scipy.stats.ranksums(x1,x2)
+print(pval)
