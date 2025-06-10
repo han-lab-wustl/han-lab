@@ -11,7 +11,7 @@ close all
 mouse_id=214;
 pr_dir=uipickfiles;
 days_check=1:length(pr_dir);
-ref_exist=1;%%% if reference image hase been already choosen
+ref_exist=0;%%% if reference image hase been already choosen
 if ref_exist
     pr_dirref=uipickfiles;%%% chose reference day here day1
 end

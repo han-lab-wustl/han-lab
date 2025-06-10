@@ -14,7 +14,7 @@ src = 'H:\';
 grayColor = [.7 .7 .7];
 ind = 1;
 
-file_path = 'H:\E245_14_Feb_2025_time(14_07_19).mat';
+file_path = 'E:\Ziyi\Data\VTA_mice\hrz\E277\19\vr\E277_04_Jun_2025_time(12_19_30).mat';
 % Load mouse data
 mouse = load(file_path);
 

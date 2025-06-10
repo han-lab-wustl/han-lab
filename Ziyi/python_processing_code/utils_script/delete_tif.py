@@ -9,5 +9,5 @@ def delete_tif_files_recursively(folder_path):
                 os.remove(file_path)
                 print(f"Deleted: {file_path}")
 
-folder_path = r"E:\Ziyi\Data"
+folder_path = r"E:\Ziyi"
 delete_tif_files_recursively(folder_path)
