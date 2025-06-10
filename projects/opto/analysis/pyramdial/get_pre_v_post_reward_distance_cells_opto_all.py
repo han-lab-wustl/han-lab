@@ -113,6 +113,10 @@ a=0.7;s=12
 fig, axes = plt.subplots(ncols=4, figsize=(12,5), sharey=True,sharex=True)
 cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
 cellty = ['pre_early', 'post_early', 'pre_late', 'post_late']
+data = pivoted[pivoted['cell_type'] == 'post_early']
+y_max = data['difference'].quantile(.85)
+y_step = 0.4*abs(y_max)
+
 for cl, cll in enumerate(cellty):
     ax = axes[cl]
     sns.barplot(
@@ -132,8 +136,6 @@ for cl, cll in enumerate(cellty):
     data = pivoted[pivoted['cell_type'] == cll]
     conds = data['condition'].unique()
     pairs = list(combinations(conds, 2))[:2]
-    y_max = data['difference'].quantile(.85)
-    y_step = 0.5 * abs(y_max)
 
     for i, (cond1, cond2) in enumerate(pairs):
         vals1 = data[data['condition'] == cond1]['difference']
@@ -191,11 +193,11 @@ fig, axes = plt.subplots(ncols=2, figsize=(7.5,6), sharey=True)
 for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
     ax = axes[cl]
     sns.barplot(
-        x='condition', y='difference', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
         ax=ax, palette=pl, errorbar='se', fill=False
     )
     sns.stripplot(
-        x='condition', y='difference', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
         ax=ax, palette=pl, alpha=a, s=s
     )
     ax.set_title(lbls[cl])
@@ -208,8 +210,9 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
 
     conds = data['condition'].unique()
     pairs = list(combinations(conds, 2))[:2]
-    y_max = data['difference'].quantile(.85)
-    y_step = 0.5 * abs(y_max)
+    if cl==0:
+        y_max = data['difference'].quantile(.85)
+        y_step = 0.4 * abs(y_max)
 
     for i, (cond1, cond2) in enumerate(pairs):
         vals1 = data[data['condition'] == cond1]['difference']
