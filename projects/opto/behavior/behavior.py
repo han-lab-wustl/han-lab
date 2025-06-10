@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 
 
-def smooth_lick_rate(licks, dt, sigma_sec=0.05):
+def smooth_lick_rate(licks, dt, sigma_sec=0.7):
     # Convert sigma from seconds to samples
     sigma_samples = sigma_sec / dt
     # Smooth the binary lick vector
@@ -306,10 +306,10 @@ def lick_selectivity_current_and_prev_reward(opto_ep, eps, trialnum, rewards, li
     return lick_selectivity_per_trial_opto,lick_selectivity_per_trial_opto_prevrew 
     
 
-def get_performance(opto_ep, eps, trialnum, rewards, licks, \
+def get_performance(eptest, eps, trialnum, rewards, licks, \
     ybinned, rewlocs, forwardvel, time, rewsize,fs=31.25,lasttr = 8,firsttr = 3):
     # opto ep    
-    eptotest = opto_ep-1 # matlab index (+1)
+    eptotest = eptest-1 # matlab index (+1)
     eprng = range(eps[eptotest], eps[eptotest+1])
     trialnum_ = trialnum[eprng]
     reward_ = rewards[eprng]
@@ -331,6 +331,7 @@ def get_performance(opto_ep, eps, trialnum, rewards, licks, \
     mask = np.array([xx in ttr[:firsttr] for xx in trialnum_])    
     t = time_[mask][(ybinned_<rewloc)[mask]]
     dt = np.nanmedian(np.diff(t))
+    # manually check 0.7 for smoothing
     lick_rate_opto = smooth_lick_rate(licks_[mask][(ybinned_<rewloc)[mask]], dt)
     # early lick selectivity
     mask = np.array([xx in strials[:firsttr] for xx in trialnum_])

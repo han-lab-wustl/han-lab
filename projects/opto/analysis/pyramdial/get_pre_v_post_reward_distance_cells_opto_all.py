@@ -28,11 +28,10 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 results_all=[]
 radian_alignment = {}
 cm_window = 20
-# %%
 
 #%%
 # iterate through all animals
@@ -236,6 +235,79 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_reward_cellp_opto.svg'), bbox_inches='tight')
+#%%
+# Map old cell types to new ones
+cell_type_map = {
+    'pre_late': 'pre',
+    'pre_early': 'pre',
+    'post_late': 'post',
+    'post_early': 'post'
+}
+# Copy and remap
+realdf_avg = realdf.copy()
+realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
+# Average across pre_early/late and post_early/late per animal/condition/opto
+dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).median(numeric_only=True).reset_index()
+pivoted_avg = dfagg_avg.pivot_table(
+    index=['animal', 'cell_type', 'condition'],
+    columns='opto',
+    values='goal_cell_prop'
+).reset_index()
+pivoted_avg.columns.name = None
+pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference']=pivoted_avg['difference']*100
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+a = 0.7
+s = 12
+lbls = pivoted_avg['cell_type'].unique()
+fig, axes = plt.subplots(ncols=2, figsize=(7.5,6), sharey=True)
+for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
+    ax = axes[cl]
+    sns.barplot(
+        x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        ax=ax, palette=pl, errorbar='se', fill=False
+    )
+    sns.stripplot(
+        x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        ax=ax, palette=pl, alpha=a, s=s
+    )
+    ax.set_title(lbls[cl])
+    ax.set_ylabel('$\\Delta$ % Reward cell\n(LEDon - LEDoff)')
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
+    ax.set_xlabel('')
+    # --- Stats + annotation ---
+    data = pivoted_avg[pivoted_avg['cell_type'] == cll]
+
+    conds = data['condition'].unique()
+    pairs = list(combinations(conds, 2))[:2]
+    if cl==0:
+        y_max = data['difference'].quantile(.85)
+        y_step = 0.4 * abs(y_max)
+
+    for i, (cond1, cond2) in enumerate(pairs):
+        vals1 = data[data['condition'] == cond1]['difference']
+        vals2 = data[data['condition'] == cond2]['difference']
+        stat, pval = scipy.stats.ttest_ind(vals1, vals2)
+        # Annotation text
+        if pval < 0.001:
+            text = '***'
+        elif pval < 0.01:
+            text = '**'
+        elif pval < 0.05:
+            text = '*'
+        else:
+            text = f""
+
+        # Get x-locations
+        x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+        y = y_max + y_step * (i + 1)
+        ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+        ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
+        ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'pre_v_post_reward_cellp_opto.svg'), bbox_inches='tight')
 
 # %%
 

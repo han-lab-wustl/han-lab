@@ -1,8 +1,7 @@
 
 """
 zahra
-get tuning curves with dark time
-figure 2
+late/stable tc  vs. trial by trial
 """
 #%%
 import numpy as np, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -17,19 +16,18 @@ plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
-from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype,make_tuning_curves_radians_by_trialtype_early\
-    ,get_radian_position_first_lick_after_rew_w_dt
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_radians_by_trialtype,\
+    make_tuning_curves_time_trial_by_trial
 from projects.pyr_reward.rewardcell import get_radian_position,\
-    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle
+    get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle,\
+    trail_type_activity_quant, cosine_sim_ignore_nan
+
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_early_v_late.p"
-# with open(saveddataset, "rb") as fp: #unpickle
-#         radian_alignment_saved = pickle.load(fp)
-savepth = os.path.join(savedst, 'early_v_late_tuning.pdf')
-pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+saveddataset = r"Z:\saved_datasets\stable_v_trial_by_trial_tc.p"
+
 
 #%%
 ####################################### RUN CODE #######################################
@@ -92,8 +90,8 @@ for ii in range(len(conddf)):
             total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
             rates.append(success/total_trials)
         rate=np.nanmean(np.array(rates))
-        rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates
-
+        rad = get_radian_position_first_lick_after_rew(eps, ybinned, 
+            licks, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates
         # added to get anatomical info
         # takes time
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -106,48 +104,40 @@ for ii in range(len(conddf)):
         # normal tc
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size) 
-        tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early = make_tuning_curves_radians_by_trialtype_early(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size)      
+        # get trial by trial tuning curves
+        trialstates, licks_all, tcs, coms=make_tuning_curves_time_trial_by_trial(eps, rewlocs, licks, ybinned, time, Fc3, 
+            trialnum, rewards, forwardvel, rewsize, bin_size)
+        # test
+        # cll=0
+        # tc = tcs_correct[0][0]
+        # # only correct trials
+        # tr_tc = tcs[0][0][trialstates[0]==1]
+        # stable_v_tr_cosine_sim = [cosine_sim_ignore_nan(tr,tc) for tr in tr_tc]
+        # only corrects
+        # per cell per epoch
+        # max trials
+        maxtr= [tr[:,trialstates[ep]==1].shape[1] for ep,tr in enumerate(tcs)]
+        stable_v_tr_cosine_sim_corr =np.ones((len(tcs_correct),np.nanmax(maxtr),tcs_correct[0].shape[0]))*np.nan
+        for ep, tc_c in enumerate(tcs_correct):
+            # transpose trial by trial
+            # only correct trials
+            trial_tc = np.transpose(tcs[ep][:,trialstates[ep]==1,:], (1, 0, 2))
+            # trial x cell
+            for trnm,tr_tc in enumerate(trial_tc):
+                stable_v_tr_cosine_sim_corr[ep,trnm,:]=[cosine_sim_ignore_nan(tr_tc[cll],tc_c[cll,:]) for cll in range(tc_c.shape[0])] 
+        # vs. all 
+        maxtr= [tr.shape[1] for ep,tr in enumerate(tcs)]
+        stable_v_tr_cosine_sim_all_trial =np.ones((len(tcs_correct),np.nanmax(maxtr),tcs_correct[0].shape[0]))*np.nan
+        for ep, tc_c in enumerate(tcs_correct):
+            # transpose trial by trial
+            # only correct trials
+            trial_tc = np.transpose(tcs[ep][:,trialstates[ep]==1,:], (1, 0, 2))
+            # trial x cell
+            for trnm,tr_tc in enumerate(trial_tc):
+                stable_v_tr_cosine_sim_all_trial[ep,trnm,:]=[cosine_sim_ignore_nan(tr_tc[cll],tc_c[cll,:]) for cll in range(tc_c.shape[0])] 
 
-        goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
-        goal_cells, com_goal_postrew, perm, rz_perm = get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all')
-        goal_cells_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_postrew]
-        # early
-        goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_early, cell_type = 'all')
-        goal_cells_p_per_comparison_dt = [len(xx)/len(coms_correct_early[0]) for xx in com_goal_postrew_dt]
-        #only get perms with non zero cells
-        # get per comparison and also across epochs
-        p_goal_cells.append([len(goal_cells)/len(coms_correct[0]),goal_cells_p_per_comparison])
-        p_goal_cells_dt.append([len(goal_cells_dt)/len(coms_correct_early[0]), goal_cells_p_per_comparison_dt])
-        goal_cells_iind.append([goal_cells, goal_cells_dt])
-        # save perm
-        perms.append([[perm, rz_perm],
-            [perm_dt, rz_perm_dt]])
-        print(f'Goal cells late: {goal_cells}\n\
-            Goal cells early: {goal_cells_dt}')
-        # shuffle
-        num_iterations=1000
-        goal_cell_shuf_ps_per_comp, goal_cell_shuf_ps, shuffled_dist=goal_cell_shuffle(coms_correct, goal_window,\
-                            perm,num_iterations = num_iterations)
-        goal_cell_shuf_ps_per_comp_dt, goal_cell_shuf_ps_dt, shuffled_dist_dt=goal_cell_shuffle(coms_correct_early, \
-                        goal_window, perm_dt, num_iterations = num_iterations)
-        goal_cell_shuf_ps_per_comp_av = np.nanmedian(goal_cell_shuf_ps_per_comp,axis=0)        
-        goal_cell_shuf_ps_av = np.nanmedian(np.array(goal_cell_shuf_ps))
-        goal_cell_p=len(goal_cells)/len(coms_correct[0]) 
-        p_value = sum(shuffled_dist>goal_cell_p)/num_iterations
-        # early
-        goal_cell_shuf_ps_per_comp_av_dt = np.nanmedian(goal_cell_shuf_ps_per_comp_dt,axis=0)        
-        goal_cell_shuf_ps_av_dt = np.nanmedian(np.array(goal_cell_shuf_ps_dt))
-        goal_cell_p_dt=len(goal_cells_dt)/len(coms_correct[0]) 
-        p_value_dt = sum(shuffled_dist_dt>goal_cell_p_dt)/num_iterations
-        print(f'{animal}, day {day}: significant goal cells proportion p-value: {p_value} v w/ dark ttime {p_value_dt}')
-        goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
-                        [goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt]])
-        pvals.append([p_value,p_value_dt]); 
-        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early]
+        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, trialstates, licks_all, tcs, coms, stable_v_tr_cosine_sim_corr, stable_v_tr_cosine_sim_all_trial, rates]
 
-pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(datadct, fp) 

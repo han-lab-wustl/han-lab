@@ -930,10 +930,10 @@ def get_rew_cells_opto(
         # find correct trials within each epoch!!!!
         # normal tc
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size,lasttr=8)  
+        rewards,forwardvel,rewsize,bin_size,lasttr=15)  
         # early tc
         tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early=make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-        rewards,forwardvel,rewsize,bin_size,lasttr=8) 
+        rewards,forwardvel,rewsize,bin_size,lasttr=15) 
         
     goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
     rz = get_rewzones(rewlocs,1/scalingf) 
