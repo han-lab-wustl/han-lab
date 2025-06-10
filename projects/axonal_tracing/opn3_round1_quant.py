@@ -85,3 +85,64 @@ for ax, (inj, row) in zip(axs, axon_counts_inj.iterrows()):
 fig.suptitle('TH+ eOPN3 axons by injection site')
 plt.tight_layout()
 plt.savefig(os.path.join(dst, 'th_opn3_pie.svg'),bbox_inches='tight')
+#%%
+df['percent_axons'] = df[df.stain=='eOPN3-mScarlet'].groupby(['animal'])['num_axons'].transform(lambda x: 100 * x / x.sum())
+# Plot
+horder = ['SO', 'SP', 'SR', 'SLM']
+s = 12
+a = 0.7
+# Filter for eOPN3-mScarlet only
+df_filtered = df[df['stain'] == 'eOPN3-mScarlet']
+
+# Compute mean ± SEM across animals per injection × layer
+grouped = df_filtered.groupby(['animal', 'injection', 'hipp_layer'])['percent_axons'].mean().reset_index()
+summary = grouped.groupby(['injection', 'hipp_layer'])['percent_axons'].agg(['mean', 'sem']).reset_index()
+order=['SNc', 'VTA']
+# Plot
+fig, ax = plt.subplots(figsize=(5, 5))
+sns.barplot(
+    x='injection', y='percent_axons', hue='hipp_layer',order=order,
+    data=grouped, hue_order=horder,palette=palette,fill=False,legend=False
+)
+sns.stripplot(
+    x='injection', y='percent_axons', hue='hipp_layer',order=order,
+    data=grouped, hue_order=horder,palette=palette,s=s,dodge=True
+)
+sns.stripplot(
+    x='injection', y='percent_axons', hue='hipp_layer',order=order,
+    data=df, hue_order=horder,palette=palette,s=8,alpha=a,dodge=True,
+    legend=False
+)
+# Clean up
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('% Axons per layer')
+ax.set_xlabel('Injection site')
+plt.tight_layout()
+plt.savefig(os.path.join(dst, 'opn3_layer_percent_avg.svg'), bbox_inches='tight')
+#%%
+# Filter to eOPN3-mScarlet only
+df_filtered = df[df['stain'] == 'eOPN3-mScarlet']
+
+# Sum % axons per animal × layer
+df_sum = df_filtered.groupby(['animal', 'hipp_layer'])['percent_axons'].sum().unstack()
+
+# Compute SP/SO ratio
+df_sum['sp_so_ratio'] = df_sum['SO'] / df_sum['SP']
+
+# Merge with injection info (once per animal)
+animal_injection = df_filtered[['animal', 'injection']].drop_duplicates()
+df_ratios = df_sum[['sp_so_ratio']].reset_index().merge(animal_injection, on='animal')
+
+color=np.array([160, 100, 128])/255
+print(df_ratios)
+fig, ax = plt.subplots(figsize=(3,5))
+sns.stripplot(data=df_ratios, x='injection', y='sp_so_ratio', jitter=True, size=12, alpha=0.7,order=order,color=color)
+sns.barplot(data=df_ratios, x='injection', y='sp_so_ratio', order=order,
+            fill=False,color=color)
+
+ax.set_ylabel('SO/SP axon % ratio')
+ax.set_xlabel('Injection site')
+ax.set_title('Relative SO vs. SP axons')
+ax.spines[['top', 'right']].set_visible(False)
+plt.tight_layout()
+plt.savefig(os.path.join(dst, 'opn3_sp_so_ratio.svg'), bbox_inches='tight')

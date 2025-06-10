@@ -13,7 +13,7 @@ from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype
 from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew
 from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime, \
-        intersect_arrays, make_tuning_curves_radians_by_trialtype, make_tuning_curves_by_trialtype_w_darktime_early
+        intersect_arrays, make_tuning_curves_radians_by_trialtype, make_tuning_curves_radians_by_trialtype_early
 from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 from itertools import combinations
@@ -898,23 +898,16 @@ def get_rew_cells_opto(
             eptest = random.randint(2,3)   
             if len(eps)<4: eptest = 2 # if no 3 epochs 
     eptest=int(eptest)   
-
     lasttr=8 # last trials
     bins=90
     rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
     track_length_rad = track_length*(2*np.pi/track_length)
-    bin_size=track_length_rad/bins        
-    # dark time params
-    track_length_dt = 550 # cm estimate based on 99.9% of ypos
-    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-    bins_dt=150 
-    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+    bin_size=track_length_rad/bins
 
-    if f'{animal}_{day:03d}' in radian_alignment_saved.keys():
+    if sum([f'{animal}_{day:03d}' in xx for xx in list(radian_alignment_saved.keys())])>0:
         k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
         print(k)
-        tcs_correct, coms_correct, tcs_fail, coms_fail,\
-                com_goal,goal_cell_shuf_ps_av = radian_alignment_saved[k]            
+        tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early = radian_alignment_saved[k]            
     else:# remake tuning curves relative to reward        
     # takes time
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -925,9 +918,6 @@ def get_rew_cells_opto(
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         # if animal!='z14' and animal!='e200' and animal!='e189':                
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-        track_length_dt = 550 # cm estimate based on 99.9% of ypos
-        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-        bins_dt=150 
         skew_thres_range=np.arange(0,1.1,0.1)[::-1]
         iii=0
         while Fc3.shape[1]==0:      
@@ -938,14 +928,13 @@ def get_rew_cells_opto(
             Fc3 = Fc3[:, skew>skew_thres_range[iii]]
         # 9/19/24
         # find correct trials within each epoch!!!!
-        # tc w/ dark time
-        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,
-            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-            bins=bins_dt)
-        tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, _ = make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,lick,
-            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-            bins=bins_dt)
+        # normal tc
+        tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        rewards,forwardvel,rewsize,bin_size,lasttr=8)  
+        # early tc
+        tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early=make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+        rewards,forwardvel,rewsize,bin_size,lasttr=8) 
+        
     goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
     rz = get_rewzones(rewlocs,1/scalingf) 
     #     return {

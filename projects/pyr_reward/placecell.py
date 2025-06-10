@@ -264,7 +264,6 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
             failed_inbtw=np.array(ftrials)
         failed_trialnm.append(failed_inbtw)
         # trials going into tuning curve
-        print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
         rates.append(success/total_trials)
         F_all = Fc3[eprng,:]            
         # simpler metric to get moving time
@@ -289,6 +288,87 @@ def make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum
             # only take last 8 failed trials?
             if len(failed_inbtw)>0:
                 mask = [True if xx in failed_inbtw[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                # print(f'Fluorescence array size:\n{F.shape}\n')
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_fail[ep, :, :] = tc
+                coms_fail[ep, :] = com
+    
+    return tcs_correct, coms_correct, tcs_fail, coms_fail
+
+
+def make_tuning_curves_radians_by_trialtype_early(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,velocity_filter=False):    
+    """
+    Description: This function creates tuning curves for neuronal activity aligned to reward locations and categorizes them by trial type (correct or fail). The tuning curves are generated for each epoch, and the data is filtered based on velocity if the option is enabled.
+    Parameters:
+    eps (numpy.ndarray): Array of epoch (trial segment) start indices.
+    rewlocs (numpy.ndarray): Array of reward locations for each epoch.
+    ybinned (numpy.ndarray): Array of position data (binned).
+    rad (numpy.ndarray): Array of radian positions.
+    Fc3 (numpy.ndarray): Fluorescence data of cells. The shape should be (time, cells).
+    trialnum (numpy.ndarray): Array with trial numbers.
+    rewards (numpy.ndarray): Array indicating whether a reward was received at each time point.
+    forwardvel (numpy.ndarray): Array of forward velocity values at each time point.
+    rewsize (float): Size of the reward zone.
+    bin_size (float): Size of the bin for the tuning curve.
+    lasttr (int, optional): The number of last correct trials considered for analysis (default is 8).
+    bins (int, optional): The number of bins for the tuning curve (default is 90).
+    velocity_filter (bool, optional): Whether to apply a velocity filter to include only times when velocity > 5 cm/s (default is False).
+    Returns:
+    tcs_correct (numpy.ndarray): Tuning curves for correct trials. Shape is (epochs, cells, bins).
+    coms_correct (numpy.ndarray): Center of mass (COM) for correct trials. Shape is (epochs, cells).
+    tcs_fail (numpy.ndarray): Tuning curves for failed trials. Shape is (epochs, cells, bins).
+    coms_fail (numpy.ndarray): Center of mass (COM) for failed trials. Shape is (epochs, cells).
+    """ 
+    failed_trialnm = []; rates=[]
+    # initialize
+    tcs_fail = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    coms_fail = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = rad[eprng]        
+        success, fail, strials, ftrials, ttr, \
+            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        # in between failed trials only!!!!! 4/2025
+        if len(strials)>0:
+            failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
+            failed_inbtw=np.array(ftrials)[failed_inbtw>0]
+        else: # for cases where an epoch was started but not enough trials
+            failed_inbtw=np.array(ftrials)
+        failed_trialnm.append(failed_inbtw)
+        # trials going into tuning curve
+        rates.append(success/total_trials)
+        F_all = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F_all = F_all[moving_middle,:]
+        relpos_all = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            # last 8 correct trials
+            if len(strials)>0:
+                mask = [True if xx in strials[:lasttr] else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_correct[ep, :,:] = tc
+                coms_correct[ep, :] = com
+            # failed trials
+            # UPDATE 4/16/25
+            # only take last 8 failed trials?
+            if len(failed_inbtw)>0:
+                mask = [True if xx in failed_inbtw[:lasttr] else False for xx in trialnum[eprng][moving_middle]]
                 F = F_all[mask,:]
                 # print(f'Fluorescence array size:\n{F.shape}\n')
                 relpos = relpos_all[mask]                
