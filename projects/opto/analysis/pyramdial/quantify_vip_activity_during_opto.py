@@ -7,20 +7,20 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
 
 # Definitions and setups
-mice = ["e216", "e217", "e218"]
-dys_s = [[37,41], [14, 26, 27], [35, 38, 41, 44, 47, 50]]
+mice = ["e216", "e218"]
+dys_s = [[37,41,54], [38, 41, 44, 50]]
 # dys_s = [[43,44,45,48]]
-opto_ep_s = [[2,2], [2, 3, 3], [3, 2, 3, 2, 3, 2]]
+opto_ep_s = [[2,2,3], [2, 3, 2, 2]]
 # cells_to_plot_s = [[466,159,423,200,299]]#, [16,6,9], 
-cells_to_plot_s = [[466,299], [16,6,9], 
-        [[453,63,26,38], [301, 17, 13, 320], [17, 23, 36, 10], 
-        [6, 114, 11, 24], [49, 47, 6, 37], [434,19,77,5]]]
+cells_to_plot_s = [[466,299,2044], 
+        [[301, 17, 13, 320], [17, 23, 36, 10], 
+        [6, 114, 11, 24], [434,19,77,5]]]
 
 src = r"Y:\analysis\fmats"
 dffs_cp_dys = []
@@ -29,7 +29,7 @@ mind = 0
 nbins = 90
 bin_size = 3                
 binsize = 0.1 # s
-range_val = 5
+range_val = 8
 # Processing loop
 for m, mouse_name in enumerate(mice):
         days = dys_s[m]
@@ -95,6 +95,8 @@ for m, mouse_name in enumerate(mice):
                 # Extract dFF arrays for the corresponding conditions
                 optodff = np.nanmean(dffopto[:, [cp]],axis=1)
                 prevepdff = np.nanmean(dffpreopto[:, [cp]],axis=1)
+                # optodff = dffopto[:, 0]
+                # prevepdff = dffpreopto[:, 0]
                 # get tuning curve
                 # # Process for 'opto' condition
                 # # Create an index array from 0 to len(timedFF(rngopto)) - 1
@@ -172,43 +174,125 @@ fig.tight_layout()
 #%%
 s=12
 # plot mean activity between diff epochs
-opto = [np.nanmax(xx[0][:int(range_val/binsize)]) for xx in dffs_cp_dys][:10]
-ctrl = [np.nanmax(xx[1][:int(range_val/binsize)]) for xx in dffs_cp_dys][:10]
-opto = np.array(opto)[np.array([0,1,6,8,9])]
-ctrl = np.array(ctrl)[np.array([0,1,6,8,9])]
+t=int(range_val/binsize)
+opto_ = [np.nanmean(xx[0][:t]) for xx in dffs_cp_dys][:10]
+ctrl_ = [np.nanmean(xx[1][:t]) for xx in dffs_cp_dys][:10]
+# opto = np.array(opto_)[np.array(opto_)-np.array(ctrl_)<0]
+# ctrl = np.array(ctrl_)[np.array(opto_)-np.array(ctrl_)<0]
+opto=opto_
+ctrl=ctrl_
+# plot mean activity between diff epochs
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+import scipy.stats
+import os
+
+s = 12
+a = 0.7
+fs = 46
+ii = 0.5
+y = .5
+pshift = 0.2
+
+# Create dataframe
 df = pd.DataFrame()
-df['average_dff'] = np.concatenate([ctrl,opto])
-df['condition'] = np.concatenate([['LED off']*len(opto),['LED on']*len(opto)])
-fig, ax = plt.subplots(figsize=(2,5))
-sns.barplot(data=df, x='condition', y='average_dff',hue='condition',ax=ax, fill=False,
-            color='k')
-sns.stripplot(data=df, x='condition', y='average_dff',hue='condition',ax=ax,s=s,
-            color='k')
-ax.spines[['top','right']].set_visible(False)
+df['average_dff'] = np.concatenate([ctrl, opto])
+df['condition'] = ['LED off'] * len(ctrl) + ['LED on'] * len(opto)
+
+# Plot
+fig, ax = plt.subplots(figsize=(2.5, 5))
+sns.barplot(
+    data=df, x='condition', y='average_dff', hue='condition', ax=ax, fill=False,
+    palette={'LED off': "k", 'LED on': "r"}, alpha=a
+)
+sns.stripplot(
+    data=df, x='condition', y='average_dff', hue='condition', ax=ax, s=s,
+    palette={'LED off': "k", 'LED on': "r"}, alpha=a, dodge=False
+)
+
+# Add connecting lines
+for i in range(len(opto)):
+    ax.plot([0, 1], [ctrl[i], opto[i]], color='gray', alpha=0.5, linewidth=1.5)
+# Clean up axes
+ax.spines[['top', 'right']].set_visible(False)
 ax.set_xlabel('')
 ax.set_ylabel('VIP Pre-Reward $\Delta$F/F')
-t,pval = scipy.stats.ttest_rel(opto,ctrl)
-# statistical annotation    
-fs=46
-ii=0.5; y=.72; pshift=.1
+# Wilcoxon test and annotation
+t, pval = scipy.stats.wilcoxon(opto, ctrl)
 if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
+    ax.text(ii, y, "***", ha='center', fontsize=fs)
 elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
+    ax.text(ii, y, "**", ha='center', fontsize=fs)
 elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
+    ax.text(ii, y, "*", ha='center', fontsize=fs)
+ax.text(ii - 0.5, y + pshift, f'p={pval:.3g}', fontsize=12)
+ax.set_title('Inhibition')
+
+# Save figure
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 plt.savefig(os.path.join(savedst,'vip_pre_reward_dff.svg'),bbox_inches='tight')
 
 #%% 
 # plot individual traces
-fig,axes = plt.subplots(nrows=2,ncols=1, figsize=(6,6))
-axes[0].plot(prevepdff[7000:12000,0], 'k')
-axes[1].plot(optodff[15000:20000,0], 'r')
-axes[0].set_ylim([-0.2,2])
-axes[1].set_ylim([-0.2,2])
-axes[0].spines[['top','right']].set_visible(False)
+# e218, day 35,38
+
+from matplotlib.patches import Rectangle
+
+def add_reward_zone_patches(ax, ypos_segment, start_idx, 
+        rewloc, color='lightcoral', alpha=0.3):
+    in_patch = False
+    start = None
+    for i, y in enumerate(ypos_segment):
+        if 0 <= y < rewloc:
+            if not in_patch:
+                start = i
+                in_patch = True
+        else:
+            if in_patch:
+                ax.add_patch(Rectangle((start, 0), i - start, rewloc - 0,
+                                       color=color, alpha=alpha, zorder=0))
+                in_patch = False
+    if in_patch:  # close final patch if still open
+        ax.add_patch(Rectangle((start, 0), len(ypos_segment) - start, rewloc - 0,
+                               color=color, alpha=alpha, zorder=0))
+
+# plot individual traces
+fig,axes = plt.subplots(nrows=2,ncols=1, figsize=(6,6),sharey=True,sharex=True)
+x1,x2 = 16000,19000
+tropto=trialnum[rngopto][x1:x2]
+trprev=trialnum[rngpreopto][x1:x2]
+yposopto = ypos[rngopto][x1:x2]
+ypospreopto = ypos[rngpreopto][x1:x2]
+# get rew loc
+rl=rewloc[[0,1]]
+axes[0].plot(prevepdff[x1:x2,0], 'k')
+axes[1].plot(optodff[x1:x2,0], 'r')
+ax2_0 = axes[0].twinx()
+ax2_0.plot(ypospreopto, color='gray')
+ax2_0.set_ylabel('', color='gray')
+ax2_0.tick_params(axis='y', labelcolor='gray')
+ax2_0.spines[['top','bottom']].set_visible(False)
+axes[0].set_title('LED off', color='k')
+axes[1].set_title('LED on', color='r')
+axes[1].set_ylim([-0.2,4])
+ax2_0 = axes[1].twinx()
+ax2_0.plot(yposopto, color='gray')
+ax2_0.set_ylabel('Position (cm)', color='gray')
+ax2_0.tick_params(axis='y', labelcolor='gray')
+add_reward_zone_patches(ax2_0, yposopto, x1, rl[1],color='mediumturquoise')
+ax2_0.spines[['top']].set_visible(False)
+axes[1].set_ylabel('$\Delta$ F/F')
+axes[0].set_ylabel('$\Delta$ F/F')
+time = (x2-x1)/31.25
+axes[1].set_xticks([0,x2-x1])
+
+axes[1].set_xticklabels([0,int(time)])
+axes[1].set_xlabel('Time (s)')
+axes[0].spines[['top','bottom']].set_visible(False)
 axes[1].spines[['top','right']].set_visible(False)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
-plt.savefig(os.path.join(savedst,'vip_traces.svg'),bbox_inches='tight')
+
+fig.suptitle('VIP+ neuron, Inhibition')
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
+plt.savefig(os.path.join(savedst,'vip_traces_inhib.svg'),bbox_inches='tight')

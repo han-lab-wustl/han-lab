@@ -54,8 +54,6 @@ pdf.close()
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 
-# %%
-
 #%%
 # separate out variables
 df = conddf.copy()
@@ -78,12 +76,10 @@ realdf['opto']=[True if xx>1 else False if xx<1 else np.nan for xx in realdf['op
 realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
 realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
 realdf['day']=np.concatenate([df.days]*len(all_cells))
-
-# realdf=realdf.drop([2,3,5,7,17,18,24,35,37]) # z14, z15, z17 excluded days
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e200')&(realdf.animal!='e190')]
 # remove outlier days
-realdf=realdf.drop([715,705,737,526,516,548,416,605])
+# realdf=realdf.drop([715,705,737,526,516,548,416,605])
 dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
 for cl,cll in enumerate(dfagg.cell_type.unique()):
@@ -307,6 +303,7 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
         ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
 plt.tight_layout()
+fig.suptitle('All trials')
 plt.savefig(os.path.join(savedst, 'pre_v_post_reward_cellp_opto.svg'), bbox_inches='tight')
 
 # %%

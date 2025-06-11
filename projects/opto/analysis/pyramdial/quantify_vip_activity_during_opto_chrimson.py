@@ -7,18 +7,18 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
 import matplotlib.pyplot as plt
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
 
 # Definitions and setups
-mice = ["z14"]
-dys_s = [[17,28,29,33,34,36]]
+mice = ["z14",'z15','z17']
+dys_s = [[17,28,29,33,34,36],[6,9,11],[19]]
 # dys_s = [[43,44,45,48]]
-opto_ep_s = [[2,2,2,2,2,2]]
+opto_ep_s = [[2,2,2,2,2,2],[2,2,2],[2]]
 # cells_to_plot_s = [[466,159,423,200,299]]#, [16,6,9], 
-cells_to_plot_s = [[0,5,9,3,7,1]]
+cells_to_plot_s = [[0,5,9,3,7,1],[[66,55],[136,165],[93]],[83]]
 
 src = r"Y:\analysis\fmats"
 dffs_cp_dys = []
@@ -169,49 +169,120 @@ for ii,dy in enumerate(range(dyrng)):
 fig.tight_layout()
 
 #%%
-s=12
 # plot mean activity between diff epochs
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+import scipy.stats
+import os
+
+s = 12
+a = 0.7
+fs = 46
+ii = 0.5
+y = 1.5
+pshift = 0.2
+
+# Simulate input arrays (replace with your actual data)
 opto = [np.nanmax(xx[0][20:int(range_val/binsize)]) for xx in dffs_cp_dys][:10]
 ctrl = [np.nanmax(xx[1][20:int(range_val/binsize)]) for xx in dffs_cp_dys][:10]
+
+# Create dataframe
 df = pd.DataFrame()
-df['average_dff'] = np.concatenate([ctrl,opto])
-df['condition'] = np.concatenate([['LED off']*len(opto),['LED on']*len(opto)])
-fig, ax = plt.subplots(figsize=(2,5))
-sns.barplot(data=df, x='condition', y='average_dff',hue='condition',ax=ax, fill=False,
-            palette={'LED off': "slategray", 'LED on': "darkgoldenrod"},
-            )
-sns.stripplot(data=df, x='condition', y='average_dff',hue='condition',ax=ax,s=s,
-            palette={'LED off': "slategray", 'LED on': "darkgoldenrod"},
-            )
-ax.spines[['top','right']].set_visible(False)
+df['average_dff'] = np.concatenate([ctrl, opto])
+df['condition'] = ['LED off'] * len(ctrl) + ['LED on'] * len(opto)
+
+# Plot
+fig, ax = plt.subplots(figsize=(2.5, 5))
+sns.barplot(
+    data=df, x='condition', y='average_dff', hue='condition', ax=ax, fill=False,
+    palette={'LED off': "k", 'LED on': "darkgoldenrod"}, alpha=a
+)
+sns.stripplot(
+    data=df, x='condition', y='average_dff', hue='condition', ax=ax, s=s,
+    palette={'LED off': "k", 'LED on': "darkgoldenrod"}, alpha=a, dodge=False
+)
+
+# Add connecting lines
+for i in range(len(opto)):
+    ax.plot([0, 1], [ctrl[i], opto[i]], color='gray', alpha=0.5, linewidth=1.5)
+
+# Clean up axes
+ax.spines[['top', 'right']].set_visible(False)
 ax.set_xlabel('')
 ax.set_ylabel('VIP Pre-Reward $\Delta$F/F')
-t,pval = scipy.stats.ttest_rel(opto,ctrl)
-# statistical annotation    
-fs=46
-ii=0.5; 
-y=1.5; pshift=.2
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
-    
+# Wilcoxon test and annotation
+t, pval = scipy.stats.wilcoxon(opto, ctrl)
+if pval < 0.001:
+    ax.text(ii, y, "***", ha='center', fontsize=fs)
+elif pval < 0.01:
+    ax.text(ii, y, "**", ha='center', fontsize=fs)
+elif pval < 0.05:
+    ax.text(ii, y, "*", ha='center', fontsize=fs)
+ax.text(ii - 0.5, y + pshift, f'p={pval:.3g}', fontsize=12)
+ax.set_title('Excitation')
+
+# Save figure
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
-plt.savefig(os.path.join(savedst,'vip_pre_reward_dff_chrimson.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'vip_pre_reward_dff_chrimson.svg'), bbox_inches='tight')
 
 #%% 
+from matplotlib.patches import Rectangle
+
+def add_reward_zone_patches(ax, ypos_segment, start_idx, 
+        rewloc, color='lightcoral', alpha=0.3):
+    in_patch = False
+    start = None
+    for i, y in enumerate(ypos_segment):
+        if 0 <= y < rewloc:
+            if not in_patch:
+                start = i
+                in_patch = True
+        else:
+            if in_patch:
+                ax.add_patch(Rectangle((start, 0), i - start, rewloc - 0,
+                                       color=color, alpha=alpha, zorder=0))
+                in_patch = False
+    if in_patch:  # close final patch if still open
+        ax.add_patch(Rectangle((start, 0), len(ypos_segment) - start, rewloc - 0,
+                               color=color, alpha=alpha, zorder=0))
+
 # plot individual traces
-fig,axes = plt.subplots(nrows=2,ncols=1, figsize=(6,6))
-x1,x2 = 2000,6000
+fig,axes = plt.subplots(nrows=2,ncols=1, figsize=(6,6),sharey=True,sharex=True)
+x1,x2 = 500,1500
+tropto=trialnum[rngopto][x1:x2]
+trprev=trialnum[rngpreopto][x1:x2]
+yposopto = ypos[rngopto][x1:x2]
+ypospreopto = ypos[rngpreopto][x1:x2]
+# get rew loc
+rl=rewloc[[0,1]]
 axes[0].plot(prevepdff[x1:x2], 'k')
-axes[1].plot(optodff[x1:x2], 'r')
-axes[0].set_ylim([-0.2,3])
-axes[1].set_ylim([-0.2,3])
-axes[0].spines[['top','right']].set_visible(False)
+axes[1].plot(optodff[x1:x2], 'darkgoldenrod')
+ax2_0 = axes[0].twinx()
+ax2_0.plot(ypospreopto, color='gray')
+ax2_0.set_ylabel('', color='gray')
+ax2_0.tick_params(axis='y', labelcolor='gray')
+ax2_0.spines[['top','bottom']].set_visible(False)
+axes[0].set_title('LED off', color='k')
+axes[1].set_title('LED on', color='darkgoldenrod')
+axes[1].set_ylim([-0.2,4])
+ax2_0 = axes[1].twinx()
+ax2_0.plot(yposopto, color='gray')
+ax2_0.set_ylabel('Position (cm)', color='gray')
+ax2_0.tick_params(axis='y', labelcolor='gray')
+add_reward_zone_patches(ax2_0, yposopto, x1, rewloc[1])
+ax2_0.spines[['top']].set_visible(False)
+axes[1].set_ylabel('$\Delta$ F/F')
+axes[0].set_ylabel('$\Delta$ F/F')
+time = (x2-x1)/31.25
+axes[1].set_xticks([0,x2-x1])
+axes[1].set_xticklabels([0,int(time)])
+axes[1].set_xlabel('Time (s)')
+axes[0].spines[['top','bottom']].set_visible(False)
 axes[1].spines[['top','right']].set_visible(False)
-# savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
+
+fig.suptitle('VIP+ neuron, Excitation')
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 plt.savefig(os.path.join(savedst,'vip_traces_chrimson.svg'),bbox_inches='tight')

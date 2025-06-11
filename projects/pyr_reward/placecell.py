@@ -1809,16 +1809,14 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
             mask = trial_ep == trial
             if np.sum(mask) == 0:
                 continue
-
             t_trial = time_ep[mask]
             F_trial = F_ep[mask, :]
             lick_trial = lick_ep[mask]
             ypos_trial = ypos_ep[mask]
             reward_trial = reward_ep[mask]
-
             # Align time to reward location
             if sum(reward_trial) > 0:
-                rew_idx = np.where(reward_trial == 1)[0][0]
+                rew_idx = np.where(reward_trial == .5)[0][0]
             else:
                 # Estimate reward location time based on position
                 rew_mask = (ypos_trial >= (rewlocs[ep] - rewsize / 2)) & \
