@@ -358,7 +358,9 @@ ax.set_ylabel('Lick selectivity, last 8 trials')
 ax.set_xticklabels(['LED off', 'LED on'])
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
-# plt.savefig(os.path.join(dst, 'online_performance.svg'), bbox_inches='tight')
+ax.set_title('Current Day')
+
+plt.savefig(os.path.join(dst, 'currect_day_lick_sel_inhib.svg'), bbox_inches='tight')
 
 #%%
 # lick rate
@@ -383,6 +385,7 @@ for i in range(len(ans)):
     data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
     errorbar=None, color='dimgray', linewidth=2)
 ax.get_legend().set_visible(False)
+ax.set_title('Current Day')
 
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lickrate_probes'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'lickrate_probes'].values
@@ -413,11 +416,6 @@ ans = dfagg.index.get_level_values('animal').unique().values
 ax.set_ylabel('Performance')
 ax.set_xticklabels(['LED off', 'LED on'])
 
-# for i in range(len(ans)):
-#     ax = sns.lineplot(x='opto', y='success_rate', 
-#     data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
-#     errorbar=None, color='dimgray', linewidth=2)
-
 x1 = dfagg.loc[dfagg.index.get_level_values('opto')==True, 'success_rate'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto')==False, 'success_rate'].values
 t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
@@ -432,10 +430,10 @@ for i in range(len(ans)):
     ax = sns.lineplot(x='opto', y='success_rate', 
     data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
     errorbar=None, color='dimgray', linewidth=2)
-
+ax.set_title('Current Day')
 ax.get_legend().set_visible(False)
 ax.spines[['top','right']].set_visible(False)
-# plt.savefig(os.path.join(dst, 'performance_success_rate.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'current_day_success_rate_inhib.svg'), bbox_inches='tight')
 #%%
 # velocity
 dfld = df#[df.learning_day==1]#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)

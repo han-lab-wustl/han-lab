@@ -39,7 +39,7 @@ src = r"Y:\halo_grabda"
 # animals = ['e241','e243']#,'e242','e243']
 animals = ['e243']
 # days_all = [[46,49,50,54,55,56,59,60,61,62,63,66,67,68,69,71,72,73]]
-days_all = [[45,46,54,67,68,69,71]]
+days_all = [[34,36,38,45,46,54,67,68,69,71]]
 range_val=5;binsize=0.2
 opto_cond = 'Opto' # experiment condition
 rolling_win = 4 # 3 for significance in 10 trial on/ 1 off
@@ -51,7 +51,7 @@ for ii,animal in enumerate(animals):
     for day in days: 
         # extract variables and makes plots into pdf
         plndff = extract_vars(src, animal, day, condrewloc, opto_cond, dst,
-        pdf, rolling_win=rolling_win, planes=4,range_val=range_val,reward_var='us')
+        pdf, rolling_win=rolling_win, rewloc='rewloc',prevrewloc='prevrewloc',planes=4,range_val=range_val,reward_var='us')
         day_date_dff[f'{animal}_{day}'] = plndff
 pdf.close()
 #%%
@@ -182,7 +182,7 @@ ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
 
 ax.set_title(f'Slope, before stim\n\
     per session p={pval:.3f}\n paired, per animal p={pval_an:.3f}', fontsize=12)
-# plt.savefig(os.path.join(dst, 'slopes_chr2.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'slope_quant_halo.svg'), bbox_inches='tight')
 
 #%%
 # 3 - transient trace of so vs. superficial
@@ -364,64 +364,78 @@ ax.spines['right'].set_visible(False)
 # fig.suptitle('Basal dendrite layer (stratum oriens)')
 # fig.tight_layout()
 plt.savefig(os.path.join(dst, 'halo_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
-
 #%%
-# all planes
-fig, axes = plt.subplots(nrows = 4, ncols = 2, sharex=True,
-                        figsize=(12,10))
-for pln in range(4):
-    for ld in range(2): # per learning day
-        trialtype = 0 # opto trials
-        ax = axes[pln,ld]
-        ax.plot(np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0), 
-                color='mediumturquoise', label='LEDon')
-        ax.fill_between(range(0,int(range_val/binsize)*2), 
-                    np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
-                    np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
-                    alpha=0.5, color='mediumturquoise')
-        trialtype = 1 # even
-        ax.plot(np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0), 
-                color='k',label='LEDoff')
-        ax.fill_between(range(0,int(range_val/binsize)*2), 
-                    np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
-                    np.nanmean(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_opto[(learning_day_opto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
-                    alpha=0.5, color='k')
-        ax.legend()
-        ax.add_patch(
-        patches.Rectangle(
-            xy=(range_val/binsize,0),  # point of origin.
-            width=2/binsize, height=height, linewidth=1, # width is s
-            color='mediumspringgreen', alpha=0.2))
-        ax.set_ylim(.97, height)
-        if pln==3: ax.set_xlabel('Time from CS (s)')
-        trialtype = 0 # odd
-        ax = axes[pln,ld]
-        ax.plot(np.nanmean(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0), 
-                color='peru', label='odd, 0mA')
-        ax.fill_between(range(0,int(range_val/binsize)*2), 
-                    np.nanmean(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0,nan_policy='omit'),
-                    np.nanmean(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[(learning_day_nonopto==ld),pln,trialtype,:],axis=0,nan_policy='omit'), 
-                    alpha=0.5, color='peru')
-        # trialtype = 1 # even
-        # ax.plot(np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0), 
-        #         color='peru', label='even, 0mA')
-        # ax.fill_between(range(0,int(range_val/binsize)*2), 
-        #             np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)-scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'),
-        #             np.nanmean(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0)+scipy.stats.sem(day_date_dff_arr_nonopto[:,pln,trialtype,:],axis=0,nan_policy='omit'), 
-        #             alpha=0.5, color='peru')
+# superficial slope
+plt.rc('font', size=20)
+height=.015
+ymin=-.01
+fig, ax = plt.subplots(figsize=(7,5))
+plns=[0,1]
+trialtype = 0# even
+opto_all_trial = [[np.hstack([xx[pln][trialtype] for ii,xx in \
+    enumerate(day_date_dff_arr_opto_all_tr)]).T] for pln in plns]
+opto_all_trial=np.nanmean(np.squeeze(np.array(opto_all_trial)),axis=0)
+# subset of trials
+# color part of trace turqoise, the other part grey
+stimsec=4
+baseline_sec = 1
+baseline_bins = int(baseline_sec / binsize)
+baseline = np.nanmean(opto_all_trial[:, :baseline_bins], axis=1, keepdims=True)
+opto_all_trial = opto_all_trial - baseline
+opto_all_trial_ledon = np.ones_like(opto_all_trial)*np.nan
+opto_all_trial_ledoff = opto_all_trial
+rng1, rng2 = int(range_val/binsize), int(range_val/binsize+stimsec/binsize)+1
+opto_all_trial_ledon[:,rng1:rng2]=opto_all_trial[:,rng1:rng2]
+opto_all_trial_ledoff[:,rng1+1:rng2-1]=np.nan
+color='crimson'
+ax.plot(np.nanmean(opto_all_trial_ledon,axis=0), 
+        color=color,label='LED on', linewidth=4)
+ax.fill_between(range(0,int(range_val/binsize)*2), 
+            np.nanmean(opto_all_trial_ledon,axis=0)-scipy.stats.sem(opto_all_trial_ledon,
+                                    axis=0,nan_policy='omit'),
+            np.nanmean(opto_all_trial_ledon,axis=0)+scipy.stats.sem(opto_all_trial_ledon,
+                                            axis=0,nan_policy='omit'), 
+            alpha=0.3, color=color)
+# off period
+ax.plot(np.nanmean(opto_all_trial_ledoff,axis=0), 
+        color='slategray',label='LED on', linewidth=4)
+ax.fill_between(range(0,int(range_val/binsize)*2), 
+            np.nanmean(opto_all_trial_ledoff,axis=0)-scipy.stats.sem(opto_all_trial_ledoff,axis=0,nan_policy='omit'),
+            np.nanmean(opto_all_trial_ledoff,axis=0)+scipy.stats.sem(opto_all_trial_ledoff,axis=0,nan_policy='omit'), 
+            alpha=0.3, color='slategray')
+ax.add_patch(
+patches.Rectangle(
+    xy=(range_val/binsize,ymin),  # point of origin.
+    width=stimsec/binsize, height=height-ymin, linewidth=1, # width is s
+    color='lightcoral', alpha=0.15))
+ax.set_ylim(ymin, height) 
+ax.set_xlabel('Time from Conditioned Stimulus (s)')
+ax.set_ylabel('$\Delta$ F/F')
+trialtype = 0 # odd
+nonopto_all_trial = [[np.hstack([xx[pln][trialtype] for ii,xx in \
+    enumerate(day_date_dff_arr_nonopto_all_tr)]).T] for pln in plns]
+# even out trial num
+maxyy=min([[len(yy) for yy in xx] for xx in nonopto_all_trial])[0]
+nonopto_all_trial = [[yy[:maxyy,:] for yy in xx] for xx in nonopto_all_trial]
+nonopto_all_trial=np.nanmean(np.squeeze(np.array(nonopto_all_trial)),axis=0)
+baseline_bins = int(baseline_sec / binsize)
+baseline = np.nanmean(nonopto_all_trial[:, :baseline_bins], axis=1, keepdims=True)
+nonopto_all_trial = nonopto_all_trial - baseline
 
-        if pln==0: ax.legend(bbox_to_anchor=(1.1, 1.05))
-        else: ax.get_legend().set_visible(False)
-        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-        ax.set_xticklabels(range(-range_val, range_val+1, 1))
-        if pln==0: ax.set_title(f'Learning day {ld+1}\nPlane {planelut[pln]}')
-        else: ax.set_title(f'Plane {planelut[pln]}')
-        ax.set_ylim(.97, height)
-        if pln==3: ax.set_xlabel('Time from CS (s)')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+ax.plot(np.nanmean(nonopto_all_trial,axis=0), 
+        color='slategray',label='LED off', linewidth=4)
+ax.fill_between(range(0,int(range_val/binsize)*2), 
+            np.nanmean(nonopto_all_trial,axis=0)-scipy.stats.sem(nonopto_all_trial,axis=0,nan_policy='omit'),
+            np.nanmean(nonopto_all_trial,axis=0)+scipy.stats.sem(nonopto_all_trial,axis=0,nan_policy='omit'), 
+            alpha=0.3, color='slategray')
 
-fig.suptitle('ChR2 per day per + mouse averages')
-pdf.savefig(fig)
-pdf.close()
-# plt.savefig(os.path.join(dst, 'chr2_every10trials_peri_cs_summary.svg'), bbox_inches='tight')
+ax.legend(bbox_to_anchor=(1.1, 1.05))
+# ax.get_legend().set_visible(False)
+ax.set_xticks(np.arange(0, (int(range_val/binsize)*2)+1,5))
+ax.set_xticklabels(np.arange(-range_val, range_val+1, 1))
+ax.set_ylim(ymin, height)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+fig.suptitle('Superficial slope')
+# fig.tight_layout()
+plt.savefig(os.path.join(dst, 'halo_every10trials_peri_cs_slope.svg'), bbox_inches='tight')

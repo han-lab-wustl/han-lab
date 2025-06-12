@@ -52,8 +52,9 @@ for ii in range(len(conddf)):
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF',
-                'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+                'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
                 'stat', 'licks'])
+        pcs = np.vstack(np.array(fall['putative_pcs'][0]))
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         try:
@@ -91,15 +92,25 @@ for ii in range(len(conddf)):
         rate=np.nanmean(np.array(rates))
         rad = get_radian_position_first_lick_after_rew(eps, ybinned, 
             licks, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates
-        # added to get anatomical info
-        # takes time
+        # ONLY SPATIALLY TUNED CELLS
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+        #if pc in all but 1
+        # pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
+        # looser restrictions
+        pc_bool = np.sum(pcs,axis=0)>=1
+        Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
+        # if no cells pass these crit
+        if Fc3.shape[1]==0:
+            Fc3 = fall_fc3['Fc3']
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+            # to avoid issues with e217 and z17?
+            # pc_bool = np.sum(pcs,axis=0)>=1
+            Fc3 = Fc3[:,((skew>1))]
         # normal tc
         tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
         rewards,forwardvel,rewsize,bin_size) 
@@ -108,29 +119,33 @@ for ii in range(len(conddf)):
         # only corrects
         # per cell per epoch
         # max trials
-        trialstates=trialstates[:len(tcs)] # more than probes
+        trialstates=trialstates[:len(tcs)] # correct for epoch discrepancy
+        if len(tcs_correct)!=len(trialstates):
+            if len(tcs_correct)>len(trialstates):
+                tcs_correct=tcs_correct[:len(trialstates)]
+            else:                
+                trialstates=trialstates[:len(tcs_correct)]
         maxtr= [tr[:,trialstates[ep]==1].shape[1] for ep,tr in enumerate(tcs)]
-        stable_v_tr_cosine_sim_corr =np.ones((len(tcs_correct),np.nanmax(maxtr),tcs_correct[0].shape[0]))*np.nan
-        tcs_correct=tcs_correct[:len(trialstates),:,:]
+        bin_size_trials = 3
+        stable_v_tr_cosine_sim_corr = np.ones((len(tcs_correct), np.ceil(np.nanmax(maxtr) / bin_size_trials).astype(int), tcs_correct[0].shape[0])) * np.nan
         for ep, tc_c in enumerate(tcs_correct):
-            # transpose trial by trial
-            # only correct trials
-            trial_tc = np.transpose(tcs[ep][:,trialstates[ep]==1,:], (1, 0, 2))
-            # trial x cell
-            for trnm,tr_tc in enumerate(trial_tc):
-                stable_v_tr_cosine_sim_corr[ep,trnm,:]=[cosine_sim_ignore_nan(tr_tc[cll],tc_c[cll,:]) for cll in range(tc_c.shape[0])] 
-        # vs. all 
-        maxtr= [tr.shape[1] for ep,tr in enumerate(tcs)]
-        stable_v_tr_cosine_sim_all_trial =np.ones((len(tcs_correct),np.nanmax(maxtr),tcs_correct[0].shape[0]))*np.nan
-        for ep, tc_c in enumerate(tcs_correct):
-            # transpose trial by trial
-            # only correct trials
-            trial_tc = np.transpose(tcs[ep][:,trialstates[ep]==1,:], (1, 0, 2))
-            # trial x cell
-            for trnm,tr_tc in enumerate(trial_tc):
-                stable_v_tr_cosine_sim_all_trial[ep,trnm,:]=[cosine_sim_ignore_nan(tr_tc[cll],tc_c[cll,:]) for cll in range(tc_c.shape[0])] 
+            # Get trial-by-trial data: trials x cells x bins
+            trial_tc = np.transpose(tcs[ep][:, trialstates[ep] == 1, :], (1, 0, 2))
+            n_trials = trial_tc.shape[0]
+            n_bins = int(np.ceil(n_trials / bin_size_trials))
 
-        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, trialstates, licks_all, tcs, coms, stable_v_tr_cosine_sim_corr, stable_v_tr_cosine_sim_all_trial, rates]
+            for b in range(n_bins):
+                start = b * bin_size_trials
+                end = min((b + 1) * bin_size_trials, n_trials)
+                if end - start < 1:
+                    continue
+                # Average across trials in bin
+                bin_tc = np.nanmean(trial_tc[start:end, :, :], axis=0)  # shape: cell x bins
+                stable_v_tr_cosine_sim_corr[ep, b, :] = [
+                    cosine_sim_ignore_nan(bin_tc[cll], tc_c[cll, :]) for cll in range(tc_c.shape[0])
+                ]
+
+        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, trialstates, licks_all, tcs, coms, stable_v_tr_cosine_sim_corr, rates]
 
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
@@ -143,33 +158,25 @@ corr_succ = [v[8] for k,v in datadct.items()]
 corr_all = [v[9] for k,v in datadct.items()]
 # av across cells
 corr_succ_o = [np.nanmean(c, axis=2) for c in corr_succ]
-corr_all_o = [np.nanmean(c, axis=2) for c in corr_all]
 # just take epoch 1
 fig, ax = plt.subplots(figsize=(6, 4))
 colors=['k','slategray']
 for ep in range(2):
     corr_succ = [c[ep] for c in corr_succ_o]
-    corr_all = [c[ep] for c in corr_all_o]
     # nan pad extra trials
     maxl = max([len(c) for c in corr_succ])
     corr_succ_arr = np.ones((len(corr_succ), maxl))*np.nan
     for k,c in enumerate(corr_succ):
         corr_succ_arr[k,:len(c)]=c
-    maxl = max([len(c) for c in corr_all])
-    corr_all_arr = np.ones((len(corr_all), maxl))*np.nan
-    for k,c in enumerate(corr_all):
-        corr_all_arr[k,:len(c)]=c
 
     # Compute mean and SEM
-    mean_succ = np.nanmean(corr_succ_arr, axis=0)
+    mean_succ = np.nanmedian(corr_succ_arr, axis=0)
     sem_succ = scipy.stats.sem(corr_succ_arr,axis=0,nan_policy='omit')
-    mean_all = np.nanmean(corr_all_arr, axis=0)
-    sem_all = scipy.stats.sem(corr_all_arr,axis=0,nan_policy='omit')
     # Plot
     t = np.arange(mean_succ.shape[0])  # adjust to match your time axis
     ax.plot(mean_succ,color=colors[ep])
     ax.fill_between(t, mean_succ-sem_succ, mean_succ + sem_succ, color=colors[ep],alpha=0.2)
-    ax.set_xlim([0,21])
+    # ax.set_xlim([0,21])
 # t = np.arange(mean_all.shape[0])  # adjust to match your time axis
 # ax.plot(mean_all)
 # ax.fill_between(t, mean_all-sem_all, mean_all + sem_all, color='blue',alpha=0.2)

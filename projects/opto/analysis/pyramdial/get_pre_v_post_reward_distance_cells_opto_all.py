@@ -55,7 +55,6 @@ with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 
 #%%
-# TODO
 # top down approach
 # 1) com dist in opto vs. control
 # 3) place v. reward
@@ -111,49 +110,63 @@ for pl in range(len(plots[0])):
     ax.axvline(0, color='gray', linewidth=2,linestyle='--')
 ax.legend()
 #%%
-# tuning curves
+# quantify
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import wilcoxon
 
-# --- Split by group and opto condition ---
-# VIP inhibition
-vip_in_tcs_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] > 1))]
-vip_in_tcs_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] > 1))]
-vip_in_tcs_ctrl_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] == -1))]
-vip_in_tcs_ctrl_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] == -1))]
+# Set up
+windows = np.arange(0,np.pi,.1)
+conds = ['ctrl', 'vip_in', 'vip_ex']
+groupings = [
+    (ctrl_com_prev, ctrl_com_opto),
+    (vip_in_com_prev, vip_in_com_opto),
+    (vip_ex_com_prev, vip_ex_com_opto)
+]
+# Assume df.animals has same order as groupings
+animal_ids = {
+    'ctrl': df[(~df.in_type.str.contains('vip')) & (df.optoep > 1)].animals.values,
+    'vip_in': df[(df.in_type == 'vip') & (df.optoep > 1)].animals.values,
+    'vip_ex': df[(df.in_type == 'vip_ex') & (df.optoep > 1)].animals.values,
+}
 
-# VIP excitation
-vip_ex_tcs_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] > 1))]
-vip_ex_tcs_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] > 1))]
-vip_ex_tcs_ctrl_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] < 1))]
-vip_ex_tcs_ctrl_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] < 1))]
+# Collect trial data with animal ID
+rows = []
+for w in windows:
+    for cond, (prev_group, opto_group) in zip(conds, groupings):
+        for p, o, animal in zip(prev_group, opto_group, animal_ids[cond]):
+            prev = np.array(p) - np.pi
+            opto = np.array(o) - np.pi
+            frac_prev = np.mean(np.abs(prev) < w)
+            frac_opto = np.mean(np.abs(opto) < w)
+            diff = frac_opto - frac_prev
+            rows.append({'window': w, 'cond': cond, 'diff': diff, 'animal': animal})
 
-# Controls (non-VIP)
-ctrl_tcs_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] > 1))]
-ctrl_tcs_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] > 1))]
-ctrl_tcs_ctrl_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] < 1))]
-ctrl_tcs_ctrl_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] < 1))]
-# %%
+df_density = pd.DataFrame(rows)
 
-#%%
-# dist of activity (tc)
-plots = [[ctrl_tcs_prev,vip_in_tcs_prev,vip_ex_tcs_prev,ctrl_tcs_ctrl_prev,vip_in_tcs_ctrl_prev,vip_ex_tcs_ctrl_prev],
-        [ctrl_tcs_opto,vip_in_tcs_opto,vip_ex_tcs_opto,ctrl_tcs_ctrl_opto,vip_in_tcs_ctrl_opto,vip_ex_tcs_ctrl_opto]]
-lbls=['ctrl_ledon','vip_in_ledon','vip_ex_ledon','ctrl_ledoff','vip_in_ledoff','vip_ex_ledoff']
-a=0.4
-fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(17,10))
-axes=axes.flatten()
-for pl in range(len(plots[0])):
-    ax=axes[pl]
-    # Concatenat
-    data_prev = np.concatenate(plots[0][pl])
-    data_opto = np.concatenate(plots[1][pl])
-    # ax.hist(data_prev,alpha=a,label='prev_ep',bins=100)
-    # ax.hist(data_opto,alpha=a,label='opto_ep',bins=100)
-    # KDE plots
-    sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.4, linewidth=1.5,legend=False)
-    sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.4, linewidth=1.5,legend=False)
-    ax.set_title(lbls[pl])
-    # ax.set_xlim([0,20])
-ax.legend()
+# Aggregate: per animal average for each window and condition
+df_animal_avg = df_density.groupby(['window', 'cond', 'animal'])['diff'].mean().reset_index()
+
+# Seaborn plot
+plt.figure(figsize=(10, 5))
+sns.lineplot(data=df_animal_avg, x='window', y='diff', hue='cond', marker='o', err_style='bars', errorbar='se')
+plt.axhline(0, color='gray', linestyle='--')
+plt.xlabel('COM window width (radians)')
+plt.ylabel('Δ density near 0 (LEDon - LEDoff)')
+plt.title('Change in reward-centered COM density (per animal avg)')
+plt.legend(title='Condition')
+plt.tight_layout()
+plt.show()
+
+# Wilcoxon test per group at window=0.2
+for wtest in windows:
+    print(f"\nWilcoxon test at ±{wtest} rad (per-animal averages):")
+    vals1 = df_animal_avg[(df_animal_avg['window'] == wtest) & (df_animal_avg['cond'] == 'vip_in')]['diff']
+    vals2 = df_animal_avg[(df_animal_avg['window'] == wtest) & (df_animal_avg['cond'] == 'ctrl')]['diff']
+    stat, pval = scipy.stats.ttest_ind(vals1,vals2)
+    print(f"{cond}: p = {pval:.3g}, n = {len(vals)}")
+
 # %%
 
 #%%
@@ -170,8 +183,11 @@ post_early = [xx[3] for xx in results_all]
 # concat all cell type goal cell prop
 all_cells = [pre_late, post_late, pre_early, post_early]
 goal_cell_prop = np.concatenate([[xx['goal_cell_prop'] for xx in cll] for cll in all_cells])
+goal_cell_prop_shuffle_av = np.concatenate([[np.nanmean(xx['goal_cell_shuf_ps']) for xx in cll] for cll in all_cells])
+
 realdf= pd.DataFrame()
 realdf['goal_cell_prop']=goal_cell_prop
+realdf['goal_cell_prop_shuf']=goal_cell_prop_shuffle_av
 lbl = ['pre_late', 'post_late', 'pre_early', 'post_early']
 realdf['cell_type']=np.concatenate([[lbl[kk]]*len(cll) for kk,cll in enumerate(all_cells)])
 realdf['animal']=np.concatenate([df.animals]*len(all_cells))
@@ -180,8 +196,10 @@ realdf['opto']=[True if xx>1 else False if xx<1 else np.nan for xx in realdf['op
 realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
 realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
 realdf['day']=np.concatenate([df.days]*len(all_cells))
+realdf['goal_cell_prop_shuf'] = goal_cell_prop_shuffle_av
+realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
 realdf=realdf[realdf['goal_cell_prop']>0]
-realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
+realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')&(realdf.animal!='e200')]
 # remove outlier days
 realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
@@ -210,7 +228,7 @@ pivoted.columns.name = None  # remove multiindex name
 pivoted = pivoted.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
 
 # Calculate difference
-pivoted['difference'] = pivoted['goal_cell_prop_on'] - pivoted['goal_cell_prop_off']
+pivoted['difference'] = pivoted['goal_cell_prop_on']# - pivoted['goal_cell_prop_off']
 pivoted['difference'] =pivoted['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a=0.7;s=12
@@ -288,7 +306,7 @@ pivoted_avg = dfagg_avg.pivot_table(
 
 pivoted_avg.columns.name = None
 pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
-pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on']# - pivoted_avg['goal_cell_prop_off']
 pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
@@ -323,7 +341,7 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
     for i, (cond1, cond2) in enumerate(pairs):
         vals1 = data[data['condition'] == cond1]['difference']
         vals2 = data[data['condition'] == cond2]['difference']
-        stat, pval = scipy.stats.ttest_ind(vals1, vals2)
+        stat, pval = scipy.stats.ranksums(vals1, vals2)
         # Annotation text
         if pval < 0.001:
             text = '***'
@@ -362,7 +380,7 @@ pivoted_avg = dfagg_avg.pivot_table(
 ).reset_index()
 pivoted_avg.columns.name = None
 pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
-pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on']# - pivoted_avg['goal_cell_prop_off']
 pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
