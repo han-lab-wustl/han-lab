@@ -26,7 +26,7 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_c
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper\vip_r21'
 savepth = os.path.join(savedst, 'vip_opto_place.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-# saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
+saveddataset = r"Z:\saved_datasets\place_cell_bytrialtype_vipopto.p"
 # with open(saveddataset, "rb") as fp: #unpickle
 #         radian_alignment_saved = pickle.load(fp)
 # initialize var
@@ -105,7 +105,7 @@ for ii in range(len(conddf)):
                 Fc3 = Fc3[:,((skew>2))]
         if Fc3.shape[1]>0:
                 # get abs dist tuning 
-                tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+                tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
                         Fc3,trialnum,rewards,forwardvel,
                         rewsize,bin_size) # last 5 trials
                 # get cells that maintain their coms b/wn previous and opto ep
@@ -123,7 +123,6 @@ for ii in range(len(conddf)):
                         epoch_perm.append(perm)
                         pc_prop.append([pcs_p_per_comparison,pc_p])
                         num_epochs.append(len(coms_correct_abs))
-
                         # get shuffled iterations
                         shuffled_dist = np.zeros((num_iterations))
                         # max of 5 epochs = 10 perms
@@ -158,11 +157,69 @@ for ii in range(len(conddf)):
                         print(f'{animal}, day {day}: significant place cells proportion p-value: {p_value}')
                         pvals.append(p_value);     
                         total_cells.append(len(coms_correct_abs[0]))
-                        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs, 
-                                pcs_all, place_cell_shuf_ps_per_comp_av, place_cell_shuf_ps_av]
+                        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs]
 pdf.close()
+# # save pickle of dcts
+with open(saveddataset, "wb") as fp:   #Pickling
+        pickle.dump(datadct, fp) 
 
 #%%
+# top down approach
+# 1) com dist in opto vs. control
+# 3) place v. reward
+# tcs_correct, coms_correct, tcs_fail, coms_fail,
+# tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
+# 1) get coms correct
+df = conddf.copy()
+df = df.drop([179]) # skipped e217 day
+coms_correct = [xx[1] for k,xx in datadct.items()]
+optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
+# opto comparison
+coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(coms_correct)]
+tcs_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(tcs_correct)]
+coms_correct_prev = [xx[0] for ep,xx in enumerate(coms_correct)]
+coms_correct_opto = [xx[1] for ep,xx in enumerate(coms_correct)]
+tcs_correct_prev = [xx[0] for ep,xx in enumerate(tcs_correct)]
+tcs_correct_opto = [xx[1] for ep,xx in enumerate(tcs_correct)]
+
+vip_in_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
+vip_in_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
+vip_in_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
+vip_in_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
+# excitation
+vip_ex_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
+vip_ex_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
+vip_ex_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
+vip_ex_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
+#control
+ctrl_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
+ctrl_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
+ctrl_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
+ctrl_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
+#%%
+plots = [[ctrl_com_prev,vip_in_com_prev,vip_ex_com_prev,ctrl_com_ctrl_prev,vip_in_com_ctrl_prev,vip_ex_com_ctrl_prev],
+        [ctrl_com_opto,vip_in_com_opto,vip_ex_com_opto,ctrl_com_ctrl_opto,vip_in_com_ctrl_opto,vip_ex_com_ctrl_opto]]
+lbls=['ctrl_ledon','vip_in_ledon','vip_ex_ledon','ctrl_ledoff','vip_in_ledoff','vip_ex_ledoff']
+a=0.4
+fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(17,10))
+axes=axes.flatten()
+for pl in range(len(plots[0])):
+    ax=axes[pl]
+    # Concatenate and subtract pi
+    data_prev = np.concatenate(plots[0][pl]) - np.pi
+    data_opto = np.concatenate(plots[1][pl]) - np.pi
+    ax.hist(data_prev,alpha=a,label='prev_ep',bins=100,density=True)
+    ax.hist(data_opto,alpha=a,label='opto_ep',bins=100,density=True)
+    # KDE plots
+    sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
+    sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
+    ax.set_title(lbls[pl])
+#     ax.set_xlim([-np.pi/6,np.pi])
+    ax.axvline(0, color='gray', linewidth=2,linestyle='--')
+ax.legend()
+
+#%%
+
 plt.rc('font', size=18)          # controls default text sizes
 # plot goal cells across epochs
 # just opto days

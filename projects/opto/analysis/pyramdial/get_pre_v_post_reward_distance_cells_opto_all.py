@@ -58,7 +58,6 @@ with open(saveddataset, "wb") as fp:   #Pickling
 # TODO
 # top down approach
 # 1) com dist in opto vs. control
-# 2) total activity quant
 # 3) place v. reward
 # tcs_correct, coms_correct, tcs_fail, coms_fail,
 # tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
@@ -108,7 +107,7 @@ for pl in range(len(plots[0])):
     sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
     sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
     ax.set_title(lbls[pl])
-    ax.set_xlim([-np.pi/4,np.pi])
+    ax.set_xlim([-np.pi/6,np.pi])
     ax.axvline(0, color='gray', linewidth=2,linestyle='--')
 ax.legend()
 #%%
@@ -182,10 +181,14 @@ realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
 realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
 realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf=realdf[realdf['goal_cell_prop']>0]
-realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e200')&(realdf.animal!='e190')]
+realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
 realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
+realdf=realdf[~((realdf.animal=='e217')&(realdf.day<9))]
+realdf=realdf[~((realdf.animal=='e216')&(realdf.day<32))]
+# realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+
 dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
 for cl,cll in enumerate(dfagg.cell_type.unique()):
@@ -270,6 +273,7 @@ cell_type_map = {
     'post_late': 'late',
     'post_early': 'early'
 }
+
 # Copy and remap
 realdf_avg = realdf.copy()
 realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
@@ -289,7 +293,7 @@ pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
 s = 12
-pivoted_avg=pivoted_avg[pivoted_avg.animal!='e201']
+# pivoted_avg=pivoted_avg[pivoted_avg.animal!='e201']
 lbls = ['Early', 'Late']
 fig, axes = plt.subplots(ncols=2, figsize=(7.5,6), sharey=True)
 for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):

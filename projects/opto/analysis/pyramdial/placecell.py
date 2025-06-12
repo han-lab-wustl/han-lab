@@ -1002,7 +1002,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
 def process_goal_cell_proportions(
     eptest, cell_type, coms_correct, tcs_correct, rewlocs,
     animal, day, pdf, rz, scalingf, bins, goal_window, epsilon=0.7,
-    num_iterations=1000,bound=np.pi/4
+    num_iterations=1000,bound=np.pi/6
 ):
     """
     near pre and all post

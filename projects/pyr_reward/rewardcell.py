@@ -19,7 +19,7 @@ from itertools import combinations, chain
 from scipy.spatial import distance
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import intersect_arrays,make_tuning_curves_radians_by_trialtype,\
-    consecutive_stretch,make_tuning_curves,make_tuning_curves_warped,make_tuning_curves_trial_by_trial,\
+    consecutive_stretch,make_tuning_curves,make_tuning_curves_trial_by_trial,\
         make_tuning_curves_radians_by_trialtype_behavior, make_tuning_curves_probes,\
         make_tuning_curves_by_trialtype_w_darktime
 from projects.opto.behavior.behavior import get_success_failure_trials
