@@ -32,6 +32,14 @@ lasttr=8 #  last trials
 bins=90
 tcs_correct_all=[]
 tcs_fail_all=[]
+# not used
+epoch_perm=[]
+goal_cell_iind=[]
+goal_cell_prop=[]
+num_epochs=[]
+goal_cell_null=[]
+pvals=[]
+total_cells=[]
 # iterate through all animals
 dfs = []
 for ii in range(len(conddf)):
@@ -256,6 +264,8 @@ ax.legend(
     borderaxespad=0.,
     title='Trial type'
 )
+xpos = {ct: i for i, ct in enumerate(cell_order)}
+
 # Draw dim gray connecting lines between paired trial types
 for animal in bigdf['animal'].unique():
     for ct in cell_order:
@@ -330,7 +340,7 @@ for _, row in posthoc.iterrows():
 # -- The interaction is significant: the difference between correct vs. incorrect ΔF/F depends on which cell type you look at.
 
 # Because the interaction is significant, you should then examine post-hoc tests (e.g., the paired comparisons you ran) to see for each cell type whether correct vs. incorrect is significant.
-plt.savefig(os.path.join(savedst, 'allcelltype_trialtype.svg'),bbox_inches='tight')
+# plt.savefig(os.path.join(savedst, 'allcelltype_trialtype.svg'),bbox_inches='tight')
 #%%
 # quantify cosine sim
 # TODO: get COM per cell
@@ -370,7 +380,9 @@ print(aov)
 posthoc = []
 pvals = []
 
-for ct1, ct2 in combinations(cell_types, 2):
+comb = [ ('post', 'far_post'),
+ ('pre', 'far_pre')]
+for ct1, ct2 in comb:
     sub1 = pivoted[ct1]
     sub2 = pivoted[ct2]
     t, p_unc = scipy.stats.wilcoxon(sub1, sub2)
@@ -412,7 +424,8 @@ for animal, subdf in bigdf_avg.groupby('animal'):
     ys = subdf['cosine_sim'].values
     ax.plot(xs, ys, marker='o', color='gray', linewidth=1, alpha=0.5, zorder=0)
 
-for i, row in posthoc_df.iterrows():
+posthoc=pd.DataFrame(posthoc)
+for i, row in posthoc.iterrows():
     if row['significant']:
         group1, group2 = row['comparison'].split(' vs ')
         x1, x2 = xpos[group1], xpos[group2]

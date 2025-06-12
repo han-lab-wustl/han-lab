@@ -86,6 +86,54 @@ fig.suptitle('TH+ eOPN3 axons by injection site')
 plt.tight_layout()
 plt.savefig(os.path.join(dst, 'th_opn3_pie.svg'),bbox_inches='tight')
 #%%
+import seaborn as sns
+import matplotlib.pyplot as plt
+import os
+
+# Compute total axons per animal across all hippocampal layers
+df_filtered = df[df['stain'] == 'eOPN3-mScarlet']
+
+# Step 1: Sum axons per animal per layer
+layer_sum = df_filtered.groupby(['animal', 'hipp_layer'])['num_axons'].sum().reset_index()
+
+# Step 2: Sum total axons per animal
+animal_sum = layer_sum.groupby('animal')['num_axons'].sum().reset_index(name='total_axons')
+
+# Step 3: Merge and compute percentage
+layer_sum = layer_sum.merge(animal_sum, on='animal')
+layer_sum['percent_axons'] = 100 * layer_sum['num_axons'] / layer_sum['total_axons']
+
+# Add back injection info for plotting
+layer_sum = layer_sum.merge(df_filtered[['animal', 'injection']].drop_duplicates(), on='animal')
+
+# Plotting
+horder = ['SO', 'SP', 'SR', 'SLM']
+order = ['SNc', 'VTA']
+s = 12
+a = 0.7
+
+fig, ax = plt.subplots(figsize=(6, 5))
+sns.barplot(
+    x='injection', y='percent_axons', hue='hipp_layer', order=order,
+    data=layer_sum, hue_order=horder, palette=palette, fill=False, legend=False
+)
+sns.stripplot(
+    x='injection', y='percent_axons', hue='hipp_layer', order=order,
+    data=layer_sum, hue_order=horder, palette=palette, s=s, dodge=True
+)
+sns.stripplot(
+    x='injection', y='percent_axons', hue='hipp_layer', order=order,
+    data=layer_sum, hue_order=horder, palette=palette, s=8, alpha=a, dodge=True,
+    legend=False
+)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('% Axons per layer')
+ax.set_xlabel('Injection site')
+ax.legend(title='Layer', bbox_to_anchor=(.8, 1), loc='upper left', borderaxespad=0.)
+plt.tight_layout()
+plt.savefig(os.path.join(dst, 'opn3_layer_percent_avg.svg'), bbox_inches='tight')
+
+#%%
 df['percent_axons'] = df[df.stain=='eOPN3-mScarlet'].groupby(['animal'])['num_axons'].transform(lambda x: 100 * x / x.sum())
 # Plot
 horder = ['SO', 'SP', 'SR', 'SLM']
@@ -118,7 +166,7 @@ ax.spines[['top', 'right']].set_visible(False)
 ax.set_ylabel('% Axons per layer')
 ax.set_xlabel('Injection site')
 plt.tight_layout()
-plt.savefig(os.path.join(dst, 'opn3_layer_percent_avg.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'opn3_layer_percent_avg_per_slice.svg'), bbox_inches='tight')
 #%%
 # Filter to eOPN3-mScarlet only
 df_filtered = df[df['stain'] == 'eOPN3-mScarlet']

@@ -17,8 +17,8 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.analysis.pyramdial.placecell import get_rew_cells_opto
-# import warnings
-# warnings.filterwarnings("ignore")
+import warnings
+warnings.filterwarnings("ignore")
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
@@ -28,7 +28,7 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 results_all=[]
 radian_alignment = {}
 cm_window = 20
@@ -50,14 +50,119 @@ for ii in range(len(conddf)):
         results_all.append([results_pre, results_post, results_pre_early, results_post_early])
 
 pdf.close()
-# # save pickle of dcts
+# save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
 
 #%%
+# TODO
+# top down approach
+# 1) com dist in opto vs. control
+# 2) total activity quant
+# 3) place v. reward
+# tcs_correct, coms_correct, tcs_fail, coms_fail,
+# tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
+# 1) get coms correct
+df = conddf.copy()
+df = df.drop([179]) # skipped e217 day
+coms_correct = [xx[1] for k,xx in radian_alignment.items()]
+tcs_correct = [xx[0] for k,xx in radian_alignment.items()]
+optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
+# opto comparison
+coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(coms_correct)]
+tcs_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(tcs_correct)]
+coms_correct_prev = [xx[0] for ep,xx in enumerate(coms_correct)]
+coms_correct_opto = [xx[1] for ep,xx in enumerate(coms_correct)]
+tcs_correct_prev = [xx[0] for ep,xx in enumerate(tcs_correct)]
+tcs_correct_opto = [xx[1] for ep,xx in enumerate(tcs_correct)]
+
+vip_in_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
+vip_in_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
+vip_in_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
+vip_in_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
+# excitation
+vip_ex_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
+vip_ex_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
+vip_ex_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
+vip_ex_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
+#control
+ctrl_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
+ctrl_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
+ctrl_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
+ctrl_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
+#%%
+plots = [[ctrl_com_prev,vip_in_com_prev,vip_ex_com_prev,ctrl_com_ctrl_prev,vip_in_com_ctrl_prev,vip_ex_com_ctrl_prev],
+        [ctrl_com_opto,vip_in_com_opto,vip_ex_com_opto,ctrl_com_ctrl_opto,vip_in_com_ctrl_opto,vip_ex_com_ctrl_opto]]
+lbls=['ctrl_ledon','vip_in_ledon','vip_ex_ledon','ctrl_ledoff','vip_in_ledoff','vip_ex_ledoff']
+a=0.4
+fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(17,10))
+axes=axes.flatten()
+for pl in range(len(plots[0])):
+    ax=axes[pl]
+    # Concatenate and subtract pi
+    data_prev = np.concatenate(plots[0][pl]) - np.pi
+    data_opto = np.concatenate(plots[1][pl]) - np.pi
+    ax.hist(data_prev,alpha=a,label='prev_ep',bins=100,density=True)
+    ax.hist(data_opto,alpha=a,label='opto_ep',bins=100,density=True)
+    # KDE plots
+    sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
+    sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
+    ax.set_title(lbls[pl])
+    ax.set_xlim([-np.pi/4,np.pi])
+    ax.axvline(0, color='gray', linewidth=2,linestyle='--')
+ax.legend()
+#%%
+# tuning curves
+
+# --- Split by group and opto condition ---
+# VIP inhibition
+vip_in_tcs_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] > 1))]
+vip_in_tcs_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] > 1))]
+vip_in_tcs_ctrl_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] == -1))]
+vip_in_tcs_ctrl_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip') and (df.optoep.values[kk] == -1))]
+
+# VIP excitation
+vip_ex_tcs_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] > 1))]
+vip_ex_tcs_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] > 1))]
+vip_ex_tcs_ctrl_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] < 1))]
+vip_ex_tcs_ctrl_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if ((df.in_type.values[kk] == 'vip_ex') and (df.optoep.values[kk] < 1))]
+
+# Controls (non-VIP)
+ctrl_tcs_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] > 1))]
+ctrl_tcs_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] > 1))]
+ctrl_tcs_ctrl_prev = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] < 1))]
+ctrl_tcs_ctrl_opto = [np.trapz(xx,axis=1) for kk, xx in enumerate(tcs_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk] < 1))]
+# %%
+
+#%%
+# dist of activity (tc)
+plots = [[ctrl_tcs_prev,vip_in_tcs_prev,vip_ex_tcs_prev,ctrl_tcs_ctrl_prev,vip_in_tcs_ctrl_prev,vip_ex_tcs_ctrl_prev],
+        [ctrl_tcs_opto,vip_in_tcs_opto,vip_ex_tcs_opto,ctrl_tcs_ctrl_opto,vip_in_tcs_ctrl_opto,vip_ex_tcs_ctrl_opto]]
+lbls=['ctrl_ledon','vip_in_ledon','vip_ex_ledon','ctrl_ledoff','vip_in_ledoff','vip_ex_ledoff']
+a=0.4
+fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(17,10))
+axes=axes.flatten()
+for pl in range(len(plots[0])):
+    ax=axes[pl]
+    # Concatenat
+    data_prev = np.concatenate(plots[0][pl])
+    data_opto = np.concatenate(plots[1][pl])
+    # ax.hist(data_prev,alpha=a,label='prev_ep',bins=100)
+    # ax.hist(data_opto,alpha=a,label='opto_ep',bins=100)
+    # KDE plots
+    sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.4, linewidth=1.5,legend=False)
+    sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.4, linewidth=1.5,legend=False)
+    ax.set_title(lbls[pl])
+    # ax.set_xlim([0,20])
+ax.legend()
+# %%
+
+#%%
+# rew cell %
 # separate out variables
 df = conddf.copy()
 df = df.drop([179]) # skipped e217 day
+# df=df.iloc[:120]
 pre_late = [xx[0] for xx in results_all]
 post_late = [xx[1] for xx in results_all]
 pre_early = [xx[2] for xx in results_all]
@@ -79,7 +184,8 @@ realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e200')&(realdf.animal!='e190')]
 # remove outlier days
-# realdf=realdf.drop([715,705,737,526,516,548,416,605])
+realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
+realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
 dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
 for cl,cll in enumerate(dfagg.cell_type.unique()):
@@ -169,7 +275,7 @@ realdf_avg = realdf.copy()
 realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
 
 # Average across pre_early/late and post_early/late per animal/condition/opto
-dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).median(numeric_only=True).reset_index()
+dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 pivoted_avg = dfagg_avg.pivot_table(
     index=['animal', 'cell_type', 'condition'],
     columns='opto',
@@ -183,6 +289,7 @@ pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
 s = 12
+pivoted_avg=pivoted_avg[pivoted_avg.animal!='e201']
 lbls = ['Early', 'Late']
 fig, axes = plt.subplots(ncols=2, figsize=(7.5,6), sharey=True)
 for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):

@@ -1272,17 +1272,19 @@ def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward
             except Exception as e: # if trial is empty??
                 print(e)
                 reward_idx=int(len(y)/2) # put in random middle place of trials
+            first_lick_pos = y[reward_idx]
         else:
-            reward_idx = reward_indices[0]  # First occurrence of reward
-        # Find the first lick after the reward
-        lick_indices_after_reward = np.where((licks_trial_ > 0) & (np.arange(len(licks_trial_)) > reward_idx))[0]
-        if len(lick_indices_after_reward) > 0:
-            first_lick_idx = lick_indices_after_reward[0]  # First lick after reward
-        else:
-            # if animal did not lick after reward/no reward was given
-            first_lick_idx=reward_idx
-        # Convert positions to radians relative to the first lick
-        first_lick_pos = y[first_lick_idx]
+            reward_idx = reward_indices[0]  # cs
+            # Find the first lick after the reward ONLY IF THERE IS REWARD
+            # UPDATED 6/11/25
+            lick_indices_after_reward = np.where((licks_trial_ > 0) & (np.arange(len(licks_trial_)) > reward_idx))[0]
+            if len(lick_indices_after_reward) > 0:
+                first_lick_idx = lick_indices_after_reward[0]  # First lick after reward
+            else:
+                # if animal did not lick after reward/no reward was given
+                first_lick_idx=reward_idx
+            # Convert positions to radians relative to the first lick
+            first_lick_pos = y[first_lick_idx]
         track_length = np.max(y) # custom max for each trial w dark time
         rad.append((((((y - first_lick_pos) * 2 * np.pi) / track_length) + np.pi) % (2 * np.pi)) - np.pi)
 
@@ -1333,7 +1335,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             ypos_trial = ypos_ep[trial_mask]
             # remove random end of track value            
             ypos_trial[:trial_ind] = ypos_num
-            dark_mask = ypos_trial < ypos_num
+            dark_mask = ypos_trial <= ypos_num
             dark_vel = vel_ep[trial_mask][dark_mask]
             dark_frames = np.sum(dark_mask)
             dark_time = time[eprng][trial_mask][dark_mask] 
@@ -1353,7 +1355,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             ypos_trial_new = ypos_trial.copy()
             # add dark time to end of trial instead of beginning
             # ypos_trial_new[ypos_trial_new==ypos_num] = np.nan
-            ypos_trial_new[ypos_trial_new<ypos_num] = dark_distance+ypos_trial[-1]
+            ypos_trial_new[ypos_trial_new<=ypos_num] = dark_distance+ypos_trial[-1]
             # add distance on dark distance
             # REMOVED BC CAUSING MISALIGNMENT
             # ypos_trial_new = np.append(ypos_trial_new, dark_distance+ypos_trial[-1])            
@@ -1387,9 +1389,6 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
         ybinned_dt.append(ypos_w_dt)
         # realign to reward????        
         rewloc_bool = np.concatenate(rewloc_bool)
-        # test
-        # plt.plot(ypos_w_dt)
-        # plt.plot(rewloc_bool*400)        
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
                 reward_ep, rewsize, rewloc_per_trial,
                 trial_ep)
@@ -1403,7 +1402,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
             failed_inbtw=np.array(ftrials)
         failed_trialnm.append(failed_inbtw)
         # trials going into tuning curve
-        print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
+        # print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
         F_all = Fc3[eprng,:]            
         # simpler metric to get moving time
         if velocity_filter==True:
@@ -1442,6 +1441,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
             velocity_filter=False):    
     """
     fixed misalignment 5/12/25
+    fixed 6/11/25
     """
     rates = []; 
     # initialize
@@ -1477,7 +1477,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
             ypos_trial = ypos_ep[trial_mask]
             # remove random end of track value            
             ypos_trial[:trial_ind] = ypos_num
-            dark_mask = ypos_trial < ypos_num
+            dark_mask = ypos_trial <= ypos_num
             dark_vel = vel_ep[trial_mask][dark_mask]
             dark_frames = np.sum(dark_mask)
             dark_time = time[eprng][trial_mask][dark_mask] 
@@ -1497,7 +1497,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
             ypos_trial_new = ypos_trial.copy()
             # add dark time to end of trial instead of beginning
             # ypos_trial_new[ypos_trial_new==ypos_num] = np.nan
-            ypos_trial_new[ypos_trial_new<ypos_num] = dark_distance+ypos_trial[-1]
+            ypos_trial_new[ypos_trial_new<=ypos_num] = dark_distance+ypos_trial[-1]
             # add distance on dark distance
             # REMOVED BC CAUSING MISALIGNMENT
             # ypos_trial_new = np.append(ypos_trial_new, dark_distance+ypos_trial[-1])            

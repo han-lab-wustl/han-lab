@@ -28,14 +28,14 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'X:\chrimson_snc_grabda'
-animals = ['e291','e292']
-days_all = [[1],[1]]
+animals = ['e291','e292','e293','e294']
+days_all = [[2],[2],[1],[1]]
 
-range_val = 3; binsize=0.2 #s
-dur=1# s stim duration
+range_val = 4; binsize=0.2 #s
+dur=2# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 1 # for which to normalize
-win=2 # smoothing
+prewin = 3 # for which to normalize
+win=1# smoothing
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
