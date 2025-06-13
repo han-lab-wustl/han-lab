@@ -30,7 +30,7 @@ saveddataset = r"Z:\saved_datasets\place_cell_bytrialtype_vipopto.p"
 with open(saveddataset, "rb") as fp: #unpickle
         datadct = pickle.load(fp)
 # initialize var
-# datadct = {} # overwrite
+datadct = {} # overwrite
 coms_all = []
 pc_ind = []
 pc_prop = []
@@ -101,15 +101,18 @@ for ii in range(len(conddf)):
             Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
             # to avoid issues with e217 and z17?
             # pc_bool = np.sum(pcs,axis=0)>=1
-            Fc3 = Fc3[:,((skew>1)&pc_bool)]
+            Fc3 = Fc3[:,((skew>1.5)&pc_bool)]
         if Fc3.shape[1]>0:
             # get abs dist tuning 
-            # tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
-            #         Fc3,trialnum,rewards,forwardvel,
-            #         rewsize,bin_size) # last 5 trials
             if sum([f'{animal}_{day:03d}' in xx for xx in list(datadct.keys())])>0:
                 k = [k for k,xx in datadct.items() if f'{animal}_{day:03d}' in k][0]
                 tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs=datadct[k]
+            else:
+                print('#############making tcs#############\n')
+                tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
+                Fc3,trialnum,rewards,forwardvel,
+                rewsize,bin_size) # last 5 trials
+
             # get cells that maintain their coms b/wn previous and opto ep
             perm = [(eptest-2, eptest-1)]   
             if perm[0][1]<len(coms_correct_abs): # make sure tested epoch has enough trials
@@ -222,7 +225,7 @@ ax.legend()
 
 #%%
 
-plt.rc('font', size=18)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 # plot goal cells across epochs
 # just opto days
 s=12
@@ -404,13 +407,13 @@ plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto_shufflesubtracted.s
 df_an = df_plt
 fig2, ax2 = plt.subplots(figsize=(3, 5))
 df_diff = (
-    df_an[df_an.opto =='True']
+    df_an[df_an.opto ==True]
     .set_index(['animals', 'condition'])[['place_cell_prop']]
     .rename(columns={'place_cell_prop': 'stim'})
 )
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
-df_diff['no_stim'] = df_an[df_an.opto == 'False'].set_index(['animals', 'condition'])['place_cell_prop']
+df_diff['no_stim'] = df_an[df_an.opto == False].set_index(['animals', 'condition'])['place_cell_prop']
 df_diff['delta'] = df_diff['stim']-df_diff['no_stim']
 df_diff = df_diff.reset_index()
 df_diff = df_diff[(df_diff.animals!='e190')&(df_diff.animals!='e189')&(df_diff.animals!='e200')]
@@ -425,7 +428,7 @@ ax2.axhline(0, color='black', linestyle='--')
 ax2.set_ylabel('Δ Place cell % (LEDon-LEDoff)')
 ax2.set_xlabel('')
 ax2.set_xticklabels(['Control', 'VIP\nInhibition','VIP\nExcitation'], rotation=20)
-ax2.set_title('Per-animal difference\n\n')
+ax2.set_title('Place\n\n')
 ax2.spines[['top', 'right']].set_visible(False)
 
 model = ols('delta ~ C(condition)', data=df_diff).fit()

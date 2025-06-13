@@ -420,10 +420,10 @@ if __name__ == "__main__":
     for i,drive in enumerate(drives):
         copyvr(usb, drive, animals[i])
     # e.g.
-    # src=r'X:\vipcre'
-    # dst=r'Y:\analysis\fmats'
-    # animal='e217'
-    # copyfmats(src,dst,animal,days=[11],overwrite=True)
+    src=r'X:\vipcre'
+    dst=r'Y:\analysis\fmats'
+    animal='z17'
+    copyfmats(src,dst,animal,days=[18],overwrite=True,combined=True)
     # animal='z15'
     # copyfmats(src,dst,animal,days=[13],overwrite=True)
 

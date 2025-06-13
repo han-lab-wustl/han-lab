@@ -34,7 +34,7 @@ radian_alignment = {}
 cm_window = 20
 
 #%%
-# iterate through all animals
+# iterate through all animals 
 for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
     animal = conddf.animals.values[ii]
@@ -53,6 +53,7 @@ pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
+#%%
 
 #%%
 # top down approach
@@ -63,8 +64,18 @@ with open(saveddataset, "wb") as fp:   #Pickling
 # 1) get coms correct
 df = conddf.copy()
 df = df.drop([179]) # skipped e217 day
-coms_correct = [xx[1] for k,xx in radian_alignment.items()]
-tcs_correct = [xx[0] for k,xx in radian_alignment.items()]
+# Filter out unwanted
+keep = ~((df.animals == 'z14') & (df.days < 15))
+keep &= ~((df.animals == 'z15') & (df.days < 8))
+keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
+keep &= ~((df.animals == 'e216') & (df.days < 32))
+df = df[keep].reset_index(drop=True)
+mask = keep.values
+keys = list(radian_alignment.keys())
+radian_alignment_newcoms= {k: radian_alignment[k] for k, m in zip(keys, mask) if m}
+
+coms_correct = [xx[1] for k,xx in radian_alignment_newcoms.items()]
+tcs_correct = [xx[0] for k,xx in radian_alignment_newcoms.items()]
 optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
 # opto comparison
 coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(coms_correct)]
@@ -106,9 +117,10 @@ for pl in range(len(plots[0])):
     sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
     sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
     ax.set_title(lbls[pl])
-    ax.set_xlim([-np.pi/6,np.pi])
+    ax.set_xlim([-np.pi/4,np.pi])
     ax.axvline(0, color='gray', linewidth=2,linestyle='--')
 ax.legend()
+#%%
 #%%
 # quantify
 import pandas as pd
@@ -198,22 +210,32 @@ realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf['goal_cell_prop_shuf'] = goal_cell_prop_shuffle_av
 # realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
 realdf=realdf[realdf['goal_cell_prop']>0]
-# realdf=realdf[realdf['goal_cell_prop']-realdf['goal_cell_prop_shuf']>0]
-
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
 realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
-realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)&(realdf.day>70)))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
+realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([68]))))]
 realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
-
+# realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
+#%%
+pl = {False: "slategray", True: 'darkorange'}
 dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
+cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
+a=0.7;s=12
 fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
 for cl,cll in enumerate(dfagg.cell_type.unique()):
     ax=axes[cl]
-    sns.barplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],fill=False,ax=ax)
-    ax.set_title(cll)
+    sns.barplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],fill=False,ax=ax,palette=pl,legend=False)
+    sns.stripplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],s=s,alpha=a,ax=ax,palette=pl,legend=False,dodge=True)
+    ax.set_title(cllty[cl])
+    ax.set_xlabel('')
+    ax.set_ylabel('Reward cell %')
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
+plt.savefig(os.path.join(savedst, 'ledoff_v_ledon_reward_cellp_opto.svg'), bbox_inches='tight')
+
 #%%
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
@@ -223,7 +245,7 @@ pivoted = dfagg.pivot_table(
     values='goal_cell_prop',
     fill_value=0
 ).reset_index()
-
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 # Rename the columns for clarity
 pivoted.columns.name = None  # remove multiindex name
 pivoted = pivoted.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
@@ -231,8 +253,6 @@ pivoted = pivoted.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_
 # Calculate difference
 pivoted['difference'] = pivoted['goal_cell_prop_on']-pivoted['goal_cell_prop_off']
 pivoted['difference'] =pivoted['difference']*100
-pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
-a=0.7;s=12
 fig, axes = plt.subplots(ncols=4, figsize=(12,5), sharey=True,sharex=True)
 cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
 cellty = ['pre_early', 'post_early', 'pre_late', 'post_late']
@@ -263,7 +283,7 @@ for cl, cll in enumerate(cellty):
     for i, (cond1, cond2) in enumerate(pairs):
         vals1 = data[data['condition'] == cond1]['difference']
         vals2 = data[data['condition'] == cond2]['difference']
-        stat, pval = scipy.stats.ttest_ind(vals1, vals2)
+        stat, pval = scipy.stats.ranksums(vals1, vals2)
 
         # Annotation text
         if pval < 0.001:
@@ -326,7 +346,7 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax=ax, palette=pl, alpha=a, s=s
     )
     ax.set_title(lbls[cl])
-    ax.set_ylabel('$\\Delta$ % Reward cell\n(LEDon - LEDoff)')
+    ax.set_ylabel('$\\Delta$ Reward cell %')
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
     ax.set_xlabel('')
@@ -373,12 +393,14 @@ cell_type_map = {
 realdf_avg = realdf.copy()
 realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
 # Average across pre_early/late and post_early/late per animal/condition/opto
-dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).median(numeric_only=True).reset_index()
+dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 pivoted_avg = dfagg_avg.pivot_table(
     index=['animal', 'cell_type', 'condition'],
     columns='opto',
-    values='goal_cell_prop'
+    values='goal_cell_prop',
+    fill_value=0  # or np.nan_to_num afterwards
 ).reset_index()
+
 pivoted_avg.columns.name = None
 pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
 pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
