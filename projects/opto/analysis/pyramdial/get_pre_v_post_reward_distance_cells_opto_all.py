@@ -28,7 +28,7 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-# radian_alignment_saved = {} # overwrite
+radian_alignment_saved = {} # overwrite
 results_all=[]
 radian_alignment = {}
 cm_window = 20
@@ -165,11 +165,10 @@ for wtest in windows:
     vals1 = df_animal_avg[(df_animal_avg['window'] == wtest) & (df_animal_avg['cond'] == 'vip_in')]['diff']
     vals2 = df_animal_avg[(df_animal_avg['window'] == wtest) & (df_animal_avg['cond'] == 'ctrl')]['diff']
     stat, pval = scipy.stats.ttest_ind(vals1,vals2)
-    print(f"{cond}: p = {pval:.3g}, n = {len(vals)}")
+    print(f"{cond}: p = {pval:.3g}, n = {len(vals1)}")
 
 # %%
 
-#%%
 # rew cell %
 # separate out variables
 df = conddf.copy()
@@ -197,15 +196,17 @@ realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
 realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
 realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf['goal_cell_prop_shuf'] = goal_cell_prop_shuffle_av
-realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
+# realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
 realdf=realdf[realdf['goal_cell_prop']>0]
-realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')&(realdf.animal!='e200')]
+# realdf=realdf[realdf['goal_cell_prop']-realdf['goal_cell_prop_shuf']>0]
+
+realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
 realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
-realdf=realdf[~((realdf.animal=='e217')&(realdf.day<9))]
-realdf=realdf[~((realdf.animal=='e216')&(realdf.day<32))]
-# realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)&(realdf.day>70)))]
+realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
 
 dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
@@ -216,11 +217,11 @@ for cl,cll in enumerate(dfagg.cell_type.unique()):
 #%%
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
-
 pivoted = dfagg.pivot_table(
     index=['animal', 'cell_type', 'condition'],
     columns='opto',
-    values='goal_cell_prop'
+    values='goal_cell_prop',
+    fill_value=0
 ).reset_index()
 
 # Rename the columns for clarity
@@ -228,7 +229,7 @@ pivoted.columns.name = None  # remove multiindex name
 pivoted = pivoted.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
 
 # Calculate difference
-pivoted['difference'] = pivoted['goal_cell_prop_on']# - pivoted['goal_cell_prop_off']
+pivoted['difference'] = pivoted['goal_cell_prop_on']-pivoted['goal_cell_prop_off']
 pivoted['difference'] =pivoted['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a=0.7;s=12
@@ -306,7 +307,7 @@ pivoted_avg = dfagg_avg.pivot_table(
 
 pivoted_avg.columns.name = None
 pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
-pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on']# - pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
 pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
@@ -380,7 +381,7 @@ pivoted_avg = dfagg_avg.pivot_table(
 ).reset_index()
 pivoted_avg.columns.name = None
 pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
-pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on']# - pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
 pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
@@ -434,6 +435,8 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
 plt.tight_layout()
 fig.suptitle('All trials')
 plt.savefig(os.path.join(savedst, 'pre_v_post_reward_cellp_opto.svg'), bbox_inches='tight')
+
+# %%
 
 # %%
 

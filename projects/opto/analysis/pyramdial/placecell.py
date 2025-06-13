@@ -915,7 +915,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         # if animal!='z14' and animal!='e200' and animal!='e189':                
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-        skew_thres_range=np.arange(0,1.1,0.1)[::-1]
+        skew_thres_range=np.arange(0,1.6,0.1)[::-1]
         iii=0
         while Fc3.shape[1]==0:      
             iii+=1
@@ -932,7 +932,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
         tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-            bins=bins_dt,lasttr=10) 
+            bins=bins_dt,lasttr=8) 
         # early tc
         tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt,lasttr=8)        
     goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
@@ -1002,7 +1002,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
 def process_goal_cell_proportions(
     eptest, cell_type, coms_correct, tcs_correct, rewlocs,
     animal, day, pdf, rz, scalingf, bins, goal_window, epsilon=0.7,
-    num_iterations=1000,bound=np.pi/4
+    num_iterations=1000,bound=np.pi/2
 ):
     """
     near pre and all post
