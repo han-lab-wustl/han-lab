@@ -39,7 +39,7 @@ for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
     animal = conddf.animals.values[ii]
     # skip e217 day
-    if ii!=179:#(conddf.optoep.values[ii]>1):
+    if ii!=184:#(conddf.optoep.values[ii]>1):
         if animal=='e145': pln=2  
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -63,7 +63,7 @@ with open(saveddataset, "wb") as fp:   #Pickling
 # tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
 # 1) get coms correct
 df = conddf.copy()
-df = df.drop([179]) # skipped e217 day
+df = df.drop([184]) # skipped e217 day
 # Filter out unwanted
 keep = ~((df.animals == 'z14') & (df.days < 15))
 keep &= ~((df.animals == 'z15') & (df.days < 8))
@@ -78,12 +78,10 @@ coms_correct = [xx[1] for k,xx in radian_alignment_newcoms.items()]
 tcs_correct = [xx[0] for k,xx in radian_alignment_newcoms.items()]
 optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
 # opto comparison
-coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(coms_correct)]
-tcs_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(tcs_correct)]
+coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] if len(xx)>optoep[ep]-1 else xx[[optoep[ep]-3,optoep[ep]-2],:] for ep,xx in enumerate(coms_correct)]
+# tcs_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(tcs_correct)]
 coms_correct_prev = [xx[0] for ep,xx in enumerate(coms_correct)]
 coms_correct_opto = [xx[1] for ep,xx in enumerate(coms_correct)]
-tcs_correct_prev = [xx[0] for ep,xx in enumerate(tcs_correct)]
-tcs_correct_opto = [xx[1] for ep,xx in enumerate(tcs_correct)]
 
 vip_in_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
 vip_in_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
@@ -184,7 +182,7 @@ for wtest in windows:
 # rew cell %
 # separate out variables
 df = conddf.copy()
-df = df.drop([179]) # skipped e217 day
+df = df.drop([179,184]) # skipped e217 day
 # df=df.iloc[:120]
 pre_late = [xx[0] for xx in results_all]
 post_late = [xx[1] for xx in results_all]
@@ -216,7 +214,7 @@ realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
 realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([68]))))]
+realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([68,61]))))]
 realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
 #%%

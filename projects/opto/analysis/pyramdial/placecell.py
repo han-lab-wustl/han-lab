@@ -862,6 +862,11 @@ def calculate_noise_correlations(data, trial_info):
 
 def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
     radian_alignment, cm_window=20):   
+    if animal=='e145': pln=2  
+    else: pln=0
+    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+    print(params_pth)
+
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
     'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
     'stat', 'licks'])
