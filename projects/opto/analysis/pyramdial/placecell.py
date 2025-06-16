@@ -800,34 +800,39 @@ def get_pyr_metrics_opto(conddf, dd, day, threshold=5, pc = False):
     dct['rewlocs_comp'] = rewlocs[comp]
     return dct
 
-def get_dff_opto(conddf, dd, day, gain=1.5, pc=True):
+def get_dff_opto(conddf, dd, pc=True):
     """
     get pre-reward dff on opto vs. ctrl epochs
     """    
-    dct = {}
     animal = conddf.animals.values[dd]
+    day = conddf.days.values[dd]
     params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-    fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'Fc3',
-                    'ybinned', 'iscell', 'bordercells', 'putative_pcs'])
+    fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 'Fc3','VR','ybinned', 'iscell', 'bordercells', 'putative_pcs'])
     dFF = fall['Fc3']
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+        rewsize = 10
     pcs = np.array([np.squeeze(xx) for xx in fall['putative_pcs'][0]])
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     # place cells only
     # if pc: dFF = dFF[:, (np.sum(pcs,axis=0)>0)]
     # else: dFF = dFF[:, ~(np.sum(pcs,axis=0)>0)]
-    ybinned = fall['ybinned'][0]*gain
+    ybinned = fall['ybinned'][0]/scalingf
     changeRewLoc = np.hstack(fall['changeRewLoc'])
     eptest = conddf.optoep.values[dd]    
     eps = np.where(changeRewLoc>0)[0]
-    rewlocs = changeRewLoc[eps]*gain
-    rewzones = get_rewzones(rewlocs, gain)
+    rewlocs = changeRewLoc[eps]/scalingf
+    rewzones = get_rewzones(rewlocs, 1/scalingf)
     eps = np.append(eps, len(changeRewLoc))  
     if conddf.optoep.values[dd]<2: 
         eptest = random.randint(2,3)      
         if len(eps)<4: eptest = 2 # if no 3 epochs
     comp = [eptest-2,eptest-1] # eps to compare, python indexing   
-    dff_prev = np.nanmean(dFF[eps[comp[0]]:eps[comp[1]],:][ybinned[eps[comp[0]]:eps[comp[1]]]<rewlocs[comp[0]],:])
-    dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:][ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]],:])
+    dff_prev = np.nanmean(dFF[eps[comp[0]]:eps[comp[1]],:][ybinned[eps[comp[0]]:eps[comp[1]]]<rewlocs[comp[0]]-rewsize/2,:])
+    dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:][ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]]-rewsize/2,:])
     return dff_opto, dff_prev
 
 def calculate_noise_correlations(data, trial_info):

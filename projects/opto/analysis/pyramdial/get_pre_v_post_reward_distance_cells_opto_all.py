@@ -39,7 +39,7 @@ for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
     animal = conddf.animals.values[ii]
     # skip e217 day
-    if ii!=184:#(conddf.optoep.values[ii]>1):
+    if ii!=187:#(conddf.optoep.values[ii]>1):
         if animal=='e145': pln=2  
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -53,7 +53,6 @@ pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
-#%%
 
 #%%
 # top down approach
@@ -63,17 +62,19 @@ with open(saveddataset, "wb") as fp:   #Pickling
 # tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
 # 1) get coms correct
 df = conddf.copy()
-df = df.drop([184]) # skipped e217 day
+df = df.drop([187]) # skipped e217 day
 # Filter out unwanted
 keep = ~((df.animals == 'z14') & (df.days < 15))
 keep &= ~((df.animals == 'z15') & (df.days < 8))
 keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
 keep &= ~((df.animals == 'e216') & (df.days < 32))
+keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
+keep &= ~((df.animals=='e218')&(df.days>44))
+
 df = df[keep].reset_index(drop=True)
 mask = keep.values
 keys = list(radian_alignment.keys())
 radian_alignment_newcoms= {k: radian_alignment[k] for k, m in zip(keys, mask) if m}
-
 coms_correct = [xx[1] for k,xx in radian_alignment_newcoms.items()]
 tcs_correct = [xx[0] for k,xx in radian_alignment_newcoms.items()]
 optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
@@ -119,6 +120,47 @@ for pl in range(len(plots[0])):
     ax.axvline(0, color='gray', linewidth=2,linestyle='--')
 ax.legend()
 #%%
+# First compute differences for each group
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Combine per-group previous and opto data
+labels = ['ctrl', 'vip_in', 'vip_ex']
+
+# Plotting
+a = 0.4
+fig, axs = plt.subplots(ncols=3, figsize=(17, 10), sharey=True)
+axs = axs.flatten()
+
+# Define range for density evaluation
+xs = np.linspace(-np.pi, np.pi, 500)
+
+for i, (prev, opto, label) in enumerate(zip(plots[0], plots[1], labels)):
+    ax = axs[i]
+    prev_vals = np.concatenate(prev) - np.pi
+    opto_vals = np.concatenate(opto) - np.pi
+    prev_vals = prev_vals[np.isfinite(prev_vals)]
+    opto_vals = opto_vals[np.isfinite(opto_vals)]
+    # Estimate densities
+    prev_kde = scipy.stats.kde.gaussian_kde(prev_vals)
+    opto_kde = scipy.stats.kde.gaussian_kde(opto_vals)
+    prev_density = prev_kde(xs)
+    opto_density = opto_kde(xs)
+    diff_density = opto_density - prev_density
+
+    # Plot the density difference
+    ax.plot(xs, diff_density, label='opto - prev')
+    ax.axhline(0, color='grey', linewidth=2, linestyle='--')
+    ax.fill_between(xs, 0, diff_density, color='grey', alpha=0.4)
+    ax.set_title(f'{label} (opto - prev)')
+    # ax.set_xlim([-np.pi/4, np.pi])
+
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+
 #%%
 # quantify
 import pandas as pd
@@ -178,11 +220,10 @@ for wtest in windows:
     print(f"{cond}: p = {pval:.3g}, n = {len(vals1)}")
 
 # %%
-
 # rew cell %
 # separate out variables
 df = conddf.copy()
-df = df.drop([179,184]) # skipped e217 day
+df = df.drop([187]) # skipped e217 day
 # df=df.iloc[:120]
 pre_late = [xx[0] for xx in results_all]
 post_late = [xx[1] for xx in results_all]
@@ -214,8 +255,9 @@ realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
 realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([68,61]))))]
+realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67]))))]
 realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+# realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
 #%%
 pl = {False: "slategray", True: 'darkorange'}
@@ -234,7 +276,6 @@ for cl,cll in enumerate(dfagg.cell_type.unique()):
     ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
 plt.savefig(os.path.join(savedst, 'ledoff_v_ledon_reward_cellp_opto.svg'), bbox_inches='tight')
 
-#%%
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
 pivoted = dfagg.pivot_table(
@@ -302,7 +343,6 @@ for cl, cll in enumerate(cellty):
 
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_cell_type_reward_cellp_opto.svg'), bbox_inches='tight')
-#%%
 # Map old cell types to new ones
 cell_type_map = {
     'pre_late': 'late',
@@ -344,7 +384,7 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax=ax, palette=pl, alpha=a, s=s
     )
     ax.set_title(lbls[cl])
-    ax.set_ylabel('$\\Delta$ Reward cell %')
+    ax.set_ylabel('$\\Delta$ Reward cell %\n(LEDon-LEDoff)')
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
     ax.set_xlabel('')
@@ -380,6 +420,69 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_reward_cellp_opto.svg'), bbox_inches='tight')
 #%%
+# correlate with behavior
+
+realdf= pd.DataFrame()
+realdf['goal_cell_prop']=goal_cell_prop
+realdf['goal_cell_prop_shuf']=goal_cell_prop_shuffle_av
+lbl = ['pre_late', 'post_late', 'pre_early', 'post_early']
+realdf['cell_type']=np.concatenate([[lbl[kk]]*len(cll) for kk,cll in enumerate(all_cells)])
+realdf['animal']=np.concatenate([df.animals]*len(all_cells))
+realdf['optoep']=np.concatenate([df.optoep]*len(all_cells))
+realdf['opto']=[True if xx>1 else False if xx<1 else np.nan for xx in realdf['optoep']]
+realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
+realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
+realdf['day']=np.concatenate([df.days]*len(all_cells))
+realdf['goal_cell_prop_shuf'] = goal_cell_prop_shuffle_av
+# realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
+realdf=realdf[realdf['goal_cell_prop']>0]
+realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
+# remove outlier days
+realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
+realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
+realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
+realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67]))))]
+realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+cell_type_map = {
+    'pre_late': 'all',
+    'pre_early': 'all',
+    'post_late': 'all',
+    'post_early': 'all'
+}
+# Copy and remap
+realdf_avg = realdf.copy()
+realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
+# Average across pre_early/late and post_early/late per animal/condition/opto
+dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
+pivoted_avg = dfagg_avg.pivot_table(
+    index=['animal', 'cell_type', 'condition'],
+    columns='opto',
+    values='goal_cell_prop'
+).reset_index()
+pivoted_avg.columns.name = None
+pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on']#-pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference']=pivoted_avg['difference']*100
+# pivoted_avg=pivoted_avg[pivoted_avg.cell_type=='early']
+beh = pd.read_csv(r'Z:\condition_df\vip_opto_behavior.csv')
+beh=beh[(beh.animals.isin(realdf.animal.values))&(beh.days.isin(realdf.day.values))]
+beh = beh.groupby(['animals', 'opto']).mean(numeric_only=True).reset_index()
+beh=beh[beh.opto==True]
+# Perform regression
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(beh.rates_diff.values, pivoted_avg.difference.values)
+print(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
+# Plot scatter plot with regression line
+fig,ax=plt.subplots(figsize=(6,5))
+sns.scatterplot(x=beh.rates_diff.values, y=pivoted_avg.difference.values,hue=pivoted_avg.condition.values,s=300,alpha=.7,palette=pl,ax=ax)
+ax.plot(beh.rates_diff.values, intercept + slope * beh.rates_diff.values, color='steelblue', label='Regression Line',linewidth=3)
+ax.legend(['Regression Line', 'Control', 'VIP Inhibition', 'VIP Excitation'], fontsize='small')
+ax.set_xlabel("% Correct trials (LEDon-LEDoff)")
+ax.set_ylabel("Reward cell %")
+ax.set_title(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
+ax.spines[['top', 'right']].set_visible(False)
+plt.savefig(os.path.join(savedst, 'rewardcell_v_performance.svg'), bbox_inches='tight')
+#%%
 # Map old cell types to new ones
 cell_type_map = {
     'pre_late': 'pre',
@@ -406,7 +509,7 @@ pivoted_avg['difference']=pivoted_avg['difference']*100
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
 s = 12
-lbls = pivoted_avg['cell_type'].unique()
+lbls = ['Post', 'Pre']
 fig, axes = plt.subplots(ncols=2, figsize=(7.5,6), sharey=True)
 for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
     ax = axes[cl]
@@ -419,7 +522,7 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax=ax, palette=pl, alpha=a, s=s
     )
     ax.set_title(lbls[cl])
-    ax.set_ylabel('$\\Delta$ % Reward cell\n(LEDon - LEDoff)')
+    ax.set_ylabel('$\\Delta$ % Reward cell\n(LEDon-LEDoff)')
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
     ax.set_xlabel('')

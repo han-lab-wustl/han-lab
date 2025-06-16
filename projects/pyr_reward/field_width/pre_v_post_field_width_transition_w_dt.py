@@ -468,7 +468,7 @@ plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_widt
 
 
 #%%
-# get corresponding licking behavior 
+# get corresponding licking vs velocity behavior 
 # scatterplot of lick distance vs. field width
 import numpy as np
 import pandas as pd
@@ -566,6 +566,65 @@ ax.spines[['top', 'right']].set_visible(False)
 plt.tight_layout()
 
 plt.savefig(os.path.join(os.path.join(savedst, 'lick_field_width.svg')))
+#%%
+# vs pre-reward velocity 
+# --- Plot original + shuffled ---
+fig, axes = plt.subplots(ncols = 2, figsize=(10,5))
+ax=axes[0]
+# Original regression and scatter
+sns.regplot(x='avg_velocity_cm_s', y='width_cm', data=alldf,
+            scatter=True, color='k', line_kws={'color': 'dodgerblue'},
+            scatter_kws={'alpha': 0.5, 's': 50}, ax=ax,label='Real')
+
+# --- Compute original r and p ---
+r_obs, p_obs = scipy.stats.pearsonr(alldf['avg_velocity_cm_s'], alldf['width_cm'])
+
+# --- Compute r and p for one shuffle ---
+shuffled = alldf.copy()
+shuffled['avg_velocity_cm_s'] = np.random.permutation(shuffled['avg_velocity_cm_s'].values)
+r_shuff, p_shuff = scipy.stats.pearsonr(shuffled['avg_velocity_cm_s'], shuffled['width_cm'])
+
+# Shuffled data overlay
+sns.scatterplot(x='avg_velocity_cm_s', y='width_cm', data=shuffled,
+                color='gray', alpha=0.4, s=50, ax=ax, label='Shuffle')
+
+# Display r and p values
+ax.text(0.05, 0.95,
+        f'Original:\n r = {r_obs:.2g}, p = {p_obs:.3g}\n'
+        f'Shuffled:\n r = {r_shuff:.2g}, p = {p_shuff:.3g}',
+        transform=ax.transAxes, fontsize=14, verticalalignment='top',
+        bbox=dict(facecolor='white', alpha=0.6))
+
+# --- Null distribution ---
+n_shuffles = 1000
+r_null = []
+for _ in range(n_shuffles):
+    shuffled = alldf.copy()
+    shuffled['avg_velocity_cm_s'] = np.random.permutation(shuffled['avg_velocity_cm_s'].values)
+    r_shuff, _ = scipy.stats.pearsonr(shuffled['avg_velocity_cm_s'], shuffled['width_cm'])
+    r_null.append(r_shuff)
+
+# --- Empirical two-sided p-value ---
+r_null = np.array(r_null)
+p_empirical = np.mean(np.abs(r_null) >= np.abs(r_obs))
+
+# Labels and cleanup
+ax.set_xlabel('Pre-reward velocity (cm/s)')
+ax.set_ylabel('Field Width (cm)')
+ax.spines[['top', 'right']].set_visible(False)
+ax.legend()
+# --- Plot null distribution ---
+ax=axes[1]
+sns.histplot(r_null, kde=True, color='gray', bins=30, ax=ax)
+ax.axvline(r_obs, color='dodgerblue', linewidth = 2, label=f'Observed r = {r_obs:.2f}')
+ax.set_title(f'Empirical p = {p_empirical:.4f}')
+ax.set_xlabel('Shuffled Correlation (r)')
+ax.set_ylabel('Frequency')
+ax.legend()
+ax.spines[['top', 'right']].set_visible(False)
+plt.tight_layout()
+
+plt.savefig(os.path.join(os.path.join(savedst, 'vel_field_width.svg')))
 
 #%%
 import scipy.stats as stats

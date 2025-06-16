@@ -25,7 +25,8 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-ii=147
+ii=40
+ii=153
 cm_window=20
 day = int(conddf.days.values[ii])
 animal = conddf.animals.values[ii]
@@ -78,19 +79,15 @@ if True:
    fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
    Fc3 = fall_fc3['Fc3']
    dFF = fall_fc3['dFF']
+   # for inhibi
+   # Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool)&~(fall['bordercells'][0]).astype(bool))]
+   # dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool)&~(fall['bordercells'][0]).astype(bool))]
    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
    # if animal!='z14' and animal!='e200' and animal!='e189':                
    Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-   skew_thres_range=np.arange(0,1.6,0.1)[::-1]
-   iii=0
-   while Fc3.shape[1]==0:      
-         iii+=1
-         print('************************0 cells skew > 2************************')
-         Fc3 = fall_fc3['Fc3']                        
-         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-         Fc3 = Fc3[:, skew>skew_thres_range[iii]]
    # tc w/ dark time
    print('making tuning curves...\n')
    track_length_dt = 550 # cm estimate based on 99.9% of ypos
@@ -106,7 +103,6 @@ if True:
    coms_rewrel = np.array([com-np.pi for com in coms_correct])
    perm = list(combinations(range(len(coms_correct)), 2)) 
    print(perm)
-   rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
    # account for cells that move to the end/front
    # Define a small window around pi (e.g., epsilon)
    epsilon = .7 # 20 cm
@@ -126,40 +122,58 @@ if True:
    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
 
 #%%
+plt.rc('font', size=20)          # controls default text sizes
 from matplotlib import colors
-tcs_correct_r = tcs_correct[:,np.unique(np.concatenate(com_goal))]
-tcs_fail_r = tcs_fail[:,np.unique(np.concatenate(com_goal))]
-coms_correct_r = coms_correct[:,np.unique(np.concatenate(com_goal))]
+import matplotlib.patches as patches
+
+clls=np.nanmax(tcs_correct[2],axis=1)
+cllstokeep = []
+clls_goal = np.array([cc for cc in np.unique(np.concatenate(com_goal)) if cc not in cllstokeep])
+tcs_correct_r = tcs_correct_early[:2,clls_goal]
+coms_correct_r = coms_correct_early[:2,clls_goal]
 # Assuming tcs_correct is a list of 2D arrays and coms_correct is defined
 # Determine the global min and max for normalization
-vmin = min(np.min(tcs) for tcs in tcs_correct_r)
-vmax = max(np.max(tcs) for tcs in tcs_correct_r)-.8
-norm = colors.Normalize(vmin=vmin, vmax=vmax)
 # Create subplots
-fig, axes = plt.subplots(ncols=len(tcs_correct_r),
-            nrows=2, figsize=(13.5, 9),sharex=True, sharey=True)
-gamma=0.4
-# Plot each subplot with shared normalization
+fig, axes = plt.subplots(ncols=len(tcs_correct_r), figsize=(9,7),sharex=True, sharey=True)
+vmin = min(np.min(tcs) for tcs in tcs_correct_r)
+vmax = max(np.max(tcs) for tcs in tcs_correct_r)
+# Normalize to range [0, 1]
+def normalize_rows(arr):
+   arr_new = np.copy(arr)
+   rowmins = np.nanmin(arr_new, axis=1, keepdims=True)
+   rowmaxs = np.nanmax(arr_new, axis=1, keepdims=True)
+   denom = rowmaxs - rowmins
+   # Prevent division by zero
+   denom[denom == 0] = 1
+   arr_new = (arr_new - rowmins) / denom
+   # Set entire row to 0 where max == min
+   mask = (rowmaxs == rowmins).flatten()
+   arr_new[mask, :] = 0
+   return arr_new
+lbl=['LED off','LED on']
+# Apply normalization before plotting
 for kk, tcs in enumerate(tcs_correct_r):
-    ax = axes[0,kk]
-    im = ax.imshow(tcs[np.argsort(coms_correct_r[0])] ** gamma, aspect='auto', norm=norm)
-    ax.set_title(f'Epoch {kk + 1} \n\n Rew. Loc.= {np.round((rewlocs[kk]),1)} cm \n Correct trials')
-    ax.axvline(bins / 2, color='w', linestyle='--')
-    if kk==0: ax.set_ylabel('Reward cell ID #')
+   tcs_normalized = normalize_rows(tcs)
+   ax = axes[kk]
+   im = ax.imshow(tcs_normalized[np.argsort(coms_correct_r[0])], aspect='auto')
+   ax.set_title(f'{lbl[kk]} \n\n Rew. Loc.= {np.round((rewlocs[kk]), 1)} cm \n Correct trials')
+   ax.axvline(bins_dt / 2, color='w', linestyle='--',linewidth=2)
+   if kk == 0:
+      ax.set_ylabel('Reward cell ID #')
+   patch = patches.Rectangle((0, 0),  # (x, y)
+   width=bins_dt // 2,
+   height=tcs_normalized.shape[0],
+   color='mediumspringgreen',
+   alpha=0.2)
+   ax.add_patch(patch)
 
-# Plot each subplot with shared normalization
-for kk, tcs in enumerate(tcs_fail_r):
-    ax = axes[1,kk]
-    im = ax.imshow(tcs[np.argsort(coms_correct_r[0])] ** gamma, aspect='auto', norm=norm)
-    ax.set_title(f'Incorrect trials')
-    ax.axvline(bins / 2, color='w', linestyle='--')
-    if kk==len(tcs_fail)-1:
-        ax.set_xlabel('Reward-relative distance ($\Theta$)')  
-        
-ax.set_xticks(np.arange(0,bins,30))
-ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi),2))
+
+ax.set_xticks([0, bins_dt // 2, bins_dt]) 
+ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+
 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
+cbar = fig.colorbar(im, cax=cbar_ax)
+cbar.set_label(f'$\Delta$ F/F ^ {gamma}')
 
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
-plt.savefig(os.path.join(savedst, f'{animal}_{day}_tuning_curve_correct_v_incorrect_eg.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_tuning_curve_correct_v_incorrect_eg.svg'), bbox_inches='tight')

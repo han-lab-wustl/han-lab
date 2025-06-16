@@ -162,7 +162,7 @@ for ii in range(len(conddf)):
                 print(f'{animal}, day {day}: significant place cells proportion p-value: {p_value}')
                 pvals.append(p_value);     
                 total_cells.append(len(coms_correct_abs[0]))
-                datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs]
+                datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs, pcs_all]
 pdf.close()
 # # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling

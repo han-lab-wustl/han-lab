@@ -94,7 +94,7 @@ for ii in range(len(conddf)):
                 Fc3 = Fc3[:,((skew>2)&pc_bool)]
         bin_size=3 # cm
         # get abs dist tuning 
-        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size)
         # get cells that maintain their coms across at least 2 epochs
@@ -172,7 +172,7 @@ pdf.close()
 
 #%%
 radian_alignment=datadct
-plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 # plot goal cells across epochs
 inds = [int(xx[-3:]) for xx in radian_alignment.keys()]
 df = conddf.copy()
@@ -272,52 +272,88 @@ df_plt2['place_cell_prop_shuffle']=df_plt2['place_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
 df_plt2=df_plt2[df_plt2.animals!='e189']
 # number of epochs vs. reward cell prop incl combinations    
-fig,ax = plt.subplots(figsize=(3,5))
+# number of epochs vs. reward cell prop incl combinations    
+fig,axes = plt.subplots(ncols=2,figsize=(7,5))
+ax=axes[0]
 # av across mice
 sns.stripplot(x='num_epochs', y='place_cell_prop',color='k',
-        data=df_plt2,
-        s=10,alpha=.7)
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='place_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
-ax = sns.barplot(data=df_plt2, # correct shift
-        x='num_epochs', 
-        y='place_cell_prop_shuffle',color='gray', 
-        label='shuffle',alpha=0.5)
-ax.spines[['top','right']].set_visible(False)
-ax.legend().set_visible(False)
-# make lines
+# ax = sns.lineplot(data=df_plt2, # correct shift
+#         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
+#         y='goal_cell_prop_shuffle',color='grey', 
+#         label='shuffle')
+# bar plot of shuffle instead
+sns.barplot(data=df_plt2, # correct shift
+        x='num_epochs', y='place_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
 
+ax.spines[['top','right']].set_visible(False)
+ax.legend()#.set_visible(False)
+ax.set_ylabel('Place cell %')
+eps = [2,3,4]
+y = 28
+pshift = 1
+fs=36
+pvalues=[]
+for ii,ep in enumerate(eps):
+        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop']
+        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop_shuffle']
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        pvalues.append(pval)
+        print(f'{ep} epochs, pval: {pval}')
+# correct pvalues
+from statsmodels.stats.multitest import multipletests
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+# make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='place_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2,alpha=0.7)
-ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('% Place cell')
-ax.set_xlabel('# reward loc. switches')
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
+ax.set_title('Place cells',pad=30)
+ax.set_xlabel('')
+ax.set_ylim([0,35])
+ax=axes[1]
+# subtract from shuffle
+# df_plt2=df_plt2.reset_index()
+df_plt2['place_cell_prop_sub_shuffle'] = df_plt2['place_cell_prop']-df_plt2['place_cell_prop_shuffle']
+# av across mice
+sns.stripplot(x='num_epochs', y='place_cell_prop_sub_shuffle',color='cornflowerblue',
+        data=df_plt2,s=10,alpha=0.7,ax=ax)
+sns.barplot(x='num_epochs', y='place_cell_prop_sub_shuffle',
+        data=df_plt2,
+        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
+# make lines
+df_plt2=df_plt2.reset_index()
+ans = df_plt2.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=df_plt2.num_epochs-2, y='place_cell_prop_sub_shuffle', 
+    data=df_plt2[df_plt2.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
 
-eps = [2,3,4]
-y = 30
-pshift=4
-fs=36
-for ii,ep in enumerate(eps):
-        rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop']
-        shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop_shuffle']
-        t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-        print(f'{ep} epochs, pval: {pval}')
-        # statistical annotation        
-        if pval < 0.001:
-                plt.text(ii, y, "***", ha='center', fontsize=fs)
-        elif pval < 0.01:
-                plt.text(ii, y, "**", ha='center', fontsize=fs)
-        elif pval < 0.05:
-                plt.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii, y+pshift, f'p={pval:.3g}', rotation=45,fontsize=12)
+ax.spines[['top','right']].set_visible(False)
+ax.set_xlabel('# of reward loc. switches')
+ax.set_ylabel('')
+ax.set_title('Place cell %-shuffle',pad=30)
+ax.set_ylim([-1,20
+             ])
+
 
 plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.svg'), 
-        bbox_inches='tight')
-plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.png'), 
         bbox_inches='tight')
 #%%
 

@@ -84,32 +84,9 @@ for ii in range(len(conddf)):
          eptest = random.randint(2,3)   
          if len(eps)<4: eptest = 2 # if no 3 epochs    
 
-      #   fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-      #   Fc3 = fall_fc3['Fc3']
-      #   dFF = fall_fc3['dFF']
-      #   Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-      #   dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-      #   skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-      #   #if pc in all but 1
-      #   pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
-      #   # looser restrictions
-      #   pc_bool = np.sum(pcs,axis=0)>=1
-      #   Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
-      #   # if no cells pass these crit
-      #   if Fc3.shape[1]==0:
-      #       Fc3 = fall_fc3['Fc3']
-      #       Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-      #       # to avoid issues with e217 and z17?
-      #       # pc_bool = np.sum(pcs,axis=0)>=1
-      #       Fc3 = Fc3[:,((skew>1)&pc_bool)]
-      #   if Fc3.shape[1]>0:
-            # get abs dist tuning 
-            # tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
-            #         Fc3,trialnum,rewards,forwardvel,
-            #         rewsize,bin_size) # last 5 trials
       if sum([f'{animal}_{day:03d}' in xx for xx in list(datadct.keys())])>0:
             k = [k for k,xx in datadct.items() if f'{animal}_{day:03d}' in k][0]
-            tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs=datadct[k]
+            tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs,pcs=datadct[k]
       # get cells that maintain their coms b/wn previous and opto ep
       perm = [(eptest-2, eptest-1)]   
       if perm[0][1]<len(coms_correct_abs): # make sure tested epoch has enough trials
