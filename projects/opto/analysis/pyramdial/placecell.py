@@ -817,6 +817,12 @@ def get_dff_opto(conddf, dd, pc=True):
         rewsize = 10
     pcs = np.array([np.squeeze(xx) for xx in fall['putative_pcs'][0]])
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # if animal!='z14' and animal!='e200' and animal!='e189':                
+    if animal=='z17':
+        dFF = dFF[:, skew>1.5] 
+    else:
+        dFF = dFF[:, skew>2] 
     # place cells only
     # if pc: dFF = dFF[:, (np.sum(pcs,axis=0)>0)]
     # else: dFF = dFF[:, ~(np.sum(pcs,axis=0)>0)]
@@ -834,36 +840,6 @@ def get_dff_opto(conddf, dd, pc=True):
     dff_prev = np.nanmean(dFF[eps[comp[0]]:eps[comp[1]],:][ybinned[eps[comp[0]]:eps[comp[1]]]<rewlocs[comp[0]]-rewsize/2,:])
     dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:][ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]]-rewsize/2,:])
     return dff_opto, dff_prev
-
-def calculate_noise_correlations(data, trial_info):
-    """
-    Calculate noise correlations among neurons in a calcium imaging dataset.
-
-    Args:
-        data (numpy.ndarray): Calcium imaging data with shape (num_neurons, num_timesteps, num_trials).
-        trial_info (numpy.ndarray): Trial information with shape (num_trials, num_features).
-            Typically includes trial conditions, behavioral variables, etc.
-
-    Returns:
-        numpy.ndarray: Noise correlation matrix with shape (num_neurons, num_neurons).
-    """
-    num_neurons, num_timesteps, num_trials = data.shape
-
-    # Compute trial-averaged activity for each neuron
-    trial_avg = data.mean(axis=1)  # Shape: (num_neurons, num_trials)
-
-    # Compute noise for each neuron on each trial
-    noise = data - trial_avg[:, np.newaxis, :]  # Shape: (num_neurons, num_timesteps, num_trials)
-
-    # Compute noise correlations
-    noise_corr = np.zeros((num_neurons, num_neurons))
-    for i in range(num_neurons):
-        for j in range(i+1, num_neurons):
-            # Compute Pearson correlation between noise traces
-            r, _ = pearsonr(noise[i, :, :].ravel(), noise[j, :, :].ravel())
-            noise_corr[i, j] = noise_corr[j, i] = r
-
-    return noise_corr
 
 def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
     radian_alignment, cm_window=20):   
@@ -1008,7 +984,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
     # save 
     radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early]
     return radian_alignment, results_pre, results_post, results_pre_early, results_post_early
-    s
+    
 def process_goal_cell_proportions(
     eptest, cell_type, coms_correct, tcs_correct, rewlocs,
     animal, day, pdf, rz, scalingf, bins, goal_window, epsilon=0.7,
@@ -1134,37 +1110,94 @@ def process_goal_cell_proportions(
         'goal_cell_shuf_ps': goal_cell_shuf_ps
     }
 
+def get_main_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, radian_alignment, cm_window=20):   
+    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+    'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+    'stat', 'licks'])
+    VR = fall['VR'][0][0][()]
+    scalingf = VR['scalingFACTOR'][0][0]
+    try:
+        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+    except:
+        rewsize = 10
+    ybinned = fall['ybinned'][0]/scalingf
+    track_length=180/scalingf    
+    forwardvel = fall['forwardvel'][0]    
+    changeRewLoc = np.hstack(fall['changeRewLoc'])
+    trialnum=fall['trialnum'][0]
+    rewards = fall['rewards'][0]
+    time = fall['timedFF'][0]
+    lick = fall['licks'][0]
+    if animal=='e145':
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]
+        time=time[:-1]
+        lick=lick[:-1]
+    # set vars
+    eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+    # only test opto vs. ctrl
+    eptest = conddf.optoep.values[ii]
+    if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs 
+    eptest=int(eptest)   
+    lasttr=8 # last trials
+    bins=90
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
+    track_length_rad = track_length*(2*np.pi/track_length)
+    bin_size=track_length_rad/bins
 
-def goal_cell_ind(
-    eptest, cell_type, coms_correct, tcs_correct, rewlocs,
-    animal, day, pdf, rz, scalingf, bins, goal_window, epsilon=0.7
-):
-    """
-    Parameters:
-        eptest: tuple of two epoch indices (ctrl_ep, opto_ep)
-        cell_type: 'pre' or 'post'
-        coms_correct: array of shape (n_epochs, n_cells)
-        tcs_correct: tuning curves (n_epochs, n_cells, bins)
-        rewlocs: reward location per epoch
-        goal_window: window for goal definition (radians)
-        epsilon: wraparound window around π
-        pdf: PDF object for saving figures (optional)
-
-    Returns:
-        dict with:
-            - goal_cell_prop: real goal cell proportion
-            - goal_cell_shuf_ps: list of shuffled proportions
-    """
-    from numpy import abs, pi
-    from itertools import combinations
-
+    if sum([f'{animal}_{day:03d}' in xx for xx in list(radian_alignment_saved.keys())])>0:
+        k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
+        print(k)
+        tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early = radian_alignment_saved[k]            
+    else:# remake tuning curves relative to reward        
+    # takes time
+        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # if animal!='z14' and animal!='e200' and animal!='e189':                
+        Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+        skew_thres_range=np.arange(0,1.6,0.1)[::-1]
+        iii=0
+        while Fc3.shape[1]==0:      
+            iii+=1
+            print('************************0 cells skew > 2************************')
+            Fc3 = fall_fc3['Fc3']                        
+            Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+            Fc3 = Fc3[:, skew>skew_thres_range[iii]]
+        # 9/19/24
+        # find correct trials within each epoch!!!!
+        # tc w/ dark time
+        print('making tuning curves...\n')
+        track_length_dt = 550 # cm estimate based on 99.9% of ypos
+        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+        bins_dt=150 
+        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt,lasttr=8) 
+        # early tc
+        tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt,lasttr=8)        
+    goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
     # only get opto vs. ctrl epoch comparisons
     # change to relative value 
+    # save 
+    goal_cells_early = get_goal_cell_ind(coms_correct_early,eptest,goal_window)
+    goal_cells = get_goal_cell_ind(coms_correct,eptest,goal_window)
+    radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, goal_cells_early, goal_cells, Fc3]
+    return radian_alignment
+
+def get_goal_cell_ind(coms_correct,eptest,goal_window,bound=np.pi/4):
     coms_correct=coms_correct[[eptest-2,eptest-1],:]
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
     perm = list(combinations(range(len(coms_correct)), 2)) 
     print(perm)
-    rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
     # account for cells that move to the end/front
     # Define a small window around pi (e.g., epsilon)
     epsilon = .7 # 20 cm
@@ -1184,14 +1217,10 @@ def goal_cell_ind(
     com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
 
     # Select goal COMs based on cell_type
-    if cell_type == 'pre':
-        com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:, xx], axis=0) <= 0)] if len(com) > 0 else [] for com in com_goal]
-    elif cell_type == 'post':
-        com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:, xx], axis=0) > 0)] if len(com) > 0 else [] for com in com_goal]
-    else:
-        raise ValueError("cell_type must be 'pre' or 'post'")
+    # near pre and post
+    com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:, xx], axis=0)> -bound))] if len(com) > 0 else [] for com in com_goal]
     # Get goal cells across epochs
     com_goal_postrew=[xx for xx in com_goal_postrew if len(xx) > 0]
-    goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []
+    goal_cells = intersect_arrays(*com_goal_postrew) if len(com_goal_postrew) > 0 else []    
 
     return goal_cells
