@@ -2458,12 +2458,14 @@ def licks_by_trialtype(params_pth, animal,bins=90):
         total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
     rate=np.nanmean(np.array(rates))
-    
+    #lick
     tcs_correct, tcs_fail = make_tuning_curves_radians_by_trialtype_behavior(eps,rewlocs,ybinned,rad,
         lick,trialnum,rewards,forwardvel,rewsize,bin_size)          
-    
+    # vel
+    tcs_correct_vel, tcs_fail_vel = make_tuning_curves_radians_by_trialtype_behavior(eps,rewlocs,ybinned,rad,
+        forwardvel,trialnum,rewards,forwardvel,rewsize,bin_size)          
     # get mean tuning curve correct vs. incorrect
-    return tcs_correct,tcs_fail
+    return tcs_correct,tcs_fail,tcs_correct_vel, tcs_fail_vel
 
 def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
                     goal_cm_window, pdf, pln):

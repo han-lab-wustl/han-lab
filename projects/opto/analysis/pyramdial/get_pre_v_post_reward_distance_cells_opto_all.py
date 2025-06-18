@@ -28,7 +28,7 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
-radian_alignment_saved = {} # overwrite
+# radian_alignment_saved = {} # overwrite
 results_all=[]
 radian_alignment = {}
 cm_window = 20
@@ -256,7 +256,7 @@ realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
 realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
 realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67]))))]
-realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+# realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
 # realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
 #%%

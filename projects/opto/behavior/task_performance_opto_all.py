@@ -62,7 +62,7 @@ for dd,day in enumerate(conddf.days.values):
     lick_prob_prev, trials_bwn_success_opto, \
     trials_bwn_success_prev, vel_opto, vel_prev, lick_selectivity_per_trial_opto,\
     lick_selectivity_per_trial_prev, lick_rate_opto, lick_rate_prev, com_opto, com_prev,\
-        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr=8,lasttr=8)
+        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr=15,lasttr=8)
     rewzones = get_rewzones(rewlocs, 1/scalingf)
     # save
     dct['velocity'] = [vel_prev, vel_opto]

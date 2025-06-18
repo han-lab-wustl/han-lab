@@ -287,7 +287,6 @@ for animal in bigdf['animal'].unique():
 #         errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
-from scipy.stats import ttest_rel
 
 # 1) Two-way repeated measures ANOVA
 aov = AnovaRM(
@@ -304,7 +303,7 @@ for ct in cell_order:
     sub = bigdf[bigdf['cell_type']==ct]
     cor = sub[sub['trial_type']=='correct']['mean_dff']
     inc = sub[sub['trial_type']=='incorrect']['mean_dff']
-    t, p_unc = scipy.stats.wilcoxon(cor, inc)
+    t, p_unc = scipy.stats.ttest_rel(cor, inc)
     posthoc.append({
         'cell_type': ct,
         't_stat':    t,

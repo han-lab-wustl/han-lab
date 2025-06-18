@@ -1190,7 +1190,15 @@ def get_main_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day
     # save 
     goal_cells_early = get_goal_cell_ind(coms_correct_early,eptest,goal_window)
     goal_cells = get_goal_cell_ind(coms_correct,eptest,goal_window)
-    radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, goal_cells_early, goal_cells, Fc3]
+    # average pre-reward activity
+    rng_prev=np.arange(eps[eptest-2],eps[eptest-1])
+    rng_opto=np.arange(eps[eptest-1],eps[eptest])
+    dff_p=np.nanmean(Fc3[rng_prev[ybinned[rng_prev]<rewlocs[eptest-2]-rewsize/2],:][:,goal_cells],axis=0)
+    dff_o=np.nanmean(Fc3[rng_opto[ybinned[rng_opto]<rewlocs[eptest-1]-rewsize/2],:][:,goal_cells],axis=0)
+    dff_p_e=np.nanmean(Fc3[rng_prev[ybinned[rng_prev]<rewlocs[eptest-2]-rewsize/2],:][:,goal_cells_early],axis=0)
+    dff_o_e=np.nanmean(Fc3[rng_opto[ybinned[rng_opto]<rewlocs[eptest-1]-rewsize/2],:][:,goal_cells_early],axis=0)
+
+    radian_alignment[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, goal_cells_early, goal_cells,dff_p,dff_o,dff_p_e,dff_o_e]
     return radian_alignment
 
 def get_goal_cell_ind(coms_correct,eptest,goal_window,bound=np.pi/4):

@@ -573,6 +573,63 @@ def make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,
                 coms_fail[ep, :] = com    
     return tcs_correct, coms_correct, tcs_fail, coms_fail
 
+def make_tuning_curves_early(eps,rewlocs,ybinned,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,eptrials=3,
+            velocity_filter=False):
+    tcs_fail = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    coms_fail = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = ybinned[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        F = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F_all = F[moving_middle,:]
+        # in between failed trials only!!!!! 4/2025
+        if len(strials)>0:
+            failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
+            failed_inbtw=np.array(ftrials)[failed_inbtw>0]
+        else: # for cases where an epoch was started but not enough trials
+            failed_inbtw=np.array(ftrials)
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        relpos_all = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            # last 8 correct trials
+            if len(strials)>0:
+                mask = [True if xx in strials[:lasttr] else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_correct[ep, :,:] = tc
+                coms_correct[ep, :] = com
+            # failed trials
+            # UPDATE 4/16/25
+            # only take last 8 failed trials?
+            if len(failed_inbtw)>0:
+                mask = [True if xx in failed_inbtw[:lasttr] else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                # print(f'Fluorescence array size:\n{F.shape}\n')
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_fail[ep, :, :] = tc
+                coms_fail[ep, :] = com    
+    return tcs_correct, coms_correct, tcs_fail, coms_fail
+
 def get_place_field_widths(tuning_curves, threshold=0.5):
     """
     Calculate place field widths around peak firing fields for each cell.

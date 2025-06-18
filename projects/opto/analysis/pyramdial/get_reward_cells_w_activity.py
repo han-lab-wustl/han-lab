@@ -7,6 +7,7 @@ control vs. opto epoch only
 
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
+
 import pickle, seaborn as sns, random, math
 from collections import Counter
 from itertools import combinations, chain
@@ -25,8 +26,8 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_opto_reward_relative.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
-with open(saveddataset, "rb") as fp: #unpickle
-        radian_alignment_saved = pickle.load(fp)
+# with open(saveddataset, "rb") as fp: #unpickle
+#         radian_alignment_saved = pickle.load(fp)
 # initialize var
 radian_alignment_saved = {} # overwrite
 results_all=[]
@@ -34,7 +35,6 @@ radian_alignment = {}
 cm_window = 20
 
 #%%
-radian_alignment_all =[]
 # iterate through all animals 
 for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
@@ -46,14 +46,49 @@ for ii in range(len(conddf)):
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
         radian_alignment = get_main_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, radian_alignment, cm_window=cm_window)
-        radian_alignment_all.append(radian_alignment)
         
-
-pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
         pickle.dump(radian_alignment, fp) 
+#%%
+plt.rc('font', size=20) 
+# rew cell activity
+# [tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, goal_cells_early, goal_cells,dff_p,dff_o,dff_p_e,dff_o_e]
+dfc=conddf.copy()
+dfc=dfc.drop(187)
+early_rew = [v[13]-v[12] for k,v in radian_alignment.items()]
+late_rew = [v[11]-v[10] for k,v in radian_alignment.items()]
+df=pd.DataFrame()
+df['animal'] = [s.split('_',1)[0] for s,v in radian_alignment.items()]
+df['day'] = [int(s.split('_')[1]) for s,v in radian_alignment.items()]
+df['dff_prev_opto_early'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in early_rew]
+df['dff_prev_opto_late'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in late_rew]
+df['optoep']=dfc.optoep
+df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in dfc.in_type]
+df=df[df.optoep>1]
+# Transform to long format for plotting
+df_long = df.melt(id_vars=['animal', 'day', 'optoep', 'condition'], 
+                 value_vars=['dff_prev_opto_early', 'dff_prev_opto_late'], 
+                 var_name='timepoint', 
+                 value_name='dff')
+df_long=df_long.groupby(['animal', 'condition', 'timepoint']).mean(numeric_only=True)
+# Now you can plot:
+fig,ax =plt.subplots(figsize=(5,6))
+sns.stripplot(data=df_long, x='timepoint', y='dff',hue='condition', size=12, alpha=0.7,dodge=True)
+# Optional: add boxplot for comparison
+sns.barplot(data=df_long, x='timepoint', y='dff',hue='condition', 
+    ax=ax,fill=False,legend=False)
 
+ax.legend(title='Opto')
+ax.axhline(0, color='black', linestyle='--')
+ax.set_xlabel('Timepoint')
+ax.set_ylabel('dF/F')
+
+ax.spines[['top', 'right']].set_visible(False)
+
+ax.set_title('dF/F opto (early vs late)')
+plt.tight_layout()
+plt.show()
 #%%
 # top down approach
 # 1) com dist in opto vs. control

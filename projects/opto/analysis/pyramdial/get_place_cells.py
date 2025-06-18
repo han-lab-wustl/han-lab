@@ -18,7 +18,7 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.pyr_reward.placecell import make_tuning_curves, intersect_arrays, make_tuning_curves_by_trialtype_w_darktime
+from projects.pyr_reward.placecell import make_tuning_curves, make_tuning_curves_early, intersect_arrays, make_tuning_curves_by_trialtype_w_darktime, make_tuning_curves_by_trialtype_w_darktime_early
 from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
@@ -119,12 +119,18 @@ for ii in range(len(conddf)):
                 tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size) # last 5 trials
+                tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
+                rewsize,bin_size) # last 5 trials
+
                 track_length_dt = 550 # cm estimate based on 99.9% of ypos
                 track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
                 bins_dt=150 
                 bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
                 tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
                     bins=bins_dt,lasttr=8) 
+                tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+                bins=bins_dt,lasttr=8) 
+
 
             # get cells that maintain their coms b/wn previous and opto ep
             perm = [(eptest-2, eptest-1)]   
@@ -132,7 +138,6 @@ for ii in range(len(conddf)):
                 print(eptest, perm)            
                 goal_window = 20*(2*np.pi/track_length) # cm converted to rad
                 coms_rewrel = np.array([com-np.pi for com in coms_correct])
-                perm = list(combinations(range(len(coms_correct)), 2)) 
                 # account for cells that move to the end/front
                 # Define a small window around pi (e.g., epsilon)
                 epsilon = .7 # 20 cm
@@ -155,10 +160,34 @@ for ii in range(len(conddf)):
                     goal_cells = intersect_arrays(*com_goal)
                 else:
                     goal_cells=[]
+                # early goal cells
+                coms_rewrel = np.array([com-np.pi for com in coms_correct_early])
+                # account for cells that move to the end/front
+                # Define a small window around pi (e.g., epsilon)
+                epsilon = .7 # 20 cm
+                # Find COMs near pi and shift to -pi
+                com_loop_w_in_window = []
+                for pi,p in enumerate(perm):
+                    for cll in range(coms_rewrel.shape[1]):
+                        com1_rel = coms_rewrel[p[0],cll]
+                        com2_rel = coms_rewrel[p[1],cll]
+                        # print(com1_rel,com2_rel,com_diff)
+                        if ((abs(com1_rel - np.pi) < epsilon) and 
+                        (abs(com2_rel + np.pi) < epsilon)):
+                                com_loop_w_in_window.append(cll)
+                # get abs value instead
+                coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+                com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+                com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+                com_goal=[xx for xx in com_goal if len(xx)>0]
+                if len(com_goal)>0:
+                    goal_cells_early = intersect_arrays(*com_goal)
+                else:
+                    goal_cells_early=[]
+
                 # get cells that maintain their coms across at least 2 epochs
                 place_window = 20 # cm converted to rad                
-                perm = list(combinations(range(len(coms_correct)), 2))     
-                com_per_ep = np.array([(coms_correct[perm[jj][0]]-coms_correct[perm[jj][1]]) for jj in range(len(perm))])        
+                com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
                 compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
                 # get cells across all epochs that meet crit
                 pcs = np.unique(np.concatenate(compc))
@@ -169,11 +198,26 @@ for ii in range(len(conddf)):
                     pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
                 else:
                     pcs_all=[]      
-                # get per comparison
                 pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
-                pc_ind.append(pcs_all);pc_p=len(pcs_all)/len(coms_correct_abs[0])
+                pc_p=len(pcs_all)/len(coms_correct_abs[0])
+                #early
+                com_per_ep = np.array([(coms_correct_abs_early[perm[jj][0]]-coms_correct_abs_early[perm[jj][1]]) for jj in range(len(perm))])        
+                compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+                # get cells across all epochs that meet crit
+                pcs = np.unique(np.concatenate(compc))
+                compc=[xx for xx in compc if len(xx)>0]
+                if len(compc)>0:
+                    pcs_all_early = intersect_arrays(*compc)
+                    # exclude goal cells
+                    pcs_all_early=[xx for xx in pcs_all if xx not in goal_cells_early]
+                else:
+                    pcs_all_early=[]      
+                # get per comparison
+                pcs_p_per_comparison_early = [len(xx)/len(coms_correct_abs_early[0]) for xx in compc]
+                pc_p_early=len(pcs_all_early)/len(coms_correct_abs_early[0])
+
                 epoch_perm.append(perm)
-                pc_prop.append([pcs_p_per_comparison,pc_p])
+                pc_prop.append([pcs_p_per_comparison,pc_p,pcs_p_per_comparison_early,pc_p_early])
                 num_epochs.append(len(coms_correct_abs))
                 # get shuffled iterations
                 shuffled_dist = np.zeros((num_iterations))
@@ -188,7 +232,6 @@ for ii in range(len(conddf)):
                     com_shufs = np.zeros_like(coms_correct_abs); com_shufs[0,:] = coms_correct_abs[0]
                     com_shufs[1:1+len(shufs),:] = [coms_correct_abs[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
                     # get cells that maintain their coms across at least 2 epochs
-                    perm = list(combinations(range(len(com_shufs)), 2))     
                     perm = [(eptest-2, eptest-1)]    
                     com_per_ep = np.array([(com_shufs[perm[jj][0]]-com_shufs[perm[jj][1]]) for jj in range(len(perm))])        
                     compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
@@ -209,67 +252,12 @@ for ii in range(len(conddf)):
                 print(f'{animal}, day {day}: significant place cells proportion p-value: {p_value}')
                 pvals.append(p_value);     
                 total_cells.append(len(coms_correct_abs[0]))
-                datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs, pcs_all]
+                print(eptest, perm)       
+                datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs, tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early,pcs_all]
 pdf.close()
 # # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
     pickle.dump(datadct, fp) 
-
-#%%
-# top down approach
-# 1) com dist in opto vs. control
-# 3) place v. reward
-# tcs_correct, coms_correct, tcs_fail, coms_fail,
-# tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
-# 1) get coms correct
-df = conddf.copy()
-df = df.drop([179]) # skipped e217 day
-coms_correct = [xx[1] for k,xx in datadct.items()]
-optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
-# opto comparison
-coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] if len(xx)>optoep[ep]-1 else xx[[optoep[ep]-3,optoep[ep]-2]]for ep,xx in enumerate(coms_correct)]
-# tcs_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(tcs_correct)]
-coms_correct_prev = [xx[0] for ep,xx in enumerate(coms_correct)]
-coms_correct_opto = [xx[1] for ep,xx in enumerate(coms_correct)]
-# tcs_correct_prev = [xx[0] for ep,xx in enumerate(tcs_correct)]
-# tcs_correct_opto = [xx[1] for ep,xx in enumerate(tcs_correct)]
-
-vip_in_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
-vip_in_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
-vip_in_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
-vip_in_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
-# excitation
-vip_ex_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
-vip_ex_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
-vip_ex_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
-vip_ex_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
-#control
-ctrl_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
-ctrl_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
-ctrl_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
-ctrl_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
-#%%
-plots = [[ctrl_com_prev,vip_in_com_prev,vip_ex_com_prev,ctrl_com_ctrl_prev,vip_in_com_ctrl_prev,vip_ex_com_ctrl_prev],
-        [ctrl_com_opto,vip_in_com_opto,vip_ex_com_opto,ctrl_com_ctrl_opto,vip_in_com_ctrl_opto,vip_ex_com_ctrl_opto]]
-lbls=['ctrl_ledon','vip_in_ledon','vip_ex_ledon','ctrl_ledoff','vip_in_ledoff','vip_ex_ledoff']
-a=0.4
-fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(17,10))
-axes=axes.flatten()
-for pl in range(len(plots[0])):
-    ax=axes[pl]
-    # Concatenate and subtract pi
-    data_prev = np.concatenate(plots[0][pl]) - np.pi
-    data_opto = np.concatenate(plots[1][pl]) - np.pi
-    ax.hist(data_prev,alpha=a,label='prev_ep',bins=100,density=True)
-    ax.hist(data_opto,alpha=a,label='opto_ep',bins=100,density=True)
-    # KDE plots
-    sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
-    sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
-    ax.set_title(lbls[pl])
-#     ax.set_xlim([-np.pi/6,np.pi])
-    ax.axvline(0, color='gray', linewidth=2,linestyle='--')
-ax.legend()
-
 #%%
 
 plt.rc('font', size=20)          # controls default text sizes
@@ -281,37 +269,32 @@ inds = [int(xx[-3:]) for xx in datadct.keys()]
 df = df[(df.index.isin(inds))]
 df['place_cell_prop'] = [xx[1] for xx in pc_prop]
 df['place_cell_prop']=df['place_cell_prop']*100
+df['place_cell_prop_early'] = [xx[3] for xx in pc_prop]
+df['place_cell_prop_early']=df['place_cell_prop_early']*100
 df['opto'] = df.optoep.values>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['place_cell_prop_shuffle'] =  [xx[1] for xx in place_cell_null]
 df['place_cell_prop_shuffle']=df['place_cell_prop_shuffle']*100
 df=df[df.place_cell_prop>0]
-fig,ax = plt.subplots(figsize=(5,5))
-ax = sns.histplot(data = df, x='p_value', 
-                hue='animals', bins=40)
-ax.spines[['top','right']].set_visible(False)
-ax.axvline(x=0.05, color='k', linestyle='--')
-sessions_sig = sum(df['p_value'].values<0.05)/len(df)
-ax.set_title(f'{(sessions_sig*100):.2f}% of sessions are significant')
-ax.set_xlabel('P-value')
-ax.set_ylabel('Sessions')
-#%%
+
 # number of epochs vs. reward cell prop    
-fig,ax = plt.subplots(figsize=(5,5))
+fig,axes = plt.subplots(ncols=2,figsize=(10,5))
 # av across mice
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
-df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='e200')]
+df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 df=df[~((df.animals=='z14')&(df.days<15))]
 df=df[~((df.animals=='z17')&(df.days<11))]
 df=df[~((df.animals=='z15')&(df.days<8))]
-df=df[~((df.animals=='e217')&(df.days<9))]
+df=df[~((df.animals=='e217')&(df.days<9)&(df.days==26))]
 df=df[~((df.animals=='e216')&(df.days<32))]
-# realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+# df=df[~((df.animals=='e218')&(df.days>44))]
+
 df_plt = df
 df_plt = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True).reset_index()
+ax=axes[0]
 sns.stripplot(x='opto', y='place_cell_prop',
         hue='condition',data=df_plt,
         palette=pl,dodge=True,
@@ -372,34 +355,139 @@ plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto.svg'),bbox_inches='
 # subtract by led off sessions
 # ----------------------------------------
 # Plotting Stim - No Stim per Animal
+
+# subtract by led off sessions for both
 # ----------------------------------------
-df_an = df_plt
-df_an['opto']=[True if xx=='True' else False for xx in df_an['opto']]
-fig2, ax2 = plt.subplots(figsize=(3, 5))
-df_diff = (
-    df_an[df_an.opto ==True]
-    .set_index(['animals', 'condition'])[['place_cell_prop']]
-    .rename(columns={'place_cell_prop': 'stim'})
-)
-pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
-df_diff['no_stim'] = df_an[df_an.opto == False].set_index(['animals', 'condition'])['place_cell_prop']
-df_diff['delta'] = df_diff['stim']-df_diff['no_stim']
-df_diff = df_diff.reset_index()
-# df_diff = df_diff[(df_diff.animals!='e190')&(df_diff.animals!='e189')]
-# Plot
-a=0.7
-sns.stripplot(data=df_diff, x='condition', y='delta', ax=ax2, 
-             palette=pl, size=s,alpha=a)
-sns.barplot(data=df_diff, x='condition', y='delta', ax=ax2, 
-             palette=pl, fill=False)
-# Aesthetics
-ax2.axhline(0, color='black', linestyle='--')
-ax2.set_ylabel('Δ Place cell % (LEDon-LEDoff)')
-ax2.set_xlabel('')
-ax2.set_xticklabels(['Control', 'VIP\nInhibition','VIP\nExcitation'], rotation=20)
-ax2.set_title('Place cells\n')
-ax2.spines[['top', 'right']].set_visible(False)
+# Plotting Stim - No Stim per Animal
+# ----------------------------------------
 
-    
+df_an = df_plt.copy()
+df_an = df_an.sort_values(['animals', 'condition'])
+df_an['opto'] = [True if xx=='True' else False for xx in df_an.opto]
+
+# compute delta for each condition per animal
+delta_vals = []
+for (animal, condition), group in df_an.groupby(['animals', 'condition']):
+    stim = group.loc[group.opto == True].set_index(['animals', 'condition'])[['place_cell_prop', 'place_cell_prop_early']]
+    no_stim = group.loc[group.opto == False].set_index(['animals', 'condition'])[['place_cell_prop', 'place_cell_prop_early']]
+    if not stim.empty and not no_stim.empty:
+        delta_vals.append([animal, condition, 
+                            stim.loc[(animal, condition), 'place_cell_prop'] - no_stim.loc[(animal, condition), 'place_cell_prop'], 
+                            stim.loc[(animal, condition), 'place_cell_prop_early'] - no_stim.loc[(animal, condition), 'place_cell_prop_early']])
+
+df_delta = pd.DataFrame(delta_vals, columns=['animals', 'condition', 'delta_late', 'delta_early'])
+
+# Now we can plot side by side
+fig, axs = plt.subplots(1, 2, figsize=(6, 5),sharey=True)
+
+pl ={'ctrl': "slategray", 'vip': 'red', 'vip_ex': 'darkgoldenrod'}
+a = 0.7
+s = 12
+
+# Plotting late
+ax = axs[1]
+sns.stripplot(data=df_delta, x='condition', y='delta_late', hue='condition',ax=ax, palette=pl, size=s, alpha=a)
+sns.barplot(data=df_delta, x='condition', y='delta_late',hue='condition', ax=ax, palette=pl, fill=False,errorbar='se')
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_title('Late')
+# --- Stats + annotation ---
+data=df_delta
+conds = data['condition'].unique()
+pairs = list(combinations(conds, 2))[:2]
+y_max = data['delta_late'].quantile(.85)
+y_step = 0.4 * abs(y_max)
+
+for i, (cond1, cond2) in enumerate(pairs):
+    vals1 = data[data['condition'] == cond1]['delta_late']
+    vals2 = data[data['condition'] == cond2]['delta_late']
+    stat, pval = scipy.stats.ranksums(vals1, vals2)
+    # Annotation text
+    if pval < 0.001:
+        text = '***'
+    elif pval < 0.01:
+        text = '**'
+    elif pval < 0.05:
+        text = '*'
+    else:
+        text = f""
+
+    # Get x-locations
+    x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+    y = y_max + y_step * (i + 1)
+    ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+    ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
+    ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+
+# Plotting early
+ax = axs[0]
+sns.stripplot(data=df_delta, x='condition', y='delta_early', ax=ax, 
+              palette=pl, size=s, alpha=a)
+sns.barplot(data=df_delta, x='condition', y='delta_early', ax=ax, 
+            palette=pl, fill=False,errorbar='se')
+ax.set_ylabel('Δ Place Cell % (LEDon-LEDoff)')
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_title('Early')
+# --- Stats + annotation ---
+data=df_delta
+conds = data['condition'].unique()
+pairs = list(combinations(conds, 2))[:2]
+y_max = data['delta_early'].quantile(.85)
+y_step = 0.4 * abs(y_max)
+
+for i, (cond1, cond2) in enumerate(pairs):
+    vals1 = data[data['condition'] == cond1]['delta_early']
+    vals2 = data[data['condition'] == cond2]['delta_early']
+    stat, pval = scipy.stats.ranksums(vals1, vals2)
+    # Annotation text
+    if pval < 0.001:
+        text = '***'
+    elif pval < 0.01:
+        text = '**'
+    elif pval < 0.05:
+        text = '*'
+    else:
+        text = f""
+
+    # Get x-locations
+    x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+    y = y_max + y_step * (i + 1)
+    ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+    ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
+    ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+# Save the plot
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
+
+#%% 
+# correlate with rates diff
+beh = pd.read_csv(r'Z:\condition_df\vip_opto_behavior.csv')
+beh=beh[(beh.animals.isin(df.animals.values))&(beh.days.isin(df.days.values))]
+beh=beh[~((beh.animals=='z14')&(beh.days<15))]
+beh=beh[~((beh.animals=='z17')&(beh.days<13))]
+beh=beh[~((beh.animals=='z15')&(beh.days<8))]
+beh=beh[~((beh.animals=='e217')&(beh.days<9)&(beh.days==26))]
+beh=beh[~((beh.animals=='e216')&(beh.days<32))]
+beh = beh.groupby(['animals', 'opto']).mean(numeric_only=True).reset_index()
+beh=beh[beh.opto==True]
+# take all trial cells
+y = np.nanmean([df_an.loc[(df_an.opto==True), 'place_cell_prop_early'].values,
+                df_an.loc[(df_an.opto==True), 'place_cell_prop'].values],axis=0)
+# y=df_delta.delta_early
+# Perform regression
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(beh.rates_diff.values, y)
+print(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
+
+# Plot scatter plot with regression line
+fig,ax=plt.subplots(figsize=(6,5))
+sns.scatterplot(x=beh.rates_diff.values, y=y,hue=df_an.loc[(df_an.opto==True),'condition'].values,s=300,alpha=.7,palette=pl,ax=ax)
+ax.plot(beh.rates_diff.values, intercept + slope * beh.rates_diff.values, color='steelblue', label='Regression Line',linewidth=3)
+ax.legend()
+ax.set_xlabel("% Correct trials (LEDon-LEDoff)")
+ax.set_ylabel("Place cell %")
+ax.set_title(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
+ax.spines[['top', 'right']].set_visible(False)
+plt.savefig(os.path.join(savedst, 'placecell_v_performance.svg'), bbox_inches='tight')
