@@ -282,7 +282,7 @@ alldf = alldf.dropna(subset=['width_cm', 'lick_dist'])
 alldf = alldf[alldf['width_cm'] > 0]
 alldf=alldf[(alldf.animal!='e189')&(alldf.animal!='e190')&(alldf.animal!='e200')]
 # --- Plot original + shuffled ---
-fig, axes = plt.subplots(ncols = 2, figsize=(10,5))
+fig, axes = plt.subplots(ncols = 2, figsize=(9,5),width_ratios=[2,1])
 ax=axes[0]
 # Original regression and scatter
 sns.regplot(x='lick_dist', y='width_cm', data=alldf,
@@ -323,7 +323,7 @@ p_empirical = np.mean(np.abs(r_null) >= np.abs(r_obs))
 
 # Labels and cleanup
 ax.set_xlabel('Lick Distance (cm)')
-ax.set_ylabel('Place Field Width (cm)')
+ax.set_ylabel('Place field width (cm)')
 ax.spines[['top', 'right']].set_visible(False)
 ax.legend()
 # --- Plot null distribution ---

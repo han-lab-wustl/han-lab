@@ -78,16 +78,16 @@ plt.rc('font', size=20)
 rzdf = extract_transition_epochs(bigdf, transition=('rz1', 'rz3'), max_epoch=5)
 
 # per animal
-s=10
+s=12
 hue_order = ['Pre','Post']
-fig, ax = plt.subplots(figsize=(4,5))
+fig, ax = plt.subplots(figsize=(3,6))
 # only get super close rz1 rewlocs
 rzdf = rzdf[((rzdf.epoch=='rz3')&(rzdf.rewloc_cm.values>210))|((rzdf.epoch=='rz1')&(rzdf.rewloc_cm.values<120))]
 anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
+anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
 sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
     palette='Dark2',hue_order=hue_order)
 h_strip, l_strip = ax.get_legend_handles_labels()
@@ -101,11 +101,11 @@ ind = ['Pre','Post']
 for j,ct in enumerate(ind):
     for i in range(len(ans)):    
         df_ = anrzdf[(anrzdf.animal==ans[i]) & (anrzdf.cell_type==ct)]
-        df_ = df_.sort_values(by="epoch", ascending=True)
-        color=sns.color_palette('Dark2')[j]
+        df_ = df_.sort_values(by="epoch", ascending=True)     
+        color=sns.color_palette('Dark2')[j]   
         ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='width_cm',
         data=df_,
-        errorbar=None, color=color, linewidth=2, alpha=0.3,ax=ax)
+        errorbar=None, color=color, linewidth=1.5, alpha=0.5,ax=ax)
 
 # 3) remove whatever legend was just created
 ax.legend_.remove()
@@ -284,7 +284,7 @@ anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
+anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
 order=['rz1', 'rz2']
 sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
     palette='Dark2',hue_order=hue_order,order=order)
@@ -381,12 +381,12 @@ ax.spines[['top','right']].set_visible(False)
 # per animal
 s=10
 hue_order = ['Pre','Post']
-fig, ax = plt.subplots(figsize=(4,5))
+fig, ax = plt.subplots(figsize=(3,6))
 anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e139')
+anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
 #              & (anrzdf.animal!='e216')]
 # anrzdf=anrzdf[(anrzdf.animal!='z16')]
 order = ['rz3', 'rz1']
@@ -407,7 +407,7 @@ for j,ct in enumerate(ind):
         color=sns.color_palette('Dark2')[j]
         ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='width_cm',
         data=df_,
-        errorbar=None, color=color, linewidth=2, alpha=0.3,ax=ax)
+        errorbar=None, color=color, linewidth=1.5, alpha=0.5,ax=ax)
 
 # 3) remove whatever legend was just created
 ax.legend_.remove()
@@ -468,6 +468,7 @@ plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_widt
 
 
 #%%
+plt.rc('font', size=20) 
 # get corresponding licking vs velocity behavior 
 # scatterplot of lick distance vs. field width
 import numpy as np
@@ -499,7 +500,7 @@ rzdf['day'] = rzdf['day'].astype(int)
 lrzdf = extract_epochs(lickbigdf)
 lrzdf = lrzdf.groupby(['animal', 'day', 'epoch']).median(numeric_only=True).reset_index()
 lrzdf['day'] = lrzdf['day'].astype(int)
-
+color=sns.color_palette('Dark2')[0]
 # Merge licking + tuning data
 alldf = pd.merge(lrzdf, rzdf, on=['animal', 'day', 'epoch'], how='inner')
 
@@ -508,13 +509,13 @@ alldf['lick_dist'] = alldf['last_lick_loc_cm'] - alldf['first_lick_loc_cm']
 alldf['width_cm'] = alldf['width_cm'].astype(float)
 alldf = alldf.dropna(subset=['width_cm', 'lick_dist'])
 alldf = alldf[alldf['width_cm'] > 0]
-
+alldf=alldf[(alldf.animal!='e189') & (alldf.animal!='e190')]
 # --- Plot original + shuffled ---
-fig, axes = plt.subplots(ncols = 2, figsize=(10,5))
+fig, axes = plt.subplots(ncols = 2, figsize=(9,5),width_ratios=[2,1])
 ax=axes[0]
 # Original regression and scatter
 sns.regplot(x='lick_dist', y='width_cm', data=alldf,
-            scatter=True, color='k', line_kws={'color': 'dodgerblue'},
+            scatter=True, color='k', line_kws={'color': color},
             scatter_kws={'alpha': 0.5, 's': 50}, ax=ax,label='Real')
 
 # --- Compute original r and p ---
@@ -551,14 +552,14 @@ p_empirical = np.mean(np.abs(r_null) >= np.abs(r_obs))
 
 # Labels and cleanup
 ax.set_xlabel('Lick Distance (cm)')
-ax.set_ylabel('Field Width (cm)')
+ax.set_ylabel('Pre-Reward cell field width (cm)')
 ax.spines[['top', 'right']].set_visible(False)
 ax.legend()
 # --- Plot null distribution ---
 ax=axes[1]
 sns.histplot(r_null, kde=True, color='gray', bins=30, ax=ax)
-ax.axvline(r_obs, color='dodgerblue', linewidth = 2, label=f'Observed r = {r_obs:.2f}')
-ax.set_title(f'Empirical p = {p_empirical:.4f}')
+ax.axvline(r_obs, color=color, linewidth = 2, label=f'Observed r = {r_obs:.2f}')
+ax.set_title(f'Empirical p = {p_empirical:.3g}')
 ax.set_xlabel('Shuffled Correlation (r)')
 ax.set_ylabel('Frequency')
 ax.legend()
@@ -569,11 +570,12 @@ plt.savefig(os.path.join(os.path.join(savedst, 'lick_field_width.svg')))
 #%%
 # vs pre-reward velocity 
 # --- Plot original + shuffled ---
-fig, axes = plt.subplots(ncols = 2, figsize=(10,5))
+fig, axes = plt.subplots(ncols = 2, figsize=(9,5), width_ratios=[2,1])
 ax=axes[0]
+color=sns.color_palette('Dark2')[0]
 # Original regression and scatter
 sns.regplot(x='avg_velocity_cm_s', y='width_cm', data=alldf,
-            scatter=True, color='k', line_kws={'color': 'dodgerblue'},
+            scatter=True, color='k', line_kws={'color': color},
             scatter_kws={'alpha': 0.5, 's': 50}, ax=ax,label='Real')
 
 # --- Compute original r and p ---
@@ -610,13 +612,13 @@ p_empirical = np.mean(np.abs(r_null) >= np.abs(r_obs))
 
 # Labels and cleanup
 ax.set_xlabel('Pre-reward velocity (cm/s)')
-ax.set_ylabel('Field Width (cm)')
+ax.set_ylabel('Pre-reward cell field width (cm)')
 ax.spines[['top', 'right']].set_visible(False)
 ax.legend()
 # --- Plot null distribution ---
 ax=axes[1]
 sns.histplot(r_null, kde=True, color='gray', bins=30, ax=ax)
-ax.axvline(r_obs, color='dodgerblue', linewidth = 2, label=f'Observed r = {r_obs:.2f}')
+ax.axvline(r_obs, color=color, linewidth = 2, label=f'Observed r = {r_obs:.2f}')
 ax.set_title(f'Empirical p = {p_empirical:.4f}')
 ax.set_xlabel('Shuffled Correlation (r)')
 ax.set_ylabel('Frequency')

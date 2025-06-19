@@ -28,12 +28,15 @@ lick_tc_ctrl_opto = {}
 probe_lick_tc_vip_opto = {} # collecting
 probe_lick_tc_vip_ledoff = {}
 probe_lick_tc_ctrl_opto = {}
-conddf=conddf[conddf.animals.isin(['e201','z8'])]
+# conddf=conddf[conddf.animals.isin(['e201','z8'])]
+conddf=conddf[~((conddf.animals=='z14')&(conddf.days<15))]
+conddf=conddf[~((conddf.animals=='z17')&(conddf.days<13))]
+conddf=conddf[~((conddf.animals=='z15')&(conddf.days<8))]
 for dd,_ in enumerate(conddf.days.values):
     animal = conddf.animals.values[dd]
     day = conddf.days.values[dd]
     params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-    if (conddf.in_type.values[dd]=='vip') and (conddf.optoep.values[dd]>1):
+    if (conddf.in_type.values[dd]=='vip_ex') and (conddf.optoep.values[dd]>1):
         lick_tuning_curves_per_trial_per_ep_padded, rewzone, trialstate_per_ep, rewzone_prev = get_lick_tuning_curves_per_trial(params_pth, conddf, dd,
             bin_size=bin_size)
         lick_tc_vip_opto[f'rz{int(rewzone)}_{int(rewzone_prev)}_{dd}'] = [lick_tuning_curves_per_trial_per_ep_padded, trialstate_per_ep]
@@ -105,25 +108,43 @@ def plot_lick_vis(dct_to_use, condition, savedst, probes=False,
             # Plot each row as a histogram
             sns.heatmap(df, mask=mask, cmap=new_cmap, cbar=False, ax=axes[i],rasterized=True)
             sns.heatmap(df, mask=~mask, cmap='Greys', cbar=False, ax=axes[i],rasterized=True)
-
+            # Add the legend to the first axis
+            grey_correct = patches.Patch(color='grey', label='Correct licks')
+            red_incorrect = patches.Patch(color='red', label='Incorrect licks')
+            green_rewzone = patches.Patch(color='mediumspringgreen', alpha=0.3, label='Current Reward Zone')
+            grey_prevzone = patches.Patch(color='slategray', alpha=0.3, label='Previous Reward Zone')
+            # Now add the legend to the first axis
+            if i == 0:
+                axes[0].legend(handles=[grey_correct, red_incorrect, green_rewzone, grey_prevzone],
+                            loc='upper right')
         elif plot_all_probes:
             mask = np.ones_like(df);mask[::3] = 0 # first probe
-            sns.heatmap(df, mask=mask, cmap='Greys', cbar=False, ax=axes[i])
+            sns.heatmap(df, mask=mask, cmap='Greys', cbar=False, ax=axes[i],rasterized=True)
             mask = np.ones_like(df);mask[1::3] = 0 
-            sns.heatmap(df, mask=mask, cmap='Blues', cbar=False, ax=axes[i])
+            sns.heatmap(df, mask=mask, cmap='Blues', cbar=False, ax=axes[i],rasterized=True)
             mask = np.ones_like(df);mask[2::3] = 0 
-            sns.heatmap(df, mask=mask, cmap='Purples', cbar=False, ax=axes[i])
+            sns.heatmap(df, mask=mask, cmap='Purples', cbar=False, ax=axes[i],rasterized=True)
+                # Add the legend to the first axis
+            grey_correct = patches.Patch(color='k', label='Probe 1')
+            red_incorrect = patches.Patch(color='blue', label='Probe 2')
+            probe3 = patches.Patch(color='purple', label='Probe 3')
+            green_rewzone = patches.Patch(color='mediumspringgreen', alpha=0.3, label='Current Reward Zone')
+            # Now add the legend to the first axis
+            if i == 0:
+                axes[0].legend(handles=[grey_correct, red_incorrect, probe3,green_rewzone],
+                            loc='upper right')
+
         elif (plot_all_probes==False) and (probes==True):
             df_ = df[(probe2plot-1)::3]
             sns.heatmap(df_, cmap='Greys', 
-                    cbar=False, ax=axes[i])
-    
-        axes[i].add_patch(patches.Rectangle(
-            xy=((rz[0])/bin_size,0),  # point of origin.
-            width=((rz[1])/bin_size)-((rz[0])/bin_size),
-            height=licks_opto.shape[0], linewidth=1, 
-            color='mediumspringgreen', alpha=0.3))
-        
+                    cbar=False, ax=axes[i],rasterized=True)
+        if not probes:
+            axes[i].add_patch(patches.Rectangle(
+                xy=((rz[0])/bin_size,0),  # point of origin.
+                width=((rz[1])/bin_size)-((rz[0])/bin_size),
+                height=licks_opto.shape[0], linewidth=1, 
+                color='mediumspringgreen', alpha=0.3))
+            
         if i == 0:
             axes[i].set_ylabel('Trials')
         axes[i].set_xlabel('Position (cm)')
@@ -132,15 +153,6 @@ def plot_lick_vis(dct_to_use, condition, savedst, probes=False,
         axes[i].set_xticklabels([0, 135, 270])
         axes[i].set_yticklabels([0, len(df)//2,len(df)])
 
-        # Add the legend to the first axis
-        grey_correct = patches.Patch(color='grey', label='Correct licks')
-        red_incorrect = patches.Patch(color='red', label='Incorrect licks')
-        green_rewzone = patches.Patch(color='mediumspringgreen', alpha=0.3, label='Current Reward Zone')
-        grey_prevzone = patches.Patch(color='slategray', alpha=0.3, label='Previous Reward Zone')
-        # Now add the legend to the first axis
-        if i == 0:
-            axes[0].legend(handles=[grey_correct, red_incorrect, green_rewzone, grey_prevzone],
-                        loc='upper right')
         av_licks_in_rewzones = []
         av_licks_in_prevrewzones = []
         for jj, przs in enumerate(prev_rz):
@@ -154,6 +166,14 @@ def plot_lick_vis(dct_to_use, condition, savedst, probes=False,
                 width=((rzs[przs[0]-1][1])/bin_size)-((rzs[przs[0]-1][0])/bin_size),
                 height=len(przs), linewidth=1,
                 color='slategray', alpha=0.3))
+            else:
+                axes[i].add_patch(patches.Rectangle(
+                xy=((rzs[przs[0]-1][0])/bin_size,ystart),
+                width=((rzs[przs[0]-1][1])/bin_size)-((rzs[przs[0]-1][0])/bin_size),
+                height=len(przs), linewidth=1,
+                color='mediumspringgreen', alpha=0.3))
+
+                
             arr = np.array(df)[ystart:(ystart+len(przs)), (rz[0]//bin_size):(rz[1]//bin_size)]
             # mask, only fails
             # arr = arr[trialstate[ystart:(ystart+len(przs))],:]
@@ -185,23 +205,21 @@ def plot_lick_vis(dct_to_use, condition, savedst, probes=False,
 dct_to_use = lick_tc_ctrl_opto
 condition = 'Control LED on'
 
-av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition,savedst, plot_all_probes=True,save=True,figsize=(4,3))
+av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition,savedst, plot_all_probes=True,save=True,figsize=(12,10))
 #%%
 dct_to_use = lick_tc_vip_opto
-condition = 'VIP LED on'
-av_licks_in_rewzone_vip, 
-av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use,condition,savedst, save=True)
+condition = 'VIP Ex LED on'
+av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use,condition,savedst, save=True,fignsize=(12,10))
 
 #%%
 dct_to_use = probe_lick_tc_ctrl_opto
 condition = 'Control LED on'
-av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition, savedst, probes=True, plot_all_probes=False, 
+av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_use, condition, savedst, probes=True, plot_all_probes=True, 
                 probe2plot=3)
 #%%
 dct_to_use = probe_lick_tc_vip_opto
 condition = 'VIP LED on'
-av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition,
-        probes=True, plot_all_probes=False, probe2plot=3)
+av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use, condition,savedst,probes=True, plot_all_probes=True,figsize=(4,3))
 
 #%%
 prevrz1_ctrl = av_licks_in_prevrewzone_ctrl[3]
@@ -224,5 +242,5 @@ ax.spines[['top','right']].set_visible(False)
 #%%
 dct_to_use = lick_tc_vip_ledoff
 condition = 'VIP LED off'
-plot_lick_vis(dct_to_use, condition)
+plot_lick_vis(dct_to_use, condition,savedst)
 
