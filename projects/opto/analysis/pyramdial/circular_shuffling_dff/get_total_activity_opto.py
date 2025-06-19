@@ -110,40 +110,27 @@ def compute_spatial_information_all(dff_shuffled, pos_bins, n_bins):
    return si_shuffled
 
 def blockwise_circular_permute_dff(dff, segment_len=100, n_shuffles=1000, random_state=None):
-   """
-   Perform blockwise circular permutation on dF/F traces.
-   
-   Parameters:
-      dff : np.ndarray, shape (n_cells, n_timepoints)
-      segment_len : int, length of each segment
-      n_shuffles : int, number of shuffled iterations
-      random_state : int or np.random.Generator
-   
-   Returns:
-      dff_shuffled : np.ndarray, shape (n_cells, n_timepoints, n_shuffles)
-   """
    rng = np.random.default_rng(random_state)
    n_cells, n_timepoints = dff.shape
-   n_segments = n_timepoints // segment_len
+   pad_len = (-n_timepoints) % segment_len  # how many to add to make it divisible
 
-   if n_timepoints % segment_len != 0:
-      dff = dff[:, :(n_segments * segment_len)]  # trim to full segments
-      n_timepoints = dff.shape[1]
+   if pad_len > 0:
+      dff = np.pad(dff, ((0, 0), (0, pad_len)), mode='constant', constant_values=np.nan)
 
-   # reshape into blocks: (n_cells, n_segments, segment_len)
+   n_cells, n_timepoints_padded = dff.shape
+   n_segments = n_timepoints_padded // segment_len
+
    dff_blocks = dff.reshape(n_cells, n_segments, segment_len)
-
-   # storage
-   dff_shuffled = np.zeros((n_cells, n_timepoints, n_shuffles))
+   dff_shuffled = np.zeros((n_cells, n_timepoints_padded, n_shuffles))
 
    for s in range(n_shuffles):
       shifts = rng.integers(0, n_segments, size=n_cells)
       for i in range(n_cells):
-         # circular shift along segments
          perm_blocks = np.roll(dff_blocks[i], shift=shifts[i], axis=0)
          dff_shuffled[i, :, s] = perm_blocks.reshape(-1)
 
-   return dff_shuffled
+   # Trim back to original length
+   return dff_shuffled[:, :n_timepoints, :]
 
 #%%
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
@@ -155,9 +142,9 @@ num_iterations=1000
 bin_size=3 # cm
 lasttr=8 # last trials
 bins=90
-
+#%%
 # iterate through all animals
-for ii in range(len(conddf)):
+for ii in range(19,len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    if animal=='e145': pln=2 

@@ -1921,6 +1921,8 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
     coms_all = []
     ypos_max_all_ep=[]
     ybinned_dt=[]
+    vels_all = []
+
     for ep in range(len(eps) - 1):
         eprng = np.arange(eps[ep], eps[ep + 1])
         ypos_max = []
@@ -1937,22 +1939,19 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
         trialstate[[xx for xx, t in enumerate(trials) if t in strials]] = 1
         trialstate[[xx for xx, t in enumerate(trials) if t in ftrials]] = 0
         trialstates.append(trialstate)
-        # Get dark time frames and estimate distance
+
         ypos_dt = []
         rewloc_per_trial = []
         rewloc_bool = []
-        # get the dark time and add it to the beginning of the trial
         for trial in np.unique(trial_ep):            
             trial_mask = trial_ep==trial
-            # constant set to dt
             trial_ind = 5
             if not sum(trial_mask)>trial_ind and sum(trial_mask)>1:                
                 trial_ind = 1
             elif sum(trial_mask)==1:
                 trial_ind=0
-            ypos_num = 3#ypos_ep[trial_mask][trial_ind]
+            ypos_num = 3
             ypos_trial = ypos_ep[trial_mask]
-            # remove random end of track value            
             ypos_trial[:trial_ind] = ypos_num
             dark_mask = ypos_trial < ypos_num
             dark_vel = vel_ep[trial_mask][dark_mask]
@@ -1962,38 +1961,21 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
                 init_dark_time=dark_time[0]
             else: 
                 init_dark_time=0
-            dark_dt = np.diff(dark_time, prepend=init_dark_time)  # Ensure same length as dark_vel
+            dark_dt = np.diff(dark_time, prepend=init_dark_time)
             dark_distance = np.nancumsum(dark_vel * dark_dt)
-            # do not scale to gain? do we need this?
-            # gerardo said to add
             if len(dark_distance)>0:
-                dark_distance = (dark_distance - dark_distance[0])#/ scalingf  # scale to gain             
-            # dark_distance = (dark_distance-dark_distance[0])/scalingf # scale to gain            
-            from scipy.ndimage import gaussian_filter1d
+                dark_distance = (dark_distance - dark_distance[0])
             dt_ind = np.where(ypos_trial==ypos_num)[0]
             ypos_trial_new = ypos_trial.copy()
-            # add dark time to end of trial instead of beginning
-            # ypos_trial_new[ypos_trial_new==ypos_num] = np.nan
             ypos_trial_new[ypos_trial_new<ypos_num] = dark_distance+ypos_trial[-1]
-            # add distance on dark distance
-            # REMOVED BC CAUSING MISALIGNMENT
-            # ypos_trial_new = np.append(ypos_trial_new, dark_distance+ypos_trial[-1])            
-            # remove nan
             if not sum(np.isnan(ypos_trial_new))==len(ypos_trial_new):
-                # not all dark time in beginning/never started the track on the trial
                 ypos_trial_new = ypos_trial_new[~np.isnan(ypos_trial_new)]                
-                # find start of rew loc index
-                # rew_mask = (ypos_trial_new >= (rewlocs[ep] - (rewsize / 2))) & \
-                #         (ypos_trial_new <= (rewlocs[ep] + (rewsize / 2) + 5))
-                # rew_indices = consecutive_stretch(np.where(rew_mask)[0])[0]
-                # rew_idx = int(len(ypos_trial_new) / 2) if len(rew_indices) == 0 else min(rew_indices)
-                # set to auto rewlocs
                 rew_idx = int(rewlocs[ep]-(rewsize/2))
                 rewloc_per_trial.append(rew_idx)
                 rl_bool = np.zeros_like(ypos_trial_new)
                 try:
                     rl_bool[rew_idx] = 1
-                except Exception as e: # if trial does not reach rew zone
+                except Exception as e:
                     print(e)
                     rl_bool[int(len(rl_bool)/2)] = 1
                 rewloc_bool.append(rl_bool)
@@ -2003,31 +1985,20 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
                 rewloc_bool.append(rl_bool)
             ypos_dt.append(ypos_trial_new)
         
-        # nan pad position
         ypos_w_dt = np.concatenate(ypos_dt)
         ybinned_dt.append(ypos_w_dt)
-        # realign to reward????        
         rewloc_bool = np.concatenate(rewloc_bool)
-        # test
-        # plt.plot(ypos_w_dt)
-        # plt.plot(rewloc_bool*400)        
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
                 reward_ep, rewsize, rewloc_per_trial,
                 trial_ep)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-        # in between failed trials only!!!!! 4/2025
         if len(strials)>0:
             failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
             failed_inbtw=np.array(ftrials)[failed_inbtw>0]
-        else: # for cases where an epoch was started but not enough trials
+        else:
             failed_inbtw=np.array(ftrials)
-        # trials going into tuning curve
-        # print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
+
         F_all = Fc3[eprng,:]            
-        # simpler metric to get moving time
-        # if velocity_filter==True:
-        #     moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
-        # else:
         moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
         F_all = F_all[moving_middle,:]
         relpos_all = np.array(relpos)[moving_middle]
@@ -2038,27 +2009,37 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
             tcs_per_trial = np.ones((n_cells, n_trials, bins)) * np.nan
             coms_per_trial = np.ones((n_cells, n_trials)) * np.nan
             licks_per_trial = np.ones((n_trials, bins)) * np.nan
+            vels_per_trial = np.ones((n_trials, bins)) * np.nan
+
             for i, tr in enumerate(ttr):
                 pos = relpos[trial_ep == trials[i]]
                 F_trial = F_all[trial_ep == trials[i]]
-                lick_trial = lick
+                vel_trial = vel_ep[trial_ep == trials[i]]
+                lick_trial = lick_ep[trial_ep == trials[i]]
+
                 for celln in range(n_cells):
                     tc = get_tuning_curve(pos, F_trial[:, celln], bins=bins)
                     tc[np.isnan(tc)] = 0
                     tcs_per_trial[celln, i, :] = tc
+
                 ypos_tr = ypos_w_dt[trial_ep==trials[i]]
-                # com in radianss
                 com = calc_COM_EH(tcs_per_trial[:, i, :], (np.nanmax(ypos_tr) / bins))
                 coms_per_trial[:, i] = com
-                lick_trial = lick_ep[trial_ep == trials[i]]
+
                 lick_tc = get_tuning_curve(pos, lick_trial, bins=bins)
                 lick_tc[np.isnan(lick_tc)] = 0
                 licks_per_trial[i, :] = lick_tc
+
+                vel_tc = get_tuning_curve(pos, vel_trial, bins=bins)
+                vel_tc[np.isnan(vel_tc)] = 0
+                vels_per_trial[i, :] = vel_tc
+
                 ypos_max.append(np.nanmax(ypos_tr))
 
             tcs_all.append(tcs_per_trial)
             coms_all.append(coms_per_trial)
             licks_all.append(licks_per_trial)
+            vels_all.append(vels_per_trial)
             ypos_max_all_ep.append(ypos_max)
 
-    return trialstates, licks_all, tcs_all, coms_all, ypos_max_all_ep
+    return trialstates, licks_all, tcs_all, coms_all, ypos_max_all_ep, vels_all

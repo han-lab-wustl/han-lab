@@ -225,6 +225,7 @@ for ii in range(len(conddf)):
       eptest = random.randint(2,3)      
    if len(eps)<4: eptest = 2 # if no 3 epochs
    comp = [eptest-2,eptest-1] # eps to compare, python indexing   
+   # TODO:
    # get rew cells activity and %
    # get place dff and %
    # get othe spatial tuned cells activity and %

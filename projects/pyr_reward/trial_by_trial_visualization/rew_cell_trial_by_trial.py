@@ -136,14 +136,14 @@ for ii in range(len(conddf)):
             goal_cells=[]
 
         # trial by trial raster
-        trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
+        trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max, vels_all =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
 #%%
         # plot the distance tuning
         plt.rc('font', size=16)
         colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']        
         clls=range(len(goal_cells))
         for cll in clls:
-            fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=3,figsize=(12, 10), sharex=True,width_ratios=[1.5,1.5,1])
+            fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=4,figsize=(15, 10), sharex=True,width_ratios=[1.5,1.5,1.5,1])
             # Normalize activity by row
             # per epoch
             vmin = 0
@@ -168,10 +168,10 @@ for ii in range(len(conddf)):
                 bin_size_dt = [ypos/bins_dt for ypos in ypos_max[ep]]
                 axes[0].scatter(coms_dist[ep][cll]/bin_size_dt, np.arange(len(coms_dist[ep][cll])),color='w',marker='|')
 
-                axes[2].plot(tcs_correct[ep, goal_cells[cll]].T, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm')  
-                axes[2].set_ylim([vmin,vmax])
-                axes[2].legend()
-                axes[2].set_ylabel('$\Delta F/F$')              
+                axes[3].plot(tcs_correct[ep, goal_cells[cll]].T, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm')  
+                axes[3].set_ylim([vmin,vmax])
+                axes[3].legend()
+                axes[3].set_ylabel('$\Delta F/F$')              
                 # lick com
                 com_trial = []
                 for lick_trial in licks_all_dist[ep]:
@@ -190,20 +190,38 @@ for ii in range(len(conddf)):
                 axes[1].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
                 axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
                 center_bin = bins_dt/2                              
+                # velocity
+                com_trial = []
+                for vel_trial in vels_all[ep]:
+                    arr = np.nan_to_num(vel_trial, nan=0.0)  # Replace NaNs with 0    
+                    bins = np.arange(len(arr))
+                    total = np.sum(arr)
+                    if total == 0:
+                        com= np.nan  # Avoid divide-by-zero
+                    else: com = np.sum(bins * arr) / total
+                    com_trial.append(com)
+                # norm licks
+                data = vels_all[ep]
+                norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
+                        (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+                axes[2].imshow(norm_data, aspect='auto', cmap='Greens')      
+                axes[2].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
+                axes[2].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
+                center_bin = bins_dt/2                              
                 for ax in axes:
                         ax.axvline(center_bin, color='k')
-                axes[0].axvline(center_bin, color='w')  # for contrast on heatmap                
                 axes[0].set_title(f'{animal}, {day}, cell: {goal_cells[cll]}')        
                 ticks = [0, bins_dt/2, bins_dt - 1]
                 # Set x-ticks on both the heatmap and the licks plot
-                axes[2].set_xticks(ticks)
-                axes[2].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
-                axes[2].set_xlabel('Reward-relative distance')
+                axes[3].set_xticks(ticks)
+                axes[3].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
+                axes[3].set_xlabel('Reward-centric distance')
                 axes[1].set_ylabel('Norm. Licks')
+                axes[2].set_ylabel('Velocity (cm/s)')
                 axes[0].set_ylabel('Trial #')
-                axes[2].spines[['top','right']].set_visible(False)
+                axes[3].spines[['top','right']].set_visible(False)
             plt.tight_layout()
-            plt.savefig(os.path.join(savedst, f'{animal}_{day}_rewcell{cll}_trialbytrial.svg'))
+        #     plt.savefig(os.path.join(savedst, f'{animal}_{day}_rewcell{cll}_trialbytrial.svg'))
             #%%
             pdf.savefig(fig)
             plt.close(fig)
