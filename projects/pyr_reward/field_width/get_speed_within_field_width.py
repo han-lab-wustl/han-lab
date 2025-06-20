@@ -84,7 +84,6 @@ rzdf = extract_transition_epochs(bigdf, transition=('rz1', 'rz3'), max_epoch=5)
 #%%
 # per animal
 # only get super close rz1 rewlocs
-rzdf = rzdf[((rzdf.epoch=='rz3'))|((rzdf.epoch=='rz1'))]
 rzdf=rzdf[rzdf.lick_rate_in_field>0]
 animals=rzdf.animal.unique()
 days_per_an = [rzdf[rzdf.animal==an].day.unique()[-8:] for an in animals]
@@ -93,39 +92,9 @@ for ii,an in enumerate(animals):
    for dy in days_per_an[ii]:
       df = rzdf[(rzdf.animal==an) & (rzdf.day==dy)]
       for cll in df.cellid.unique():
-         clldf = df[(df.cellid==cll) & (df.cell_type=='Pre')]
-         if (('epoch2_rz3' in clldf.epoch_org.values) and ('epoch3_rz1' in clldf.epoch_org.values)):
-            foldchangewidth = clldf[clldf.epoch=='rz3'].width_cm.values[0]/clldf[clldf.epoch=='rz1'].width_cm.values[0]
-            vel=clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]
-            lr=clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]
-            dct.append([an,dy,cll,foldchangewidth,vel,lr,clldf.cell_type.values[0]])
-         if (('epoch3_rz3' in clldf.epoch_org.values) and ('epoch2_rz1' in clldf.epoch_org.values)):
-            foldchangewidth = clldf[clldf.epoch=='rz1'].width_cm.values[0]/clldf[clldf.epoch=='rz3'].width_cm.values[0]
-            vel=clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]
-            lr=clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]
-            dct.append([an,dy,cll,foldchangewidth,vel,lr,clldf.cell_type.values[0]])
-         if (('epoch1_rz3' in clldf.epoch_org.values) and ('epoch2_rz1' in clldf.epoch_org.values)):
-            foldchangewidth = clldf[clldf.epoch=='rz3'].width_cm.values[0]/clldf[clldf.epoch=='rz1'].width_cm.values[0]
-            vel=clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]
-            lr=clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]
-            dct.append([an,dy,cll,foldchangewidth,vel,lr,clldf.cell_type.values[0]])
-         if (('epoch1_rz3' in clldf.epoch_org.values) and ('epoch3_rz1' in clldf.epoch_org.values)):
-            foldchangewidth = clldf[clldf.epoch=='rz3'].width_cm.values[0]/clldf[clldf.epoch=='rz1'].width_cm.values[0]
-            vel=clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]
-            lr=clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]
-            dct.append([an,dy,cll,foldchangewidth,vel,lr,clldf.cell_type.values[0]])
-
-         if (('epoch2_rz3' in clldf.epoch_org.values) and ('epoch1_rz1' in clldf.epoch_org.values)):
-            foldchangewidth = clldf[clldf.epoch=='rz1'].width_cm.values[0]/clldf[clldf.epoch=='rz3'].width_cm.values[0]
-            vel=clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]
-            lr=clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]
-            dct.append([an,dy,cll,foldchangewidth,vel,lr,clldf.cell_type.values[0]])
-         if (('epoch4_rz3' in clldf.epoch_org.values) and ('epoch3_rz1' in clldf.epoch_org.values)):
-            foldchangewidth = clldf[clldf.epoch=='rz1'].width_cm.values[0]/clldf[clldf.epoch=='rz3'].width_cm.values[0]
-            vel=clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]
-            lr=clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]
-            dct.append([an,dy,cll,foldchangewidth,vel,lr,clldf.cell_type.values[0]])
-         if (('epoch3_rz3' in clldf.epoch_org.values) and ('epoch1_rz1' in clldf.epoch_org.values)):
+         clldf = df[(df.cellid==cll) & (df.cell_type=='Post')]
+         # if cell in both epochs
+         if len(clldf)>0 and len(clldf[clldf.epoch=='rz1'])>0 and len(clldf[clldf.epoch=='rz3'])>0:
             foldchangewidth = clldf[clldf.epoch=='rz1'].width_cm.values[0]/clldf[clldf.epoch=='rz3'].width_cm.values[0]
             vel=clldf[clldf.epoch=='rz1'].vel_in_field_cm_s.values[0]/clldf[clldf.epoch=='rz3'].vel_in_field_cm_s.values[0]
             lr=clldf[clldf.epoch=='rz1'].lick_rate_in_field.values[0]/clldf[clldf.epoch=='rz3'].lick_rate_in_field.values[0]
@@ -141,8 +110,13 @@ fd_df=fd_df[(fd_df.animal!='e190') & (fd_df.animal!='e216')]
 fd_df = fd_df.groupby(['animal','day']).mean(numeric_only=True)
 
 ax=sns.scatterplot(x='foldchangelr',y='foldchangewidth',hue='animal',data=fd_df,alpha=.7,s=200)
+r, p = scipy.stats.pearsonr(fd_df['foldchangelr'], fd_df['foldchangewidth'])
+# Annotate correlation
+ax.text(0.05, 0.95, f"$r$ = {r:.2f}\n$p$ = {p:.3f}",
+         ha='left', va='top', transform=ax.transAxes,
+         fontsize=14, bbox=dict(facecolor='white', edgecolor='gray'))
 
-sns.regplot(x='foldchangelr',y='foldchangewidth',data=fd_df)
+# sns.lineplot(x='foldchangevel',y='foldchangewidth',data=fd_df)
 # sns.regplot(x='foldchangelr',y='foldchangewidth',data=fd_df[fd_df.celltype=='Post'])
 
 ax.axvline(1)

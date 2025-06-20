@@ -17,10 +17,10 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
     make_velocity_tuning_curves
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position, extract_data_nearrew, perireward_binned_activity
+from projects.pyr_reward.rewardcell import get_radian_position, extract_data_nearrew, perireward_binned_activity
 from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 from projects.memory.behavior import get_behavior_tuning_curve
@@ -93,12 +93,12 @@ for k,v in radian_alignment_saved.items():
     rewards = fall['rewards'][0]
     timedFF=fall['timedFF'][0]
     if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]        # set vars
-            timedFF=timedFF[:-1]
+        ybinned=ybinned[:-1]
+        forwardvel=forwardvel[:-1]
+        changeRewLoc=changeRewLoc[:-1]
+        trialnum=trialnum[:-1]
+        rewards=rewards[:-1]        # set vars
+        timedFF=timedFF[:-1]
     eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
     velocity = fall['forwardvel'][0]
     veldf = pd.DataFrame({'velocity': velocity})
@@ -110,8 +110,7 @@ for k,v in radian_alignment_saved.items():
     moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
     pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
     nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
-    rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, 
-                pre_win_framesALL, post_win_framesALL,\
+    rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
             velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
             max_reward_stop=31.25*5)    
     # nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
@@ -210,29 +209,33 @@ ax.set_ylabel('Latency (s) to transient')
 ax.set_xlabel('')
 #%%
 # histogram of latencies
-plt.rc('font', size=22) 
-fig,ax=plt.subplots()
+plt.rc('font', size=20) 
+fig,axes=plt.subplots(ncols=2,figsize=(10,4),sharey=True)
 # per animal
-sns.histplot(x='latency (s)',hue='animal',data=df[df.behavior=='Reward'],
-            bins=40)
-# ax.legend(bbox_to_anchor=(1.01, 1))  # Moves legend farther right
-# sns.boxplot(x='behavior',y='latency (s)',data=df,fill=False,showfliers= False,whis=0)
-# ax.axhline(0,color='k',linestyle='--')
-# for an in df.animal.unique():
-#     dfan = df[df.animal==an]
-#     for dy in dfan.day.unique():
-#         dfdy = dfan[dfan.day==dy]
-#         for celliid in dfdy.cellid.unique():
-#             sns.lineplot(x='behavior',y='latency (s)',data=dfdy[dfdy.cellid==celliid],
-#                 alpha=0.1,color='gray')
-ax.set_ylabel('# Post-reward cells')
-ax.set_xlabel('Latency from reward (s)')
-# sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
-ax.spines[['top','right']].set_visible(False)
+sns.histplot(x='latency (s)',hue='animal',data=df[df.behavior=='Reward'],kde=True,ax=axes[0],bins=20)
+axes[0].set_ylabel('# Post-reward cells')
+axes[0].set_xlabel('Latency from reward (s)')
+mean_val = df[df.behavior=='Reward']['latency (s)'].values.mean()
+sem = scipy.stats.sem(df[df.behavior=='Reward']['latency (s)'].values)
+axes[0].axvline(mean_val, color='k', linestyle='--', linewidth=2)
+ax=axes[0]
+ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g} +/- {sem:.2g}', color='k', ha='center', va='bottom', fontsize=14)
+
+axes[0].spines[['top','right']].set_visible(False)
+sns.histplot(x='latency (s)',hue='animal',data=df[df.behavior=='Movement Start'],kde=True,ax=axes[1],legend=False,bins=20)
+axes[1].set_xlabel('Latency from movement initiation (s)')
+axes[1].spines[['top','right']].set_visible(False)
+mean_val = np.nanmean(df[df.behavior=='Movement Start']['latency (s)'].values)
+sem = scipy.stats.sem(df[df.behavior=='Movement Start']['latency (s)'].values,nan_policy='omit')
+axes[1].axvline(mean_val, color='k', linestyle='--', linewidth=2)
+ax=axes[1]
+ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g} +/- {sem:.2g}', color='k', ha='center', va='bottom', fontsize=14)
+
 plt.savefig(os.path.join(savedst, 'latency_postrew_hist.svg'))
 #%%
 # boxplot per animal
 dfagg = df.groupby(['animal','behavior']).mean(numeric_only=True)
+dfagg=dfagg.reset_index()
 sns.stripplot(x='behavior',y='latency (s)',data=dfagg,s=13,alpha=0.7,
         dodge=True, color='k')
 sns.boxplot(x='behavior',y='latency (s)',data=dfagg,fill=False,color='k')

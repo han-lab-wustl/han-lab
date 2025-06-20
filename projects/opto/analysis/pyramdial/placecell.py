@@ -818,13 +818,11 @@ def get_dff_opto(conddf, dd, pc=True):
     pcs = np.array([np.squeeze(xx) for xx in fall['putative_pcs'][0]])
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        # if animal!='z14' and animal!='e200' and animal!='e189':                
-    if animal=='z17':
-        dFF = dFF[:, skew>1.5] 
-    else:
-        dFF = dFF[:, skew>2] 
+        # if animal!='z14' and animal!='e200' and animal!='e189':                    
     # place cells only
-    # if pc: dFF = dFF[:, (np.sum(pcs,axis=0)>0)]
+    if pc: dFF = dFF[:, (np.sum(pcs,axis=0)>0)]
+    skew=skew[(np.sum(pcs,axis=0)>0)]
+    dFF = dFF[:, skew>2] 
     # else: dFF = dFF[:, ~(np.sum(pcs,axis=0)>0)]
     ybinned = fall['ybinned'][0]/scalingf
     changeRewLoc = np.hstack(fall['changeRewLoc'])
@@ -837,8 +835,13 @@ def get_dff_opto(conddf, dd, pc=True):
         eptest = random.randint(2,3)      
         if len(eps)<4: eptest = 2 # if no 3 epochs
     comp = [eptest-2,eptest-1] # eps to compare, python indexing   
-    dff_prev = np.nanmean(dFF[eps[comp[0]]:eps[comp[1]],:][ybinned[eps[comp[0]]:eps[comp[1]]]<rewlocs[comp[0]]-rewsize/2,:])
-    dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:][ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]]-rewsize/2,:])
+    # dff_prev = np.nanmean(dFF[eps[comp[0]]:eps[comp[1]],:][ybinned[eps[comp[0]]:eps[comp[1]]]<rewlocs[comp[0]]-rewsize/2,:])
+    # dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:][ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]]-rewsize/2,:])
+    # get overall activity
+    # per cell
+    dff_prev = dFF[eps[comp[0]]:eps[comp[1]],:]
+    dff_opto = dFF[eps[comp[1]]:eps[comp[1]+1],:]
+
     return dff_opto, dff_prev
 
 def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
@@ -1107,7 +1110,8 @@ def process_goal_cell_proportions(
     return {
         'goal_cell_prop': goal_cell_p,
         'epoch_perm': perm,
-        'goal_cell_shuf_ps': goal_cell_shuf_ps
+        'goal_cell_shuf_ps': goal_cell_shuf_ps,
+        'goal_id': goal_cells
     }
 
 def get_main_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, radian_alignment, cm_window=20):   

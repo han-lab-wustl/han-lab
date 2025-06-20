@@ -17,10 +17,10 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
     make_velocity_tuning_curves
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position, extract_data_nearrew, perireward_binned_activity, get_rewzones
+from projects.pyr_reward.rewardcell import get_radian_position, extract_data_nearrew, perireward_binned_activity, get_rewzones
 from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity, get_radian_position_first_lick_after_rew
 from projects.memory.behavior import get_behavior_tuning_curve
@@ -76,14 +76,6 @@ for ii in range(len(conddf)):
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins 
         rz = get_rewzones(rewlocs,1/scalingf)       
-        # get average success rate
-        rates = []
-        for ep in range(len(eps)-1):
-            eprng = range(eps[ep],eps[ep+1])
-            success, fail, str_trials, ftr_trials, ttr, \
-            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-            rates.append(success/total_trials)
-        rate=np.nanmean(np.array(rates))
         rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,
                     trialnum, track_length) # get radian coordinates
         
@@ -102,7 +94,7 @@ for ii in range(len(conddf)):
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+        tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
 
@@ -173,9 +165,9 @@ for ii in range(len(conddf)):
                     _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
                     time, trialnum, range_val,binsize)
                     # quantify dff
-                    transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
+                    transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(0/binsize):int(range_val/binsize)+int(2/binsize)])
                     gc_latencies_rew.append(transient_around_rew)
-                    transient_after_rew = np.nanmean(meanrstops[int(range_val/binsize)-int(2/binsize):int(range_val/binsize)+int(2/binsize)])
+                    transient_after_rew = np.nanmean(meanrstops[int(range_val/binsize)-int(1/binsize):int(range_val/binsize)+int(1/binsize)])
                     gc_latencies_mov.append(transient_after_rew)
                     cellid.append(gc)
 
@@ -219,15 +211,65 @@ ax.axhline(0,color='k',linestyle='--')
 ax.spines[['top','right']].set_visible(False)
 #%%
 plt.rc('font', size=20)
-fig,ax=plt.subplots(figsize=(4,5))
 s=10
+fig,axes=plt.subplots(ncols=2, figsize=(8,5),sharex=True,width_ratios=[1.3,1])
+ax=axes[0]
 df=df[(df.animal!='e139') & (df.animal!='e145') & (df.animal!='e189') & (df.animal!='e190')]
+# only get last day
+day_per_animal = [df.loc[(df.animal==an), 'day'].unique()[-1] for an in df.animal.unique()]
+df_day = pd.concat([df[(df.animal==an) & (df.day==day_per_animal[ii])] for ii,an in enumerate(df.animal.unique())])
+celln_per_animal = [[len(df_day[(df_day.animal==an)&(df_day.cell_type==ct)]) for ii,an in enumerate(df.animal.unique())] for ct in cell_types ]
+sns.violinplot(x='behavior',y='dff',data=df_day,order=order,hue_order=hue_order,ax=ax,legend=False,
+        dodge=True,hue='cell_type',palette='Dark2')
+comparisons=[];pvals=[]
+for ct in cell_types:
+    d1 = df_day[(df_day.behavior == 'Movement Start') & (df_day.cell_type == ct)]['dff']
+    d2 = df_day[(df_day.behavior == 'Reward') & (df_day.cell_type == ct)]['dff']
+    if len(d1) > 0 and len(d2) > 0:
+        stat, p = scipy.stats.wilcoxon(d1, d2)
+        pvals.append(p)
+        comparisons.append((ct, 'Reward', 'Movement Start'))
+from statsmodels.stats.multitest import multipletests
+# --- Correct p-values using FDR ---
+reject, pvals_corrected, _, _ = multipletests(pvals, method='fdr_bh')
+# --- Plot comparisons with corrected p-values ---
+y_max = df_day['dff'].max()
+y_start = y_max
+y_step = .6
+fs = 30
+behavior_positions = {'Reward': 0, 'Movement Start': 1}
+for i, ((ct, b1, b2), p_corr, sig) in enumerate(zip(comparisons, pvals_corrected, reject)):
+    x1 = behavior_positions[b1] + (-0.2 if ct == 'pre' else 0.2)
+    x2 = behavior_positions[b2] + (-0.2 if ct == 'pre' else 0.2)
+    y = y_start + i * y_step
+    h=0.05
+    ax.plot([x1, x1, x2, x2], [y-h, y, y, y-h], lw=1.5, c='black')
+    if p_corr<0.05:
+        star='*'
+    if p_corr<0.01:
+        star='**'
+    if p_corr<0.001:
+        star='***'
+    if p_corr>0.05: star=''
+    ax.text((x1 + x2)/2, y + 0.01, f"{star}", 
+            ha='center', va='bottom', fontsize=46)
+    ax.text((x1 + x2)/2, y + 0.05, f"p={p_corr:.3g}", 
+            ha='center', va='bottom', fontsize=12)
+
+# per animal
 dfagg = df.groupby(['animal','behavior','cell_type']).mean(numeric_only=True)
 hue_order=['pre', 'post']
 order = ['Reward','Movement Start']
-sns.stripplot(x='behavior',y='dff',data=dfagg,order=order,s=s,alpha=0.7,hue_order=hue_order,
+ax.set_xticklabels(ax.get_xticklabels(), rotation=10, ha="right")
+# sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Mean $\Delta F/F$')
+ax.set_xlabel('')
+ 
+ax=axes[1]
+sns.stripplot(x='behavior',y='dff',data=dfagg,order=order,s=s,alpha=0.7,hue_order=hue_order,ax=ax,
         dodge=True,hue='cell_type',palette='Dark2')
-sns.barplot(x='behavior',y='dff',hue='cell_type',order=order,hue_order=hue_order,
+sns.barplot(x='behavior',y='dff',hue='cell_type',order=order,hue_order=hue_order,ax=ax,
             data=dfagg,fill=False,palette='Dark2')
 dfagg=dfagg.reset_index()
 xpos = [[-0.2, 0.8], [0.2, 1.2]]
@@ -239,13 +281,14 @@ for ii, cell_type in enumerate(cell_types):
             for celliid in dfdy.cellid.unique():
                 dfcell = dfdy[dfdy.cellid == celliid]
                 dfcell = dfcell.set_index('behavior').loc[order].reset_index()
+                color=sns.color_palette('Dark2')[ii]
                 yvals = dfcell['dff'].values
                 if len(yvals) == 2:
-                    ax.plot(xpos[ii], yvals, alpha=0.5, color='gray', linewidth=1.5)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+                    ax.plot(xpos[ii], yvals, alpha=0.5, color=color, linewidth=1.5)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=10, ha="right")
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Mean $\Delta F/F$')
+ax.set_ylabel('')
 ax.set_xlabel('')
 pvals = []
 comparisons = []
@@ -258,17 +301,14 @@ for ct in cell_types:
         pvals.append(p)
         comparisons.append((ct, 'Reward', 'Movement Start'))
 from statsmodels.stats.multitest import multipletests
-
 # --- Correct p-values using FDR ---
 reject, pvals_corrected, _, _ = multipletests(pvals, method='fdr_bh')
-
 # --- Plot comparisons with corrected p-values ---
 y_max = dfagg['dff'].max()
 y_start = y_max + 0.05
 y_step = 0.07
 fs = 30
 behavior_positions = {'Reward': 0, 'Movement Start': 1}
-
 for i, ((ct, b1, b2), p_corr, sig) in enumerate(zip(comparisons, pvals_corrected, reject)):
     x1 = behavior_positions[b1] + (-0.2 if ct == 'pre' else 0.2)
     x2 = behavior_positions[b2] + (-0.2 if ct == 'pre' else 0.2)

@@ -66,6 +66,14 @@ df['dff_prev_opto_late'] = [np.nanmean(xx) if len(xx)>0 else np.nan for xx in la
 df['optoep']=dfc.optoep
 df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in dfc.in_type]
 df=df[df.optoep>1]
+df=df[(df.animal!='e189')&(df.animal!='e190')]
+# remove outlier days
+df=df[~((df.animal=='z14')&(df.day<15))]
+df=df[~((df.animal=='z17')&((df.day<11)|(df.day==18)))]
+df=df[~((df.animal=='z15')&(df.day<8))]
+# df=df[~((df.animal=='e217')&((df.day<9)|(df.day==26)))]
+df=df[~((df.animal=='e216')&(df.day==48))]
+
 # Transform to long format for plotting
 df_long = df.melt(id_vars=['animal', 'day', 'optoep', 'condition'], 
                  value_vars=['dff_prev_opto_early', 'dff_prev_opto_late'], 

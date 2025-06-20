@@ -16,138 +16,74 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime,make_tuning_curves_by_trialtype_w_darktime_early, make_tuning_curves, make_tuning_curves_early
+from projects.opto.analysis.pyramdial.placecell import process_goal_cell_proportions
+import numpy as np
+from scipy.ndimage import gaussian_filter1d
+from projects.pyr_reward.rewardcell import get_rewzones, intersect_arrays
+def compute_spatial_info(p_i, f_i):
+    f = np.sum(f_i * p_i)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        ratio = f_i / f
+        log_term = np.where(ratio > 0, np.log2(ratio), 0)
+        si = np.nansum(p_i * f_i * log_term)
+    return si
 
-def fast_si_vectorized(dff, pos_bins, n_bins):
-    """
-    Compute spatial information using fully vectorized operations.
-    
-    Parameters:
-        dff : ndarray
-            Shape (n_cells, n_timepoints) or (n_cells, n_timepoints, n_shuffles)
-        pos_bins : 1D array of ints, shape (n_timepoints,)
-        n_bins : int, total number of spatial bins
-
-    Returns:
-        si : ndarray
-            Shape (n_cells,) or (n_cells, n_shuffles)
-    """
-    pos_bins = np.asarray(pos_bins)
-    time_mask = ~np.isnan(pos_bins)
-    pos_bins = pos_bins.astype(int)
-
-    # Create 2D mask: (n_bins, n_timepoints)
-    bin_mask = np.equal.outer(np.arange(n_bins), pos_bins)  # (n_bins, timepoints)
-
-    # Normalize occupancy (p_i)
-    p_i = bin_mask.sum(axis=1) / len(pos_bins)  # (n_bins,)
-
-    # If dff is 2D: (n_cells, n_timepoints)
-    if dff.ndim == 2:
-        n_cells, n_timepoints = dff.shape
-        bin_mask = bin_mask.astype(bool)
-
-        # Compute mean rate per bin: (n_cells, n_bins)
-        r_i = np.array([
-            np.nanmean(dff[:, bin_mask[b]], axis=1)
-            for b in range(n_bins)
-        ]).T  # (n_cells, n_bins)
-
-        # Mean rate per cell
-        r = np.nanmean(dff, axis=1, keepdims=True)  # (n_cells, 1)
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            ratio = r_i / r
-            log_term = np.log2(ratio, where=(ratio > 0))
-            si = np.nansum(p_i * ratio * log_term, axis=1)
-
-        return np.nan_to_num(si)
-
-    # If dff is 3D: (n_cells, n_timepoints, n_shuffles)
-    elif dff.ndim == 3:
-        n_cells, n_timepoints, n_shuffles = dff.shape
-        bin_mask = bin_mask.astype(bool)
-
-        # Preallocate
-        r_i = np.empty((n_cells, n_bins, n_shuffles))
-
+def bin_activity_per_trial(position, activity, n_bins=3, track_length=270):
+    trial_activity = np.zeros((len(position), n_bins))
+    occupancy = np.zeros((len(position), n_bins))
+    bin_edges = np.linspace(0, track_length, n_bins + 1)
+    for i, (pos, act) in enumerate(zip(position, activity)):
         for b in range(n_bins):
-            # Mean over timepoints in bin b: (n_cells, n_shuffles)
-            r_i[:, b, :] = np.nanmean(dff[:, bin_mask[b], :], axis=1)
+            in_bin = (pos >= bin_edges[b]) & (pos < bin_edges[b+1])
+            occupancy[i, b] = np.sum(in_bin)
+            if np.any(in_bin):
+                trial_activity[i, b] = np.mean(act[in_bin])
+    return trial_activity, occupancy
 
-        # Mean rate per cell & shuffle: (n_cells, 1, n_shuffles)
-        r = np.nanmean(dff, axis=1, keepdims=True)
+def compute_trial_avg_si(activity_matrix, occupancy_matrix):
+    mean_activity = np.nanmean(activity_matrix, axis=0)
+    mean_occupancy = np.nansum(occupancy_matrix, axis=0)
+    p_i = mean_occupancy / np.nansum(mean_occupancy)
+    return compute_spatial_info(p_i, mean_activity)
 
-        with np.errstate(divide='ignore', invalid='ignore'):
-            ratio = r_i / r
-            log_term = np.log2(ratio, where=(ratio > 0))
-            si = np.nansum(p_i[:, None] * ratio * log_term, axis=1)
+def shuffle_positions(position_trials, frame_rate):
+    """
+    Circularly permute position data by a random shift of at least ~1s.
+    Skips trials shorter than 1s.
+    """
+    shuffled = []
+    for pos in position_trials:
+        n = len(pos)
+        if n <= int(frame_rate):
+            shuffled.append(pos.copy())  # skip shuffle if trial too short
+            continue
+        shift = np.random.randint(int(frame_rate), n)
+        shuffled_pos = np.roll(pos, shift)
+        shuffled.append(shuffled_pos)
+    return shuffled
 
-        return np.nan_to_num(si)
+def compute_shuffle_distribution(position_trials, activity_trials,  frame_rate, n_shuffles=100):
+    shuffle_SIs = []
+    for _ in range(n_shuffles):
+        permuted_pos = shuffle_positions(position_trials,frame_rate)
+        binned, occ = bin_activity_per_trial(permuted_pos, activity_trials)
+        si = compute_trial_avg_si(binned, occ)
+        shuffle_SIs.append(si)
+    return np.array(shuffle_SIs)
 
-    else:
-        raise ValueError("dff must be 2D or 3D (cells x time or cells x time x shuffles)")
-
-def compute_spatial_information_all(dff_shuffled, pos_bins, n_bins):
-   """
-   Compute spatial information for all shuffles.
-   
-   Parameters:
-      dff_shuffled : np.ndarray, shape (n_cells, n_timepoints, n_shuffles)
-      pos_bins : np.ndarray, shape (n_timepoints,)
-      n_bins : int, number of spatial bins
-   
-   Returns:
-      si_shuffled : np.ndarray, shape (n_cells, n_shuffles)
-   """
-   n_cells, _, n_shuffles = dff_shuffled.shape
-   si_shuffled = np.zeros((n_cells, n_shuffles))
-
-   for s in range(n_shuffles):
-      if s%10==0: print(s)
-      for i in range(n_cells):
-         si_shuffled[i, s] = compute_spatial_information(dff_shuffled[i, :, s], pos_bins, n_bins)
-
-   return si_shuffled
-
-def blockwise_circular_permute_dff(dff, segment_len=100, n_shuffles=1000, random_state=None):
-   """
-   Perform blockwise circular permutation on dF/F traces.
-   
-   Parameters:
-      dff : np.ndarray, shape (n_cells, n_timepoints)
-      segment_len : int, length of each segment
-      n_shuffles : int, number of shuffled iterations
-      random_state : int or np.random.Generator
-   
-   Returns:
-      dff_shuffled : np.ndarray, shape (n_cells, n_timepoints, n_shuffles)
-   """
-   rng = np.random.default_rng(random_state)
-   n_cells, n_timepoints = dff.shape
-   n_segments = n_timepoints // segment_len
-
-   if n_timepoints % segment_len != 0:
-      dff = dff[:, :(n_segments * segment_len)]  # trim to full segments
-      n_timepoints = dff.shape[1]
-
-   # reshape into blocks: (n_cells, n_segments, segment_len)
-   dff_blocks = dff.reshape(n_cells, n_segments, segment_len)
-
-   # storage
-   dff_shuffled = np.zeros((n_cells, n_timepoints, n_shuffles))
-
-   for s in range(n_shuffles):
-      shifts = rng.integers(0, n_segments, size=n_cells)
-      for i in range(n_cells):
-         # circular shift along segments
-         perm_blocks = np.roll(dff_blocks[i], shift=shifts[i], axis=0)
-         dff_shuffled[i, :, s] = perm_blocks.reshape(-1)
-
-   return dff_shuffled
+def is_place_cell(position_trials, activity_trials, frame_rate,n_shuffles=100, alpha=0.05):
+    binned, occ = bin_activity_per_trial(position_trials, activity_trials)
+    real_si = compute_trial_avg_si(binned, occ)
+    shuffled_sis = compute_shuffle_distribution(position_trials, activity_trials,frame_rate, n_shuffles=n_shuffles)
+    p_val = np.mean(real_si <= shuffled_sis)
+    return real_si > np.percentile(shuffled_sis, 95), real_si, shuffled_sis, p_val
 
 #%%
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
+savepth = os.path.join(savedst, 'vip_opto_rew.pdf')
+pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 # initialize var
 datadct = {} # overwrite
 place_window = 20
@@ -155,7 +91,7 @@ num_iterations=1000
 bin_size=3 # cm
 lasttr=8 # last trials
 bins=90
-
+#%%
 # iterate through all animals
 for ii in range(len(conddf)):
    day = conddf.days.values[ii]
@@ -197,36 +133,155 @@ for ii in range(len(conddf)):
    if conddf.optoep.values[ii]<2: 
       eptest = random.randint(2,3)   
       if len(eps)<4: eptest = 2 # if no 3 epochs    
+   fr=31.25
+   if animal=='z9' or animal=='e190':
+      fr=fr/2
    fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
    Fc3 = fall_fc3['Fc3']
    dFF = fall_fc3['dFF']
-   Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+   Fc3_org = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
    dFF_org = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
    skew = scipy.stats.skew(dFF_org, nan_policy='omit', axis=0)
    dFF=dFF_org[:, skew>2]
+   Fc3=Fc3_org[:, skew>2]
    # low cells
    if animal=='e217' or animal=='z17' or animal=='z14' or animal=='e200':
       dFF=dFF_org[:, skew>1]
-   # Assume dff is a NumPy array of shape (n_cells, n_timepoints)
-   dff_permuted = circularly_permute_dff(dFF, random_state=42)
-   n_bins = int(np.max(np.ceil(ybinned))) + 1  # if pos_bins are 0-indexed
-   # Compute true SI
-   real_si = np.array([compute_spatial_information(dFF.T[i], np.ceil(ybinned), n_bins) for i in range(dFF.T.shape[0])])
-   # To get percentile threshold:
-   # Generate shuffle distribution (circular permutation)
-   pos_bins=np.ceil(ybinned)
-   dff_shuffle = blockwise_circular_permute_dff(dFF.T, segment_len=100, n_shuffles=1000, random_state=42)
-   # Shuffled SI (blockwise shuffles from before)
-   si_shuff = fast_si_vectorized(dff_shuffle, pos_bins, n_bins)
-   si_threshold = np.percentile(si_shuff, 95, axis=1)  # 95th percentile per cell
-   spatial_tuned_cells = np.where(real_si>si_threshold)[0]
-   dFF=dFF[:,spatial_tuned_cells]
+      Fc3=Fc3_org[:, skew>1]
+   # per epoch si
+   # nshuffles=100   
+   rz = get_rewzones(rewlocs,1/scalingf)
+   pcs_ep=[]; si_ep=[]
+   for ep in range(len(eps)-1):
+      eprng = np.arange(eps[ep], eps[ep+1])
+      trials=trialnum[eprng]
+      activity_trials=dFF[eprng,:]
+      pcs = []; si=[]
+      for cll in range(activity_trials.shape[1]):
+         is_sig, real_si, shuffled_sis, p_val = is_place_cell([ybinned[eprng][trials==tr] for tr in np.unique(trials)], [activity_trials[trials==tr][:,cll] for tr in np.unique(trials)], fr)
+         pcs.append(is_sig); si.append(real_si)
+      pcs_ep.append(pcs); si_ep.append(si)
+   spatially_tuned = np.sum(pcs_ep,axis=0)>0 # if tuned in any epoch
+   dFF=dFF[:,spatially_tuned]
+   Fc3=Fc3[:,spatially_tuned] # replace to make easier
    if conddf.optoep.values[ii]<2: 
       eptest = random.randint(2,3)      
    if len(eps)<4: eptest = 2 # if no 3 epochs
    comp = [eptest-2,eptest-1] # eps to compare, python indexing   
+   cm_window=20
    # TODO:
    # get rew cells activity and %
    # get place dff and %
-   # get othe spatial tuned cells activity and %
+   # get other spatial tuned cells activity and %
+   # tc w/ dark time
+   print('making tuning curves...\n')
+   track_length_dt = 550 # cm estimate based on 99.9% of ypos
+   track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+   bins_dt=150 
+   bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+   tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+      bins=bins_dt,lasttr=8) 
+   # early tc
+   tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt,lasttr=8)        
+   goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
+
+   results_pre_early = process_goal_cell_proportions(eptest, 
+   cell_type='pre',
+   coms_correct=coms_correct_early,
+   tcs_correct=tcs_correct_early,
+   rewlocs=rewlocs,
+   animal=animal,
+   day=day,
+   pdf=pdf,
+   rz=rz,
+   scalingf=scalingf,
+   bins=bins,
+   goal_window=goal_window
+   )
+
+   results_post_early = process_goal_cell_proportions(eptest, 
+      cell_type='post',
+      coms_correct=coms_correct_early,
+      tcs_correct=tcs_correct_early,
+      rewlocs=rewlocs,
+      animal=animal,
+      day=day,
+      pdf=pdf,
+      rz=rz,
+      scalingf=scalingf,
+      bins=bins,
+      goal_window=goal_window
+   )
+   results_pre = process_goal_cell_proportions(eptest, 
+      cell_type='pre',
+      coms_correct=coms_correct,
+      tcs_correct=tcs_correct,
+      rewlocs=rewlocs,
+      animal=animal,
+      day=day,
+      pdf=pdf,
+      rz=rz,
+      scalingf=scalingf,
+      bins=bins,
+      goal_window=goal_window
+   )
+   results_post = process_goal_cell_proportions(eptest, 
+      cell_type='post',
+      coms_correct=coms_correct,
+      tcs_correct=tcs_correct,
+      rewlocs=rewlocs,
+      animal=animal,
+      day=day,
+      pdf=pdf,
+      rz=rz,
+      scalingf=scalingf,
+      bins=bins,
+      goal_window=goal_window
+   )
+   print('#############making place tcs#############\n')
+   tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
+   Fc3,trialnum,rewards,forwardvel,
+   rewsize,bin_size) # last 5 trials
+   tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
+   rewsize,bin_size) # last 5 trials
+   # all goal
+   goal_cells = np.unique(np.concatenate([xx['goal_id'] for xx in [results_pre, results_post, results_pre_early, results_post_early]]))
+   perm = [(eptest-2, eptest-1)]   
+   print(eptest, perm)            
+   # get cells that maintain their coms across at least 2 epochs
+   place_window = 20 # cm converted to rad                
+   com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
+   compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+   # get cells across all epochs that meet crit
+   pcs = np.unique(np.concatenate(compc))
+   compc=[xx for xx in compc if len(xx)>0]
+   if len(compc)>0:
+      pcs_all = intersect_arrays(*compc)
+      # exclude goal cells
+      pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
+   else:
+      pcs_all=[]      
+   pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
+   pc_p=len(pcs_all)/len(coms_correct_abs[0])
+   #early
+   com_per_ep = np.array([(coms_correct_abs_early[perm[jj][0]]-coms_correct_abs_early[perm[jj][1]]) for jj in range(len(perm))])        
+   compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+   # get cells across all epochs that meet crit
+   pcs = np.unique(np.concatenate(compc))
+   compc=[xx for xx in compc if len(xx)>0]
+   if len(compc)>0:
+      pcs_all_early = intersect_arrays(*compc)
+      # exclude goal cells
+      pcs_all_early=[xx for xx in pcs_all_early if xx not in goal_cells]
+   else:
+      pcs_all_early=[]      
+   pc_p_early=len(pcs_all_early)/len(coms_correct_abs[0])
+
+   # get % of other spatially tuned cells
+   spatially_tuned_not_rew_place = [xx for xx in range(Fc3.shape[1]) if xx not in pcs_all and xx not in pcs_all_early and xx not in goal_cells]
+   spatially_tuned_not_rew_place_p=len(spatially_tuned_not_rew_place)/len(coms_correct[0])
+   print(spatially_tuned_not_rew_place_p,pc_p_early,pc_p)
+   datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p_early,pc_p,results_pre, results_post, results_pre_early, results_post_early]
 #%%
+spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
+placecell_p=[v[0] for k,v in datadct.items()]

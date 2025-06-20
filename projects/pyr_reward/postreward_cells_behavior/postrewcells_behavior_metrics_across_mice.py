@@ -16,9 +16,9 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity
+from projects.pyr_reward.rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity
 from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 
@@ -184,6 +184,7 @@ lick_rewstops_trials_per_an =[[[yy[2] for yy in v[0]] for k,v in dff_per_an_day_
 
 #%%
 # plot
+# get both rewarded and unrewarded stops with licks/without licks
 dst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 def moving_average(x, window_size):
     return np.convolve(x, np.ones(window_size)/window_size, mode='same')

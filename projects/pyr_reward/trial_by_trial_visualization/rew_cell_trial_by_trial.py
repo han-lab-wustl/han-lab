@@ -96,7 +96,7 @@ for ii in range(len(conddf)):
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
                 rewsize,ybinned,time,lick,
                 Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
                 bins=bins_dt)  
@@ -139,90 +139,118 @@ for ii in range(len(conddf)):
         trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max, vels_all =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
 #%%
         # plot the distance tuning
-        plt.rc('font', size=16)
+        def moving_average(x, window_size=3):
+                return np.convolve(x, np.ones(window_size)/window_size, mode='same')
+
+        plt.rc('font', size=20)
         colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']        
-        clls=range(len(goal_cells))
+        clls = [10]  # subset of goal_cells to plot
+
         for cll in clls:
-            fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=4,figsize=(15, 10), sharex=True,width_ratios=[1.5,1.5,1.5,1])
-            # Normalize activity by row
-            # per epoch
-            vmin = 0
-            vmax = np.nanmax(tcs_correct[:, goal_cells[cll]])
-            for ep in range(len(tcs_dist)):
-                axes=axes_all[ep,:]
-                data = tcs_dist[ep][cll]
-                norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
-                        (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+                fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=4, figsize=(15, 10), sharex=True, width_ratios=[1.5, 1, 1, 1])
+                vmin = 0
+                vmax = np.nanmax(tcs_correct[:, goal_cells[cll]])
 
-                # Add divider to move colorbar outside of axes[0]
-                divider = make_axes_locatable(axes[0])
-                cax = divider.append_axes("right", size="5%", pad=0.05)
-                
-                im = axes[0].imshow(norm_data, aspect='auto',cmap='Greys')
-                fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. $\Delta F/F$')
-                trial_mask = np.array(trialstates[ep])  # shape (n_trials,)
-                trial_mask_2d = trial_mask[:, np.newaxis] * np.ones((1, data.shape[1]))  # shape (n_trials, n_timebins)
-                a=0.4
-                axes[0].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
-                # plot com
-                bin_size_dt = [ypos/bins_dt for ypos in ypos_max[ep]]
-                axes[0].scatter(coms_dist[ep][cll]/bin_size_dt, np.arange(len(coms_dist[ep][cll])),color='w',marker='|')
+                for ep in range(len(tcs_dist)):
+                        axes = axes_all[ep, :]
+                        
+                        # --- Load data ---
+                        raw_data = tcs_dist[ep][cll]
+                        lick_data = licks_all_dist[ep]
+                        vel_data = vels_all[ep]
+                        trial_mask = np.array(trialstates[ep])
+                        coms = np.array(coms_dist[ep][cll])
 
-                axes[3].plot(tcs_correct[ep, goal_cells[cll]].T, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm')  
-                axes[3].set_ylim([vmin,vmax])
-                axes[3].legend()
-                axes[3].set_ylabel('$\Delta F/F$')              
-                # lick com
-                com_trial = []
-                for lick_trial in licks_all_dist[ep]:
-                    arr = np.nan_to_num(lick_trial, nan=0.0)  # Replace NaNs with 0    
-                    bins = np.arange(len(arr))
-                    total = np.sum(arr)
-                    if total == 0:
-                        com= np.nan  # Avoid divide-by-zero
-                    else: com = np.sum(bins * arr) / total
-                    com_trial.append(com)
-                # norm licks
-                data = licks_all_dist[ep]
-                norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
-                        (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
-                axes[1].imshow(norm_data, aspect='auto', cmap='Blues')      
-                axes[1].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
-                axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
-                center_bin = bins_dt/2                              
-                # velocity
-                com_trial = []
-                for vel_trial in vels_all[ep]:
-                    arr = np.nan_to_num(vel_trial, nan=0.0)  # Replace NaNs with 0    
-                    bins = np.arange(len(arr))
-                    total = np.sum(arr)
-                    if total == 0:
-                        com= np.nan  # Avoid divide-by-zero
-                    else: com = np.sum(bins * arr) / total
-                    com_trial.append(com)
-                # norm licks
-                data = vels_all[ep]
-                norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
-                        (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
-                axes[2].imshow(norm_data, aspect='auto', cmap='Greens')      
-                axes[2].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
-                axes[2].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
-                center_bin = bins_dt/2                              
-                for ax in axes:
-                        ax.axvline(center_bin, color='k')
-                axes[0].set_title(f'{animal}, {day}, cell: {goal_cells[cll]}')        
-                ticks = [0, bins_dt/2, bins_dt - 1]
-                # Set x-ticks on both the heatmap and the licks plot
-                axes[3].set_xticks(ticks)
-                axes[3].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
-                axes[3].set_xlabel('Reward-centric distance')
-                axes[1].set_ylabel('Norm. Licks')
-                axes[2].set_ylabel('Velocity (cm/s)')
-                axes[0].set_ylabel('Trial #')
-                axes[3].spines[['top','right']].set_visible(False)
-            plt.tight_layout()
-        #     plt.savefig(os.path.join(savedst, f'{animal}_{day}_rewcell{cll}_trialbytrial.svg'))
-            #%%
-            pdf.savefig(fig)
-            plt.close(fig)
+                        # --- Filter valid trials ---
+                        valid_trials = [
+                        i for i in range(raw_data.shape[0])
+                        if trial_mask[i] != -1 and
+                        not np.all(np.isnan(raw_data[i])) and
+                        not np.all(np.isnan(lick_data[i])) and
+                        not np.all(np.isnan(vel_data[i]))
+                        ]
+
+                        data = raw_data[valid_trials]
+                        lick_data = lick_data[valid_trials]
+                        vel_data = vel_data[valid_trials]
+                        trial_mask_filtered = trial_mask[valid_trials]
+                        coms_filtered = coms[valid_trials]
+
+                        # --- Trial mask overlay ---
+                        trial_mask_2d = trial_mask_filtered[:, np.newaxis] * np.ones((1, data.shape[1]))
+
+                        # --- dF/F plot ---
+                        norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
+                                (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
+                        divider = make_axes_locatable(axes[0])
+                        cax = divider.append_axes("right", size="5%", pad=0.05)
+                        im = axes[0].imshow(norm_data, aspect='auto', cmap='Greys')
+                        fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. $\Delta F/F$')
+
+                        a = 0.4
+                        axes[0].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
+
+                        bin_size_dt = [ypos / bins_dt for ypos in ypos_max[ep]]
+                        axes[0].scatter(coms_filtered / np.nanmean(bin_size_dt), np.arange(len(coms_filtered)), color='w', marker='|')
+
+                        # --- Trial-average trace ---
+                        avg_trace = moving_average(tcs_correct[ep, goal_cells[cll]].T, window_size=5)
+                        axes[3].plot(avg_trace, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm', linewidth=2)
+                        axes[3].legend()
+                        axes[3].set_ylabel('$\Delta F/F$')
+
+                        # --- Lick COM ---
+                        com_trial_lick = []
+                        for arr in lick_data:
+                                arr_clean = np.nan_to_num(arr, nan=0.0)
+                                bins = np.arange(len(arr_clean))
+                                total = np.sum(arr_clean)
+                                if total > 0:
+                                        com = np.sum(bins * arr_clean) / total
+                                else:
+                                        com = np.nan
+                                com_trial_lick.append(com)
+
+                        norm_licks = (lick_data - np.nanmin(lick_data, axis=1, keepdims=True)) / \
+                                (np.nanmax(lick_data, axis=1, keepdims=True) - np.nanmin(lick_data, axis=1, keepdims=True) + 1e-10)
+                        axes[1].imshow(norm_licks, aspect='auto', cmap='Blues')
+                        axes[1].scatter(com_trial_lick, np.arange(len(com_trial_lick)), color='k', marker='|')
+                        axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
+
+                        # --- Velocity COM ---
+                        com_trial_vel = []
+                        for arr in vel_data:
+                                arr = np.nan_to_num(arr, nan=0.0)
+                                bins = np.arange(len(arr))
+                                total = np.sum(arr)
+                                com = np.sum(bins * arr) / total if total > 0 else np.nan
+                                com_trial_vel.append(com)
+
+                        norm_vels = (vel_data - np.nanmin(vel_data, axis=1, keepdims=True)) / \
+                                (np.nanmax(vel_data, axis=1, keepdims=True) - np.nanmin(vel_data, axis=1, keepdims=True) + 1e-10)
+                        axes[2].imshow(norm_vels, aspect='auto', cmap='Purples')
+                        axes[2].scatter(com_trial_vel, np.arange(len(com_trial_vel)), color='k', marker='|')
+                        axes[2].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
+
+                        # --- Formatting ---
+                        center_bin = bins_dt / 2
+                        for ax in axes:
+                                ax.axvline(center_bin, color='k')
+                        axes[0].set_title(f'{animal}, {day}, cell: {goal_cells[cll]}')
+
+                        ticks = [0, bins_dt/2, bins_dt - 1]
+                        axes[3].set_xticks(ticks)
+                        axes[3].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
+                        axes[3].set_xlabel('Reward-centric distance ($\Theta$)')
+                        axes[1].set_ylabel('Norm. Licks')
+                        axes[2].set_ylabel('Velocity (cm/s)')
+                        axes[0].set_ylabel('Trial #')
+                        axes[3].spines[['top', 'right']].set_visible(False)
+
+                        plt.tight_layout()
+                        plt.savefig(os.path.join(savedst, f'{animal}_{day}_rewcell{cll}_trialbytrial.svg'))
+
+                        #%% 
+                        pdf.savefig(fig)
+                        plt.close(fig)
 pdf.close()

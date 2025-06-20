@@ -1355,7 +1355,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
     tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
     coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
     coms_fail = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
-    rewlocs_w_dt = []; ybinned_dt = []
+    relpos_all_ep = []; ybinned_dt = []
     failed_trialnm = []; 
     # remake tuning curves relative to reward        
     for ep in range(len(eps)-1):
@@ -1480,8 +1480,8 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
                 com = calc_COM_EH(tc,bin_size)
                 tcs_fail[ep, :,:] = tc
                 coms_fail[ep, :] = com
-        rewlocs_w_dt.append(rewloc_per_trial)
-    return tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt
+        relpos_all_ep.append(relpos_all)
+    return tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos_all_ep
 
 def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,
@@ -1970,7 +1970,7 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
             ypos_trial_new[ypos_trial_new<ypos_num] = dark_distance+ypos_trial[-1]
             if not sum(np.isnan(ypos_trial_new))==len(ypos_trial_new):
                 ypos_trial_new = ypos_trial_new[~np.isnan(ypos_trial_new)]                
-                rew_idx = int(rewlocs[ep]-(rewsize/2))
+                rew_idx = int(rewlocs[ep]-(rewsize/2)-5)
                 rewloc_per_trial.append(rew_idx)
                 rl_bool = np.zeros_like(ypos_trial_new)
                 try:

@@ -164,8 +164,7 @@ def get_stops(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
     
     return nonrew_stop_success_tmpts, rew_stop_success_tmpts
 
-def get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,
-              forwardvelALL, reward_binned, lick_binned, max_reward_stop=31.25*5):
+def get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,forwardvelALL, reward_binned, lick_binned, max_reward_stop=31.25*5):
     """from gerardo
 
     Args:
