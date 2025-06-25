@@ -135,9 +135,10 @@ for k,v in radian_alignment_saved.items():
         _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
         if np.nanmax(meanrew)>1: # only get highly active cells?
-            _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            
             iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
+            
             transient_after_rew=iind[iind>int(range_val/binsize)]
             if len(transient_after_rew)>0:
                 transient_after_rew=transient_after_rew[0]

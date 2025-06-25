@@ -146,8 +146,8 @@ for ii in range(len(conddf)):
    Fc3=Fc3_org[:, skew>2]
    # low cells
    if animal=='e217' or animal=='z17' or animal=='z14' or animal=='e200':
-      dFF=dFF_org[:, skew>1]
-      Fc3=Fc3_org[:, skew>1]
+      dFF=dFF_org[:, skew>1.5]
+      Fc3=Fc3_org[:, skew>1.5]
    # per epoch si
    # nshuffles=100   
    rz = get_rewzones(rewlocs,1/scalingf)
@@ -155,10 +155,10 @@ for ii in range(len(conddf)):
    for ep in range(len(eps)-1):
       eprng = np.arange(eps[ep], eps[ep+1])
       trials=trialnum[eprng]
-      activity_trials=dFF[eprng,:]
+      activity_trials=Fc3[eprng,:]
       pcs = []; si=[]
       for cll in range(activity_trials.shape[1]):
-         is_sig, real_si, shuffled_sis, p_val = is_place_cell([ybinned[eprng][trials==tr] for tr in np.unique(trials)], [activity_trials[trials==tr][:,cll] for tr in np.unique(trials)], fr)
+         is_sig, real_si, shuffled_sis, p_val = is_place_cell([ybinned[eprng][trials==tr] for tr in np.unique(trials)], [activity_trials[trials==tr][:,cll] for tr in np.unique(trials)], fr,n_shuffles=50)
          pcs.append(is_sig); si.append(real_si)
       pcs_ep.append(pcs); si_ep.append(si)
    spatially_tuned = np.sum(pcs_ep,axis=0)>0 # if tuned in any epoch
@@ -283,5 +283,99 @@ for ii in range(len(conddf)):
    print(spatially_tuned_not_rew_place_p,pc_p_early,pc_p)
    datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p_early,pc_p,results_pre, results_post, results_pre_early, results_post_early]
 #%%
+# get proportions opto v not
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
-placecell_p=[v[0] for k,v in datadct.items()]
+placecell_p_early=[v[1] for k,v in datadct.items()]
+placecell_p=[v[2] for k,v in datadct.items()]
+pre_p=[v[3]['goal_cell_prop'] for k,v in datadct.items()]
+post_p=[v[4]['goal_cell_prop'] for k,v in datadct.items()]
+pre_p_early=[v[5]['goal_cell_prop'] for k,v in datadct.items()]
+post_p_early=[v[6]['goal_cell_prop'] for k,v in datadct.items()]
+
+df=pd.DataFrame()
+df['proportions']=np.concatenate([spatially_tuned_not_rew_place,placecell_p_early,placecell_p,pre_p,post_p,pre_p_early,post_p_early])
+allty=[spatially_tuned_not_rew_place,placecell_p_early,placecell_p,pre_p,post_p,pre_p_early,post_p_early]
+lbl=['other_spatially_tuned','place_early','place','pre','post','pre_early','post_early']
+df['type']=np.concatenate([[lbl[i]]*len(allty[i]) for i in range(len(lbl))])
+df['animals']=[k.split('_')[0] for k,v in datadct.items()]*7
+df['days']=[int(k.split('_')[1]) for k,v in datadct.items()]*7
+df = df.merge(conddf[['animals', 'days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
+df['opto']=df['optoep']>1
+df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
+keep = ~((df.animals == 'z14') & (df.days < 15))
+keep &= ~((df.animals == 'z15') & (df.days < 8))
+keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
+keep &= ~((df.animals == 'e216') & (df.days < 32))
+keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
+# keep &= ~((df.animals=='e218')&(df.days>44))
+df = df[keep].reset_index(drop=True)
+
+# Get non-opto averages to subtract
+non_opto_means = (
+    df[df.opto == False]
+    .groupby(['animals', 'type', 'condition'])['proportions']
+    .mean()
+    .reset_index()
+    .rename(columns={'proportions': 'baseline'})
+)
+# Merge with opto trials
+df_opto = df[df.opto == True].copy()
+df_opto = df_opto.merge(non_opto_means, on=['animals', 'type', 'condition'], how='left')
+# Compute normalized proportions
+df_opto['norm_proportions'] = df_opto['proportions']#-df_opto['baseline']
+df_opto = df_opto.groupby(['animals', 'type', 'condition']).mean(numeric_only=True).reset_index()
+# Define comparison groups and types
+conditions_to_compare = df_opto['condition'].unique()
+cell_types = df_opto['type'].unique()
+
+# Set up plot
+plt.figure(figsize=(5, 6))
+ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto, errorbar='se')
+ax.set_xlabel('Opto - No-Opto Δ (Proportion)')
+ax.set_ylabel('Cell Type')
+ax.set_title('Optogenetic Modulation of Goal/Place Cell Proportions')
+ax.spines[['top', 'right']].set_visible(False)
+
+# Perform tests and annotate
+y_max = df_opto['norm_proportions'].max()
+y_offset = 0 * y_max if y_max > 0 else 0
+
+for t in cell_types:
+    data = df_opto[df_opto['type'] == t]
+    ctrl_vals = data[data['condition'] == 'ctrl']['norm_proportions']
+
+    xpos = {}
+    for i, cond in enumerate(conditions_to_compare):
+        if cond == 'ctrl':
+            continue
+        opto_vals = data[data['condition'] == cond]['norm_proportions']
+        if len(ctrl_vals) > 0 and len(opto_vals) > 0:
+            stat, pval = scipy.stats.ranksums(opto_vals, ctrl_vals, alternative='two-sided')
+            print(f'{t}, {cond} vs ctrl: p = {pval:.3g}')
+
+            # Set y-position for annotation
+            bar_heights = data.groupby('condition')['norm_proportions'].mean()
+            max_height = max(bar_heights.get(cond, 0), bar_heights.get('ctrl', 0))
+            y = max_height + y_offset
+
+            # Significance annotation
+            if pval < 0.001:
+                star = '***'
+            elif pval < 0.01:
+                star = '**'
+            elif pval < 0.05:
+                star = '*'
+            else:
+                star = 'n.s.'
+
+            # Get bar position
+            group_order = df_opto['condition'].unique()
+            xpos = np.where((df_opto['type'].unique() == t))[0][0]
+            xctrl = xpos
+            xopto = xpos
+
+            ax.plot([xctrl, xopto], [y, y], lw=1.2, c='k')
+            ax.text((xctrl + xopto)/2, y + y_offset/2, star, ha='center', va='bottom', fontsize=10)
+
+plt.tight_layout()
+plt.show()

@@ -16,7 +16,7 @@ mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import get_success_failure_trials, get_lick_selectivity
-from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones
+from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones, make_tuning_curves_radians_by_trialtype
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
@@ -33,10 +33,10 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p"
 rates_perm_all=[]
 ls_perm_all=[]
 perms=[]
-
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-for ii in range(len(conddf)):
+#%%
+for ii in range(262,len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     if (animal!='e217') & (conddf.optoep.values[ii]<2):
@@ -79,33 +79,33 @@ for ii in range(len(conddf)):
         # get average success rate
         rates = []; ls = []
         for ep in range(len(eps)-1):
-            eprng = range(eps[ep],eps[ep+1])
-            success, fail, str_trials, ftr_trials, ttr, \
-            total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-            lick_selectivity_per_trial = get_lick_selectivity(ybinned[eprng], trialnum[eprng], 
-            licks[eprng], rewlocs[ep], rewsize,
-            fails_only = False)
-            rates.append(success/total_trials)
-            # last 8 trials
-            ls.append(np.nanmean(lick_selectivity_per_trial[:-8]))
+                eprng = range(eps[ep],eps[ep+1])
+                success, fail, str_trials, ftr_trials, ttr, \
+                total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+                lick_selectivity_per_trial = get_lick_selectivity(ybinned[eprng], trialnum[eprng], 
+                licks[eprng], rewlocs[ep], rewsize,
+                fails_only = False)
+                rates.append(success/total_trials)
+                # last 8 trials
+                ls.append(np.nanmean(lick_selectivity_per_trial[:-8]))
         rate=np.nanmean(np.array(rates))
-        # added to get anatomical info
-        # takes time
-        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-        Fc3 = fall_fc3['Fc3']
-        dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+                tcs_correct, coms_correct, tcs_fail, coms_fail, \
+                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
-            # 9/19/24
-            # find correct trials within each epoch!!!!
-            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size)          
+        # 9/19/24
+        # find correct trials within each epoch!!!!
+                # takes time
+                fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+                Fc3 = fall_fc3['Fc3']
+                dFF = fall_fc3['dFF']
+                Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+                dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+                skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+                Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+
+                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
+                rewards,forwardvel,rewsize,bin_size)          
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         perm = list(combinations(range(len(coms_correct)), 2)) 
@@ -129,7 +129,7 @@ df2['rates'] = [np.nanmean(xx)*100 for xx in rates_perm_all]
 df['lick_selectivity'] = [np.nanmean(xx) for xx in ls_perm_all]
 df2['num_epochs'] = [2]*len(df2)
 df=pd.concat([df,df2])
-
+df=df[df.animals!='e189']
 # number of epochs vs. rates    
 fig,ax = plt.subplots(figsize=(3,5))
 df_plt=df[df.num_epochs<5]
@@ -143,9 +143,29 @@ sns.barplot(x='num_epochs', y='rates',
         fill=False,ax=ax, color='k', errorbar='se')
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('% Correct trials')
-ax.set_xlabel('# of reward loc. switches')
+ax.set_xlabel('# of epochs')
+# Group rates by number of epochs
+grouped = df_plt.groupby('num_epochs')['rates'].apply(list)
+
+# Filter out groups with <2 data points (optional for robustness)
+valid_groups = [g for g in grouped if len(g) > 1]
+
+# Run test if at least 2 valid groups
+if len(valid_groups) > 1:
+    stat, p = scipy.stats.kruskal(*valid_groups)
+    print("Kruskal-Wallis Test: Effect of number of epochs on % correct trials")
+    print(f"H-statistic = {stat:.3f}, p = {p:.4f}")
+else:
+    print("Not enough valid groups to run Kruskal-Wallis test.")
+summary = df_plt.groupby('num_epochs')['rates'].agg(['mean', scipy.stats.sem]).reset_index()
+summary.columns = ['num_epochs', 'mean_rate', 'sem_rate']
+
+print("Mean ± SEM of % correct trials per number of epochs:")
+print(summary)
 
 plt.savefig(os.path.join(savedst, 'p_correct_trials.svg'))
+
+
 fig,ax = plt.subplots(figsize=(3,5))
 sns.stripplot(x='num_epochs', y='lick_selectivity',color='k',
         data=df_plt,alpha=0.7,

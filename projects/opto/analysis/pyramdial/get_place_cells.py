@@ -23,7 +23,7 @@ from projects.pyr_reward.rewardcell import get_radian_position
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper\vip_r21'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_opto_place.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\place_cell_bytrialtype_vipopto.p"
@@ -39,6 +39,7 @@ epoch_perm = []
 pvals = []
 total_cells = []
 place_cell_null=[]
+other_sp_prop=[]
 place_window = 20
 num_iterations=1000
 bin_size=3 # cm
@@ -98,22 +99,24 @@ for ii in range(len(conddf)):
         pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
         # looser restrictions
         pc_bool = np.sum(pcs,axis=0)>=1        
-        if animal=='e217':
-            Fc3 = Fc3[:,((skew>1)&pc_bool)] # only keep cells with skew 
+        if animal=='e200' or animal=='e217' or animal=='z17':
+            Fc3 = Fc3[:,((skew>1)&pc_bool)]
         else:
             Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greater than 2
         # if no cells pass these crit
-        if Fc3.shape[1]==0:
-            Fc3 = fall_fc3['Fc3']
+        skew_thres_range=np.arange(0,1.6,0.1)[::-1]
+        iii=0
+        while Fc3.shape[1]==0:      
+            iii+=1
+            print('************************0 cells skew > 2************************')
+            Fc3 = fall_fc3['Fc3']                        
             Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-            # to avoid issues with e217 and z17?
-            # pc_bool = np.sum(pcs,axis=0)>=1
-            Fc3 = Fc3[:,((skew>1.5)&pc_bool)]        
+            Fc3 = Fc3[:, (skew>skew_thres_range[iii])&pc_bool]
         if Fc3.shape[1]>0:
             # get abs dist tuning 
             if sum([f'{animal}_{day:03d}' in xx for xx in list(datadct.keys())])>0:
                 k = [k for k,xx in datadct.items() if f'{animal}_{day:03d}' in k][0]
-                tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs=datadct[k]
+                tcs_correct_abs, coms_correct_abs,tcs_fail_abs,coms_fail_abs, tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early,pcs_all=datadct[k]
             else:
                 print('#############making tcs#############\n')
                 tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
@@ -122,14 +125,14 @@ for ii in range(len(conddf)):
                 tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
                 rewsize,bin_size) # last 5 trials
 
-                track_length_dt = 550 # cm estimate based on 99.9% of ypos
-                track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-                bins_dt=150 
-                bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-                tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-                    bins=bins_dt,lasttr=8) 
-                tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            track_length_dt = 550 # cm estimate based on 99.9% of ypos
+            track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+            bins_dt=150 
+            bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+            tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
                 bins=bins_dt,lasttr=8) 
+            tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt,lasttr=8) 
 
 
             # get cells that maintain their coms b/wn previous and opto ep
@@ -204,7 +207,7 @@ for ii in range(len(conddf)):
                 com_per_ep = np.array([(coms_correct_abs_early[perm[jj][0]]-coms_correct_abs_early[perm[jj][1]]) for jj in range(len(perm))])        
                 compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
                 # get cells across all epochs that meet crit
-                pcs = np.unique(np.concatenate(compc))
+                pcs_early = np.unique(np.concatenate(compc))
                 compc=[xx for xx in compc if len(xx)>0]
                 if len(compc)>0:
                     pcs_all_early = intersect_arrays(*compc)
@@ -215,7 +218,11 @@ for ii in range(len(conddf)):
                 # get per comparison
                 pcs_p_per_comparison_early = [len(xx)/len(coms_correct_abs_early[0]) for xx in compc]
                 pc_p_early=len(pcs_all_early)/len(coms_correct_abs_early[0])
-
+                # get other spatially tuned cells
+                other_sp = [xx for xx in np.arange(Fc3.shape[1]) if xx not in pcs_all_early and xx not in pcs_all and xx not in goal_cells_early and xx not in goal_cells]
+                other_sp_prop.append(len(other_sp)/len(coms_correct[0]))
+                # print props
+                print(len(other_sp)/len(coms_correct[0]), pc_p, len(goal_cells)/len(coms_correct[0]))
                 epoch_perm.append(perm)
                 pc_prop.append([pcs_p_per_comparison,pc_p,pcs_p_per_comparison_early,pc_p_early])
                 num_epochs.append(len(coms_correct_abs))
@@ -253,6 +260,7 @@ for ii in range(len(conddf)):
                 pvals.append(p_value);     
                 total_cells.append(len(coms_correct_abs[0]))
                 print(eptest, perm)       
+                
                 datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs, tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early,pcs_all]
 pdf.close()
 # # save pickle of dcts
@@ -271,6 +279,8 @@ df['place_cell_prop'] = [xx[1] for xx in pc_prop]
 df['place_cell_prop']=df['place_cell_prop']*100
 df['place_cell_prop_early'] = [xx[3] for xx in pc_prop]
 df['place_cell_prop_early']=df['place_cell_prop_early']*100
+df['other_sp_prop'] = other_sp_prop
+df['other_sp_prop'] = df['other_sp_prop']*100
 df['opto'] = df.optoep.values>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
@@ -285,11 +295,12 @@ pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
 df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
-df=df[~((df.animals=='z14')&(df.days<15))]
-df=df[~((df.animals=='z17')&(df.days<11))]
+# df=df[~((df.animals=='z14')&(df.days<33))]
 df=df[~((df.animals=='z15')&(df.days<8))]
 df=df[~((df.animals=='e217')&(df.days<9)&(df.days==26))]
-df=df[~((df.animals=='e216')&(df.days<32))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+
 # df=df[~((df.animals=='e218')&(df.days>44))]
 
 df_plt = df
@@ -369,17 +380,18 @@ df_an['opto'] = [True if xx=='True' else False for xx in df_an.opto]
 # compute delta for each condition per animal
 delta_vals = []
 for (animal, condition), group in df_an.groupby(['animals', 'condition']):
-    stim = group.loc[group.opto == True].set_index(['animals', 'condition'])[['place_cell_prop', 'place_cell_prop_early']]
-    no_stim = group.loc[group.opto == False].set_index(['animals', 'condition'])[['place_cell_prop', 'place_cell_prop_early']]
+    stim = group.loc[group.opto == True].set_index(['animals', 'condition'])[['place_cell_prop', 'place_cell_prop_early', 'other_sp_prop']]
+    no_stim = group.loc[group.opto == False].set_index(['animals', 'condition'])[['place_cell_prop', 'place_cell_prop_early','other_sp_prop']]
+
     if not stim.empty and not no_stim.empty:
         delta_vals.append([animal, condition, 
-                            stim.loc[(animal, condition), 'place_cell_prop'] - no_stim.loc[(animal, condition), 'place_cell_prop'], 
-                            stim.loc[(animal, condition), 'place_cell_prop_early'] - no_stim.loc[(animal, condition), 'place_cell_prop_early']])
+                            stim.loc[(animal, condition),'place_cell_prop'] - no_stim.loc[(animal, condition), 'place_cell_prop'], 
+                            stim.loc[(animal, condition), 'place_cell_prop_early'] - no_stim.loc[(animal, condition), 'place_cell_prop_early'], stim.loc[(animal, condition), 'other_sp_prop'] - no_stim.loc[(animal, condition), 'other_sp_prop']])
 
-df_delta = pd.DataFrame(delta_vals, columns=['animals', 'condition', 'delta_late', 'delta_early'])
+df_delta = pd.DataFrame(delta_vals, columns=['animals', 'condition', 'delta_late', 'delta_early', 'delta_other_sp'])
 
 # Now we can plot side by side
-fig, axs = plt.subplots(1, 2, figsize=(6, 5),sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(11,6),sharey=True)
 
 pl ={'ctrl': "slategray", 'vip': 'red', 'vip_ex': 'darkgoldenrod'}
 a = 0.7
@@ -392,12 +404,12 @@ sns.barplot(data=df_delta, x='condition', y='delta_late',hue='condition', ax=ax,
 ax.set_xlabel('')
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 ax.spines[['top', 'right']].set_visible(False)
-ax.set_title('Late')
+ax.set_title('Late Place')
 # --- Stats + annotation ---
 data=df_delta
 conds = data['condition'].unique()
 pairs = list(combinations(conds, 2))[:2]
-y_max = data['delta_late'].quantile(.85)
+y_max = data['delta_late'].quantile(.99)
 y_step = 0.4 * abs(y_max)
 
 for i, (cond1, cond2) in enumerate(pairs):
@@ -427,11 +439,11 @@ sns.stripplot(data=df_delta, x='condition', y='delta_early', ax=ax,
               palette=pl, size=s, alpha=a)
 sns.barplot(data=df_delta, x='condition', y='delta_early', ax=ax, 
             palette=pl, fill=False,errorbar='se')
-ax.set_ylabel('Δ Place Cell % (LEDon-LEDoff)')
+ax.set_ylabel('$\Delta$ Place cell % \n(LEDon-LEDoff)')
 ax.set_xlabel('')
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 ax.spines[['top', 'right']].set_visible(False)
-ax.set_title('Early')
+ax.set_title('Early Place')
 # --- Stats + annotation ---
 data=df_delta
 conds = data['condition'].unique()
@@ -459,6 +471,46 @@ for i, (cond1, cond2) in enumerate(pairs):
     ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
     ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
     ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+
+# other spatially tuned
+
+# Plotting early
+ax = axs[2]
+sns.stripplot(data=df_delta, x='condition', y='delta_other_sp', ax=ax, 
+              palette=pl, size=s, alpha=a)
+sns.barplot(data=df_delta, x='condition', y='delta_other_sp', ax=ax, 
+            palette=pl, fill=False,errorbar='se')
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_title('Other spatially tuned')
+# --- Stats + annotation ---
+data=df_delta
+conds = data['condition'].unique()
+pairs = list(combinations(conds, 2))[:2]
+y_max = data['delta_other_sp'].quantile(.99)
+y_step = 0.4 * abs(y_max)
+
+for i, (cond1, cond2) in enumerate(pairs):
+    vals1 = data[data['condition'] == cond1]['delta_other_sp']
+    vals2 = data[data['condition'] == cond2]['delta_other_sp']
+    stat, pval = scipy.stats.ranksums(vals1, vals2)
+    # Annotation text
+    if pval < 0.001:
+        text = '***'
+    elif pval < 0.01:
+        text = '**'
+    elif pval < 0.05:
+        text = '*'
+    else:
+        text = f""
+
+    # Get x-locations
+    x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+    y = y_max + y_step * (i + 1)
+    ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+    ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
+    ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
 # Save the plot
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
 
@@ -466,16 +518,10 @@ plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_in
 # correlate with rates diff
 beh = pd.read_csv(r'Z:\condition_df\vip_opto_behavior.csv')
 beh=beh[(beh.animals.isin(df.animals.values))&(beh.days.isin(df.days.values))]
-beh=beh[~((beh.animals=='z14')&(beh.days<15))]
-beh=beh[~((beh.animals=='z17')&(beh.days<13))]
-beh=beh[~((beh.animals=='z15')&(beh.days<8))]
-beh=beh[~((beh.animals=='e217')&(beh.days<9)&(beh.days==26))]
-beh=beh[~((beh.animals=='e216')&(beh.days<32))]
 beh = beh.groupby(['animals', 'opto']).mean(numeric_only=True).reset_index()
 beh=beh[beh.opto==True]
 # take all trial cells
-y = np.nanmean([df_an.loc[(df_an.opto==True), 'place_cell_prop_early'].values,
-                df_an.loc[(df_an.opto==True), 'place_cell_prop'].values],axis=0)
+y = np.nanmean([df_an.loc[(df_an.opto==True), 'place_cell_prop_early'].values,df_an.loc[(df_an.opto==True), 'place_cell_prop'].values],axis=0)
 # y=df_delta.delta_early
 # Perform regression
 slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(beh.rates_diff.values, y)
@@ -491,3 +537,16 @@ ax.set_ylabel("Place cell %")
 ax.set_title(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
 ax.spines[['top', 'right']].set_visible(False)
 plt.savefig(os.path.join(savedst, 'placecell_v_performance.svg'), bbox_inches='tight')
+
+#%%
+# Change y='place_cell_prop' -> y='other_sp_prop' throughout
+
+fig,ax=plt.subplots()
+sns.stripplot(x='opto', y='other_sp_prop',
+        hue='condition', data=df_plt,
+        palette=pl, dodge=True,
+        s=s, alpha=0.7)
+sns.barplot(x='opto', y='other_sp_prop', hue='condition',
+        data=df_plt,
+        palette=pl,
+        fill=False, ax=ax, color='k', errorbar='se', legend=False)

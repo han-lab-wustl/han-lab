@@ -195,6 +195,7 @@ df['rewzone_transition_2'] = np.concatenate(rz_perm)[:,1]
 df = df[(df.ep_transition_1==1) & (df.ep_transition_2==2)]
 df = df.groupby(['animal','rewzone_transition_1','rewzone_transition_2']).mean(numeric_only=True)
 df = df.reset_index()
+df = df[df.animal!='z16']
 s=10
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 rz_palette = 'Set1_r'#sns.color_palette(colors)  # Set custom palette
@@ -214,19 +215,25 @@ ax.set_ylabel('% Correct trials')
 ax.set_xlabel('Reward Zone')
 ax.spines[['top','right']].set_visible(False)
 
-# not significant
-df_rz1 = df[df['rewzone_transition_2'] == 1]  # make sure type matches if it's string
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-# Fit model to see effect of previous reward zone (transition 1) on performance in reward zone 1
-model = ols('performance_transition_2 ~ C(rewzone_transition_1) + C(animal)', data=df_rz1).fit()
-anova_table = sm.stats.anova_lm(model)
-print("ANOVA (Effect of previous reward zone on performance in current reward zone 1):\n")
-print(anova_table)
-groups = df_rz1.groupby('rewzone_transition_1')
-data_by_prev = {k: v.set_index('animal')['performance_transition_2'] for k, v in groups}
+# Loop through each reward zone transition (current)
+for rz2 in sorted(df['rewzone_transition_2'].unique()):
+    df_rz = df[df['rewzone_transition_2'] == rz2]
+    # Group performances by previous reward zone
+    grouped = df_rz.groupby('rewzone_transition_1')['performance_transition_2'].apply(list)
+    # Filter out groups with fewer than 2 entries
+    valid_groups = [vals for vals in grouped if len(vals) > 1]
+
+    if len(valid_groups) > 1:
+        stat, p = scipy.stats.kruskal(*valid_groups)
+        print(f"Kruskal-Wallis test for current reward zone {rz2}:")
+        print(f"  H-statistic = {stat:.3f}, p = {p:.4f}")
+    else:
+        print(f"Not enough valid groups to test for reward zone {rz2}.")
+
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 plt.savefig(os.path.join(savedst, 'rewzone_performance.svg'),bbox_inches='tight')
+
+
 #%%
 # licks selectivity by reward zone
 # performance average by transition

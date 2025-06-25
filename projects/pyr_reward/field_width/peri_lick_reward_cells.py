@@ -24,7 +24,7 @@ from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_
     get_radian_position_first_lick_after_rew, get_rewzones
 from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_by_trialtype_w_darktime, make_tuning_curves_time_trial_by_trial_w_darktime, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
-from width import smooth_lick_rate,detect_lick_bout_starts
+from width import smooth_lick_rate,detect_lick_bouts, check_reward_in_bouts
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 
 # import condition df
@@ -95,7 +95,7 @@ for ii in range(len(conddf)):
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
             rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)  
@@ -123,8 +123,7 @@ for ii in range(len(conddf)):
         com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
         com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
         # all cells before 0
-        com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<0)] if len(com)>0 else [] for com in com_goal]
+        com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,xx], axis=0)<0)&(np.nanmedian(coms_rewrel[:,xx], axis=0)>-np.pi/4))] if len(com)>0 else [] for com in com_goal]
         # get goal cells across all epochs        
         if len(com_goal_postrew)>0:
             goal_cells = intersect_arrays(*com_goal_postrew); 
@@ -134,27 +133,16 @@ for ii in range(len(conddf)):
         # lick rate
         dt = np.median(np.diff(time))  # make sure time is 1D and regularly sampled
         lickrate = smooth_lick_rate(lick,dt)
-        bout_starts,bout_ends  = detect_lick_bouts(lickrate, time, threshold=0, min_duration=0.1)
-        # Assume you already have start and end times of each bout:
-        # e.g., from an updated bout detection function that gives both
-        reward_in_bout = check_reward_in_bouts(bout_starts,bout_ends, rewards==1, time)
+        bout_starts,bout_ends  = detect_lick_bouts(lickrate, time, threshold=.2, min_duration=0.01)
         # Now you can use this to filter:
-        lick_bout_starts_with_reward = np.array(bout_starts)[reward_in_bout]
-        lick_bout_starts_wo_reward = np.array(bout_starts)[~reward_in_bout]
-        # rewarded bouts
-        rew_bout_bin = np.zeros_like(lickrate)
-        for i in lick_bout_starts_with_reward:
-            ind = np.where(((time>=i)&(time<i+.4)))[0][0]
-            rew_bout_bin[ind]=1
-        # unrewarded bouts
-        nonrew_bout_bin = np.zeros_like(lickrate)
-        for i in lick_bout_starts_wo_reward:
-            ind = np.where(((time>=i)&(time<i+.4)))[0][0]
-            nonrew_bout_bin[ind]=1
+        lick_bout_starts = np.array(bout_starts)
         # peri align
         allprerew_r = []
         allprerew_nr = []
-        range_val,binsize=8,.1
+        # corresponding licks
+        allprerew_lickr = []
+        allprerew_licknr = []
+        range_val,binsize=12,.1
         for gc in goal_all:
             _, meanrflick, __, rewrflick = perireward_binned_activity(Fc3[:,gc], rew_bout_bin.astype(bool), 
             time, trialnum, range_val,binsize)
@@ -162,10 +150,15 @@ for ii in range(len(conddf)):
             time, trialnum, range_val,binsize)
             _, mean_rlick, __, all_rlick = perireward_binned_activity(lick, rew_bout_bin.astype(bool), 
             time, trialnum, range_val,binsize)
-            _, mean_lick, __, all_lick = perireward_binned_activity(lick, nonrew_bout_bin.astype(bool), 
+            _, mean_lick, __, all_lick = perireward_binned_activity(lick, nonrew_bout_bin.astype(bool), time, trialnum, range_val,binsize)
+            _, mean_rrew, __, all_rrew = perireward_binned_activity(rewards==1, rew_bout_bin.astype(bool), 
             time, trialnum, range_val,binsize)
-            allprerew_r.append(meanrflick)
-            allprerew_nr.append(meanflick)
+            _, mean_rew, __, all_rew = perireward_binned_activity(rewards==1, nonrew_bout_bin.astype(bool), time, trialnum, range_val,binsize)
+
+            allprerew_r.append(rewrflick)
+            allprerew_nr.append(rewflick)
+            allprerew_lickr.append(all_rlick)
+            allprerew_licknr.append(all_lick)
         # correlation b/wn licks and fc3
         ep=0
         eprng = np.arange(eps[ep],eps[ep+1])

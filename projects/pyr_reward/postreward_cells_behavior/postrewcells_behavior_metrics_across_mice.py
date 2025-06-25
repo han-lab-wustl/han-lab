@@ -197,9 +197,9 @@ for an_eg in range(len(animals)):
         for i in nrewstops_wo_licks_trials_per_an[an_eg]: # animal 1 
             for j in i: # sessions?
                 all_cells.append(j) # average across cells
-        # nrewstops_wo_licks_trials_cells = np.hstack(all_cells)
+        nrewstops_wo_licks_trials_cells = np.hstack(all_cells)
 
-        # all_cells = []
+        all_cells = []
         # combine types of stops
         for i in nrewstops_w_licks_trials_per_an[an_eg]: # animal 1 
             for j in i: # sessions?
@@ -215,25 +215,25 @@ for an_eg in range(len(animals)):
         # per animal average
         fig, axes = plt.subplots(nrows = 3, sharex=True, figsize=(3,5))
         ax=axes[0]
-        # m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
-        # ax.plot(m,color='sienna',label=f'Unrewarded stops without licks')
-        # ax.fill_between(
-        #     range(0, int(range_val / binsize) * 2),
-        #     m - scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
-        #     m + scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
-        #     alpha=0.5,color='sienna'
-        #     ) 
+        m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
+        ax.plot(m,color=colors[0])
+        ax.fill_between(
+            range(0, int(range_val / binsize) * 2),
+            m - scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
+            m + scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
+            alpha=0.5,color=colors[0]
+            ) 
 
         m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)
-        ax.plot(m,color=colors[0],label='Unrewarded stops')
+        ax.plot(m,color='sienna')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(nrewstops_w_licks_trials_cells, axis=1, nan_policy='omit'),
             m + scipy.stats.sem(nrewstops_w_licks_trials_cells, axis=1, nan_policy='omit'),
-            alpha=0.5,color=colors[0]
+            alpha=0.5,color='sienna'
             )                    
         m=np.nanmean(rewstops_trials_cells,axis=1)
-        ax.plot(m,color=colors[1],label='Rewarded stops')
+        ax.plot(m,color=colors[1])
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(rewstops_trials_cells, axis=1, nan_policy='omit'),
@@ -249,7 +249,7 @@ for an_eg in range(len(animals)):
         for i in vel_nrewstops_wo_licks_trials_per_an[an_eg]: # animal 1 
             for j in i: # sessions?
                 all_cells.append(j) # average across cells
-        # nrewstops_wo_licks_trials_cells = np.hstack(all_cells)
+        nrewstops_wo_licks_trials_cells = np.hstack(all_cells)
 
         # all_cells = []
         for i in vel_nrewstops_w_licks_trials_per_an[an_eg]: # animal 1 
@@ -265,25 +265,25 @@ for an_eg in range(len(animals)):
 
         # per animal average
         ax=axes[1]
-        # m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
-        # ax.plot(m,color='sienna',label=f'Unrewarded stops without licks')
-        # ax.fill_between(
-        #     range(0, int(range_val / binsize) * 2),
-        #     m - scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
-        #     m + scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
-        #     alpha=0.5,color='sienna'
-        #     )                    
+        m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
+        ax.plot(m,color=colors[0])
+        ax.fill_between(
+            range(0, int(range_val / binsize) * 2),
+            m - scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
+            m + scipy.stats.sem(nrewstops_wo_licks_trials_cells, axis=1, nan_policy='omit'),
+            alpha=0.5,color=colors[0]
+            )                    
 
         m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)
-        ax.plot(m,color=colors[0],label='Unrewarded stops')
+        ax.plot(m,color='sienna')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(nrewstops_w_licks_trials_cells, axis=1, nan_policy='omit'),
             m + scipy.stats.sem(nrewstops_w_licks_trials_cells, axis=1, nan_policy='omit'),
-            alpha=0.5,color=colors[0]
+            alpha=0.5,color='sienna'
             )                    
         m=np.nanmean(rewstops_trials_cells,axis=1)
-        ax.plot(m,color=colors[1],label='Rewarded stops')
+        ax.plot(m,color=colors[1])
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(rewstops_trials_cells, axis=1, nan_policy='omit'),
@@ -299,7 +299,7 @@ for an_eg in range(len(animals)):
         for i in lick_nrewstops_wo_licks_trials_per_an[an_eg]: # animal 1 
             for j in i: # sessions?
                 all_cells.append(j) # average across cells
-        # nrewstops_wo_licks_trials_cells = np.hstack(all_cells)
+        nrewstops_wo_licks_trials_cells = np.hstack(all_cells)
 
         # all_cells = []
         for i in lick_nrewstops_w_licks_trials_per_an[an_eg]: # animal 1 
@@ -315,40 +315,39 @@ for an_eg in range(len(animals)):
 
         # per animal average
         ax=axes[2]
-        # m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)
-        # sem = np.array([moving_average(s,window_size=5) for s in nrewstops_wo_licks_trials_cells])
-        # m=moving_average(m, window_size=5)
-        # ax.plot(m,color='sienna',label=f'Unrewarded stops without licks\n {sem.shape[1]} trials')
-        # ax.fill_between(
-        #     range(0, int(range_val / binsize) * 2),
-        #     m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
-        #     m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
-        #     alpha=0.5,color='sienna'
-        #     )                 
-
-        m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)
-        sem = np.array([moving_average(s,window_size=5) for s in nrewstops_w_licks_trials_cells])
+        m=np.nanmean(nrewstops_wo_licks_trials_cells,axis=1)/np.nanmax(nrewstops_w_licks_trials_cells,axis=1)
+        sem = np.array([moving_average(s,window_size=5) for s in nrewstops_wo_licks_trials_cells])
         m=moving_average(m, window_size=5)
-        ax.plot(m,color=colors[0],label=f'Unrewarded stops\n {sem.shape[1]} trials')
+        ax.plot(m,color=colors[0],label=f'No lick\n {sem.shape[1]} trials')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             alpha=0.5,color=colors[0]
+            )                 
+
+        m=np.nanmean(nrewstops_w_licks_trials_cells,axis=1)/np.nanmax(nrewstops_w_licks_trials_cells,axis=1)
+        sem = np.array([moving_average(s,window_size=5) for s in nrewstops_w_licks_trials_cells])
+        m=moving_average(m, window_size=5)
+        ax.plot(m,color='sienna',label=f'Lick\n {sem.shape[1]} trials')
+        ax.fill_between(
+            range(0, int(range_val / binsize) * 2),
+            m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
+            m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
+            alpha=0.5,color='sienna'
             )                    
-        m=np.nanmean(rewstops_trials_cells,axis=1)
+        m=np.nanmean(rewstops_trials_cells,axis=1)/np.nanmax(nrewstops_w_licks_trials_cells,axis=1)
         sem = np.array([moving_average(s,window_size=5) for s in rewstops_trials_cells])
         m=moving_average(m, window_size=5)
-        ax.plot(m,color=colors[1],label=f'Rewarded stops\n{sem.shape[1]} trials')
+        ax.plot(m,color=colors[1],label=f'Rewarded\n{sem.shape[1]} trials')
         ax.fill_between(
             range(0, int(range_val / binsize) * 2),
             m - scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             m + scipy.stats.sem(sem, axis=1, nan_policy='omit'),
             alpha=0.5,color=colors[1]
             )                    
-
         ax.set_xlabel('Time from stop (s)')
-        ax.set_ylabel('Licks')
+        ax.set_ylabel('Norm lick rate')
         ax.axvline(int(range_val / binsize), color='k', linestyle='--')
         ax.spines[['top', 'right']].set_visible(False)    
         ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1,20))
@@ -360,11 +359,18 @@ for an_eg in range(len(animals)):
 #%%
 # average activity of all cells
 # get post rew / stop activity
-secs_post_rew=9 # window after stop
+secs_post_rew=10# window after stop
 mov_start=4
-nrewstops_wo_licks_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=(1,0)) for yy in xx] for xx in nrewstops_wo_licks_trials_per_an]
-nrewstops_w_licks_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=(1,0)) for yy in xx] for xx in nrewstops_w_licks_trials_per_an]
-rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=(1,0)) for yy in xx] for xx in rewstops_trials_per_an]
+# average of all cells
+# subtract from prewidnow
+pre=-5
+nrewstops_wo_licks_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=(1,0))-np.nanmean(np.hstack(yy)[int((range_val/binsize)+(pre/binsize)):int((range_val/binsize))],axis=(1,0)) for yy in xx] for xx in nrewstops_wo_licks_trials_per_an]
+nrewstops_w_licks_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=(1,0))-np.nanmean(np.hstack(yy)[int((range_val/binsize)+(pre/binsize)):int((range_val/binsize))],axis=(1,0)) for yy in xx] for xx in nrewstops_w_licks_trials_per_an]
+rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=(1,0))-np.nanmean(np.hstack(yy)[int((range_val/binsize)+(pre/binsize)):int((range_val/binsize))],axis=(1,0)) for yy in xx] for xx in rewstops_trials_per_an]
+# 1 cell per sequence?
+# nrewstops_wo_licks_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=0)[0] for yy in xx] for xx in nrewstops_wo_licks_trials_per_an]
+# nrewstops_w_licks_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=0)[0] for yy in xx] for xx in nrewstops_w_licks_trials_per_an]
+# rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=0)[0] for yy in xx] for xx in rewstops_trials_per_an]
 
 #%%
 # plot
@@ -384,32 +390,63 @@ df['trial_type'] = np.concatenate([['non_rewarded_stops_wo_licks']*len(nrewstops
                 ['rewarded_stops']*len(rewstops_trials_per_an_av_concat)])
 df['animal'] = np.concatenate([an_nrewstops_wo_licks_trials_per_an_av_concat,
             an_nrewstops_w_licks_trials_per_an_av_concat,an_rewstops_trials_per_an_av_concat])
-df=df.fillna(0)
-df=df[df.animal!='e189']
+df=df[(df.animal!='e189')&(df.animal!='e139')&(df.animal!='e200')&(df.animal!='e145')]
 # combined nonrew 
-non_reward_df = df[df['trial_type'].isin(['non_rewarded_stops_wo_licks', 'non_reward_stops_w_licks'])]
-non_reward_avg = non_reward_df.groupby('animal')['activity'].mean().reset_index()
-non_reward_avg['trial_type'] = 'non_rewarded_stops'
+# non_reward_df = df[df['trial_type'].isin(['non_rewarded_stops_wo_licks', 'non_reward_stops_w_licks'])]
+# non_reward_avg = non_reward_df.groupby('animal')['activity'].mean().reset_index()
+# non_reward_avg['trial_type'] = 'non_rewarded_stops'
 
-# Step 2: Keep rewarded trials as they are
-reward_df = df[df['trial_type'] == 'rewarded_stops']
-reward_avg = reward_df.groupby('animal')['activity'].mean().reset_index()
-reward_avg['trial_type'] = ['rewarded_stops']*len(reward_avg)
-# Step 3: Combine the averaged non-reward and rewarded data
-df = pd.concat([non_reward_avg, reward_avg], ignore_index=True)
+# # Step 2: Keep rewarded trials as they are
+# reward_df = df[df['trial_type'] == 'rewarded_stops']
+# reward_avg = reward_df.groupby('animal')['activity'].mean().reset_index()
+# reward_avg['trial_type'] = ['rewarded_stops']*len(reward_avg)
+# # Step 3: Combine the averaged non-reward and rewarded data
+# df = pd.concat([non_reward_avg, reward_avg], ignore_index=True)
 df=df.reset_index()
-df=df[(df.animal!='e139') & (df.animal!='e189') & (df.animal!='e145')]
-colors = ['firebrick','seagreen']
-palette = {'rewarded_stops':'seagreen', 'non_rewarded_stops': 'firebrick'}
-fig,ax=plt.subplots(figsize=(2,5))
-s=10
-sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,
-            palette=palette)
-sns.barplot(x='trial_type', y='activity',hue='trial_type', data=df, fill=False,
-            palette=palette)
+palette = {'rewarded_stops':'seagreen', 'non_rewarded_stops_wo_licks': 'firebrick', 'non_reward_stops_w_licks': 'sienna'}
+# plot all cells
+fig,axes=plt.subplots(ncols = 2, figsize=(7.5,5))
+ax=axes[0]
+sns.violinplot(x='trial_type', y='activity',hue='trial_type', data=df, palette=palette,ax=ax)
+df=df[df.activity>0]
+# Group data by trial type
+grouped = [group['activity'].values for name, group in df.groupby('trial_type')]
+# Perform Kruskal-Wallis test
+stat, pval = scipy.stats.kruskal(*grouped)
+print(f'Kruskal-Wallis H={stat:.3f}, p={pval:.3g}')
+# Get unique trial types
+trial_types = df['trial_type'].unique()
+# Create all pairwise comparisons
+comparisons = list(itertools.combinations(trial_types, 2))
+ax.set_xticklabels(['No licks','Licks','Rewarded'],rotation=20)
+ax.set_xlabel('')
+ax.set_ylabel('Mean $\Delta$ F/F (after-before mov.)')
+fig.suptitle('Stops\nPost-reward cells')
+ax.spines[['top','right']].set_visible(False)
+# Count number of cells per trial type
+cell_counts = df.groupby('trial_type').size()
+# Add count annotations to the plot
+for i, trial_type in enumerate(ax.get_xticks()):
+    count = cell_counts.iloc[i]
+    ax.text(
+        i, 
+        ax.get_ylim()[1] * 0.95,  # 95% of y-axis height
+        f'n={count}', 
+        ha='center', 
+        va='top', 
+        fontsize=10, 
+        color='black'
+    )
+    
+df = df.groupby(['animal', 'trial_type']).mean().reset_index()
+ax=axes[1]
+s=12
+order=['non_rewarded_stops_wo_licks','non_reward_stops_w_licks','rewarded_stops']
+sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,ax=ax,palette=palette,order=order)
+sns.barplot(x='trial_type', y='activity',hue='trial_type', data=df, fill=False,ax=ax,palette=palette,order=order)
 ax.spines[['top','right']].set_visible(False)
 
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=20)
 ans = df.animal.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x='trial_type', y='activity', 
@@ -421,14 +458,15 @@ import itertools
 from statsmodels.stats.multitest import multipletests
 
 # Perform ANOVA
-model = smf.ols('activity ~ trial_type', data=df).fit()
-anova_table = sm.stats.anova_lm(model, typ=2)
-print(anova_table)
-# Get unique trial types
+# Group data by trial type
+grouped = [group['activity'].values for name, group in df.groupby('trial_type')]
+# Perform Kruskal-Wallis test
+stat, pval = scipy.stats.kruskal(*grouped)
+print(f'Kruskal-Wallis H={stat:.3f}, p={pval:.3g}')
+v# Get unique trial types
 trial_types = df['trial_type'].unique()
 # Create all pairwise comparisons
 comparisons = list(itertools.combinations(trial_types, 2))
-
 # Store p-values
 p_values = []
 test_results = {}
@@ -469,12 +507,10 @@ for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corre
     p_text = f"p = {corrected_p:.3g}"
     ax.text((x1 + x2) / 2, y + y_offset * 0.3, p_text, 
              ha='center', va='bottom', fontsize=12)
-    ax.text((x1 + x2) / 2, y + y_offset * 0.3, '**', 
-             ha='center', va='bottom', fontsize=46)
-ax.set_xticklabels(['Unrewarded stops','Rewarded stops'])
-ax.set_ylabel('Average $\Delta F/F$')
+ax.set_xticklabels(['Licks','No licks','Rewarded'])
+ax.set_ylabel('')
 ax.set_xlabel('Trial type')
-fig.suptitle('Post-reward cells')
+fig.suptitle('Stops\nPost-reward cells')
 plt.savefig(os.path.join(savedst, 'postrew_cells_by_stop_trial_type.svg'),bbox_inches='tight')
 
 # %%

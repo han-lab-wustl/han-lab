@@ -39,7 +39,7 @@ for ii in range(len(conddf)):
     day = int(conddf.days.values[ii])
     animal = conddf.animals.values[ii]
     # skip e217 day
-    if ii!=187:#(conddf.optoep.values[ii]>1):
+    if ii!=191:#(conddf.optoep.values[ii]>1):
         if animal=='e145': pln=2  
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -52,7 +52,7 @@ for ii in range(len(conddf)):
 pdf.close()
 # save pickle of dcts
 with open(saveddataset, "wb") as fp:   #Pickling
-        pickle.dump(radian_alignment, fp) 
+    pickle.dump(radian_alignment, fp) 
 
 #%%
 # top down approach
@@ -62,7 +62,7 @@ with open(saveddataset, "wb") as fp:   #Pickling
 # tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
 # 1) get coms correct
 df = conddf.copy()
-df = df.drop([187]) # skipped e217 day
+df = df.drop([191]) # skipped e217 day
 # Filter out unwanted
 keep = ~((df.animals == 'z14') & (df.days < 15))
 keep &= ~((df.animals == 'z15') & (df.days < 8))
@@ -223,59 +223,56 @@ for wtest in windows:
 # rew cell %
 # separate out variables
 df = conddf.copy()
-df = df.drop([187]) # skipped e217 day
+df = df.drop([191]) # skipped e217 day
 # df=df.iloc[:120]
 pre_late = [xx[0] for xx in results_all]
 post_late = [xx[1] for xx in results_all]
 pre_early = [xx[2] for xx in results_all]
 post_early = [xx[3] for xx in results_all]
-
+plt.rc('font', size=20)
 # concat all cell type goal cell prop
 all_cells = [pre_late, post_late, pre_early, post_early]
 goal_cell_prop = np.concatenate([[xx['goal_cell_prop'] for xx in cll] for cll in all_cells])
-goal_cell_prop_shuffle_av = np.concatenate([[np.nanmean(xx['goal_cell_shuf_ps']) for xx in cll] for cll in all_cells])
 
 realdf= pd.DataFrame()
 realdf['goal_cell_prop']=goal_cell_prop
-realdf['goal_cell_prop_shuf']=goal_cell_prop_shuffle_av
 lbl = ['pre_late', 'post_late', 'pre_early', 'post_early']
 realdf['cell_type']=np.concatenate([[lbl[kk]]*len(cll) for kk,cll in enumerate(all_cells)])
 realdf['animal']=np.concatenate([df.animals]*len(all_cells))
 realdf['optoep']=np.concatenate([df.optoep]*len(all_cells))
-realdf['opto']=[True if xx>1 else False if xx<1 else np.nan for xx in realdf['optoep']]
+realdf['opto']=[True if xx>1 else False for xx in realdf['optoep']]
 realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
 realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
 realdf['day']=np.concatenate([df.days]*len(all_cells))
-realdf['goal_cell_prop_shuf'] = goal_cell_prop_shuffle_av
 # realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
-realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
+# realdf=realdf[~((realdf.animal=='z14')&((realdf.day<30)|(realdf.day.isin([32]))))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
-realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
-realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67]))))]
-# realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,26]))))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([57]))))]
+realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
+realdf=realdf[~((realdf.animal=='e218')&(realdf.day==55))]
 # realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
 #%%
 pl = {False: "slategray", True: 'darkorange'}
-dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
+dfagg = realdf#.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
 cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
 a=0.7;s=12
 fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
 for cl,cll in enumerate(dfagg.cell_type.unique()):
     ax=axes[cl]
     sns.barplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],fill=False,ax=ax,palette=pl,legend=False)
-    sns.stripplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],s=s,alpha=a,ax=ax,palette=pl,legend=False,dodge=True)
+    sns.stripplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],s=10,alpha=a,ax=ax,palette=pl,legend=False,dodge=True)
     ax.set_title(cllty[cl])
     ax.set_xlabel('')
     ax.set_ylabel('Reward cell %')
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
 plt.savefig(os.path.join(savedst, 'ledoff_v_ledon_reward_cellp_opto.svg'), bbox_inches='tight')
-
+#%%
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
 pivoted = dfagg.pivot_table(
@@ -284,6 +281,13 @@ pivoted = dfagg.pivot_table(
     values='goal_cell_prop',
     fill_value=0
 ).reset_index()
+# all sessions
+# pivoted = dfagg.reset_index().drop(columns=['index']).pivot(
+#     index=['animal', 'cell_type','day', 'condition'],  # keep all rows distinct
+#     columns='opto',
+#     values='goal_cell_prop'
+# ).reset_index()
+
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 # Rename the columns for clarity
 pivoted.columns.name = None  # remove multiindex name
@@ -343,6 +347,7 @@ for cl, cll in enumerate(cellty):
 
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_cell_type_reward_cellp_opto.svg'), bbox_inches='tight')
+#%%
 # Map old cell types to new ones
 cell_type_map = {
     'pre_late': 'late',
@@ -350,7 +355,6 @@ cell_type_map = {
     'post_late': 'late',
     'post_early': 'early'
 }
-
 # Copy and remap
 realdf_avg = realdf.copy()
 realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
@@ -424,7 +428,6 @@ plt.savefig(os.path.join(savedst, 'early_v_late_reward_cellp_opto.svg'), bbox_in
 
 realdf= pd.DataFrame()
 realdf['goal_cell_prop']=goal_cell_prop
-realdf['goal_cell_prop_shuf']=goal_cell_prop_shuffle_av
 lbl = ['pre_late', 'post_late', 'pre_early', 'post_early']
 realdf['cell_type']=np.concatenate([[lbl[kk]]*len(cll) for kk,cll in enumerate(all_cells)])
 realdf['animal']=np.concatenate([df.animals]*len(all_cells))
@@ -433,17 +436,15 @@ realdf['opto']=[True if xx>1 else False if xx<1 else np.nan for xx in realdf['op
 realdf['condition']=np.concatenate([df.in_type]*len(all_cells))
 realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.values]
 realdf['day']=np.concatenate([df.days]*len(all_cells))
-realdf['goal_cell_prop_shuf'] = goal_cell_prop_shuffle_av
 # realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
-realdf=realdf[~((realdf.animal=='z14')&(realdf.day<15))]
 realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
-realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day==26)))]
-realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67]))))]
-realdf=realdf[~((realdf.animal=='e218')&(realdf.day>44))]
+realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,26]))))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([57]))))]
+realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
+realdf=realdf[~((realdf.animal=='e218')&(realdf.day==55))]
 cell_type_map = {
     'pre_late': 'all',
     'pre_early': 'all',

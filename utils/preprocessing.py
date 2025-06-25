@@ -126,7 +126,7 @@ def fillops(ops, params):
     ops["delete_bin"]=params["delete_bin"] #False
     ops["move_bin"]=params["move_bin"]
     ops["save_mat"]=params["save_mat"]
-    ops["threshold_scaling"]=0.7 #TODO: make modular
+    ops["threshold_scaling"]=1 #TODO: make modular
     ops["max_iterations"]=30
     # added temp
     # ops["keep_movie_raw"]=1 #TODO: make modular

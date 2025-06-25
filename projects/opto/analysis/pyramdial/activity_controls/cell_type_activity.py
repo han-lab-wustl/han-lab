@@ -21,104 +21,8 @@ from projects.opto.analysis.pyramdial.placecell import process_goal_cell_proport
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from projects.pyr_reward.rewardcell import get_rewzones, intersect_arrays
-import numpy as np
 from joblib import Parallel, delayed
 from scipy.ndimage import gaussian_filter1d
-
-def compute_spatial_info(p_i, f_i):
-    f = np.sum(f_i * p_i)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        ratio = f_i / f
-        log_term = np.where(ratio > 0, np.log2(ratio), 0)
-        si = np.nansum(p_i * f_i * log_term)
-    return si
-
-def bin_activity_per_trial(position_trials, activity_trials, n_bins=90, track_length=270):
-    n_trials = len(position_trials)
-    trial_activity = np.zeros((n_trials, n_bins))
-    occupancy = np.zeros((n_trials, n_bins))
-    bin_edges = np.linspace(0, track_length, n_bins + 1)
-    
-    for i, (pos, act) in enumerate(zip(position_trials, activity_trials)):
-        bin_ids = np.digitize(pos, bin_edges) - 1
-        for b in range(n_bins):
-            in_bin = bin_ids == b
-            occupancy[i, b] = np.sum(in_bin)
-            if occupancy[i, b] > 0:
-                trial_activity[i, b] = np.mean(act[in_bin])
-    return trial_activity, occupancy
-
-def compute_trial_avg_si(activity_matrix, occupancy_matrix):
-    mean_activity = np.nanmean(activity_matrix, axis=0)
-    mean_occupancy = np.nansum(occupancy_matrix, axis=0)
-    p_i = mean_occupancy / np.nansum(mean_occupancy)
-    return compute_spatial_info(p_i, mean_activity)
-
-def shuffle_positions(position_trials, frame_rate):
-    shuffled = []
-    for pos in position_trials:
-        n = len(pos)
-        if n <= int(frame_rate):
-            shuffled.append(pos.copy())
-            continue
-        shift = np.random.randint(int(frame_rate), n)
-        shuffled.append(np.roll(pos, shift))
-    return shuffled
-
-def compute_shuffle_si_once(position_trials, activity_trials, frame_rate):
-    permuted_pos = shuffle_positions(position_trials, frame_rate)
-    binned, occ = bin_activity_per_trial(permuted_pos, activity_trials)
-    return compute_trial_avg_si(binned, occ)
-
-def compute_shuffle_distribution(position_trials, activity_trials, frame_rate, n_shuffles=100, n_jobs=-1):
-    return np.array(
-        Parallel(n_jobs=n_jobs)(
-            delayed(compute_shuffle_si_once)(position_trials, activity_trials, frame_rate)
-            for _ in range(n_shuffles)
-        )
-    )
-
-def is_place_cell(position_trials, activity_trials, frame_rate, n_shuffles=100, p=95, n_jobs=-1):
-    binned, occ = bin_activity_per_trial(position_trials, activity_trials)
-    real_si = compute_trial_avg_si(binned, occ)
-    shuffled_sis = compute_shuffle_distribution(position_trials, activity_trials, frame_rate, n_shuffles, n_jobs)
-    p_val = np.mean(real_si <= shuffled_sis)
-    return real_si > np.percentile(shuffled_sis, p), real_si, shuffled_sis, p_val
-from joblib import Parallel, delayed
-
-def run_place_cell_batch(position_trials, activity_trials_list, frame_rate, n_shuffles=100, n_jobs=-1):
-    """
-    Run place cell analysis on a batch of cells in parallel.
-
-    Parameters
-    ----------
-    position_trials : list of np.ndarray
-        Position arrays for each trial (same for all cells)
-    activity_trials_list : list of list of np.ndarray
-        One list per cell, containing trial-wise activity arrays
-    frame_rate : float
-        Sampling rate (e.g. frames/sec)
-    n_shuffles : int
-        Number of shuffles per cell
-    n_jobs : int
-        Number of parallel jobs (-1 = use all cores)
-
-    Returns
-    -------
-    results : list of tuples
-        Each tuple is (is_place_cell, real_si, shuffled_sis, p_val)
-    """
-    results = Parallel(n_jobs=n_jobs)(
-        delayed(is_place_cell)(
-            position_trials,
-            activity_trials,
-            frame_rate,
-            n_shuffles=n_shuffles,
-            n_jobs=1  # Important! Don’t nest parallel jobs
-        )
-        for activity_trials in activity_trials_list
-    )
-    return results
 
 #%%
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
@@ -129,10 +33,10 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 datadct = {} # overwrite
 save_shuf_info=[]
 place_window = 20
+cm_window = 20
 num_iterations=100
 bin_size=3 # cm
 bins=90
-a=0.05 # threshold for si detection
 
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -199,48 +103,7 @@ for ii in range(len(conddf)):
       # per epoch si
       # nshuffles=100   
       rz = get_rewzones(rewlocs,1/scalingf)
-      pcs_ep=[]; si_ep=[]
-      for ep in range(len(eps)-1):
-         eprng = np.arange(eps[ep], eps[ep+1])
-         trials=trialnum[eprng]
-         activity_trials=dFF[eprng,:]
-         position_trials = ybinned[eprng]
-         pcs = []; si=[]
-         # position_trials = [np.array(...), ...]      # shared position per trial
-         # activity_trials_list = [[trial1_cell1, ...], [trial1_cell2, ...], ...]  # each sublist = one cell
-         activity_trials_list = [[activity_trials[trials==tr][:,cll] for tr in np.unique(trials)] for cll in np.arange(activity_trials.shape[1])]
-         pos = [position_trials[trials==tr] for tr in np.unique(trials)]
-         # make first pos 1.5 again
-         pos_corr=[]
-         for xx in pos:
-            xx[0]=1.5
-            pos_corr.append(xx)
-         # fast shuf
-         results = run_place_cell_batch(
-            position_trials=pos_corr,
-            activity_trials_list=activity_trials_list,
-            frame_rate=fr,            # or whatever your frame rate is
-            n_shuffles=num_iterations,
-            n_jobs=8
-         )
-         place_cell_flags = [r[0] for r in results]
-         real_sis = [r[1] for r in results]
-         shuffle_sis = [r[2] for r in results]
-         p_values = [r[3] for r in results]
-         pcs_ep.append(np.array(p_values)<a); si_ep.append(real_sis)
-      spatially_tuned = np.sum(np.array(pcs_ep),axis=0)>0 # if tuned in any epoch
-      save_shuf_info.append([pcs_ep,si_ep,spatially_tuned])
-      dFF_si=dFF[:,spatially_tuned]
-      Fc3_si=Fc3[:,spatially_tuned] # replace to make easier
-      if conddf.optoep.values[ii]<2: 
-         eptest = random.randint(2,3)      
-      if len(eps)<4: eptest = 2 # if no 3 epochs
       comp = [eptest-2,eptest-1] # eps to compare, python indexing   
-      cm_window=20
-      # TODO:
-      # get rew cells activity and %
-      # get place dff and %
-      # get other spatial tuned cells activity and %
       # tc w/ dark time
       print('making tuning curves...\n')
       track_length_dt = 550 # cm estimate based on 99.9% of ypos
@@ -284,16 +147,11 @@ for ii in range(len(conddf)):
       # tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
       # rewsize,bin_size) # last 5 trials
       # # all goal
-      goal_cells = np.unique(np.concatenate([xx['goal_id'] for xx in [results_pre, results_post]]))
+      goal_cells = np.unique(np.concatenate([xx['goal_id'] for xx in [results_pre, results_post]])).astype(int)
       print(f'\n pre si restriction: {len(goal_cells)} rew cells')
-      # remove goal cells that do not pass spatial info metric!!!
-      not_sp_tuned = np.arange(Fc3.shape[1])[~spatially_tuned]
-      goal_cells = [xx for xx in goal_cells if xx not in not_sp_tuned]
-      print(f'\n post si restriction: {len(goal_cells)} rew cells')
       perm = [(eptest-2, eptest-1)]   
       print(eptest, perm)            
       # get cells that maintain their coms across at least 2 epochs
-      place_window = 20 # cm converted to rad                
       com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
       compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
       # get cells across all epochs that meet crit
@@ -302,7 +160,7 @@ for ii in range(len(conddf)):
       if len(compc)>0:
          pcs_all = intersect_arrays(*compc)
          # exclude no sp cells
-         pcs_all=[xx for xx in pcs_all if xx not in not_sp_tuned]
+         # pcs_all=[xx for xx in pcs_all if xx not in not_sp_tuned]
          # exclude goal cells
          pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
       else:
@@ -310,10 +168,24 @@ for ii in range(len(conddf)):
       pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
       pc_p=len(pcs_all)/len(coms_correct_abs[0])
       # get % of other spatially tuned cells
-      spatially_tuned_not_rew_place = [xx for xx in range(Fc3.shape[1]) if xx not in not_sp_tuned and xx not in pcs_all and xx not in goal_cells]
+      spatially_tuned_not_rew_place = [xx for xx in range(Fc3.shape[1]) if xx not in pcs_all and xx not in goal_cells]
       spatially_tuned_not_rew_place_p=len(spatially_tuned_not_rew_place)/len(coms_correct_abs[0])
       print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
-      datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
+      # get activity, pre vs. post
+      for ep in range(len(eps)-1):
+         eprng = np.arange(eps[ep], eps[ep+1])
+         ypos = ybinned[eprng]
+         # leading up to and in rew zone
+         spatially_tuned_not_rew_place_act_pre = np.nanmean(dFF[eprng,:][:,spatially_tuned_not_rew_place][(ypos<rewlocs[ep]+rewsize/2),:],axis=0)
+         # post
+         spatially_tuned_not_rew_place_act_post = np.nanmean(dFF[eprng,:][:,spatially_tuned_not_rew_place][(ypos>rewlocs[ep]+rewsize/2),:],axis=0)
+         place_pre = np.nanmean(dFF[eprng,:][:,pcs_all][(ypos<rewlocs[ep]+rewsize/2),:],axis=0)
+         place_post = np.nanmean(dFF[eprng,:][:,pcs_all][(ypos>rewlocs[ep]+rewsize/2),:],axis=0)
+         rew_pre = np.nanmean(dFF[eprng,:][:,np.array(results_pre['goal_id']).astype(int)][(ypos<rewlocs[ep]+rewsize/2),:],axis=0)
+         rew_post = np.nanmean(dFF[eprng,:][:,np.array(results_post['goal_id']).astype(int)][(ypos>rewlocs[ep]+rewsize/2),:],axis=0)
+         prerew_post = np.nanmean(dFF[eprng,:][:,np.array(results_pre['goal_id']).astype(int)][(ypos>rewlocs[ep]+rewsize/2),:],axis=0)
+
+      datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post, comp,spatially_tuned_not_rew_place_act_pre, spatially_tuned_not_rew_place_act_post,place_pre,place_post,rew_pre,rew_post,prerew_post]
 #%%
 # per cell prop comparison
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]

@@ -3,6 +3,7 @@ get reward distance cells between opto and non opto conditions
 oct 2024
 mods in june 2025
 control vs. opto epoch only
+
 """
 
 #%%
@@ -30,7 +31,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 # get all cell activity
 dff=[]
 for ii in range(len(conddf)):
-   if ii!=187:
+   if ii!=191:
       if ii%10==0: print(ii)
       dff.append(get_dff_opto(conddf, ii, pc=True))
 #%%
@@ -50,38 +51,35 @@ df['days'] = np.concatenate([[cond]*(dff[ii][0].shape[1]) for ii,cond in enumera
 df['optoep'] = np.concatenate([[cond]*(dff[ii][0].shape[1]) for ii,cond in enumerate(dfc.optoep)])
 
 # df['opto'] = df.optoep.values>1
-df=df[~((df.animals=='z14')&(df.days<15))]
 df=df[~((df.animals=='z15')&(df.days<8))]
-df=df[~((df.animals=='z17')&(df.days<11))]
-df=df[~((df.animals=='e217')&((df.days<9)|(df.days==26)))]
-df=df[~((df.animals=='e216')&((df.days<32)))]
-df=df[~((df.animals=='e200')&((df.days.isin([67]))))]
-df=df[~((df.animals=='e218')&(df.days>44))]
-
+df=df[~((df.animals=='e217')&(df.days<9)&(df.days==26))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+# df=df[~((df.animals=='e218')&(df.days>44))]
+# df=df[df['dff_target-prev']<.4] # xclude outlier fl days
 #%%
-df = df.loc[~((df.animals=='e190')|(df.animals=='e189'))] # exclude noisy days
-df=df[df.optoep.values>1]
-df=df.groupby(['animals', 'days','condition']).mean(numeric_only=True)
+dforg = df.loc[~((df.animals=='e190')|(df.animals=='e189'))] # exclude noisy days
+ =dforg[dforg.optoep.values>1]
+df=dforg.groupby(['animals','condition']).median(numeric_only=True)
 df=df.reset_index()
-#%%
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
-fig,ax = plt.subplots(figsize=(4,5))
-# sns.stripplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,palette=pl, ax=ax,alpha=.5)
-sns.violinplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,palette=pl,ax=ax)
+fig,ax = plt.subplots(figsize=(3,5))
+sns.stripplot(x="condition", y="dff_target", hue = 'condition',s=12, data=df,palette=pl, ax=ax,alpha=.7)
+sns.barplot(x="condition", y="dff_target", hue = 'condition', data=df,palette=pl, ax=ax,fill=False,errorbar='se')
+# sns.violinplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,palette=pl,ax=ax) 
 
 ax.spines[['top','right']].set_visible(False)
 # ax.get_legend().set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Norm. $\\Delta$ F/F (LEDon-LEDoff)')
+ax.set_ylabel(f'Mean $\\Delta F/F$')
 # ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
 ax.set_xlabel('')
 # Prepare groups by condition
 groups = [group['dff_target-prev'].values for name, group in df.groupby('condition')]
 # Unique conditions
 conds = df['condition'].unique()
-
 # Collect data by condition
-data_by_group = {cond: df[df['condition'] == cond]['dff_target-prev'].values for cond in conds}
+data_by_group = {cond: df[df['condition'] == cond]['dff_target'].values for cond in conds}
 # Perform Kruskal-Wallis H-test
 h_stat, p_val = scipy.stats.kruskal(*groups)
 import itertools
@@ -98,7 +96,7 @@ for (g1, g2) in comparisons:
     results.append((g1, g2, stat, p))
 
 # Multiple comparisons correction
-rejected, pvals_corrected = smm.multipletests(pvals, method='fdr_bh')[:2]
+# rejected, pvals_corrected = smm.multipletests(pvals, method='fdr_bh')[:2]
 def get_xtick_positions(ax, conds):
     xticks = []
     for label in conds:
@@ -110,11 +108,11 @@ def get_xtick_positions(ax, conds):
 
 xtick_map = get_xtick_positions(ax, conds)
 y_max = df['dff_target-prev'].max()
-
-for idx, ((g1, g2, _, raw_p), corr_p, sig) in enumerate(zip(results, pvals_corrected, rejected)):
+h=0.03
+for idx, ((g1, g2, _, raw_p), corr_p, sig) in enumerate(zip(results, pvals, rejected)):
       x1, x2 = xtick_map[conds.tolist().index(g1)], xtick_map[conds.tolist().index(g2)]
-      y = y_max + 0.05 + idx * 0.05
-      ax.plot([x1, x1, x2, x2], [y - 0.01, y, y, y - 0.01], lw=1.5, color='k')
+      y = y_max + h + idx * h/3
+      ax.plot([x1, x1, x2, x2], [y - 0.003, y, y, y - 0.003], lw=1.5, color='k')
       annotation = f"p = {corr_p:.3f}"
       ax.text((x1 + x2) / 2, y - 0.015, annotation, ha='center', va='bottom', fontsize=14)
 ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)

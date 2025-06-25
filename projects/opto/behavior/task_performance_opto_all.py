@@ -101,14 +101,18 @@ df['opto'] = conddf.optoep.values>1
 df['condition'] = ['ctrl' if 'vip' not in xx else xx for xx in conddf.in_type.values]
 df = df[(df.animals!='e189')]
 df=df[(df.optoep.values>1)]
-df=df.drop([2,3,5,7,17,18,24,35,37]) # z14, z15, z17 excluded days
+df=df[~((df.animals=='z15')&(df.days<6))]
+df=df[~((df.animals=='z14')&(df.days<33))]
+df=df[~((df.animals=='z17')&(df.days.isin([3,4,11,12,18,22])))]
+# df=df[~((df.animals=='z9')&(df.days.isin([20,15])))]
+# df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([21,26]))))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+# df=df[~((df.animals=='e218')&(df.days==55))]
 # plot rates vip vs. ctl led off and on
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
-bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
-bigdf_plot = bigdf_plot.reset_index()
-model = ols('rates_diff ~ C(condition)', data=bigdf_plot).fit()
-anova_table = anova_lm(model, typ=2)
-print(anova_table)
+bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True).reset_index()
+
 # Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
 conds = ['ctrl', 'vip', 'vip_ex']
 comparisons = list(itertools.combinations(conds, 2))[:-1]
@@ -158,6 +162,7 @@ for i, (c1, c2) in enumerate(comparisons):
 # ax.set_ylim([-35,10])
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'),  bbox_inches='tight')
+df.to_csv(r'Z:\condition_df\vip_opto_behavior.csv')
 #%%
 # Step 1: Calculate the means and standard deviations
 group1=x1;group2=x2
