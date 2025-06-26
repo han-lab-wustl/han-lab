@@ -37,15 +37,13 @@ cm_window = 20
 num_iterations=100
 bin_size=3 # cm
 bins=90
-
+#%%
 # iterate through all animals
 for ii in range(len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    # check if its the last 3 days of animal behavior
-   andf = conddf[(conddf.animals==animal)]
-   lastdays = andf.days.values#[-3:]
-   if (day in lastdays):
+   if ii!=204:#(day in lastdays):
       if animal=='e145': pln=2 
       else: pln=0
       params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -98,8 +96,8 @@ for ii in range(len(conddf)):
       Fc3=Fc3_org[:, skew>2]
       # low cells
       if animal=='e217' or animal=='z17' or animal=='z14' or animal=='e200':
-         dFF=dFF_org[:, skew>1]
-         Fc3=Fc3_org[:, skew>1]
+         dFF=dFF_org[:, skew>1.5]
+         Fc3=Fc3_org[:, skew>1.5]
       # per epoch si
       # nshuffles=100   
       rz = get_rewzones(rewlocs,1/scalingf)
@@ -172,6 +170,7 @@ for ii in range(len(conddf)):
       spatially_tuned_not_rew_place_p=len(spatially_tuned_not_rew_place)/len(coms_correct_abs[0])
       print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
       # get activity, pre vs. post
+      activity=[]
       for ep in range(len(eps)-1):
          eprng = np.arange(eps[ep], eps[ep+1])
          ypos = ybinned[eprng]
@@ -184,14 +183,183 @@ for ii in range(len(conddf)):
          rew_pre = np.nanmean(dFF[eprng,:][:,np.array(results_pre['goal_id']).astype(int)][(ypos<rewlocs[ep]+rewsize/2),:],axis=0)
          rew_post = np.nanmean(dFF[eprng,:][:,np.array(results_post['goal_id']).astype(int)][(ypos>rewlocs[ep]+rewsize/2),:],axis=0)
          prerew_post = np.nanmean(dFF[eprng,:][:,np.array(results_pre['goal_id']).astype(int)][(ypos>rewlocs[ep]+rewsize/2),:],axis=0)
+         # per epoch activity
+         activity.append([spatially_tuned_not_rew_place_act_pre, spatially_tuned_not_rew_place_act_post,place_pre,place_post,rew_pre,rew_post,prerew_post])
+      datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post, comp,activity]
+      
+# save pickle of dcts
+with open(r'Z:\condition_df\activity_vip_opto.p', "wb") as fp:   #Pickling
+    pickle.dump(datadct, fp) 
 
-      datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post, comp,spatially_tuned_not_rew_place_act_pre, spatially_tuned_not_rew_place_act_post,place_pre,place_post,rew_pre,rew_post,prerew_post]
 #%%
 # per cell prop comparison
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
 placecell_p=[v[1] for k,v in datadct.items()]
 pre_p=[v[2]['goal_cell_prop'] for k,v in datadct.items()]
 post_p=[v[3]['goal_cell_prop'] for k,v in datadct.items()]
+epoch_comp=[np.array(v[4]) for k,v in datadct.items()] 
+activities=[v[5] for k,v in datadct.items()]
+
+spatially_tuned_not_rew_place_act_pre=[[v[ep][0] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+spatially_tuned_not_rew_place_act_post=[[v[ep][1] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+place_pre=[[v[ep][2] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+place_post=[[v[ep][3] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+rew_pre=[[v[ep][4] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+rew_post=[[v[ep][5] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+prerew_post=[[v[ep][6] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
+#%% 
+#normalize by pprev epoch
+spatially_tuned_not_rew_place_act_pre=[xx[1]-xx[0] for xx in spatially_tuned_not_rew_place_act_pre]
+spatially_tuned_not_rew_place_act_post=[xx[1]-xx[0] for xx in spatially_tuned_not_rew_place_act_post]
+place_pre=[xx[1]-xx[0] for xx in place_pre]
+place_post=[xx[1]-xx[0] for xx in place_post]
+rew_pre=[xx[1]-xx[0] for xx in rew_pre]
+rew_post=[xx[1]-xx[0] for xx in rew_post]
+prerew_post=[xx[1]-xx[0] for xx in prerew_post]
+
+# vs. not normalized
+# spatially_tuned_not_rew_place_act_pre=[xx[1] for xx in spatially_tuned_not_rew_place_act_pre]
+# spatially_tuned_not_rew_place_act_post=[xx[1] for xx in spatially_tuned_not_rew_place_act_post]
+# place_pre=[xx[1] for xx in place_pre]
+# place_post=[xx[1] for xx in place_post]
+# rew_pre=[xx[1] for xx in rew_pre]
+# rew_post=[xx[1] for xx in rew_post]
+# prerew_post=[xx[1] for xx in prerew_post]
+
+#%%
+# activities
+df=pd.DataFrame()
+df['norm_dff']=np.concatenate([np.concatenate(spatially_tuned_not_rew_place_act_pre),np.concatenate(place_pre),np.concatenate(rew_pre)])
+allty=[np.concatenate(spatially_tuned_not_rew_place_act_pre),np.concatenate(place_pre),np.concatenate(rew_pre)]
+alltyorg=[spatially_tuned_not_rew_place_act_pre,place_pre,rew_pre]
+lbl=['other_spatially_tuned','place','rew']
+df['type']=np.concatenate([[lbl[i]]*len(allty[i]) for i in range(len(lbl))])
+an=[k.split('_')[0] for k,v in datadct.items()]*len(allty)
+# Map animal IDs per cell
+animals_per_type = []
+for ct,cell_group in enumerate(alltyorg):
+   for ii, arr in enumerate(cell_group):
+      animal_id = list(datadct.keys())[ii].split('_')[0]
+      animals_per_type.extend([animal_id] * len(arr))
+df['animals'] = animals_per_type
+day_per_type = []
+for ct,cell_group in enumerate(alltyorg):
+   for ii, arr in enumerate(cell_group):
+      dy = int(list(datadct.keys())[ii].split('_')[1])
+      day_per_type.extend([dy] * len(arr))
+df['days']=day_per_type
+df = df.merge(conddf[['animals', 'days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
+df['opto']=df['optoep']>1
+df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
+df=df[(df.animals!='e189')&(df.animals!='e190')]
+keep = ~((df.animals == 'z15') & (df.days < 9))
+keep = ~((df.animals == 'z17') & (df.days < 11))
+keep = ~((df.animals == 'e217') &((df.days.isin([18,21,26,29,30]))))
+# keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
+keep &= ~((df.animals=='e200')&((df.days.isin([67,68,81]))))
+keep &= ~((df.animals=='e218')&(df.days==55))
+df = df[keep].reset_index(drop=True)
+df=df[df.animals!='e217']
+# Set up plot
+titles=['LEDon day', 'LEDoff day']
+fig, axes= plt.subplots(ncols=2,figsize=(8,4),sharex=True,sharey=True)
+for cc,cond in enumerate([True, False]):
+   ax=axes[cc]
+   dfc=df[df.opto==cond]
+   # per an
+   dfagg=dfc.groupby(['animals', 'days','type', 'condition']).median(numeric_only=True).reset_index()
+   sns.barplot(y='norm_dff', x='type', hue='condition', data=dfagg,errorbar='se',dodge=True,fill=False,ax=ax,legend=False)
+   sns.stripplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True,ax=ax)
+   ax.set_title(titles[cc])
+   ax.set_ylabel('Pre-reward mean $\Delta$ F/F (Target ep.-Control ep.)')
+   paired_stats=[]
+   for t in dfagg['type'].unique():
+      df_paired = dfagg[dfagg['type'] == t].pivot(index=['animals','days'], columns='condition', values='norm_dff')
+      if df_paired.shape[1] >= 2:
+         conds = df_paired.columns
+         for c1, c2 in combinations(conds, 2):
+               if c1 in df_paired.columns and c2 in df_paired.columns:
+                  try:
+                     w, p = scipy.stats.ranksums(df_paired[c1], df_paired[c2], nan_policy='omit')
+                     paired_stats.append((t, c1, c2, p))
+                     print(f"{t}: {c1} vs {c2} --> Wilcoxon W={w:.2f}, p={p:.4f}")
+                  except ValueError:
+                     print(f"{t}: {c1} vs {c2} --> Not enough paired data")
+
+   for i, (typ, c1, c2, p) in enumerate(paired_stats):
+      if p < 0.05:
+         x = list(dfagg['type'].unique()).index(typ)
+         ax.annotate(f'{c1} vs {c2}\n*p*={p:.3g}', 
+                     xy=(x, .1+i*0.03), ha='center')
+#%%
+# post
+# activities
+df=pd.DataFrame()
+df['norm_dff']=np.concatenate([np.concatenate(spatially_tuned_not_rew_place_act_post),np.concatenate(place_post),np.concatenate(rew_post),np.concatenate(prerew_post)])
+allty=[np.concatenate(spatially_tuned_not_rew_place_act_post),np.concatenate(place_post),np.concatenate(rew_post),np.concatenate(prerew_post)]
+alltyorg=[spatially_tuned_not_rew_place_act_post,place_post,rew_post,prerew_post]
+lbl=['other_spatially_tuned','place','rew','prerew_post']
+df['type']=np.concatenate([[lbl[i]]*len(allty[i]) for i in range(len(lbl))])
+an=[k.split('_')[0] for k,v in datadct.items()]*len(allty)
+# Map animal IDs per cell
+animals_per_type = []
+for ct,cell_group in enumerate(alltyorg):
+   for ii, arr in enumerate(cell_group):
+      animal_id = list(datadct.keys())[ii].split('_')[0]
+      animals_per_type.extend([animal_id] * len(arr))
+df['animals'] = animals_per_type
+day_per_type = []
+for ct,cell_group in enumerate(alltyorg):
+   for ii, arr in enumerate(cell_group):
+      dy = int(list(datadct.keys())[ii].split('_')[1])
+      day_per_type.extend([dy] * len(arr))
+df['days']=day_per_type
+df = df.merge(conddf[['animals', 'days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
+df['opto']=df['optoep']>1
+df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
+df=df[(df.animals!='e189')&(df.animals!='e190')]
+keep = ~((df.animals == 'z15') & (df.days < 9))
+keep = ~((df.animals == 'e217') &((df.days < 9) | (df.days.isin([21,26]))))
+# keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
+keep &= ~((df.animals=='e200')&((df.days.isin([67,68,81]))))
+keep &= ~((df.animals=='e218')&(df.days==55))
+df = df[keep].reset_index(drop=True)
+df=df[df.animals!='e217']
+# Set up plot
+# Set up plot
+titles=['LEDon day', 'LEDoff day']
+fig, axes= plt.subplots(ncols=2,figsize=(8,4),sharex=True,sharey=True)
+for cc,cond in enumerate([True, False]):
+   ax=axes[cc]
+   dfc=df[df.opto==cond]
+   dfc=dfc[dfc.norm_dff<2]
+   # per an
+   dfagg=dfc.groupby(['animals', 'type', 'condition']).median(numeric_only=True).reset_index()
+   sns.boxplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True, fill=False,ax=ax,legend=False)
+   # sns.stripplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True,ax=ax)
+   ax.set_title(titles[cc])
+   ax.set_ylabel('Post-reward mean $\Delta$ F/F (Target ep.-Control ep.)')
+   paired_stats=[]
+   for t in dfagg['type'].unique():
+      df_paired = dfagg[dfagg['type'] == t].pivot(index=['animals','days'], columns='condition', values='norm_dff')
+      if df_paired.shape[1] >= 2:
+         conds = df_paired.columns
+         for c1, c2 in combinations(conds, 2):
+               if c1 in df_paired.columns and c2 in df_paired.columns:
+                  try:
+                     w, p = scipy.stats.ranksums(df_paired[c1], df_paired[c2], nan_policy='omit')
+                     paired_stats.append((t, c1, c2, p))
+                     print(f"{t}: {c1} vs {c2} --> Wilcoxon W={w:.2f}, p={p:.4f}")
+                  except ValueError:
+                     print(f"{t}: {c1} vs {c2} --> Not enough paired data")
+
+   for i, (typ, c1, c2, p) in enumerate(paired_stats):
+      if p < 0.05:
+         x = list(dfagg['type'].unique()).index(typ)
+         ax.annotate(f'{c1} vs {c2}\n*p*={p:.3g}', 
+                     xy=(x, .3-i*0.1), ha='center')
+
+#%% 
 
 df=pd.DataFrame()
 df['proportions']=np.concatenate([spatially_tuned_not_rew_place,placecell_p,pre_p,post_p])
@@ -201,19 +369,20 @@ df['type']=np.concatenate([[lbl[i]]*len(allty[i]) for i in range(len(lbl))])
 df['animals']=[k.split('_')[0] for k,v in datadct.items()]*len(allty)
 df['days']=[int(k.split('_')[1]) for k,v in datadct.items()]*len(allty)
 df = df.merge(conddf[['animals', 'days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
-df['opto']=df['optoep']>-1
+df['opto']=df['optoep']>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
-keep = ~((df.animals == 'z14') & (df.days < 15))
-keep &= ~((df.animals == 'z15') & (df.days < 8))
-keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
-keep &= ~((df.animals == 'e216') & (df.days < 32))
-keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
-# keep &= ~((df.animals=='e218')&(df.days>44))
+df=df[(df.animals!='e189')&(df.animals!='e190')]
+keep = ~((df.animals == 'z15') & (df.days < 9))
+keep = ~((df.animals == 'e217') &((df.days < 9) & (df.days.isin([21,26]))))
+keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
+keep &= ~((df.animals=='e200')&((df.days.isin([67,68,81]))))
+keep &= ~((df.animals=='e218')&(df.days==55))
 df = df[keep].reset_index(drop=True)
+# remove outlier days
 
 # Get non-opto averages to subtract
 non_opto_means = (
-    df[df.opto == False]
+    df[df.optoep<1]
     .groupby(['animals', 'type', 'condition'])['proportions']
     .mean()
     .reset_index()
@@ -231,7 +400,9 @@ cell_types = df_opto['type'].unique()
 
 # Set up plot
 plt.figure(figsize=(5, 6))
-ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto, errorbar='se')
+ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto,dodge=True, errorbar='se',fill=False)
+ax = sns.stripplot(y='norm_proportions', x='type', hue='condition', data=df_opto,dodge=True)
+
 ax.set_xlabel('Opto - No-Opto Δ (Proportion)')
 ax.set_ylabel('Cell Type')
 ax.set_title('Optogenetic Modulation of Goal/Place Cell Proportions')

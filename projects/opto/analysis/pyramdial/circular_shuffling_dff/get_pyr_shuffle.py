@@ -133,9 +133,9 @@ num_iterations=100
 bin_size=3 # cm
 bins=90
 a=0.05 # threshold for si detection
-
+#%%
 # iterate through all animals
-for ii in range(len(conddf)):
+for ii in range(174,len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    # check if its the last 3 days of animal behavior
@@ -315,6 +315,9 @@ for ii in range(len(conddf)):
       print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
       datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
 #%%
+with open(r'Z:\condition_df\circ_shuffle_vip_opto.p', "wb") as fp: 
+   pickle.dump(datadct, fp) 
+#%%
 # per cell prop comparison
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
 placecell_p=[v[1] for k,v in datadct.items()]
@@ -328,13 +331,14 @@ lbl=['other_spatially_tuned','place','pre','post']
 df['type']=np.concatenate([[lbl[i]]*len(allty[i]) for i in range(len(lbl))])
 df['animals']=[k.split('_')[0] for k,v in datadct.items()]*len(allty)
 df['days']=[int(k.split('_')[1]) for k,v in datadct.items()]*len(allty)
-df = df.merge(conddf[['animals', 'days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
-df['opto']=df['optoep']>-1
+df = df.merge(conddf[['animals','days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
+df['opto']=df['optoep']>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
 keep = ~((df.animals == 'z14') & (df.days < 15))
 keep &= ~((df.animals == 'z15') & (df.days < 8))
 keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
 keep &= ~((df.animals == 'e216') & (df.days < 32))
+
 keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
 # keep &= ~((df.animals=='e218')&(df.days>44))
 df = df[keep].reset_index(drop=True)
@@ -342,14 +346,14 @@ df = df[keep].reset_index(drop=True)
 # Get non-opto averages to subtract
 non_opto_means = (
     df[df.opto == False]
-    .groupby(['animals', 'type', 'condition'])['proportions']
+    .groupby(['animals','type', 'condition'])['proportions']
     .mean()
     .reset_index()
     .rename(columns={'proportions': 'baseline'})
 )
 # Merge with opto trials
 df_opto = df[df.opto == True].copy()
-df_opto = df_opto.merge(non_opto_means, on=['animals', 'type', 'condition'], how='left')
+df_opto = df_opto.merge(non_opto_means, on=['animals','type', 'condition'], how='left')
 # Compute normalized proportions
 df_opto['norm_proportions'] = df_opto['proportions']-df_opto['baseline']
 df_opto = df_opto.groupby(['animals', 'type', 'condition']).mean(numeric_only=True).reset_index()
@@ -359,7 +363,9 @@ cell_types = df_opto['type'].unique()
 
 # Set up plot
 plt.figure(figsize=(5, 6))
-ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto, errorbar='se')
+ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto, errorbar='se',fill=False)
+sns.stripplot(y='norm_proportions', x='type', hue='condition', data=df_opto,dodge=True)
+
 ax.set_xlabel('Opto - No-Opto Δ (Proportion)')
 ax.set_ylabel('Cell Type')
 ax.set_title('Optogenetic Modulation of Goal/Place Cell Proportions')
