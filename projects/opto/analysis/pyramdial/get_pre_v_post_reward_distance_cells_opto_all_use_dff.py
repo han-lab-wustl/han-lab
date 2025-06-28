@@ -16,19 +16,19 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.opto.analysis.pyramdial.placecell import get_rew_cells_opto
+from projects.opto.analysis.pyramdial.placecell import get_rew_cells_opto_dff
 import warnings
 warnings.filterwarnings("ignore")
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
-savepth = os.path.join(savedst, 'vip_opto_reward_relative.pdf')
+savepth = os.path.join(savedst, 'vip_opto_dff_rewcells.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
-with open(saveddataset, "rb") as fp: #unpickle
-    radian_alignment_saved = pickle.load(fp)
-# initialize var
-# radian_alignment_saved = {} # overwrite
+saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto_dff.p"
+# with open(saveddataset, "rb") as fp: #unpickle
+#     radian_alignment_saved = pickle.load(fp)
+# # initialize var
+radian_alignment_saved = {} # overwrite
 results_all=[]
 radian_alignment = {}
 cm_window = 20
@@ -44,7 +44,7 @@ for ii in range(len(conddf)):
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
-        radian_alignment, results_pre, results_post, results_pre_early, results_post_early = get_rew_cells_opto(
+        radian_alignment, results_pre, results_post, results_pre_early, results_post_early = get_rew_cells_opto_dff(
             params_pth, pdf, radian_alignment_saved, animal, day, ii, conddf, 
             radian_alignment, cm_window=cm_window)
         results_all.append([results_pre, results_post, results_pre_early, results_post_early])
@@ -62,11 +62,11 @@ with open(saveddataset, "wb") as fp:   #Pickling
 # tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
 # 1) get coms correct
 df = conddf.copy()
-df = df.drop([191]) # skipped e217 day
+df = df.drop([202]) # skipped e217 day
 # Filter out unwanted
 keep = ~((df.animals == 'z14') & (df.days < 15))
 keep &= ~((df.animals == 'z15') & (df.days < 8))
-keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days.isin[26,29,30])))
+keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days.isin([26,29,30]))))
 keep &= ~((df.animals == 'e216') & (df.days < 32))
 keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
 keep &= ~((df.animals=='e218')&(df.days>44))

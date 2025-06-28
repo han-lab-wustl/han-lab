@@ -35,18 +35,25 @@ def compute_spatial_info(p_i, f_i):
 
 def bin_activity_per_trial(position_trials, activity_trials, n_bins=90, track_length=270):
     n_trials = len(position_trials)
-    trial_activity = np.zeros((n_trials, n_bins))
-    occupancy = np.zeros((n_trials, n_bins))
-    bin_edges = np.linspace(0, track_length, n_bins + 1)
-    
-    for i, (pos, act) in enumerate(zip(position_trials, activity_trials)):
-        bin_ids = np.digitize(pos, bin_edges) - 1
+    trial_activity = np.zeros((n_trials, n_bins), dtype=np.float32)
+    occupancy = np.zeros((n_trials, n_bins), dtype=np.float32)
+    bin_edges = np.linspace(0, track_length, n_bins + 1, dtype=np.float32)
+
+    for i in range(n_trials):
+        pos = np.asarray(position_trials[i], dtype=np.float32)
+        act = np.asarray(activity_trials[i], dtype=np.float32)
+        bin_ids = np.digitize(pos, bin_edges, right=False) - 1
+
         for b in range(n_bins):
-            in_bin = bin_ids == b
-            occupancy[i, b] = np.sum(in_bin)
-            if occupancy[i, b] > 0:
-                trial_activity[i, b] = np.mean(act[in_bin])
+            in_bin = (bin_ids == b)
+            n_in_bin = np.sum(in_bin)
+            if n_in_bin > 0:
+                occupancy[i, b] = n_in_bin
+                trial_activity[i, b] = np.mean(act[in_bin], dtype=np.float32)
+
     return trial_activity, occupancy
+
+
 
 def compute_trial_avg_si(activity_matrix, occupancy_matrix):
     mean_activity = np.nanmean(activity_matrix, axis=0)
@@ -55,27 +62,26 @@ def compute_trial_avg_si(activity_matrix, occupancy_matrix):
     return compute_spatial_info(p_i, mean_activity)
 
 def shuffle_positions(position_trials, frame_rate):
-    shuffled = []
     for pos in position_trials:
         n = len(pos)
         if n <= int(frame_rate):
-            shuffled.append(pos.copy())
-            continue
-        shift = np.random.randint(int(frame_rate), n)
-        shuffled.append(np.roll(pos, shift))
-    return shuffled
+            yield np.asarray(pos, dtype=np.float32)
+        else:
+            shift = np.random.randint(int(frame_rate), n)
+            yield np.roll(np.asarray(pos, dtype=np.float32), shift)
 
 def compute_shuffle_si_once(position_trials, activity_trials, frame_rate):
     permuted_pos = shuffle_positions(position_trials, frame_rate)
     binned, occ = bin_activity_per_trial(permuted_pos, activity_trials)
     return compute_trial_avg_si(binned, occ)
 
-def compute_shuffle_distribution(position_trials, activity_trials, frame_rate, n_shuffles=100, n_jobs=-1):
+def compute_shuffle_distribution(position_trials, activity_trials, frame_rate, n_shuffles=100, n_jobs=1):
     return np.array(
         Parallel(n_jobs=n_jobs)(
             delayed(compute_shuffle_si_once)(position_trials, activity_trials, frame_rate)
             for _ in range(n_shuffles)
-        )
+        ),
+        dtype=np.float32
     )
 
 def is_place_cell(position_trials, activity_trials, frame_rate, n_shuffles=100, p=95, n_jobs=-1):
@@ -129,7 +135,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 datadct = {} # overwrite
 save_shuf_info=[]
 place_window = 20
-num_iterations=100
+num_iterations=50
 bin_size=3 # cm
 bins=90
 a=0.05 # threshold for si detection
@@ -208,6 +214,8 @@ for ii in range(174,len(conddf)):
          pcs = []; si=[]
          # position_trials = [np.array(...), ...]      # shared position per trial
          # activity_trials_list = [[trial1_cell1, ...], [trial1_cell2, ...], ...]  # each sublist = one cell
+         # for cells > 700 (e216)
+         # only do on 700 cells
          activity_trials_list = [[activity_trials[trials==tr][:,cll] for tr in np.unique(trials)] for cll in np.arange(activity_trials.shape[1])]
          pos = [position_trials[trials==tr] for tr in np.unique(trials)]
          # make first pos 1.5 again
@@ -221,7 +229,7 @@ for ii in range(174,len(conddf)):
             activity_trials_list=activity_trials_list,
             frame_rate=fr,            # or whatever your frame rate is
             n_shuffles=num_iterations,
-            n_jobs=8
+            n_jobs=1
          )
          place_cell_flags = [r[0] for r in results]
          real_sis = [r[1] for r in results]

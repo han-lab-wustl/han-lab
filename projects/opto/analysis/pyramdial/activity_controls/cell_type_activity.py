@@ -43,7 +43,7 @@ for ii in range(len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    # check if its the last 3 days of animal behavior
-   if ii!=204:#(day in lastdays):
+   if ii!=202:#(day in lastdays):
       if animal=='e145': pln=2 
       else: pln=0
       params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -96,8 +96,8 @@ for ii in range(len(conddf)):
       Fc3=Fc3_org[:, skew>2]
       # low cells
       if animal=='e217' or animal=='z17' or animal=='z14' or animal=='e200':
-         dFF=dFF_org[:, skew>1.5]
-         Fc3=Fc3_org[:, skew>1.5]
+         dFF=dFF_org[:, skew>1]
+         Fc3=Fc3_org[:, skew>1]
       # per epoch si
       # nshuffles=100   
       rz = get_rewzones(rewlocs,1/scalingf)
@@ -207,7 +207,7 @@ place_post=[[v[ep][3] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
 rew_pre=[[v[ep][4] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
 rew_post=[[v[ep][5] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
 prerew_post=[[v[ep][6] for ep in epoch_comp[k]] for k,v in enumerate(activities)]
-#%% 
+
 #normalize by pprev epoch
 spatially_tuned_not_rew_place_act_pre=[xx[1]-xx[0] for xx in spatially_tuned_not_rew_place_act_pre]
 spatially_tuned_not_rew_place_act_post=[xx[1]-xx[0] for xx in spatially_tuned_not_rew_place_act_post]
@@ -228,6 +228,7 @@ prerew_post=[xx[1]-xx[0] for xx in prerew_post]
 
 #%%
 # activities
+plt.rc('font', size=12) 
 df=pd.DataFrame()
 df['norm_dff']=np.concatenate([np.concatenate(spatially_tuned_not_rew_place_act_pre),np.concatenate(place_pre),np.concatenate(rew_pre)])
 allty=[np.concatenate(spatially_tuned_not_rew_place_act_pre),np.concatenate(place_pre),np.concatenate(rew_pre)]
@@ -253,13 +254,14 @@ df['opto']=df['optoep']>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
 df=df[(df.animals!='e189')&(df.animals!='e190')]
 keep = ~((df.animals == 'z15') & (df.days < 9))
-keep = ~((df.animals == 'z17') & (df.days < 11))
-keep = ~((df.animals == 'e217') &((df.days.isin([18,21,26,29,30]))))
-# keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
+keep = ~((df.animals == 'e217') &(df.days.isin([18,21,26,29])))
+keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
 keep &= ~((df.animals=='e200')&((df.days.isin([67,68,81]))))
 keep &= ~((df.animals=='e218')&(df.days==55))
 df = df[keep].reset_index(drop=True)
-df=df[df.animals!='e217']
+# df=df[df.animals!='e217']
+# df=df[df.norm_dff<.2]
+df=df[df.norm_dff>-.05]
 # Set up plot
 titles=['LEDon day', 'LEDoff day']
 fig, axes= plt.subplots(ncols=2,figsize=(8,4),sharex=True,sharey=True)
@@ -267,7 +269,8 @@ for cc,cond in enumerate([True, False]):
    ax=axes[cc]
    dfc=df[df.opto==cond]
    # per an
-   dfagg=dfc.groupby(['animals', 'days','type', 'condition']).median(numeric_only=True).reset_index()
+   # dfagg=dfc.groupby(['animals','days', 'type', 'condition']).mean(numeric_only=True).reset_index()
+   dfagg=dfc.groupby(['animals','type', 'condition']).mean(numeric_only=True).reset_index()
    sns.barplot(y='norm_dff', x='type', hue='condition', data=dfagg,errorbar='se',dodge=True,fill=False,ax=ax,legend=False)
    sns.stripplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True,ax=ax)
    ax.set_title(titles[cc])
@@ -319,13 +322,14 @@ df['opto']=df['optoep']>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
 df=df[(df.animals!='e189')&(df.animals!='e190')]
 keep = ~((df.animals == 'z15') & (df.days < 9))
-keep = ~((df.animals == 'e217') &((df.days < 9) | (df.days.isin([21,26]))))
-# keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
+keep = ~((df.animals == 'e217') &(df.days.isin([18,21,26,29])))
+keep &= ~((df.animals == 'e216') & ((df.days < 32)|(df.days==57)))
 keep &= ~((df.animals=='e200')&((df.days.isin([67,68,81]))))
 keep &= ~((df.animals=='e218')&(df.days==55))
 df = df[keep].reset_index(drop=True)
-df=df[df.animals!='e217']
-# Set up plot
+# df=df[df.animals!='e217']
+# df=df[df.norm_dff<.1]
+# df=df[df.norm_dff>-.05]
 # Set up plot
 titles=['LEDon day', 'LEDoff day']
 fig, axes= plt.subplots(ncols=2,figsize=(8,4),sharex=True,sharey=True)
@@ -334,9 +338,9 @@ for cc,cond in enumerate([True, False]):
    dfc=df[df.opto==cond]
    dfc=dfc[dfc.norm_dff<2]
    # per an
-   dfagg=dfc.groupby(['animals', 'type', 'condition']).median(numeric_only=True).reset_index()
-   sns.boxplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True, fill=False,ax=ax,legend=False)
-   # sns.stripplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True,ax=ax)
+   dfagg=dfc.groupby(['animals','type', 'condition']).mean(numeric_only=True).reset_index()
+   sns.barplot(y='norm_dff', x='type', hue='condition', data=dfagg,errorbar='se',dodge=True, fill=False,ax=ax,legend=False)
+   sns.stripplot(y='norm_dff', x='type', hue='condition', data=dfagg,dodge=True,ax=ax)
    ax.set_title(titles[cc])
    ax.set_ylabel('Post-reward mean $\Delta$ F/F (Target ep.-Control ep.)')
    paired_stats=[]
