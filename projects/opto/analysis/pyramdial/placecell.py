@@ -52,7 +52,7 @@ def get_inactivated_cells_hist(dd, day, conddf):
     Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~fall['bordercells'][0].astype(bool))]
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~fall['bordercells'][0].astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-    # Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+    Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
     eps = np.append(eps, len(changeRewLoc)) 
     # # exclude last ep if too little trials
     # lastrials = np.unique(trialnum[eps[(len(eps)-2)]:eps[(len(eps)-1)]])[-1]
@@ -63,12 +63,11 @@ def get_inactivated_cells_hist(dd, day, conddf):
         if len(eps)<4: eptest = 2 # if no 3 epochs
     comp = [eptest-2,eptest-1] # eps to compare    
     bin_size = 3    
-    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
-                    trialnum, track_length) # get radian coordinates
-    tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[0]]]))
-    tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[1]]]))
-    tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0]]]))
-    tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1]]]))    
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates
+    tc1_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[0],skew>2]]))
+    tc2_early = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_early[comp[1],skew>2]]))
+    tc1_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[0],skew>2]]))
+    tc2_late = np.squeeze(np.array([pd.DataFrame(xx).rolling(3).mean().values for xx in tcs_late[comp[1],skew>2]]))    
     # replace nan coms
     # peak = np.nanmax(tc1_late,axis=1)
     # coms1_max = np.array([np.where(tc1_late[ii,:]==peak[ii])[0][0] for ii in range(len(peak))])
@@ -632,7 +631,7 @@ def find_differentially_activated_cells(tuning_curve1, tuning_curve2, threshold,
     
     Returns:
     np.ndarray: Indices of cells considered differentially inactivated.
-    """
+    """ 
     # Calculate the AUC across bins for each cell in each condition
     auc_tc1 = []; auc_tc2 = []
     for cll in range(tuning_curve1.shape[0]):

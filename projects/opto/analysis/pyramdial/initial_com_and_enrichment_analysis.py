@@ -6,38 +6,33 @@ updated aug 2024
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math,  matplotlib as mpl, matplotlib.backends.backend_pdf
-from placecell import get_pyr_metrics_opto, get_dff_opto
+sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
+from projects.opto.analysis.pyramdial.placecell import get_pyr_metrics_opto, get_dff_opto
 mpl.rcParams['svg.fonttype'] = 'none'; mpl.rcParams["xtick.major.size"] = 8; mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
-sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_neural_com_inference.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\aha'
+conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 #%% - re-run dct making
+# uses matlab tuning curves
 dcts = []
-for dd,day in enumerate(conddf.days.values):
+for dd in range(len(conddf.days.values)):
     # define threshold to detect activation/inactivation
+    day = conddf.days.values[dd]
     if dd%10==0: print(f'{dd}/{len(conddf)}')
-    threshold = 5
-    pc = False
-    dct = get_pyr_metrics_opto(conddf, dd, day, 
-                threshold=threshold, pc=pc)
-    dcts.append(dct)
-# save pickle of dcts
+    if dd!=202:
+        threshold = 5
+        pc = False
+        dct = get_pyr_metrics_opto(conddf, dd, day, 
+                    threshold=threshold, pc=pc)
+        dcts.append(dct)
+    # save pickle of dcts
 # saved new version for r21 2/25/25
 with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
     pickle.dump(dcts, fp)   
     
 #%%
 # get inactivated cells distribution
-
-d
-#%%
-# open previously saved dcts
-# with open(r"Z:\dcts_com_opto_inference_wcomp.p", "rb") as fp: #unpickle
-#         dcts = pickle.load(fp)
-
-# #%%
 # fc3 for opto vs. control
 # pre reward
 # pcs only
@@ -97,9 +92,10 @@ ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
 
 # plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
 #%%
-s=15 # pointsize
+s=12 # pointsize
 # plot fraction of cells near reward
-df = conddf
+# conddf=conddf.drop([202])
+df = conddf.copy()
 optoep = conddf.optoep.values; animals = conddf.animals.values; in_type = conddf.in_type.values
 dcts = np.array(dcts)
 df['frac_pc_prev_early'] = [dct['frac_place_cells_tc1_early_trials'] for dct in dcts]
@@ -111,8 +107,8 @@ df['frac_pc_opto'] = df['frac_pc_opto_late']-df['frac_pc_opto_early']
 df['opto'] = [True if xx>1 else False if xx<1 else np.nan for xx in conddf.optoep.values]
 
 # df['opto'] = conddf.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in conddf.in_type.values]
-df = df.loc[(df.animals!='e189')&(df.animals!='e190')]
+df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in conddf.in_type.values]
+# df = df.loc[(df.animals!='e189')&(df.animals!='e190')]
 bigdf=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 bigdf = bigdf.reset_index()
 
@@ -121,11 +117,12 @@ sns.barplot(data=bigdf,
             x='opto', 
             y="frac_pc_opto", 
             hue='condition',        
-                palette={'ctrl': "slategray", 'vip': "red"},
+                # palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se',ax=ax,fill=False)
 sns.stripplot(x="opto", y="frac_pc_opto", hue = 'condition',
                 data=bigdf,
-                palette={'ctrl': "slategray", 'vip': "red"},dodge=True,
+                # palette={'ctrl': "slategray", 'vip': "red"},
+                dodge=True,
                 s=s,ax=ax)
 ax.spines[['top', 'right']].set_visible(False); 
 ax.legend(bbox_to_anchor=(1.05, 1.05))
@@ -196,11 +193,8 @@ bigdf=df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True)
 
 plt.figure(figsize=(2.5,6))
 bigdf = bigdf.sort_values('condition')
-ax = sns.barplot(x="opto", y="enrichment_opto",hue='condition',data=bigdf, fill=False,
-                palette={'ctrl': "slategray", 'vip': "red"},
-                errorbar='se')
-sns.stripplot(x="opto", y="enrichment_opto",hue='condition',data=bigdf,
-            palette={'ctrl': "slategray", 'vip': "red"},s=10)
+ax = sns.barplot(x="opto", y="enrichment_opto",hue='condition',data=bigdf, fill=False,errorbar='se')
+sns.stripplot(x="opto", y="enrichment_opto",hue='condition',data=bigdf,dodge=True,s=10)
 vip = bigdf[(bigdf.index.get_level_values('opto')==True) & (bigdf.index.get_level_values('condition')=='vip')].enrichment_opto.values
 ctrl = bigdf[(bigdf.index.get_level_values('opto')==True) &  (bigdf.index.get_level_values('condition')=='ctrl')].enrichment_opto.values
 t,pval=scipy.stats.ranksums(vip, ctrl)
@@ -223,25 +217,21 @@ df['com_shift_active'] = com_shift[:,1]
 df['rewloc_shift'] = rewloc_shift
 df['animal'] = animals
 condition = []
-df['vipcond'] = ['vip' if (xx == 'e216') | (xx == 'e217') | (xx == 'e218') else 'ctrl' for xx in animals]
+df['vipcond'] = [xx if 'vip' in xx else 'ctrl' for xx in in_type]
 df = df[(df.animal!='e189')&(df.animal!='e200')]
 dfagg = df.groupby(['animal', 'vipcond']).mean(numeric_only=True)
 
 fig, ax = plt.subplots()
-ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = dfagg, 
-        palette={'ctrl': "slategray", 'vip': "red"},s=150)
-ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = df, 
-        palette={'ctrl': "slategray", 'vip': "red"}, s=150,alpha=0.2)
+ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = dfagg,s=150)
+ax = sns.scatterplot(x = 'com_shift_inactive', y = 'rewloc_shift', hue = 'vipcond', data = df, s=150,alpha=0.2)
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 ax.set_title('Shift = VIP Inhibition-Before Inhibition')
 # plt.savefig(os.path.join(savedst, 'scatterplot_comshift.svg'), bbox_inches='tight')
 # active
 fig, ax = plt.subplots()
-ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = dfagg, 
-        palette={'ctrl': "slategray", 'vip': "red"},s=50)
-ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = df, 
-        palette={'ctrl': "slategray", 'vip': "red"}, alpha=0.2)
+ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = dfagg ,s=50)
+ax = sns.scatterplot(x = 'com_shift_active', y = 'rewloc_shift', hue = 'vipcond', data = df, alpha=0.2)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.legend(bbox_to_anchor=(1.1, 1.1))
@@ -253,10 +243,8 @@ dfagg = dfagg.sort_values('vipcond')
 dfagg = dfagg.reset_index()
 fig, ax = plt.subplots(figsize=(2.5,5))
 ax = sns.barplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg,
-                palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se', fill=False)
 ax = sns.stripplot(x = 'vipcond', y = 'com_shift_inactive', hue = 'vipcond', data=dfagg,
-                palette={'ctrl': "slategray", 'vip': "red"},
                 s=s)
 
 ax.spines[['top','right']].set_visible(False)
@@ -297,10 +285,8 @@ print(f"Power: {power:.3f}")
 dfagg = dfagg.sort_values('vipcond')
 fig, ax = plt.subplots(figsize=(2.5,6))
 ax = sns.barplot(x = 'vipcond', y = 'com_shift_active', hue = 'vipcond', data=dfagg, fill=False,
-                palette={'ctrl': "slategray", 'vip': "red"},
                 errorbar='se')
 ax = sns.stripplot(x = 'vipcond', y = 'com_shift_active', hue = 'vipcond', data=dfagg,
-                palette={'ctrl': "slategray", 'vip': "red"},
                 s=10)
 
 ax.spines['top'].set_visible(False)
@@ -312,9 +298,11 @@ plt.title(f"p-value = {pval:03f}")
 # plt.savefig(os.path.join(savedst, 'barplot_active_comshift.svg'), bbox_inches='tight')
 
 #%%
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scipy.stats as stats
 # proportion of inactivate cells 
 dcts_opto = np.array(dcts)
-
 dfs_diff = []
 for ii,dct in enumerate(dcts_opto):
     inactive_frac = len(dct['inactive'])/len(dct['coms1'])
@@ -323,11 +311,12 @@ for ii,dct in enumerate(dcts_opto):
     df['active_frac'] = active_frac
     df['condition'] = np.hstack([[f'day{ii}_tc1_rz_{dct["rewzones_comp"][0]}']])
     df['animal'] = conddf.animals.values[ii]
+    df['day'] = conddf.days.values[ii]
     df['in_type'] = conddf.in_type.values[ii]    
     df['opto'] = bool(conddf.optoep.values[ii]>1) # true vs. false
     df['rewzones_transition'] = f'rz_{dct["rewzones_comp"][0].astype(int)}-{dct["rewzones_comp"][1].astype(int)}'
-    if df['in_type'].values[0] =='vip':
-        df['vip_cond'] = 'vip'
+    if 'vip' in df['in_type'].values[0]:
+        df['vip_cond'] = df['in_type'].values[0] 
     else:
         df['vip_cond'] = 'ctrl'
 
@@ -335,93 +324,133 @@ for ii,dct in enumerate(dcts_opto):
 bigdf_org = pd.concat(dfs_diff,ignore_index=False) 
 bigdf_org.reset_index(drop=True, inplace=True)   
 bigdf_org = bigdf_org[(bigdf_org['animal']!='e190')&(bigdf_org['animal']!='e186')]
-# plot fraction of inactivated vs. activated cells
-bigdf_test = bigdf_org.groupby(['animal', 'vip_cond', 'opto']).mean(numeric_only=True)
-bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True)
 
-fig, ax = plt.subplots(figsize=(2.5,6))
-ratio = (bigdf.loc[bigdf.index.get_level_values('opto')==True, 'inactive_frac'].values)-(bigdf.loc[bigdf.index.get_level_values('opto')==False, 'inactive_frac'].values)
-conditions = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('vip_cond'))
-animals = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('animal'))
-df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['inactivated_cells_proportion_LEDon-off', 'condition', 'animal'])
-ax = sns.barplot(x="condition", y="inactivated_cells_proportion_LEDon-off", 
-                hue='condition',data=df,fill=False,
-                palette={'ctrl': "slategray", 'vip': "red"})
-ax = sns.stripplot(x="condition", y="inactivated_cells_proportion_LEDon-off", 
-                hue='condition', s=s,data=df,
-                palette={'ctrl': "slategray", 'vip': "red"})
-ax.tick_params(axis='x', labelrotation=90)
+# remove outlier days
+bigdf_org=bigdf_org[~((bigdf_org.animal=='z17')&((bigdf_org.day>12)))]
+bigdf_org=bigdf_org[~((bigdf_org.animal=='z15')&((bigdf_org.day.isin([10,16]))))]
+bigdf_org=bigdf_org[~((bigdf_org.animal=='e217')&((bigdf_org.day<9)|(bigdf_org.day.isin([18,17,11,29,30]))))]
+# bigdf_org=bigdf_org[~((bigdf_org.animal=='e216')&((bigdf_org.day<32)|(bigdf_org.day.isin([57]))))]
+# bigdf_org=bigdf_org[~((bigdf_org.animal=='e200')&((bigdf_org.day.isin([67,68,81]))))]
+# bigdf_org=bigdf_org[~((bigdf_org.animal=='e218')&(bigdf_org.day.isin([41,55])))]
+
+# Compute per-animal LED-on minus off differences for inactive and active
+bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True).reset_index()
+# Pivot to get ON/OFF split
+pivoted = bigdf.pivot_table(index=['animal', 'vip_cond'], columns='opto', values=['inactive_frac', 'active_frac'])
+pivoted.columns = [f"{feat}_{'on' if opto else 'off'}" for feat, opto in pivoted.columns]
+
+# Compute difference per animal
+pivoted['inactive_diff'] = pivoted['inactive_frac_on'] - pivoted['inactive_frac_off']
+pivoted['active_diff'] = pivoted['active_frac_on'] - pivoted['active_frac_off']
+pivoted = pivoted.reset_index()
+# Melt to long format for plotting
+df_long = pd.melt(pivoted, id_vars=['animal', 'vip_cond'], 
+                  value_vars=['inactive_diff', 'active_diff'], 
+                  var_name='cell_type', value_name='LED_on_minus_off')
+# Rename for nicer plotting
+df_long['cell_type'] = df_long['cell_type'].map({
+    'inactive_diff': 'Inactivated',
+    'active_diff': 'Activated'
+})
+# --- Plot ---
+plt.figure(figsize=(6,5))
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+ax = sns.barplot(data=df_long, x='cell_type', y='LED_on_minus_off', hue='vip_cond', errorbar='se', fill=False,legend=False,palette=pl)
+sns.stripplot(data=df_long, x='cell_type', y='LED_on_minus_off', hue='vip_cond',dodge=True, jitter=0.1, s=12, ax=ax,alpha=0.7,palette=pl)
+# Clean up duplicate legend
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles[:2], labels[:2], title='Condition', bbox_to_anchor=(1.05, 1), loc='upper left')
+
+# Format axes
+ax.set_ylabel('$\Delta$ Proportion (LEDon-LEDoff)')
+ax.set_xlabel('')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+# --- Statistical Annotations with Comparison Bars ---
+conds = df_long['vip_cond'].unique()
+cell_types = ['Inactivated', 'Activated']
+y_max = df_long['LED_on_minus_off'].max()-.1
+y_step = 0.03
+bar_idx = 0  # counter to stack comparison bars
 
-# sig # per animal
-stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'inactivated_cells_proportion_LEDon-off'].astype(float).values, 
-            df.loc[(df.condition=='ctrl'), 'inactivated_cells_proportion_LEDon-off'].astype(float).values)
-ax.set_title(f'p={np.round(pval, 4)}')
-# plt.savefig(os.path.join(savedst, 'inactive_prop.svg'), bbox_inches='tight')
+for cell_type in cell_types:
+    df_cell = df_long[df_long['cell_type'] == cell_type]
+
+    for cond in conds:
+        if cond == 'ctrl': continue
+        # Get group data
+        data1 = df_cell[df_cell['vip_cond'] == 'ctrl']['LED_on_minus_off'].astype(float)
+        data2 = df_cell[df_cell['vip_cond'] == cond]['LED_on_minus_off'].astype(float)
+
+        # Compute p-value
+        stat, pval = stats.ranksums(data1, data2)
+        text = '*' if pval < 0.05 else ''
+
+        # Get x-locations
+        x1 = cell_types.index(cell_type) - 0.2  # ctrl
+        x2 = cell_types.index(cell_type) + 0.2  # test group
+        y = y_max + y_step * (bar_idx + 1)
+
+        # Draw bar and annotate
+        ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+        ax.text((x1 + x2) / 2, y-.01, text, ha='center', va='bottom', fontsize=40)
+        ax.text((x1 + x2) / 2, y + y_step/3 - 0.01, f'p = {pval:.3g}', ha='center', va='bottom', fontsize=10)
+
+        bar_idx += 1
+
+ax.legend()
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'active_v_inactive_all_opto.svg'))
+
 #%%
-# activated cells
-fig, ax = plt.subplots(figsize=(3,6))
-ratio = (bigdf.loc[bigdf.index.get_level_values('opto')==True, 'active_frac'].values)-(bigdf.loc[bigdf.index.get_level_values('opto')==False, 'active_frac'].values)
-conditions = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('vip_cond'))
-animals = (bigdf[bigdf.index.get_level_values('opto')==True].index.get_level_values('animal'))
-df = pd.DataFrame(np.array([ratio, conditions, animals]).T, columns=['activated_cells_proportion_LEDon-off', 'condition', 'animal'])
-ax = sns.barplot(x="condition", y="activated_cells_proportion_LEDon-off", hue='condition',data=df,fill=False,
-                palette={'ctrl': "slategray", 'vip': "red"})
-ax = sns.stripplot(x="condition", y="activated_cells_proportion_LEDon-off", 
-                hue='condition', s=10,data=df,
-                palette={'ctrl': "slategray", 'vip': "red"})
-ax.tick_params(axis='x', labelrotation=90)
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-
-stat,pval = scipy.stats.ranksums(df.loc[(df.condition=='vip'), 'activated_cells_proportion_LEDon-off'].astype(float).values, 
-            df.loc[(df.condition=='ctrl'), 'activated_cells_proportion_LEDon-off'].astype(float).values)
-ax.set_title(f'p={np.round(pval, 4)}')
-
-#%%
-# get spatial info of inactive cells vs. all cells
+# examples
 track_length = 270
-
-info_inactive = []
-info_other = []
-for dd,day in enumerate(conddf.days.values):
-    # define threshold to detect activation/inactivation
-    animal = conddf.animals.values[dd]
-    if conddf.optoep.values[dd]>1 and conddf.in_type.values[dd]=='vip':
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-        fall = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'forwardvel', 'ybinned', 'iscell',
-                                    'bordercells', 'changeRewLoc'])
-        inactive = dcts[dd]['inactive']
-        changeRewLoc = np.hstack(fall['changeRewLoc'])
-        eptest = conddf.optoep.values[dd]
-        if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
-        eps = np.where(changeRewLoc>0)[0]
-        rewlocs = changeRewLoc[eps]*1.5
-        rewzones = get_rewzones(rewlocs, 1.5)
-        eps = np.append(eps, len(changeRewLoc))    
-        if len(eps)<4: eptest = 2 # if no 3 epochs
-        comp = [eptest-2,eptest-1] # eps to compare  
-        # filter iscell
-        Fc3 = fall['Fc3'][:,(fall['iscell'][:,0].astype(bool)) & (~fall['bordercells'][0].astype(bool))]
-        thres = 5; ftol = 10; Fs = 31.25; nBins = 90 # hard coded thresholds
-        fv = fall['forwardvel'][0]
-        position = fall['ybinned'][0]*1.5
-        info = []
-        # gets spatial info across entire recording!
-        # for i in range(Fc3.shape[1]):
-        #     info.append(get_spatial_info_per_cell(Fc3[:,i], fv, thres, ftol, position, 
-        #                         Fs, nBins, track_length))
-        # only in opto ep
-        for i in range(Fc3.shape[1]):
-            info.append(get_spatial_info_per_cell(Fc3[eps[comp[0]]:eps[comp[1]+1],i], fv[eps[comp[0]]:eps[comp[0]+1]],
-                thres, ftol, position[eps[comp[0]]:eps[comp[0]+1]], 
-                Fs, nBins, track_length)-get_spatial_info_per_cell(Fc3[eps[comp[1]]:eps[comp[1]+1],i], fv[eps[comp[1]]:eps[comp[1]+1]],
-                thres, ftol, position[eps[comp[1]]:eps[comp[1]+1]], 
-                Fs, nBins, track_length))
-        info = np.array(info)
-        info_inactive.append(info[inactive])
-        info_other.append(info[~inactive])
+# dd=192
+dd=52
+# define threshold to detect activation/inactivation
+animal = conddf.animals.values[dd]
+day=conddf.days.values[dd]
+params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
+fall = scipy.io.loadmat(params_pth, variable_names=['dFF', 'Fc3','forwardvel', 'ybinned', 'iscell','bordercells', 'changeRewLoc'])
+active = dcts[dd]['active']
+inactive = dcts[dd]['inactive']
+changeRewLoc = np.hstack(fall['changeRewLoc'])
+eptest = conddf.optoep.values[dd]
+if conddf.optoep.values[dd]<2: eptest = random.randint(2,3)    
+eps = np.where(changeRewLoc>0)[0]
+rewlocs = changeRewLoc[eps]*1.5
+eps = np.append(eps, len(changeRewLoc))    
+if len(eps)<4: eptest = 2 # if no 3 epochs
+comp = [eptest-2,eptest-1] # eps to compare  
+# filter iscell
+Fc3 = fall['dFF'][:,((fall['iscell'][:,0].astype(bool)) & ~(fall['bordercells'][0].astype(bool)))]
+fv = fall['forwardvel'][0]
+position = fall['ybinned'][0]*1.5
+# z15
+active=active[np.array([1,3,4,6,7,8,9,10,11,13,15])]
+#%%
+# plot
+cells=inactive[25:35] # e216, 54
+color='mediumturquoise'
+cells=active
+color='lightcoral'
+fig, axes=plt.subplots(nrows=len(cells),sharex=True,figsize=(9,6))
+for kk,cll in enumerate(cells):
+    axes[kk].plot(Fc3[:,cll],color='k')
+    patch_start = eps[1]
+    patch_end = Fc3.shape[0]  # or patch_start + some_window
+    # Draw patch (light red transparent rectangle)
+    axes[kk].axvspan(patch_start, patch_end, color=color, alpha=0.3)
+    if kk==0:
+        axes[kk].set_ylabel('$\Delta F/F$')
+    axes[kk].spines[['top','right']].set_visible(False)    
+    # axes[kk].set_rasterized(True)  # <-- Rasterize this axis
+    axes[kk].tick_params(axis='y', labelsize=12)  # or any size you prefer
+axes[kk].set_xlabel('Time (minutes)')
+axes[kk].set_xticks([0,Fc3.shape[0]/2,Fc3.shape[0]])
+axes[kk].set_xticklabels([0,np.round(((Fc3.shape[0]/2)/31.25)/60,1),np.round(((Fc3.shape[0])/31.25)/60,1)])
+# fig.tight_layout()
+plt.savefig(os.path.join(savedst, f'{animal}_day{day}_active_cell_traces_opto.svg'))
 #%%
 ina = np.concatenate(info_inactive)
 # ina = info_inactive[16]

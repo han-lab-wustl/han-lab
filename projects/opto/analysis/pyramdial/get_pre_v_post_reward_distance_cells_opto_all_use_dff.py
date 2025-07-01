@@ -246,16 +246,18 @@ realdf['condition']=[xx if 'vip' in xx else 'ctrl' for xx in realdf.condition.va
 realdf['day']=np.concatenate([df.days]*len(all_cells))
 # realdf['goal_cell_prop'] = realdf['goal_cell_prop'] - realdf['goal_cell_prop_shuf']
 realdf=realdf[realdf['goal_cell_prop']>0]
-realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
+realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190') & (realdf.animal!='e200')]
 # remove outlier days
-realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
+# realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
 realdf=realdf[~((realdf.animal=='z14')&((realdf.day<33)))]
-realdf=realdf[~((realdf.animal=='z16')&((realdf.day>15)))]
+# realdf=realdf[~((realdf.animal=='z16')&((realdf.day>15)))]
+realdf=realdf[~((realdf.animal=='z17')&((realdf.day<1)|(realdf.day.isin([3,4,5,9,13,16]))))]
+
 realdf=realdf[~((realdf.animal=='z15')&((realdf.day<8)|(realdf.day.isin([15]))))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,29,30,26]))))]
 realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([57]))))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
-realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
+# realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
+# realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
 # realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
 #%%
@@ -563,14 +565,11 @@ fig.suptitle('All trials')
 plt.savefig(os.path.join(savedst, 'pre_v_post_reward_cellp_opto.svg'), bbox_inches='tight')
 
 # %%
+pre = [xx[0]['goal_id'] for xx in results_all]
+post = [xx[1]['goal_id'] for xx in results_all]
+pre_early= [xx[2]['goal_id'] for xx in results_all]
+post_early = [xx[3]['goal_id'] for xx in results_all]
 
-# %%
-
-#%%
-cll='early'
-x1=pivoted_avg.loc[(pivoted_avg['cell_type'] == cll) & (pivoted_avg['condition']=='ctrl'), 'difference'].values
-x2=pivoted_avg.loc[(pivoted_avg['cell_type'] == cll) & (pivoted_avg['condition']=='vip_ex'),'difference'].values
-_,pval = scipy.stats.ttest_ind(x1,x2)
-print(pval)
-
-# %%
+sv = r'Z:\condition_df\goal_cell_id_dff_tc_opto.p'
+with open(sv, "wb") as fp:   #Pickling
+    pickle.dump(results_all, fp) 

@@ -25,6 +25,11 @@ import numpy as np
 from joblib import Parallel, delayed
 from scipy.ndimage import gaussian_filter1d
 
+savedst=r'Z:\condition_df\circ_shuffle_vip_opto.p'
+with open(savedst, "rb") as fp: #unpickle
+   datadct = pickle.load(fp)
+# initialize var
+
 def compute_spatial_info(p_i, f_i):
     f = np.sum(f_i * p_i)
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -132,7 +137,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_opto_rew.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 # initialize var
-datadct = {} # overwrite
+# datadct = {} # overwrite
 save_shuf_info=[]
 place_window = 20
 num_iterations=50
@@ -141,7 +146,7 @@ bins=90
 a=0.05 # threshold for si detection
 #%%
 # iterate through all animals
-for ii in range(174,len(conddf)):
+for ii in range(185,len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    # check if its the last 3 days of animal behavior
@@ -323,7 +328,7 @@ for ii in range(174,len(conddf)):
       print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
       datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
 #%%
-with open(r'Z:\condition_df\circ_shuffle_vip_opto.p', "wb") as fp: 
+with open(savedst, "wb") as fp: 
    pickle.dump(datadct, fp) 
 #%%
 # per cell prop comparison

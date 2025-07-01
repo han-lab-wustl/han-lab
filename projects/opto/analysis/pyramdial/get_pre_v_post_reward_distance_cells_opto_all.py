@@ -298,13 +298,13 @@ pivoted = pivoted.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_
 # Calculate difference
 pivoted['difference'] = pivoted['goal_cell_prop_on']-pivoted['goal_cell_prop_off']
 pivoted['difference'] =pivoted['difference']*100
-fig, axes = plt.subplots(ncols=4, figsize=(12,5), sharey=True,sharex=True)
+fig, axes = plt.subplots(ncols=2, nrows=2,figsize=(7,8), sharey=True,sharex=True)
 cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
 cellty = ['pre_early', 'post_early', 'pre_late', 'post_late']
 data = pivoted[pivoted['cell_type'] == 'post_early']
 y_max = data['difference'].quantile(.85)
 y_step = 0.4*abs(y_max)
-
+axes=axes.flatten()
 for cl, cll in enumerate(cellty):
     ax = axes[cl]
     sns.barplot(
@@ -563,14 +563,44 @@ fig.suptitle('All trials')
 plt.savefig(os.path.join(savedst, 'pre_v_post_reward_cellp_opto.svg'), bbox_inches='tight')
 
 # %%
+# results_pre, results_post, results_pre_early, results_post_early
+# get rew cells id to compare to dff
+pre = [xx[0]['goal_id'] for xx in results_all]
+post = [xx[1]['goal_id'] for xx in results_all]
+pre_early= [xx[2]['goal_id'] for xx in results_all]
+post_early = [xx[3]['goal_id'] for xx in results_all]
+
+# get dff rew cells and compare
+sv = r'Z:\condition_df\goal_cell_id_dff_tc_opto.p'
+
+with open(sv, "rb") as fp: #unpickle
+    results_dff = pickle.load(fp)
+
+pre_dff = [xx[0]['goal_id'] for xx in results_dff]
+post_dff = [xx[1]['goal_id'] for xx in results_dff]
+pre_early_dff= [xx[2]['goal_id'] for xx in results_dff]
+post_early_dff = [xx[3]['goal_id'] for xx in results_dff]
 
 # %%
 
-#%%
-cll='early'
-x1=pivoted_avg.loc[(pivoted_avg['cell_type'] == cll) & (pivoted_avg['condition']=='ctrl'), 'difference'].values
-x2=pivoted_avg.loc[(pivoted_avg['cell_type'] == cll) & (pivoted_avg['condition']=='vip_ex'),'difference'].values
-_,pval = scipy.stats.ttest_ind(x1,x2)
-print(pval)
+labels = ['pre', 'post', 'pre_early', 'post_early']
+reg_sets = [pre, post, pre_early, post_early]
+dff_sets = [pre_dff, post_dff, pre_early_dff, post_early_dff]
 
+# Plot Venn diagram per animal
+for i in range(len(results_all[:10])):
+    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+    axs = axs.flatten()
+
+    for j, label in enumerate(labels):
+        reg_ids = set(reg_sets[j][i])
+        dff_ids = set(dff_sets[j][i])
+
+        venn2([reg_ids, dff_ids], set_labels=('fc3', 'dF/F'), ax=axs[j])
+        
+        axs[j].set_title(f'{label} - animal {i}')
+
+    plt.tight_layout()
+    plt.suptitle(f'Goal Cell ID Overlap - Animal {i}', fontsize=14, y=1.02)
+    plt.show()
 # %%
