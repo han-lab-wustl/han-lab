@@ -62,7 +62,7 @@ for dd,day in enumerate(conddf.days.values):
     lick_prob_prev, trials_bwn_success_opto, \
     trials_bwn_success_prev, vel_opto, vel_prev, lick_selectivity_per_trial_opto,\
     lick_selectivity_per_trial_prev, lick_rate_opto, lick_rate_prev, com_opto, com_prev,\
-        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr=15,lasttr=8)
+        lick_rate_opto_late, lick_rate_prev_late, lick_selectivity_per_trial_prev_early, lick_selectivity_per_trial_opto_early= get_performance(eptest, eps, trialnum, rewards, licks, ybinned, rewlocs, forwardvel, time, rewsize,firsttr=8,lasttr=8)
     rewzones = get_rewzones(rewlocs, 1/scalingf)
     # save
     dct['velocity'] = [vel_prev, vel_opto]
@@ -101,14 +101,14 @@ df['opto'] = conddf.optoep.values>1
 df['condition'] = ['ctrl' if 'vip' not in xx else xx for xx in conddf.in_type.values]
 df = df[(df.animals!='e189')]
 df=df[(df.optoep.values>1)]
-df=df[~((df.animals=='z15')&(df.days<6))]
+df=df[~((df.animals=='z15')&((df.days<6)|(df.days.isin([15,16]))))]
 df=df[~((df.animals=='z14')&(df.days<33))]
-df=df[~((df.animals=='z17')&(df.days.isin([3,4,11,12,18,22])))]
-# df=df[~((df.animals=='z9')&(df.days.isin([20,15])))]
-# df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([21,26]))))]
-df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
-df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
-# df=df[~((df.animals=='e218')&(df.days==55))]
+df=df[~((df.animals=='z17')&(df.days.isin([3,4,11,12,18,22,23])))]
+df=df[~((df.animals=='z9')&(df.days.isin([20,15])))]
+df=df[~((df.animals=='e201')&((df.days.isin([58,61]))))]
+# df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([85]))))]
+df=df[~((df.animals=='e218')&(df.days==55))]
 # plot rates vip vs. ctl led off and on
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True).reset_index()
@@ -161,8 +161,8 @@ for i, (c1, c2) in enumerate(comparisons):
     y_start += gap
 # ax.set_ylim([-35,10])
 plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'),  bbox_inches='tight')
-df.to_csv(r'Z:\condition_df\vip_opto_behavior.csv')
+# plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'),  bbox_inches='tight')
+# df.to_csv(r'Z:\condition_df\vip_opto_behavior.csv')
 #%%
 # Step 1: Calculate the means and standard deviations
 group1=x1;group2=x2
@@ -242,27 +242,25 @@ plt.savefig(os.path.join(savedst, 'lick_selectivity_opto_all.svg'),  bbox_inches
 #%%
 # only 3 to 1
 # bigdf_plot=bigdf_plot[bigdf_plot.animals!='e190']
-bigdf_plot = df.groupby(['animals', 'condition', 'opto','rewzone_transition']).mean(numeric_only=True)
+bigdf_plot = df.groupby(['animals', 'days','condition', 'opto','rewzone_transition']).mean(numeric_only=True)
 bigdf_plot = bigdf_plot.reset_index()
-df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(3.0, 1.0)')|(bigdf_plot.rewzone_transition=='(2.0, 1.0)')]
-df2plt = df2plt.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True).reset_index()
-df2plt = df2plt[(df2plt.animals!='e190')]
+df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(3.0, 1.0)')|(bigdf_plot.rewzone_transition=='(2.0, 1.0)')|(bigdf_plot.rewzone_transition=='(3.0, 2.0)')]
+df2plt = df2plt.groupby(['animals', 'days','condition', 'opto']).mean(numeric_only=True).reset_index()
+df2plt = df2plt[(df2plt.animals!='e189')&(df2plt.animals!='e190')]
 
 fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="com",hue='condition', data=df2plt, 
             palette=pl,                     
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="com",hue='condition', data=df2plt, palette=pl, alpha=a,
-            s=s,ax=ax)
+            s=9,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Late COM Licks-Reward Loc. (cm)')
+ax.set_ylabel(f'Norm. COM Licks')
+# ax.axhline(0, color='k')
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 ax.set_title('Far to Near')
 ax.set_xlabel('')
-model = ols('com ~ C(condition)', data=df2plt).fit()
-anova_table = anova_lm(model, typ=2)
-print(anova_table)
 # Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
 conds = ['ctrl', 'vip', 'vip_ex']
 comparisons = list(itertools.combinations(conds, 2))[:2]
@@ -270,10 +268,10 @@ p_vals = []
 for c1, c2 in comparisons:
     x1 = df2plt[df2plt['condition'] == c1]['com'].dropna()
     x2 = df2plt[df2plt['condition'] == c2]['com'].dropna()
-    stat, p = stats.ttest_ind(x1, x2, alternative='two-sided')
+    stat, p = stats.ranksums(x1, x2)
     p_vals.append(p)
 # Correct for multiple comparisons
-reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+# reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
 # Add significance annotations
 def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
     x1 = conds.index(group1)
@@ -295,7 +293,7 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
 y_start = bigdf_plot['lick_selectivity'].max() + 20
 gap = 5
 for i, (c1, c2) in enumerate(comparisons):
-    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],xoffset=5,height=1)
+    add_sig(ax, c1, c2, y_start, p_vals[i],xoffset=5,height=1)
     y_start += gap
     
 fig.tight_layout()
@@ -304,17 +302,17 @@ plt.savefig(os.path.join(savedst, 'far2near_com_opto.svg'),  bbox_inches='tight'
 #%%
 # near to far
 # bigdf_plot=bigdf_plot[bigdf_plot.animals!='e190']
-bigdf_plot = df.groupby(['animals', 'condition', 'opto','rewzone_transition']).mean(numeric_only=True)
+bigdf_plot = df.groupby(['animals', 'days','condition', 'opto','rewzone_transition']).mean(numeric_only=True)
 bigdf_plot = bigdf_plot.reset_index()
 df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(1.0, 3.0)')|(bigdf_plot.rewzone_transition=='(1.0, 2.0)')]
-df2plt = df2plt.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True).reset_index()
+df2plt = df2plt.groupby(['animals', 'days','condition', 'opto']).mean(numeric_only=True).reset_index()
 
 fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="com",hue='condition', data=df2plt, 
             palette=pl,                     
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="com",hue='condition', data=df2plt, palette=pl, alpha=a,
-            s=s,ax=ax)
+            s=10,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'COM Licks-Reward Loc. (cm)')
@@ -329,8 +327,8 @@ fig.tight_layout()
 plt.savefig(os.path.join(savedst, 'near2far_com_opto.svg'),  bbox_inches='tight')
 #%%
 # lick rate diff
-bigdf_plot = df.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True).reset_index()
-bigdf_plot = bigdf_plot[(bigdf_plot.animals!='e190')]
+bigdf_plot = df.groupby(['animals','condition', 'opto']).mean(numeric_only=True).reset_index()
+bigdf_plot = bigdf_plot[(bigdf_plot.animals!='e190')&(bigdf_plot.animals!='e189')]
 
 fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="lick_rate_diff",hue='condition', data=bigdf_plot, 
@@ -342,7 +340,7 @@ sns.stripplot(x="condition", y="lick_rate_diff",hue='condition', data=bigdf_plot
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
 ax.set_ylabel(f'Pre-reward lick rate (licks/s)')
-ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation =20)
 ax.set_xlabel('')
 fig.tight_layout()
 

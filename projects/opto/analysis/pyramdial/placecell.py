@@ -1026,6 +1026,10 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
     rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
     track_length_rad = track_length*(2*np.pi/track_length)
     bin_size=track_length_rad/bins
+    track_length_dt = 550 # cm estimate based on 99.9% of ypos
+    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+    bins_dt=150 
+    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
 
     if sum([f'{animal}_{day:03d}' in xx for xx in list(radian_alignment_saved.keys())])>0:
         k = [xx for xx in radian_alignment_saved.keys() if f'{animal}_{day:03d}' in xx][0]
@@ -1053,10 +1057,6 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
         # find correct trials within each epoch!!!!
         # tc w/ dark time
         print('making tuning curves...\n')
-        track_length_dt = 550 # cm estimate based on 99.9% of ypos
-        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-        bins_dt=150 
-        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
         tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt,lasttr=8) 
         # early tc
@@ -1128,7 +1128,7 @@ def get_rew_cells_opto(params_pth, pdf, radian_alignment_saved, animal, day, ii,
 def process_goal_cell_proportions(
     eptest, cell_type, coms_correct, tcs_correct, rewlocs,
     animal, day, pdf, rz, scalingf, bins, goal_window, epsilon=0.7,
-    num_iterations=1000,bound=np.pi/2
+    num_iterations=1000,bound=np.pi/2,allep=False
 ):
     """
     near pre and all post

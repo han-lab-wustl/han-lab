@@ -329,9 +329,7 @@ bigdf_org = bigdf_org[(bigdf_org['animal']!='e190')&(bigdf_org['animal']!='e186'
 bigdf_org=bigdf_org[~((bigdf_org.animal=='z17')&((bigdf_org.day>12)))]
 bigdf_org=bigdf_org[~((bigdf_org.animal=='z15')&((bigdf_org.day.isin([10,16]))))]
 bigdf_org=bigdf_org[~((bigdf_org.animal=='e217')&((bigdf_org.day<9)|(bigdf_org.day.isin([18,17,11,29,30]))))]
-# bigdf_org=bigdf_org[~((bigdf_org.animal=='e216')&((bigdf_org.day<32)|(bigdf_org.day.isin([57]))))]
-# bigdf_org=bigdf_org[~((bigdf_org.animal=='e200')&((bigdf_org.day.isin([67,68,81]))))]
-# bigdf_org=bigdf_org[~((bigdf_org.animal=='e218')&(bigdf_org.day.isin([41,55])))]
+bigdf_org=bigdf_org[~((bigdf_org.animal=='e189')&((bigdf_org.day.isin([35,41,42,44]))))]
 
 # Compute per-animal LED-on minus off differences for inactive and active
 bigdf = bigdf_org.groupby(['animal', 'vip_cond','opto']).mean(numeric_only=True).reset_index()
@@ -352,8 +350,9 @@ df_long['cell_type'] = df_long['cell_type'].map({
     'inactive_diff': 'Inactivated',
     'active_diff': 'Activated'
 })
+df_long['LED_on_minus_off']=df_long['LED_on_minus_off']*100
 # --- Plot ---
-plt.figure(figsize=(6,5))
+plt.figure(figsize=(5.5,5))
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 ax = sns.barplot(data=df_long, x='cell_type', y='LED_on_minus_off', hue='vip_cond', errorbar='se', fill=False,legend=False,palette=pl)
 sns.stripplot(data=df_long, x='cell_type', y='LED_on_minus_off', hue='vip_cond',dodge=True, jitter=0.1, s=12, ax=ax,alpha=0.7,palette=pl)
@@ -362,21 +361,21 @@ handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles[:2], labels[:2], title='Condition', bbox_to_anchor=(1.05, 1), loc='upper left')
 
 # Format axes
-ax.set_ylabel('$\Delta$ Proportion (LEDon-LEDoff)')
+ax.set_ylabel('$\Delta$ % Cells (LEDon-LEDoff)')
 ax.set_xlabel('')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 # --- Statistical Annotations with Comparison Bars ---
 conds = df_long['vip_cond'].unique()
 cell_types = ['Inactivated', 'Activated']
-y_max = df_long['LED_on_minus_off'].max()-.1
-y_step = 0.03
+y_max = df_long['LED_on_minus_off'].max()-10
+y_step = 3
 bar_idx = 0  # counter to stack comparison bars
 
 for cell_type in cell_types:
     df_cell = df_long[df_long['cell_type'] == cell_type]
 
-    for cond in conds:
+    for iii,cond in enumerate(conds):
         if cond == 'ctrl': continue
         # Get group data
         data1 = df_cell[df_cell['vip_cond'] == 'ctrl']['LED_on_minus_off'].astype(float)
@@ -387,8 +386,8 @@ for cell_type in cell_types:
         text = '*' if pval < 0.05 else ''
 
         # Get x-locations
-        x1 = cell_types.index(cell_type) - 0.2  # ctrl
-        x2 = cell_types.index(cell_type) + 0.2  # test group
+        x1 = cell_types.index(cell_type)-0.25  # ctrl
+        x2 = cell_types.index(cell_type)-0.15+0.2*iii  # test group
         y = y_max + y_step * (bar_idx + 1)
 
         # Draw bar and annotate

@@ -209,7 +209,7 @@ av_licks_in_rewzone_ctrl, av_licks_in_prevrewzone_ctrl = plot_lick_vis(dct_to_us
 #%%
 dct_to_use = lick_tc_vip_opto
 condition = 'VIP Ex LED on'
-av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use,condition,savedst, save=True,fignsize=(12,10))
+av_licks_in_rewzone_vip, av_licks_in_prevrewzone_vip = plot_lick_vis(dct_to_use,condition,savedst, save=True,figsize=(12,10))
 
 #%%
 dct_to_use = probe_lick_tc_ctrl_opto
