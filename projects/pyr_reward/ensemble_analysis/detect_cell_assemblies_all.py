@@ -124,27 +124,6 @@ for cell_type in cell_types:
                     ax.set_ylabel('Cell ID #')
                     if jj==0:
                         plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_darktime_{cell_type}_ensemble_eg.svg'),bbox_inches='tight')
-                    ############## incorrects #############
-                    # asm = ass_all_incorr[jj]
-                    # fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
-                    # for kk,tcs in enumerate(asm):
-                    #     ax = axes[kk]
-                    #     vmin = np.min(tcs)
-                    #     vmax = np.max(tcs)
-                    #     norm = colors.Normalize(vmin=vmin, vmax=vmax)
-                    #     # same order as corrects
-                    #     # if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
-                    #     im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
-                    #     ax.set_title(f'Epoch {kk+1}')
-                    #     ax.axvline(bins_dt/2, color='w', linestyle='--')
-                    # # ax.set_xticks(np.arange(0,bins_dt+10,30))
-                    # # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
-                    # fig.suptitle(f'Incorrect \n Pre-reward ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
-                    #     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}\n\n')
-                    # cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-                    # fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
-                    # if jj==0:
-                    #     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_darktime_prerew_ensemble_eg.svg'),bbox_inches='tight')
 
             num_epochs.append(len(asm))
             cs_all.append(cs_per_ep)
@@ -153,19 +132,100 @@ for cell_type in cell_types:
             # plt.figure()
             # plt.plot(tcs[np.argsort(com_per_cell)].T)
 #%%
-# align example pf assembly to lick tuning curve
-assembly=[assembly_cells_all_an[i]['pre']['assemblies'] for i in range(len(assembly_cells_all_an))]
-pln=0
-for ii,ass in enumerate(assembly):
-    if df.iloc[ii].animal==an_plt and df.iloc[ii].days==an_day:
-        params_pth = rf"Y:\analysis\fmats\{an_plt}\days\{animal}_day{an_day:03d}_plane{pln}_Fall.mat"
-        print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=[
-        'coms', 'changeRewLoc', 'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 
-        'rewards', 'iscell', 'bordercells', 'stat', 'licks'])
-        
+# example plots
+bins_dt=150
+# look through all the assemblies
+# df = conddf.copy()
+# df = df[(df.animals!='e217') & (df.optoep.values<2)]
+an_plt = 'z9' # 1 eg animal
+an_day = 19
+plt.close('all')
+rewlocs=[169.5, 114, 213, 157.5] # for e201,72
+cs_all_celltype = []; num_epochs_celltype = []
+cell_types = ['pre', 'post', 'place']
+for cell_type in cell_types:
+    cs_all = []; num_epochs = []
+    plot=True
+    # plot = False
+    assembly=[assembly_cells_all_an[i][cell_type]['assemblies'] for i in range(len(assembly_cells_all_an))]
+    for ii,ass in enumerate(assembly):
+        if df.iloc[ii].animal==an_plt and df.iloc[ii].days==an_day:
+            print(f'{df.iloc[ii].animal}, {df.iloc[ii].days}')
+            ass_all = [xx[0] for xx in list(ass.values())] # all assemblies
+            # split into correct v fail
+            ass_all_incorr = [xx[1] for xx in list(ass.values())] # all assemblies
+            cs_per_ep = []; ne = []
+            for jj,asm in enumerate(ass_all):
+                # only pick cells > 10
+                cell_nm = asm.shape[1]
+                if cell_nm<5:
+                    continue
+                perm = list(combinations(range(len(asm)), 2)) 
+                # consecutive ep only
+                perm = [p for p in perm if p[0]-p[1]==-1]
+                cs = [cosine_sim_ignore_nan(asm[p[0]], asm[p[1]]) for p in perm]
+                cs_per_ep.append(cs)
+                if plot:
+                    fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
+                    gamma=1
+                    for kk,tcs in enumerate(asm):
+                        ax = axes[kk]
+                        time_bins = np.arange(tcs.shape[1])
+                        if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                        # Normalize per row
+                        tcs_norm = tcs / np.nanmax(tcs, axis=1, keepdims=True)
+                        tcs_norm[np.isnan(tcs_norm)] = 0
+                        vmin = np.min(tcs_norm)
+                        vmax = np.max(tcs_norm)
+                        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+                        im = ax.imshow(tcs_norm[np.argsort(com_per_cell)]**gamma, aspect='auto', norm=norm)
+                        ax.set_title(f'Epoch {kk+1}')
+                        if kk==0: ax.set_ylabel('Cell ID #')
+                        ax.set_xticks([0, tcs.shape[1]/2,tcs.shape[1]])
+                        if cell_type!='place':
+                            ax.set_xticklabels(['-$\\pi$',0,'$\\pi$'])
+                            ax.axvline(time_bins[-1]/2, color='w', linestyle='--')
+                        else:
+                            ax.set_xticklabels([0,135,270])
+                            ax.axvline(rewlocs[kk]/3, color='w', linestyle='--')
+                    if cell_type!='place':
+                        ax.set_xlabel('Reward-relative distance ($\Theta$)')
+                    else:
+                        ax.set_xlabel('Track position (cm)')
 
+                    fig.suptitle(f'Correct \n {cell_type} ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
+                        Assembly: {jj}, Cosine sim b/wn epochs average: {np.round(np.nanmean(cs),2)}\n\n')
+                    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+                    fig.colorbar(im, cax=cbar_ax, label=f'Norm. $\Delta$ F/F')
+                    
+                    if jj==0:
+                        plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_darktime_{cell_type}_ensemble_eg.svg'),bbox_inches='tight')
+                    ############## incorrects #############
+                    # # asm = ass_all_incorr[jj]
+                    # # fig,axes = plt.subplots(ncols = len(asm), figsize=(14,5),sharex=True,sharey=True)
+                    # # for kk,tcs in enumerate(asm):
+                    # #     ax = axes[kk]
+                    # #     vmin = np.min(tcs)
+                    # #     vmax = np.max(tcs)
+                    # #     norm = colors.Normalize(vmin=vmin, vmax=vmax)
+                    # #     # same order as corrects
+                    # #     # if kk==0: com_per_cell = [np.sum(tc * time_bins) / np.sum(tc) if np.sum(tc) > 0 else np.nan for tc in tcs]            
+                    # #     im=ax.imshow(tcs[np.argsort(com_per_cell)]**gamma,aspect='auto',norm=norm)
+                    # #     ax.set_title(f'Epoch {kk+1}')
+                    # #     ax.axvline(bins_dt/2, color='w', linestyle='--')
+                    # # # ax.set_xticks(np.arange(0,bins_dt+10,30))
+                    # # # ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi+.6, np.pi/2.5),2))
+                    # # fig.suptitle(f'Incorrect \n Pre-reward ensemble \n {df.iloc[ii].animal}, {df.iloc[ii].days} \n\
+                    # #     Assembly: {jj}, Cosine similarity b/wn epochs average: {np.round(np.nanmean(cs),2)}\n\n')
+                    # # cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+                    # # fig.colorbar(im, cax=cbar_ax, label=f'$\Delta$ F/F ^ {gamma}')
+                    # if jj==0:
+                    #     plt.savefig(os.path.join(savedst,f'{an_plt}_{an_day}_darktime_prerew_ensemble_eg.svg'),bbox_inches='tight')
 
+            num_epochs.append(len(asm))
+            cs_all.append(cs_per_ep)
+    cs_all_celltype.append(cs_all)
+    num_epochs_celltype.append(num_epochs)
 #%%
 # ######################## shuffle ########################
 # # look through all the assemblies
@@ -275,17 +335,13 @@ plt.rc('font', size=20)
 dfan = df_all.groupby(['animal', 'num_epochs', 'cell_type']).mean(numeric_only=True)
 dfan = dfan.reset_index()
 dfan = dfan[dfan.num_epochs<5]
-df_clean = dfan[(dfan.animal!='e139')& (dfan.animal!='e189')]
+df_clean = dfan[(dfan.animal!='e139')& (dfan.animal!='e189') & (dfan.animal!='z16')& (dfan.animal!='e200')]
 # palette = seaborn Dark2
 s=10
 df_all = df_clean
 cell_types = ['pre', 'post', 'place']
 plt.figure(figsize=(6,4))
-ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, errorbar='se',
-            fill=False, palette = 'Dark2',hue_order=cell_types)
-# sns.barplot(x='num_epochs', y='cosine_sim_across_ep',data=df_shuffle, errorbar='se',
-#             color='dimgrey',alpha=0.3,
-#             label='shuffle', err_kws={'color': 'grey'},ax=ax)
+ax = sns.barplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, errorbar='se',fill=False, palette = 'Dark2',hue_order=cell_types)
 ax = sns.stripplot(x='num_epochs', y='cosine_sim_across_ep', hue='cell_type',data=df_all, dodge=True,
             s=s,alpha=0.7,palette = 'Dark2',hue_order=cell_types)
 
@@ -297,51 +353,44 @@ ax.spines[['top','right']].set_visible(False)
 epochs = sorted(df_all.num_epochs.unique())
 ymax = .6
 y_offsets = [ymax + (i * 0.03) for i in range(len(epochs))]
-
 fs = 40  # font size for stars
 pshift = 0.08  # p-value label offset
 
-# non rew vs. pre reward
-# for i, epoch in enumerate(epochs):
-#     data_epoch = df_all[df_all.num_epochs == epoch]
-#     pre_vals = data_epoch[data_epoch.cell_type == 'Pre-reward']['cosine_sim_across_ep'].dropna()
-#     post_vals = data_epoch[data_epoch.cell_type == 'Place']['cosine_sim_across_ep'].dropna()
-
-#     # t-test
-#     stat, pval = scipy.stats.ranksums(pre_vals, post_vals)
-#     # Plot annotation
-#     x = i
-#     y = y_offsets[i]
-#     # Show p-value (optional)
-#     ax.text(x, y + pshift, f'place vs. pre p={pval:.2g}', ha='center', fontsize=12, rotation=45)
 groups = [
     df_all[df_all.cell_type == ct]['cosine_sim_across_ep'].dropna()
     for ct in ['place', 'pre', 'post']
 ]
-f_stat, p_anova = scipy.stats.f_oneway(*groups)
-print(f"ANOVA F={f_stat:.3f}, p={p_anova:.3g}")
+# Kruskal-Wallis test
+kw_result = scipy.stats.kruskal(*groups)
+print("\nKruskal-Wallis result:")
+print(kw_result)
+
 comparisons = [('pre', 'post')]
 pvals = []
 epochs = sorted(df_all.num_epochs.unique())
 y_offsets = [0.6 + 0.03 * i for i in range(len(comparisons))]  # adjust if needed
 from statsmodels.stats.multitest import multipletests
-
+h=0.04# comp bar
 for i, epoch in enumerate(epochs):
     data_epoch = df_all[df_all.num_epochs == epoch]
     pairwise_pvals = []
     for (a, b) in comparisons:
         vals_a = data_epoch[data_epoch.cell_type == a]['cosine_sim_across_ep']
         vals_b = data_epoch[data_epoch.cell_type == b]['cosine_sim_across_ep']
-        _, p = scipy.stats.ranksums(vals_a[~np.isnan(vals_a)], vals_b[~np.isnan(vals_b)])
+        _, p = scipy.stats.wilcoxon(vals_a[~np.isnan(vals_a)], vals_b[~np.isnan(vals_b)])
         pairwise_pvals.append(p)
     # FDR correction
     reject, pvals_corr, _, _ = multipletests(pairwise_pvals, method='fdr_bh')
     
     # Plot annotations
     for j, ((a, b), pval, sig) in enumerate(zip(comparisons, pvals_corr, reject)):
-        x = i-j/3+.5
+        x = i - j / 3 + 0.5
         y = 0.62 + j * 0.05  # stagger vertical position
+        x_start = i - 0.35 + j * 0.05
+        x_end = i + 0.05 - j * 0.05
+
         if sig:
+            # Stars based on significance level
             if pval < 0.001:
                 star = '***'
             elif pval < 0.01:
@@ -350,39 +399,109 @@ for i, epoch in enumerate(epochs):
                 star = '*'
             else:
                 star = ''
-            ax.text(x, y, star, ha='center', fontsize=16)
-        ax.text(x, y + 0.02, f'{a} vs {b}\np={pval:.2g}', ha='center', fontsize=10, rotation=45)
+
+            # Plot bar
+            ax.plot([x_start,x_start, x_end,x_end], [y, y+h, y+h, y], lw=1.5, c='k')
+            # Plot star above bar
+            ax.text(x_end-.2, y + 0, star, ha='center', va='bottom', fontsize=40)
+
+        # Always show p-value label (optional: only show if sig)
+        ax.text(x, y + 0.025, f'{a} vs {b}\np={pval:.2g}', ha='center', fontsize=9, rotation=45)
 
 ax.set_ylabel('Mean ensemble cosine similarity')
-ax.set_xlabel('# of reward loc. switches')
+ax.set_xlabel('# of epochs')
 
 plt.savefig(os.path.join(savedst, 'dark_time_ensemble_cosine_sim_pre_v_post.svg'))
 #%%
 # histogram of cell % in assemblies
 # df_all=df_all.reset_index()
-fig, axes = plt.subplots(ncols=2,figsize=(10,5))
-ax=axes[0] 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+from scipy.stats import kruskal
+
+# Capitalize cell_type values
+df_all['cell_type'] = df_all['cell_type'].str.capitalize()
+cell_types = [ct.capitalize() for ct in cell_types]
+
+# Count number of observations per cell type
+print("Number of observations per cell type:")
+counts = df_all['cell_type'].value_counts()
+for ct in cell_types:
+    print(f"{ct}: {counts.get(ct, 0)}")
+
+# Kruskal-Wallis test
+groups = [df_all[df_all['cell_type'] == ct]['p_cells_in_assemblies'].dropna() for ct in cell_types]
+kw_result = kruskal(*groups)
+print("\nKruskal-Wallis result:")
+print(kw_result)
+
+# Plotting
+fig, axes = plt.subplots(ncols=2, figsize=(8,5))
+
+# Histogram
+ax = axes[0]
 sns.histplot(
     x='p_cells_in_assemblies',
     hue='cell_type',
-    data=df_all,hue_order=cell_types,
+    data=df_all, hue_order=cell_types,
     bins=5,
     palette='Dark2',
-    multiple='dodge',  # This avoids overlapping
-ax=ax)
+    multiple='dodge',
+    ax=ax)
 ax.set_xlabel('Cell % in ensemble')
 ax.set_ylabel('Sessions')
-ax.spines[['top','right']].set_visible(False)
-ax=axes[1]
+ax.spines[['top', 'right']].set_visible(False)
+
+# Boxplot
+ax = axes[1]
 sns.boxplot(
     x='cell_type',
     y='p_cells_in_assemblies',
     hue='cell_type',
-    data=df_all,order=cell_types,hue_order=cell_types,
-    palette='Dark2',    
-ax=ax)
+    data=df_all, order=cell_types, hue_order=cell_types,
+    palette='Dark2',
+    ax=ax)
 ax.set_ylabel('% of cells in ensemble')
 ax.set_xlabel('')
-ax.spines[['top','right']].set_visible(False)
+ax.spines[['top', 'right']].set_visible(False)
+from statsmodels.stats.multitest import multipletests
+import itertools
+# Pairwise Mann-Whitney U tests with Bonferroni correction
+print("\nPairwise Mann-Whitney U tests (rank-sum):")
+pairs = list(itertools.combinations(cell_types, 2))
+pvals = []
+stats = []
+
+# Compute uncorrected p-values
+for ct1, ct2 in pairs:
+    data1 = df_all[df_all['cell_type'] == ct1]['p_cells_in_assemblies'].dropna()
+    data2 = df_all[df_all['cell_type'] == ct2]['p_cells_in_assemblies'].dropna()
+    stat, p =scipy.stats.ranksums(data1, data2)
+    stats.append((ct1, ct2, stat))
+    pvals.append(p)
+
+# Bonferroni correction
+reject, pvals_corrected, _, _ = multipletests(pvals, method='bonferroni')
+
+# Print results
+for i, (ct1, ct2, stat) in enumerate(stats):
+    print(f"{ct1} vs {ct2}: U = {stat:.2f}, raw p = {pvals[i]:.4f}, corrected p = {pvals_corrected[i]:.4f}, significant: {reject[i]}")
+# Annotate boxplot with significance
+from matplotlib.lines import Line2D
+
+# Define height positions for annotation lines
+y_max = df_all['p_cells_in_assemblies'].max()
+height_step = (y_max * 0.05) if y_max > 0 else 0.05
+start_height = y_max + height_step
+h=5# comparison bar height
+for i, ((ct1, ct2), p_corr, sig) in enumerate(zip(pairs, pvals_corrected, reject)):
+    if sig:
+        x1, x2 = cell_types.index(ct1), cell_types.index(ct2)
+        y = start_height + i * height_step
+        ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], lw=1.5, c='k')
+        ax.text((x1 + x2) / 2, y + 0.01, f"p = {p_corr:.3f}", ha='center', va='bottom', fontsize=8)
+        ax.text((x1 + x2) / 2, y + 0.01, f"**", ha='center', va='bottom', fontsize=40)
+
 fig.tight_layout()
 plt.savefig(os.path.join(savedst, 'dark_time_pcells_in_ensembles.svg'))

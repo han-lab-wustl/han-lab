@@ -20,38 +20,35 @@ from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
 from rewardcell import get_radian_position,extract_data_df
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
+conddf = pd.read_csv(r"Z:\condition_df\conddf_tracking.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'cell_charac.pdf')
+savepth = os.path.join(savedst, 'vip_opto_cell_charac.pdf')
 #%%
 goal_cm_window=20 # to search for rew cells
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
-saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p'
-with open(saveddataset, "rb") as fp: #unpickle 
-    radian_alignment_saved = pickle.load(fp)
+# saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_rewardcentric_all.p'
+# with open(saveddataset, "rb") as fp: #unpickle 
+#     radian_alignment_saved = pickle.load(fp)
 radian_alignment_saved = {} # overwrite
 dfs = []
 radian_alignment = {}
 lasttr=8 #  last trials 
 bins=90
-
+#%%
 # iterate through all animals
-for ii in range(99,len(conddf)):
-    day = conddf.days.values[ii]
-    animal = conddf.animals.values[ii]
-    if (conddf.optoep.values[ii]>1):
+for ii in range(179,len(conddf)):
+    if ii!=179:
+        day = conddf.days.values[ii]
+        animal = conddf.animals.values[ii]
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        try:
-            df=extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
-                        goal_cm_window, pdf, pln)
-            dfs.append(df)
-        except Exception as e:
-            print(e)
+        df=extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
+                    goal_cm_window, pdf, pln)
+        dfs.append(df)
 #%%
 # concat bigdf
 bigdf=pd.concat(dfs)
-bigdf.to_csv(r'C:\Users\Han\Desktop\cell_features_pyr_goal_opto.csv',index=None)
+bigdf.to_csv(r"\\storage1.ris.wustl.edu\ebhan\Active\dzahra\vip_opto_inhib_excit_cell_features_pyr_goal.csv",index=None)
 #%%
 bigdf[(bigdf.animal=='e201')&(bigdf.tracked_cellid==2)] 

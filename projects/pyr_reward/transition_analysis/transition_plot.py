@@ -148,82 +148,6 @@ fig.suptitle('Reward-Place')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'reward_place_eg.svg'), bbox_inches='tight')
 #%%
-fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\TransitionMatrix\Per_Animial_Mean_Transition"
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
-with open(fl, "rb") as fp: #unpickle
-    dct = pickle.load(fp)
-
-df = pd.DataFrame(dct)
-# RR2RR_m	RR2PP_m	RR2NL_m	PP2RR_m	PP2PP_m	PP2NL_m	NL2RR_m	NL2PP_m	NL2NL_m
-df.columns = ['Reward-Reward', 'Reward-Place', 'Reward-Untuned', 'Place-Reward', 'Place-Place','Place-Untuned', 'Untuned-Reward', 'Untuned-Place', 'Untuned-Untuned']
-order = ['Place-Place','Reward-Place','Place-Reward','Reward-Reward','Place-Untuned', 'Reward-Untuned','Untuned-Reward', 'Untuned-Place', 'Untuned-Untuned']
-df = df[order]*100
-fig,ax = plt.subplots(figsize=(6,4))
-sns.heatmap(df, fmt=".1f", cmap="Blues", cbar_kws={'label': '% Cells that transition'},annot_kws={'size': 12})
-ax.set_ylabel('Animal')
-ax.set_xlabel('Transition')
-plt.savefig(os.path.join(savedst, 'transition_matrix.svg'), bbox_inches='tight')
-
-# draw graph
-# Compute means
-means = df.mean().to_dict()
-
-# Build graph
-G = nx.DiGraph()
-for k, v in means.items():
-    src, dst = k.split('-')
-    G.add_edge(src, dst, weight=v)
-
-# Node positions
-pos = nx.spring_layout(G)
-
-fig, ax = plt.subplots(figsize=(6,5))
-matplotlib.rcParams['font.family'] = 'Arial'
-
-# Draw nodes
-nx.draw_networkx_nodes(G, pos, node_size=5000, node_color='w', edgecolors='black', ax=ax)
-nx.draw_networkx_labels(G, pos, font_family='Arial', font_size=16, ax=ax)
-fs=14
-# Draw normal edges (no self-loops)
-for u, v, d in G.edges(data=True):
-    if u != v:
-        nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], arrowstyle='-|>', arrowsize=15,
-                               edge_color='gray', width=2, ax=ax)
-        x_text = (pos[u][0] + pos[v][0]) / 2
-        y_text = (pos[u][1] + pos[v][1]) / 2
-        ax.text(x_text, y_text, f"{d['weight']:.1f}%", fontsize=fs, ha='center', va='center')
-
-# Manually draw self-loop arrows
-loop_offsets = {
-    'Place': (0.0, -0.5),
-    'Reward': (0.0, 0.5),
-    'Untuned': (0.0, -0.5),
-}
-for node, (dx, dy) in loop_offsets.items():
-    x, y = pos[node]
-    if G.has_edge(node, node):
-        weight = G[node][node]['weight']
-        loop = mpatches.FancyArrowPatch(
-            (x, y), (x + dx, y + dy),
-            connectionstyle="arc3,rad=0.6",
-            arrowstyle='-|>',
-            mutation_scale=20,
-            color='gray',
-            lw=2,
-            zorder=10
-        )
-        ax.add_patch(loop)
-        ax.text(x + dx * 1.2, y + dy * 1.2, f"{weight:.1f}%", ha='center', va='center', fontsize=fs)
-
-# Adjust plot
-ax.set_xlim(-2,2)
-ax.set_ylim(-2,2)
-# Final formatting
-# ax.set_title("Transition Diagram", fontsize=16)
-ax.axis('off')
-# plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'transition_diagram.svg'), bbox_inches='tight')
-#%%
 # transition v shuffle
 fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\Truth_vs_Shuffle\ShuffleDistribution_PP2PP"
 with open(fl, "rb") as fp: #unpickle
@@ -384,7 +308,6 @@ ax.set_title('Real vs Shuffle Transitions')
 
 fig.tight_layout(rect=[0, 0, 0.85, 1])
 plt.savefig(os.path.join(savedst, 'transition_stats_v_shuffle.svg'), bbox_inches='tight')
-
 #%%
 # pre v post
 
@@ -480,3 +403,143 @@ ax.set_ylabel('% Cell transition')
 ax.set_title('Pre v. Post Transitions')
 plt.xticks(rotation=25)
 plt.savefig(os.path.join(savedst, 'pre_post_transition.svg'), bbox_inches='tight')
+
+import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+# Define nodes
+nodes = ['Reward', 'Place', 'Untuned']
+
+# Define edge weights (from raw data above)
+edge_weights = {
+    ('Reward', 'Reward'): np.mean(r2r[0]) * 100,
+    ('Reward', 'Place'): np.mean(r2p[0]) * 100,
+    ('Reward', 'Untuned'): 5,  # Placeholder
+
+    ('Place', 'Reward'): np.mean(p2r[0]) * 100,
+    ('Place', 'Place'): np.mean(p2p[0]) * 100,
+    ('Place', 'Untuned'): 4,  # Placeholder
+
+    ('Untuned', 'Reward'): 3,
+    ('Untuned', 'Place'): 2,
+    ('Untuned', 'Untuned'): 6,
+}
+
+# Create directed graph
+G = nx.DiGraph()
+
+# Add nodes and edges
+for (src, dst), weight in edge_weights.items():
+    G.add_edge(src, dst, weight=weight)
+
+# Custom node positions
+pos = {
+    'Reward': (-1, 1),
+    'Place': (1, 1),
+    'Untuned': (0, -0.7),
+}
+
+# Draw nodes
+node_colors = ['cornflowerblue', 'indigo', 'gray']
+nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=2000)
+
+# Draw edges with widths scaled by transition strength
+weights = [G[u][v]['weight'] for u, v in G.edges()]
+max_weight = max(weights)
+widths = [3 + (w / max_weight) * 5 for w in weights]
+
+nx.draw_networkx_edges(G, pos, edge_color='black', width=widths, arrows=True, arrowstyle='-|>', arrowsize=20)
+
+# Draw labels
+nx.draw_networkx_labels(G, pos, font_size=14, font_color='white', font_weight='bold')
+
+# Draw edge labels (% transition)
+edge_labels = {(u, v): f"{G[u][v]['weight']:.1f}%" for u, v in G.edges()}
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
+
+# Final plot settings
+plt.title("Cell Type Transition Graph", fontsize=16)
+plt.axis('off')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, "transition_network_graph.svg"), bbox_inches='tight')
+plt.show()
+#%%
+
+fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\TransitionMatrix\Per_Animial_Mean_Transition"
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+with open(fl, "rb") as fp: #unpickle
+    dct = pickle.load(fp)
+
+df = pd.DataFrame(dct)
+# RR2RR_m	RR2PP_m	RR2NL_m	PP2RR_m	PP2PP_m	PP2NL_m	NL2RR_m	NL2PP_m	NL2NL_m
+df.columns = ['Reward-Reward', 'Reward-Place', 'Reward-Untuned', 'Place-Reward', 'Place-Place','Place-Untuned', 'Untuned-Reward', 'Untuned-Place', 'Untuned-Untuned']
+order = ['Place-Place','Reward-Place','Place-Reward','Reward-Reward','Place-Untuned', 'Reward-Untuned','Untuned-Reward', 'Untuned-Place', 'Untuned-Untuned']
+df = df[order]*100
+fig,ax = plt.subplots(figsize=(6,4))
+sns.heatmap(df, fmt=".1f", cmap="Blues", cbar_kws={'label': '% Cells that transition'},annot_kws={'size': 12})
+ax.set_ylabel('Animal')
+ax.set_xlabel('Transition')
+plt.savefig(os.path.join(savedst, 'transition_matrix.svg'), bbox_inches='tight')
+
+# draw graph
+# Compute means
+means = df.mean().to_dict()
+
+# Build graph
+G = nx.DiGraph()
+for k, v in means.items():
+    src, dst = k.split('-')
+    G.add_edge(src, dst, weight=v)
+
+# Node positions
+pos = nx.spring_layout(G)
+
+fig, ax = plt.subplots(figsize=(6,5))
+matplotlib.rcParams['font.family'] = 'Arial'
+
+# Draw nodes
+nx.draw_networkx_nodes(G, pos, node_size=5000, node_color='w', edgecolors='black', ax=ax)
+nx.draw_networkx_labels(G, pos, font_family='Arial', font_size=16, ax=ax)
+fs=14
+# Draw normal edges (no self-loops)
+for u, v, d in G.edges(data=True):
+    if u != v:
+        nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], arrowstyle='-|>', arrowsize=15,
+                               edge_color='gray', width=2, ax=ax)
+        x_text = (pos[u][0] + pos[v][0]) / 2
+        y_text = (pos[u][1] + pos[v][1]) / 2
+        ax.text(x_text, y_text, f"{d['weight']:.1f}%", fontsize=fs, ha='center', va='center')
+
+# Manually draw self-loop arrows
+loop_offsets = {
+    'Place': (0.0, -0.5),
+    'Reward': (0.0, 0.5),
+    'Untuned': (0.0, -0.5),
+}
+for node, (dx, dy) in loop_offsets.items():
+    x, y = pos[node]
+    if G.has_edge(node, node):
+        weight = G[node][node]['weight']
+        loop = mpatches.FancyArrowPatch(
+            (x, y), (x + dx, y + dy),
+            connectionstyle="arc3,rad=0.6",
+            arrowstyle='-|>',
+            mutation_scale=20,
+            color='gray',
+            lw=2,
+            zorder=10
+        )
+        ax.add_patch(loop)
+        ax.text(x + dx * 1.2, y + dy * 1.2, f"{weight:.1f}%", ha='center', va='center', fontsize=fs)
+
+# # Adjust plot
+ax.set_xlim(-2,2)
+ax.set_ylim(-2,2)
+# 
+# Final formatting
+# ax.set_title("Transition Diagram", fontsize=16)
+ax.axis('off')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'transition_diagram.svg'), bbox_inches='tight')

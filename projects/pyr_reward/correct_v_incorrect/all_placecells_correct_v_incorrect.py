@@ -108,7 +108,7 @@ for ii in range(len(conddf)):
          Fc3 = Fc3[:,((skew>2)&pc_bool)]
       bin_size=3 # cm
       # get abs dist tuning 
-      tcs_correct, coms_correct,tcs_fail,coms_fail = make_tuning_curves(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel, rewsize,bin_size)
+      tcs_correct_abs, coms_correct_abs,tcs_fail_abs,coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel, rewsize,bin_size,velocity_filter=True)
       # get  rew cells and make sure place is not reward
       track_length_rad = track_length*(2*np.pi/track_length)
       bin_size=track_length_rad/bins
@@ -118,7 +118,7 @@ for ii in range(len(conddf)):
       track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
       bins_dt=150 
       bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-      tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+      tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt,lasttr=8) 
       goal_window = 20*(2*np.pi/track_length) # cm converted to rad
       coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -147,8 +147,8 @@ for ii in range(len(conddf)):
          goal_cells=[]
       # get cells that maintain their coms across at least 2 epochs
       place_window = 20 # cm converted to rad                
-      perm = list(combinations(range(len(coms_correct)), 2))     
-      com_per_ep = np.array([(coms_correct[perm[jj][0]]-coms_correct[perm[jj][1]]) for jj in range(len(perm))])        
+      perm = list(combinations(range(len(coms_correct_abs)), 2))     
+      com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
       compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
       # get cells across all epochs that meet crit
       pcs = np.unique(np.concatenate(compc))
@@ -161,9 +161,9 @@ for ii in range(len(conddf)):
       # get all for now
       # pcs_all=pcs
       # get tc 
-      correct = scipy.integrate.trapz(tcs_correct[:,pcs_all, :],axis=2)
+      correct = scipy.integrate.trapz(tcs_correct_abs[:,pcs_all, :],axis=2)
       # epoch (x) x cells (y)
-      incorrect = scipy.integrate.trapz(tcs_fail[:,pcs_all, :],axis=2)
+      incorrect = scipy.integrate.trapz(tcs_fail_abs[:,pcs_all, :],axis=2)
       df=pd.DataFrame()
       df['mean_tc'] = np.concatenate([np.concatenate(correct), 
                            np.concatenate(incorrect)])
@@ -175,6 +175,11 @@ for ii in range(len(conddf)):
       df['animal']=[animal]*len(df)
       df['day']=[day]*len(df)
       df['cell_type'] = ['place']*len(df)
+      # collect place aligned vs. reward aligned
+      # place align      
+      # tcs_corr_all.append(tcs_correct_abs[:,pcs_all])
+      # tcs_f_all.append(tcs_fail_abs[:,pcs_all])
+      # reward align
       tcs_corr_all.append(tcs_correct[:,pcs_all])
       tcs_f_all.append(tcs_fail[:,pcs_all])
       epoch_perm.append(perm) 
@@ -192,7 +197,7 @@ def normalize_rows_0_to_1(arr):
     row_max = np.nanmax(arr, axis=1, keepdims=True)
     normed = arr / row_max
     return normed
-
+vmin=0;vmax=1
 plt.rc('font', size=20)
 # --- Settings ---
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
@@ -218,13 +223,14 @@ for animal in animals_test:
       activity_window='pre'
    else:
       activity_window='post'
-   window=bins//6
+   window=bins//2
    # print(cell_type, activity_window)
    # Get relevant traces for correct trials
    tcs_correct_ct = tcs_corr_all
    for ii, tcs_corr in enumerate(tcs_correct_ct):
       if animals[ii] == animal and tcs_corr.shape[1] > 0:
-            tc = np.nanmean(tcs_corr, axis=0)
+            tc = np.nanmean(tcs_corr, axis=0) # 0=mean across ep
+            # 1 =mean across cells
             if tc.ndim == 1: tc = np.expand_dims(tc, 0)
             tcs_correct.append(tc)
             # Quantile per trial

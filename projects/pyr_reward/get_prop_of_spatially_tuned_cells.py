@@ -102,27 +102,31 @@ df['rates_all']=np.concatenate(rates_all)
 df['spatial_tuned_per_ep_all']=np.concatenate(spatial_tuned_per_ep_all)*100
 df['epoch']=np.concatenate([np.arange(len(xx))+1 for xx in rates_all])
 df=df[df.epoch<5]
+colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 
 fig,ax=plt.subplots(figsize=(4,5))
-sns.boxplot(x='epoch', y='spatial_tuned_per_ep_all', data=df, hue='epoch', palette=sns.color_palette('colorblind'))
+sns.boxplot(x='epoch', y='spatial_tuned_per_ep_all', data=df, hue='epoch', palette=colors)
 # sns.stripplot(x='epoch', y='spatial_tuned_per_ep_all', data=df)
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('% of Spatially tuned cells')
 ax.set_xlabel('Epoch #')
-
+ax.set_ylim([0,100])
 plt.savefig(os.path.join(savedst, 'p_spatially_tuned_cells.svg'),bbox_inches='tight')
 
-#%%
-# not signficant!!
-# ANOVA results:
-#                 sum_sq     df         F    PR(>F)
-# C(epoch)   1461.124075    3.0  1.877126  0.132943
-# Residual  97816.848799  377.0       NaN       NaN
+#%%from scipy.stats import kruskal
 
-# Post-hoc t-tests (Bonferroni corrected):
-# 1 vs 2: raw p = 0.3027, corrected p = 1.0000, significant: False
-# 1 vs 3: raw p = 0.9944, corrected p = 1.0000, significant: False
-# 1 vs 4: raw p = 0.0428, corrected p = 0.2569, significant: False
-# 2 vs 3: raw p = 0.4017, corrected p = 1.0000, significant: False
-# 2 vs 4: raw p = 0.0292, corrected p = 0.1753, significant: False
-# 3 vs 4: raw p = 0.1168, corrected p = 0.7008, significant: False
+# Group values by epoch
+grouped = [group['spatial_tuned_per_ep_all'].values for _, group in df.groupby('epoch')]
+
+# Run Kruskal-Wallis test
+stat, pval = scipy.stats.kruskal(*grouped)
+
+print(f"Kruskal-Wallis H = {stat:.3f}, p = {pval:.4g}")
+import scikit_posthocs as sp
+
+# Dunn's post hoc test with Holm correction
+posthoc = sp.posthoc_dunn(df, val_col='spatial_tuned_per_ep_all', group_col='epoch', p_adjust='holm')
+
+print("Dunn's test with Holm correction:\n", posthoc)
+counts = df.groupby('epoch')['spatial_tuned_per_ep_all'].count()
+print("Number of observations per epoch:\n", counts)

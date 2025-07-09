@@ -2634,8 +2634,7 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     rewlocs = changeRewLoc[eps] / scalingf
     eps = np.append(eps, len(changeRewLoc))
     bins = 90
-    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize, rewlocs,
-                                                    trialnum, track_length)  # get radian coordinates
+    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize, rewlocs,trialnum, track_length)  # get radian coordinates
     track_length_rad = track_length * (2 * np.pi / track_length)
     bin_size = track_length_rad / bins 
     rz = get_rewzones(rewlocs, 1 / scalingf)       
@@ -2668,8 +2667,7 @@ def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignm
     
     # allocentric ref
     bin_size = track_length / bins 
-    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum,
-                                                            rewards, forwardvel, rewsize, bin_size)
+    tcs_correct_abs, coms_correct_abs, tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum,rewards, forwardvel, rewsize, bin_size)
     assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
 
     # change to relative value 

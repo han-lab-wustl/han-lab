@@ -16,9 +16,9 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials
-from rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity
+from projects.pyr_reward.rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -30,7 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # test
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
-iind='e186_014_index026'
+iind='e186_017_index015'
 radian_alignment=radian_alignment_saved
 tcs_correct, coms_correct, tcs_fail, coms_fail,\
         com_goal, goal_cell_shuf_ps_per_comp_av,\
@@ -46,19 +46,18 @@ com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj
 com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
 # in addition, com near but after goal
 upperbound=np.pi/4
-com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-        xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
-        xx], axis=0)>0))] for com in com_goal if len(com)>0]
+com_goal = [com for com in com_goal if len(com)>0]
 # get goal cells across all epochs        
 goal_cells = intersect_arrays(*com_goal)
-
+goal_cells=np.unique(np.concatenate(com_goal))
 #%%
 goal_cell_iind = goal_cells
 tc = tcs_correct
 for gc in goal_cell_iind:
-    plt.figure()
-    for ep in range(len(tc)):
-        plt.plot(tcs_correct[ep,gc,:])
+        plt.figure()
+        for ep in range(len(tc)):
+                plt.plot(tcs_correct[ep,gc,:])
+                plt.title(gc)
 animal,day,pln = iind[:4], int(iind[5:8]),0
 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"        
 fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'licks',
@@ -115,12 +114,15 @@ nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
 rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 #%%
-plt.rc('font', size=20)
+plt.rc('font', size=16)
 range_val,binsize=10, .1
 def moving_average(x, window_size):
     return np.convolve(x, np.ones(window_size)/window_size, mode='same')
-
-for gc in goal_cell_iind[:1]:
+goal_cell_iind=np.array(goal_cell_iind)
+colors=sns.color_palette('Dark2')
+fig, axes = plt.subplots(nrows=3,sharex=True,figsize=(3,4),height_ratios=[2,1,1])
+# pre and post eg cell
+for iii,gc in enumerate(goal_cell_iind[[28,2]]):
     # TODO: make condensed
     _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
@@ -148,61 +150,58 @@ for gc in goal_cell_iind[:1]:
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
     _, meanrewrewstops, __, rewrewstops = perireward_binned_activity(fall['rewards'][0], rew_per_plane, 
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+    if iii == 0:
+        ax = axes[0]  # base axis for first cell
+        ax1 = ax
+    else:
+        ax1 = ax.twinx()  # second y-axis for second cell
+    ax1.plot(meanrstops, color=colors[iii], label=f'Cell {gc}')
+    ax1.fill_between(
+        range(0, int(range_val / binsize) * 2),
+        meanrstops - scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
+        meanrstops + scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
+        alpha=0.5, color=colors[iii]
+    )
+    ax1.spines[['top']].set_visible(False)
+    if iii == 0:
+        ax1.set_ylabel('$\Delta F/F$ (Pre)', color=colors[iii])
+    else:
+        ax1.set_ylabel('$\Delta F/F$ (Post)', color=colors[iii])
+    ax1.axvline(int(range_val / binsize), color='k', linestyle='--')
 
+excolor='dimgrey'
+ax=axes[2]
+ax.plot(meanvelrew,color=excolor, label='rewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanvelrew - scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
+meanvelrew + scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
+alpha=0.5, color=excolor
+)               
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('Velocity (cm/s)')
+ax.set_xlabel('Time from stop (s)')
 
-    fig, axes = plt.subplots(nrows=4,sharex=True,figsize=(3,6))
-    ax=axes[0]
-    ax.plot(meanrstops,color='k', label='Rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanrstops - scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
-    meanrstops + scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
-    alpha=0.5, color='k'
-    )             
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.legend().set_visible(False)
-    ax.set_ylabel('$\Delta$ F/F')
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax=axes[1]
-    ax.plot(meanvelrew,color='navy', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanvelrew - scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
-    meanvelrew + scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='navy'
-    )               
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.set_ylabel('Velocity (cm/s)')
-    ax=axes[2]
-    # meanlickrew, __, lickrew
-    lickrew = np.array([moving_average(xx,3) for xx in lickrew.T]).T
-    ax.plot(moving_average(meanlickrew,3),alpha=0.5,color='navy', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanlickrew - scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
-    meanlickrew + scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
-    alpha=0.5, color='navy'
-    )                 
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.spines[['top', 'right']].set_visible(False)    
-    ax.set_ylabel('Licks')
-    ax=axes[3]
-    # meanlickrew, __, lickrew
-    ax.plot(moving_average(meanrewrewstops,2),color='navy', label='rewarded stops')
-    ax.fill_between(
-    range(0, int(range_val / binsize) * 2),
-    meanrewrewstops - scipy.stats.sem(rewrewstops, axis=1, nan_policy='omit'),
-    meanrewrewstops + scipy.stats.sem(rewrewstops, axis=1, nan_policy='omit'),
-    alpha=0.5, color='navy'
-    )             
-    ax.axvline(int(range_val / binsize), color='k', linestyle='--')
-    ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1,20))
-    ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.set_xlabel('Time from stop (s)')
-    ax.set_ylabel('Reward')
-    ax.legend().set_visible(False)
-    fig.suptitle(f'cell # {gc}')
-    
-    plt.savefig(os.path.join(savedst, f'postrew_traces_cell{gc}.svg'))
+ax=axes[1]
+# meanlickrew, __, lickrew
+lickrew = np.array([moving_average(xx,3) for xx in lickrew.T]).T
+lickrew=lickrew/np.nanmax(lickrew,axis=0)
+meanlickrew=np.nanmean(lickrew,axis=1)
+ax.plot(moving_average(meanlickrew,3),alpha=0.5,color=excolor, label='rewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanlickrew - scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
+meanlickrew + scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
+alpha=0.5, color=excolor
+)                 
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.spines[['top', 'right']].set_visible(False)    
+ax.set_ylabel('Norm. Licks')
+ax.set_xticks(np.arange(0, (int(range_val / binsize) * 2) + 1,20))
+ax.set_xticklabels(np.arange(-range_val, range_val + 1, 2))
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('Norm. licks')
+ax.legend().set_visible(False)
+
+plt.savefig(os.path.join(savedst, f'postrew_traces_cell{gc}.svg'))

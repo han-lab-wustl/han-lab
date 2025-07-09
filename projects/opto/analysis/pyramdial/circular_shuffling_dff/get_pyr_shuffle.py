@@ -25,8 +25,8 @@ import numpy as np
 from joblib import Parallel, delayed
 from scipy.ndimage import gaussian_filter1d
 
-savedst=r'Z:\condition_df\circ_shuffle_vip_opto.p'
-with open(savedst, "rb") as fp: #unpickle
+savepickle=r'Z:\condition_df\circ_shuffle_vip_opto.p'
+with open(savepickle, "rb") as fp: #unpickle
    datadct = pickle.load(fp)
 # initialize var
 
@@ -59,7 +59,6 @@ def bin_activity_per_trial(position_trials, activity_trials, n_bins=90, track_le
     return trial_activity, occupancy
 
 
-
 def compute_trial_avg_si(activity_matrix, occupancy_matrix):
     mean_activity = np.nanmean(activity_matrix, axis=0)
     mean_occupancy = np.nansum(occupancy_matrix, axis=0)
@@ -76,7 +75,7 @@ def shuffle_positions(position_trials, frame_rate):
             yield np.roll(np.asarray(pos, dtype=np.float32), shift)
 
 def compute_shuffle_si_once(position_trials, activity_trials, frame_rate):
-    permuted_pos = shuffle_positions(position_trials, frame_rate)
+    permuted_pos = list(shuffle_positions(position_trials, frame_rate))
     binned, occ = bin_activity_per_trial(permuted_pos, activity_trials)
     return compute_trial_avg_si(binned, occ)
 
@@ -90,7 +89,8 @@ def compute_shuffle_distribution(position_trials, activity_trials, frame_rate, n
     )
 
 def is_place_cell(position_trials, activity_trials, frame_rate, n_shuffles=100, p=95, n_jobs=-1):
-    binned, occ = bin_activity_per_trial(position_trials, activity_trials)
+    # print(activity_trials)
+    binned, occ = bin_activity_per_trial(list(position_trials), list(activity_trials))
     real_si = compute_trial_avg_si(binned, occ)
     shuffled_sis = compute_shuffle_distribution(position_trials, activity_trials, frame_rate, n_shuffles, n_jobs)
     p_val = np.mean(real_si <= shuffled_sis)
@@ -146,7 +146,7 @@ bins=90
 a=0.05 # threshold for si detection
 #%%
 # iterate through all animals
-for ii in range(185,len(conddf)):
+for ii in range(159,len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    # check if its the last 3 days of animal behavior
@@ -201,12 +201,8 @@ for ii in range(185,len(conddf)):
       Fc3_org = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
       dFF_org = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
       skew = scipy.stats.skew(dFF_org, nan_policy='omit', axis=0)
-      dFF=dFF_org[:, skew>2]
-      Fc3=Fc3_org[:, skew>2]
-      # low cells
-      if animal=='e217' or animal=='z17' or animal=='z14' or animal=='e200':
-         dFF=dFF_org[:, skew>1]
-         Fc3=Fc3_org[:, skew>1]
+      dFF=dFF_org[:, skew>1.2]
+      Fc3=Fc3_org[:, skew>1.2]
       # per epoch si
       # nshuffles=100   
       rz = get_rewzones(rewlocs,1/scalingf)
@@ -234,7 +230,7 @@ for ii in range(185,len(conddf)):
             activity_trials_list=activity_trials_list,
             frame_rate=fr,            # or whatever your frame rate is
             n_shuffles=num_iterations,
-            n_jobs=1
+            n_jobs=4
          )
          place_cell_flags = [r[0] for r in results]
          real_sis = [r[1] for r in results]
@@ -260,8 +256,7 @@ for ii in range(185,len(conddf)):
       track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
       bins_dt=150 
       bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-      tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-         bins=bins_dt) 
+      tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
       # early tc
       goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
       results_pre = process_goal_cell_proportions(eptest, 
@@ -328,7 +323,7 @@ for ii in range(185,len(conddf)):
       print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
       datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
 #%%
-with open(savedst, "wb") as fp: 
+with open(savepickle, "wb") as fp: 
    pickle.dump(datadct, fp) 
 #%%
 # per cell prop comparison
@@ -351,8 +346,8 @@ keep = ~((df.animals == 'z14') & (df.days < 15))
 keep &= ~((df.animals == 'z15') & (df.days < 8))
 keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
 keep &= ~((df.animals == 'e216') & (df.days < 32))
-
 keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
+keep &= ~((df.animals=='z16') | (df.animals=='e200'))
 # keep &= ~((df.animals=='e218')&(df.days>44))
 df = df[keep].reset_index(drop=True)
 

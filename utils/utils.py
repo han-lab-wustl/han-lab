@@ -108,7 +108,7 @@ def copydopaminefldstruct(src, dst, days, overwrite=False,
                     shutil.copy(mat, copypth)            
                     print(f"*********Copied {day} Params file to {dst_day}*********")
 
-def copyfmats(src, dst, animal, overwrite=False, days=False, 
+def copyfmats(src, dst, animal, days, overwrite=False, 
             weeks=False, weekdir=False, planes=[0], combined=False):
     """useful for cell tracking, copies Fall to another location for each day in animal folder
     if you align to behavior can also use for further analysis 

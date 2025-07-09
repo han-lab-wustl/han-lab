@@ -362,7 +362,7 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     bin_size_dt = (2 * np.pi) / bins_dt
     # Get tuning curves for each trial type
     ########################## rew cells w/ dt ##########################
-    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(
+    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(
         eps, rewlocs, rewsize, ybinned, time, licks, Fc3, trialnum, rewards, forwardvel, 
         scalingf, bin_size_dt, bins=bins_dt)
     # Define goal window
@@ -394,7 +394,7 @@ def get_all_ensemble_data(params_pth, animal, day, pdf, bins=90, goal_window_cm=
     post_goal_cells = np.concatenate(com_goal_postrew)
     ########################## place cells w/ dt ##########################
     # Place cell detection
-    tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards, forwardvel, rewsize, 3)
+    tcs_correct_abs, coms_correct_abs,_,_ = make_tuning_curves(eps, rewlocs, ybinned, Fc3, trialnum, rewards, forwardvel, rewsize, 3)
     place_window = 20
     perm_abs = list(combinations(range(len(coms_correct_abs)), 2))
     # restrict to consecutive epochs
