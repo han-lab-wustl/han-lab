@@ -8,7 +8,7 @@ import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random, math,  matplotlib as mpl, matplotlib.backends.backend_pdf
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.analysis.pyramdial.placecell import get_pyr_metrics_opto, get_dff_opto
-mpl.rcParams['svg.fonttype'] = 'none'; mpl.rcParams["xtick.major.size"] = 8; mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams['svg.fonttype'] = 'none'; mpl.rcParams["xtick.major.size"] = 10; mpl.rcParams["ytick.major.size"] = 10
 plt.rcParams["font.family"] = "Arial"
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)

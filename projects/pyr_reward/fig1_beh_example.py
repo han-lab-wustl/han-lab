@@ -17,7 +17,7 @@ import warnings
 warnings.filterwarnings("ignore")
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 savepth = os.path.join(savedst, 'vip_opto_reward_relative.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
@@ -25,99 +25,103 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-ii=78
+iis=conddf[conddf.animals=='z9'].index
+iis=[138]
 cm_window=20
-day = int(conddf.days.values[ii])
-animal = conddf.animals.values[ii]
-if animal=='e145': pln=2  
-else: pln=0
-params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-print(params_pth)
-plt.rc('font', size=16)
-fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-'stat', 'licks'])
-VR = fall['VR'][0][0][()]
-scalingf = VR['scalingFACTOR'][0][0]
-try:
-   rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
-except:
-   rewsize = 10
-ybinned = fall['ybinned'][0]/scalingf
-track_length=180/scalingf    
-forwardvel = fall['forwardvel'][0]    
-changeRewLoc = np.hstack(fall['changeRewLoc'])
-trialnum=fall['trialnum'][0]
-rewards = fall['rewards'][0]
-time = fall['timedFF'][0]
-lick = fall['licks'][0]
-if animal=='e145':
-   ybinned=ybinned[:-1]
-   forwardvel=forwardvel[:-1]
-   changeRewLoc=changeRewLoc[:-1]
-   trialnum=trialnum[:-1]
-   rewards=rewards[:-1]
-   time=time[:-1]
-   lick=lick[:-1]
-# set vars
-eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-# only test opto vs. ctrl
-eptest = conddf.optoep.values[ii]
-if conddf.optoep.values[ii]<2: 
-         eptest = random.randint(2,3)   
-         if len(eps)<4: eptest = 2 # if no 3 epochs 
-eptest=int(eptest)   
-lasttr=8 # last trials
-bins=90
-rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
-track_length_rad = track_length*(2*np.pi/track_length)
-bin_size=track_length_rad/bins
-#%%
-# behavior eg
-# example plot during learning
-eprng = np.arange(eps[0],eps[2])
-# mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
-mask = np.zeros_like(trialnum).astype(bool)
-mask[10600:22800]=1
-# mask[:]=1
-probes = np.where(trialnum[mask]<3)[0]
-# mask[eps[0]+8500:eps[1]+2700]=True
-import matplotlib.patches as patches
-fig, ax = plt.subplots(figsize=(6,3))
-ypos=ybinned
-rew=rewards==1
-lick[ybinned<2]=0
-# incorrect licks
-trials=trialnum[mask]
-incorrlick=np.zeros_like(lick[mask])
-for trial in np.unique(trials):
-   tr = trials==trial
-   if trial>2:
-      if sum(rew[mask][tr])==0:
-         incorrlick[tr]=lick[mask][tr]
-ax.plot(ypos[mask],zorder=1,label='Postion',color='slategray')
-s=9
-ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,rasterized=True,label='Lick')
-ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s,rasterized=True, label='Incorrect lick')
-ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12,rasterized=True, label='Reward')
-ax.add_patch(
-patches.Rectangle(
-    xy=(probes[0],0),  # point of origin.
-    width=probes[-1]-probes[0], height=270, linewidth=1, # width is s
-    color='royalblue', alpha=0.2,
-   label='Probe trials'))
-ax.add_patch(
-patches.Rectangle(
-    xy=(0,rewlocs[1]-10),  # point of origin.
-    width=len(ypos[mask]), height=20, linewidth=1, # width is s
-    color='dimgrey', alpha=0.2,label='Reward zone'))
-ax.set_ylim([0,270])
-ax.set_yticks([0,270])
-ax.set_yticklabels([0,270])
-ax.set_ylabel('Track position (cm)')
-ax.spines[['top','right']].set_visible(False)
-ax.set_xticks([0, len(ypos[mask])])
-ax.set_xticklabels([0, int(np.ceil((len(ypos[mask])/31.25)/60))])
-ax.set_xlabel('Time (minutes)')
-ax.legend()
-plt.savefig(os.path.join(savedst, f'fig1_beh_{animal}_{day}.svg'),bbox_inches='tight')
+for ii in iis:
+   day = int(conddf.days.values[ii])
+   animal = conddf.animals.values[ii]
+   if animal=='e145': pln=2  
+   else: pln=0
+   params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+   print(params_pth)
+   plt.rc('font', size=16)
+   fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+   'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+   'stat', 'licks'])
+   VR = fall['VR'][0][0][()]
+   scalingf = VR['scalingFACTOR'][0][0]
+   try:
+      rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+   except:
+      rewsize = 10
+   ybinned = fall['ybinned'][0]/scalingf
+   track_length=180/scalingf    
+   forwardvel = fall['forwardvel'][0]    
+   changeRewLoc = np.hstack(fall['changeRewLoc'])
+   trialnum=fall['trialnum'][0]
+   rewards = fall['rewards'][0]
+   time = fall['timedFF'][0]
+   lick = fall['licks'][0]
+   if animal=='e145':
+      ybinned=ybinned[:-1]
+      forwardvel=forwardvel[:-1]
+      changeRewLoc=changeRewLoc[:-1]
+      trialnum=trialnum[:-1]
+      rewards=rewards[:-1]
+      time=time[:-1]
+      lick=lick[:-1]
+   # set vars
+   eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+   # only test opto vs. ctrl
+   eptest = conddf.optoep.values[ii]
+   if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs 
+   eptest=int(eptest)   
+   lasttr=8 # last trials
+   bins=90
+   rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
+   track_length_rad = track_length*(2*np.pi/track_length)
+   bin_size=track_length_rad/bins
+   # behavior eg
+   # example plot during learning
+   eprng = np.arange(eps[0],eps[2])
+   # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
+   mask = np.zeros_like(trialnum).astype(bool)
+   mask[15090:21920]=1
+   # mask[:]=1
+   probes = np.where(trialnum[mask]<3)[0]
+   # mask[eps[0]+8500:eps[1]+2700]=True
+   import matplotlib.patches as patches
+   fig, ax = plt.subplots(figsize=(6,3))
+   ypos=ybinned
+   rew=rewards
+   lick[ybinned<2]=0
+   # incorrect licks
+   trials=trialnum[mask]
+   incorrlick=np.zeros_like(lick[mask])
+   for trial in np.unique(trials):
+      tr = trials==trial
+      if trial>2:
+         if sum(rew[mask][tr])<1.5:
+            incorrlick[tr]=lick[mask][tr]
+   nolick = [tr for tr in np.unique(trials) if sum(lick[mask][trials==tr])==0]
+   mask2 = np.ones_like(trials).astype(bool)
+   mask2[[ii for ii,xx in enumerate(trials) if xx in nolick]]=0
+   ax.plot(ypos[mask],zorder=1,label='Mouse Postion',color='slategray')
+   s=9
+   ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,rasterized=True,label='Lick')
+   ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s,rasterized=True, label='Incorrect lick')
+   ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12,rasterized=True, label='Reward')
+   ax.add_patch(
+   patches.Rectangle(
+      xy=(probes[0],0),  # point of origin.
+      width=probes[-1]-probes[0], height=270, linewidth=1, # width is s
+      color='royalblue', alpha=0.2,
+      label='Probe trials'))
+   ax.add_patch(
+   patches.Rectangle(
+      xy=(0,rewlocs[1]-rewsize/2),  # point of origin.
+      width=len(ypos[mask]), height=rewsize, linewidth=1, # width is s
+      color='dimgrey', alpha=0.2,label='Reward zone'))
+   ax.set_ylim([0,270])
+   ax.set_yticks([0,270])
+   ax.set_yticklabels([0,270])
+   ax.set_ylabel('Track position (cm)')
+   ax.spines[['top','right']].set_visible(False)
+   ax.set_xticks([0, len(ypos[mask])])
+   ax.set_xticklabels([0, int(np.ceil((len(ypos[mask])/(31.25/2))/60))])
+   ax.set_xlabel('Time (minutes)')
+   ax.legend()
+   plt.savefig(os.path.join(savedst, f'fig1_beh_{animal}_{day}.svg'),bbox_inches='tight')

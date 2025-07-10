@@ -146,182 +146,188 @@ bins=90
 a=0.05 # threshold for si detection
 #%%
 # iterate through all animals
-for ii in range(159,len(conddf)):
-   day = conddf.days.values[ii]
-   animal = conddf.animals.values[ii]
-   # check if its the last 3 days of animal behavior
-   andf = conddf[(conddf.animals==animal)]
-   lastdays = andf.days.values#[-3:]
-   if (day in lastdays):
-      if animal=='e145': pln=2 
-      else: pln=0
-      params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-      print(params_pth)
-      fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF','licks',
-         'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-         'stat'])
-      pcs = np.vstack(np.array(fall['putative_pcs'][0]))
-      VR = fall['VR'][0][0][()]
-      scalingf = VR['scalingFACTOR'][0][0]
-      try:
-         rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
-      except:
-         rewsize = 10
-      ybinned = fall['ybinned'][0]/scalingf
-      track_length=180/scalingf    
-      forwardvel = fall['forwardvel'][0]    
-      changeRewLoc = np.hstack(fall['changeRewLoc'])
-      trialnum=fall['trialnum'][0]
-      rewards = fall['rewards'][0]
-      time = fall['timedFF'][0]
-      lick = fall['licks'][0]
-      if animal=='e145':
-         ybinned=ybinned[:-1]
-         forwardvel=forwardvel[:-1]
-         changeRewLoc=changeRewLoc[:-1]
-         trialnum=trialnum[:-1]
-         rewards=rewards[:-1]
-         time=time[:-1]
-         lick=lick[:-1]
-      # set vars
-      eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-      # only test opto vs. ctrl
-      eptest = conddf.optoep.values[ii]
-      if conddf.optoep.values[ii]<2: 
-         eptest = random.randint(2,3)   
-         if len(eps)<4: eptest = 2 # if no 3 epochs    
-      fr=31.25
-      if animal=='z9' or animal=='e190' or animal=='z14':
-         fr=fr/2
-      if animal=='z17':
-         fr=fr/3
-      fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-      Fc3 = fall_fc3['Fc3']
-      dFF = fall_fc3['dFF']
-      Fc3_org = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-      dFF_org = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-      skew = scipy.stats.skew(dFF_org, nan_policy='omit', axis=0)
-      dFF=dFF_org[:, skew>1.2]
-      Fc3=Fc3_org[:, skew>1.2]
-      # per epoch si
-      # nshuffles=100   
-      rz = get_rewzones(rewlocs,1/scalingf)
-      pcs_ep=[]; si_ep=[]
-      for ep in range(len(eps)-1):
-         eprng = np.arange(eps[ep], eps[ep+1])
-         trials=trialnum[eprng]
-         activity_trials=dFF[eprng,:]
-         position_trials = ybinned[eprng]
-         pcs = []; si=[]
-         # position_trials = [np.array(...), ...]      # shared position per trial
-         # activity_trials_list = [[trial1_cell1, ...], [trial1_cell2, ...], ...]  # each sublist = one cell
-         # for cells > 700 (e216)
-         # only do on 700 cells
-         activity_trials_list = [[activity_trials[trials==tr][:,cll] for tr in np.unique(trials)] for cll in np.arange(activity_trials.shape[1])]
-         pos = [position_trials[trials==tr] for tr in np.unique(trials)]
-         # make first pos 1.5 again
-         pos_corr=[]
-         for xx in pos:
-            xx[0]=1.5
-            pos_corr.append(xx)
-         # fast shuf
-         results = run_place_cell_batch(
+for ii in range(170,len(conddf)):
+    day = conddf.days.values[ii]
+    animal = conddf.animals.values[ii]
+    # check if its the last 3 days of animal behavior
+    andf = conddf[(conddf.animals==animal)]
+    lastdays = andf.days.values#[-3:]
+    if (day in lastdays):
+        if animal=='e145': pln=2 
+        else: pln=0
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+        print(params_pth)
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF','licks',
+            'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'stat'])
+        pcs = np.vstack(np.array(fall['putative_pcs'][0]))
+        VR = fall['VR'][0][0][()]
+        scalingf = VR['scalingFACTOR'][0][0]
+        try:
+            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+        except:
+            rewsize = 10
+        ybinned = fall['ybinned'][0]/scalingf
+        track_length=180/scalingf    
+        forwardvel = fall['forwardvel'][0]    
+        changeRewLoc = np.hstack(fall['changeRewLoc'])
+        trialnum=fall['trialnum'][0]
+        rewards = fall['rewards'][0]
+        time = fall['timedFF'][0]
+        lick = fall['licks'][0]
+        if animal=='e145':
+            ybinned=ybinned[:-1]
+            forwardvel=forwardvel[:-1]
+            changeRewLoc=changeRewLoc[:-1]
+            trialnum=trialnum[:-1]
+            rewards=rewards[:-1]
+            time=time[:-1]
+            lick=lick[:-1]
+        # set vars
+        eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+        # only test opto vs. ctrl
+        eptest = conddf.optoep.values[ii]
+        if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs    
+        fr=31.25
+        if animal=='z9' or animal=='e190' or animal=='z14':
+            fr=fr/2
+        if animal=='z17':
+            fr=fr/3
+        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        Fc3_org = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+        dFF_org = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        skew = scipy.stats.skew(dFF_org, nan_policy='omit', axis=0)
+        dFF=dFF_org[:, skew>1.2]
+        Fc3=Fc3_org[:, skew>1.2]
+        # per epoch si
+        # nshuffles=100   
+        rz = get_rewzones(rewlocs,1/scalingf)
+        pcs_ep=[]; si_ep=[]
+        for ep in range(len(eps)-1):
+            eprng = np.arange(eps[ep], eps[ep+1])
+            trials=trialnum[eprng]
+            activity_trials=dFF[eprng,:]
+            position_trials = ybinned[eprng]
+            pcs = []; si=[]
+            # position_trials = [np.array(...), ...]      # shared position per trial
+            # activity_trials_list = [[trial1_cell1, ...], [trial1_cell2, ...], ...]  # each sublist = one cell
+            n_cells = activity_trials.shape[1]
+            unique_trials = np.unique(trials)
+            # Precompute the trial indices
+            trial_idx_dict = {tr: np.where(trials == tr)[0] for tr in unique_trials}
+            # Efficiently index activity per cell per trial
+            activity_trials_list = [
+                [activity_trials[trial_idx_dict[tr], cll] for tr in unique_trials]
+                for cll in range(n_cells)]
+            #  activity_trials_list = [[activity_trials[trials==tr][:,cll] for tr in np.unique(trials)] for cll in np.arange(activity_trials.shape[1])]
+            pos = [position_trials[trials==tr] for tr in np.unique(trials)]
+            # make first pos 1.5 again
+            pos_corr=[]
+            for xx in pos:
+                xx[0]=1.5
+                pos_corr.append(xx)
+            # fast shuf
+            results = run_place_cell_batch(
             position_trials=pos_corr,
             activity_trials_list=activity_trials_list,
             frame_rate=fr,            # or whatever your frame rate is
             n_shuffles=num_iterations,
             n_jobs=4
-         )
-         place_cell_flags = [r[0] for r in results]
-         real_sis = [r[1] for r in results]
-         shuffle_sis = [r[2] for r in results]
-         p_values = [r[3] for r in results]
-         pcs_ep.append(np.array(p_values)<a); si_ep.append(real_sis)
-      spatially_tuned = np.sum(np.array(pcs_ep),axis=0)>0 # if tuned in any epoch
-      save_shuf_info.append([pcs_ep,si_ep,spatially_tuned])
-      dFF_si=dFF[:,spatially_tuned]
-      Fc3_si=Fc3[:,spatially_tuned] # replace to make easier
-      if conddf.optoep.values[ii]<2: 
-         eptest = random.randint(2,3)      
-      if len(eps)<4: eptest = 2 # if no 3 epochs
-      comp = [eptest-2,eptest-1] # eps to compare, python indexing   
-      cm_window=20
-      # TODO:
-      # get rew cells activity and %
-      # get place dff and %
-      # get other spatial tuned cells activity and %
-      # tc w/ dark time
-      print('making tuning curves...\n')
-      track_length_dt = 550 # cm estimate based on 99.9% of ypos
-      track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-      bins_dt=150 
-      bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-      tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
-      # early tc
-      goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
-      results_pre = process_goal_cell_proportions(eptest, 
-         cell_type='pre',
-         coms_correct=coms_correct,
-         tcs_correct=tcs_correct,
-         rewlocs=rewlocs,
-         animal=animal,
-         day=day,
-         pdf=pdf,
-         rz=rz,
-         scalingf=scalingf,
-         bins=bins,
-         goal_window=goal_window
-      )
-      results_post = process_goal_cell_proportions(eptest, 
-         cell_type='post',
-         coms_correct=coms_correct,
-         tcs_correct=tcs_correct,
-         rewlocs=rewlocs,
-         animal=animal,
-         day=day,
-         pdf=pdf,
-         rz=rz,
-         scalingf=scalingf,
-         bins=bins,
-         goal_window=goal_window
-      )
-      print('#############making place tcs#############\n')
-      tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
-      Fc3,trialnum,rewards,forwardvel,
-      rewsize,bin_size) # last 5 trials
-      # tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
-      # rewsize,bin_size) # last 5 trials
-      # # all goal
-      goal_cells = np.unique(np.concatenate([xx['goal_id'] for xx in [results_pre, results_post]]))
-      print(f'\n pre si restriction: {len(goal_cells)} rew cells')
-      # remove goal cells that do not pass spatial info metric!!!
-      not_sp_tuned = np.arange(Fc3.shape[1])[~spatially_tuned]
-      goal_cells = [xx for xx in goal_cells if xx not in not_sp_tuned]
-      print(f'\n post si restriction: {len(goal_cells)} rew cells')
-      perm = [(eptest-2, eptest-1)]   
-      print(eptest, perm)            
-      # get cells that maintain their coms across at least 2 epochs
-      place_window = 20 # cm converted to rad                
-      com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
-      compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
-      # get cells across all epochs that meet crit
-      pcs = np.unique(np.concatenate(compc))
-      compc=[xx for xx in compc if len(xx)>0]
-      if len(compc)>0:
-         pcs_all = intersect_arrays(*compc)
-         # exclude no sp cells
-         pcs_all=[xx for xx in pcs_all if xx not in not_sp_tuned]
-         # exclude goal cells
-         pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
-      else:
-         pcs_all=[]      
-      pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
-      pc_p=len(pcs_all)/len(coms_correct_abs[0])
-      # get % of other spatially tuned cells
-      spatially_tuned_not_rew_place = [xx for xx in range(Fc3.shape[1]) if xx not in not_sp_tuned and xx not in pcs_all and xx not in goal_cells]
-      spatially_tuned_not_rew_place_p=len(spatially_tuned_not_rew_place)/len(coms_correct_abs[0])
-      print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
-      datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
+            )
+            place_cell_flags = [r[0] for r in results]
+            real_sis = [r[1] for r in results]
+            shuffle_sis = [r[2] for r in results]
+            p_values = [r[3] for r in results]
+            pcs_ep.append(np.array(p_values)<a); si_ep.append(real_sis)
+        spatially_tuned = np.sum(np.array(pcs_ep),axis=0)>0 # if tuned in any epoch
+        save_shuf_info.append([pcs_ep,si_ep,spatially_tuned])
+        dFF_si=dFF[:,spatially_tuned]
+        Fc3_si=Fc3[:,spatially_tuned] # replace to make easier
+        if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)      
+        if len(eps)<4: eptest = 2 # if no 3 epochs
+        comp = [eptest-2,eptest-1] # eps to compare, python indexing   
+        cm_window=20
+        # TODO:
+        # get rew cells activity and %
+        # get place dff and %
+        # get other spatial tuned cells activity and %
+        # tc w/ dark time
+        print('making tuning curves...\n')
+        track_length_dt = 550 # cm estimate based on 99.9% of ypos
+        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+        bins_dt=150 
+        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
+        # early tc
+        goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
+        results_pre = process_goal_cell_proportions(eptest, 
+            cell_type='pre',
+            coms_correct=coms_correct,
+            tcs_correct=tcs_correct,
+            rewlocs=rewlocs,
+            animal=animal,
+            day=day,
+            pdf=pdf,
+            rz=rz,
+            scalingf=scalingf,
+            bins=bins,
+            goal_window=goal_window
+        )
+        results_post = process_goal_cell_proportions(eptest, 
+            cell_type='post',
+            coms_correct=coms_correct,
+            tcs_correct=tcs_correct,
+            rewlocs=rewlocs,
+            animal=animal,
+            day=day,
+            pdf=pdf,
+            rz=rz,
+            scalingf=scalingf,
+            bins=bins,
+            goal_window=goal_window
+        )
+        print('#############making place tcs#############\n')
+        tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        Fc3,trialnum,rewards,forwardvel,
+        rewsize,bin_size) # last 5 trials
+        # tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
+        # rewsize,bin_size) # last 5 trials
+        # # all goal
+        goal_cells = np.unique(np.concatenate([xx['goal_id'] for xx in [results_pre, results_post]]))
+        print(f'\n pre si restriction: {len(goal_cells)} rew cells')
+        # remove goal cells that do not pass spatial info metric!!!
+        not_sp_tuned = np.arange(Fc3.shape[1])[~spatially_tuned]
+        goal_cells = [xx for xx in goal_cells if xx not in not_sp_tuned]
+        print(f'\n post si restriction: {len(goal_cells)} rew cells')
+        perm = [(eptest-2, eptest-1)]   
+        print(eptest, perm)            
+        # get cells that maintain their coms across at least 2 epochs
+        place_window = 20 # cm converted to rad                
+        com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
+        compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+        # get cells across all epochs that meet crit
+        pcs = np.unique(np.concatenate(compc))
+        compc=[xx for xx in compc if len(xx)>0]
+        if len(compc)>0:
+            pcs_all = intersect_arrays(*compc)
+            # exclude no sp cells
+            pcs_all=[xx for xx in pcs_all if xx not in not_sp_tuned]
+            # exclude goal cells
+            pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
+        else:
+            pcs_all=[]      
+        pcs_p_per_comparison = [len(xx)/len(coms_correct_abs[0]) for xx in compc]
+        pc_p=len(pcs_all)/len(coms_correct_abs[0])
+        # get % of other spatially tuned cells
+        spatially_tuned_not_rew_place = [xx for xx in range(Fc3.shape[1]) if xx not in not_sp_tuned and xx not in pcs_all and xx not in goal_cells]
+        spatially_tuned_not_rew_place_p=len(spatially_tuned_not_rew_place)/len(coms_correct_abs[0])
+        print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
+        datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
 #%%
 with open(savepickle, "wb") as fp: 
    pickle.dump(datadct, fp) 

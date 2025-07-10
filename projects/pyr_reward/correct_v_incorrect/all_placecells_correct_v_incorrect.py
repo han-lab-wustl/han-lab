@@ -39,6 +39,7 @@ num_epochs=[]
 goal_cell_null=[]
 pvals=[]
 total_cells=[]
+vel_tc = []
 # iterate through all animals
 dfs = []
 
@@ -119,7 +120,13 @@ for ii in range(len(conddf)):
       bins_dt=150 
       bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
       tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-            bins=bins_dt,lasttr=8) 
+            bins=bins_dt,lasttr=8,velocity_filter=True) 
+      # get vel tc too
+      vel_correct, _, vel_fail, _, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,np.array([forwardvel]).T,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt,lasttr=8,velocity_filter=True) 
+      vel_correct=np.squeeze(vel_correct)
+      vel_fail=np.squeeze(vel_fail)
+      vel_tc.append([vel_correct,vel_fail])# save
       goal_window = 20*(2*np.pi/track_length) # cm converted to rad
       coms_rewrel = np.array([com-np.pi for com in coms_correct])
       perm = list(combinations(range(len(coms_correct)), 2)) 
@@ -203,7 +210,7 @@ plt.rc('font', size=20)
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
 animals_test = [ 'e145', 'e186', 'e189', 'e190', 'e200', 'e201', 'e216',
-       'e218', 'z8', 'z9']
+       'e218', 'z8', 'z9', 'z16']
 bins = 90
 # recalc tc
 dff_correct_per_type = []
@@ -219,6 +226,7 @@ cs_per_an=[]
 for animal in animals_test:
    dff_correct, dff_fail = [], []
    tcs_correct, tcs_fail = [], []
+   vel_corr,vel_fail=[],[]
    if 'pre' in cell_type:
       activity_window='pre'
    else:
@@ -229,10 +237,13 @@ for animal in animals_test:
    tcs_correct_ct = tcs_corr_all
    for ii, tcs_corr in enumerate(tcs_correct_ct):
       if animals[ii] == animal and tcs_corr.shape[1] > 0:
-            tc = np.nanmean(tcs_corr, axis=0) # 0=mean across ep
+            # tc = np.nanmean(tcs_corr, axis=0) # 0=mean across ep
             # 1 =mean across cells
+            tc=np.vstack(tcs_corr)
+            vel = vel_tc[ii][0] # 0=correct
             if tc.ndim == 1: tc = np.expand_dims(tc, 0)
             tcs_correct.append(tc)
+            vel_corr.append(vel)
             # Quantile per trial
             # switched to mean
             if activity_window == 'pre':
@@ -244,9 +255,13 @@ for animal in animals_test:
    tcs_fail_ct = tcs_f_all
    for ii, tcs_f in enumerate(tcs_fail_ct):
       if animals[ii] == animal and tcs_f.shape[1] > 0:
-            tc = np.nanmean(tcs_f, axis=0)
+            # tc = np.nanmean(tcs_f, axis=0)
+            # all epochs and cells
+            tc=np.vstack(tcs_f)
+            vel = vel_tc[ii][1] # 0=correct
             if tc.ndim == 1: tc = np.expand_dims(tc, 0)
             tcs_fail.append(tc)
+            vel_fail.append(vel)
             if np.sum(np.isnan(tc)) == 0:
                if activity_window == 'pre':
                   dff_fail.append(np.nanmean(tc[:, :window], axis=1))
@@ -260,46 +275,44 @@ for animal in animals_test:
       for i in range(np.vstack(tcs_correct).shape[0])]
    cs=np.array(cs); cs_per_an.append(cs)
    # --- Plotting ---
-   fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(10, 12),
-                           gridspec_kw={'height_ratios': [2, 1], 'width_ratios': [1, 1, 0.05]},
+   fig, axes = plt.subplots(ncols=3, nrows=3, figsize=(10, 12),
+                           gridspec_kw={'height_ratios': [2, 1, .6], 'width_ratios': [1, 1, 0.05]},
                            constrained_layout=True)
    axes = axes.flatten()
-
    # Panel: Correct Trials Heatmap
    ax = axes[0]
    tc = np.vstack(tcs_correct)
+   valid_rows = ~(np.sum(np.isnan(tc),axis=1)>0)
+   tc=tc[valid_rows,:]
    tc_z = normalize_rows_0_to_1(tc)
    peak_bins = np.argmax(tc_z, axis=1)
    sort_idx = np.argsort(peak_bins)
    im = ax.imshow(tc_z[sort_idx], vmin=vmin, vmax=vmax, aspect='auto', cmap='viridis')
    ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
-   ax.set_xticklabels([0, 135, 270])
-   ax.set_xlabel('Track Position (cm)')
-   ax.set_ylabel('Place cells (sorted)')
+   ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
+   ax.set_xlabel('Reward-centric distance ($\Theta$)')
+   ax.set_ylabel('Place cell # (sorted)')
    ax.set_title(f'{animal}\nCorrect Trials')
-
    # Panel: Failed Trials Heatmap
    ax = axes[1]
-   tc = np.vstack(tcs_fail)[sort_idx]
+   tc = np.vstack(tcs_fail)
    # Remove rows with all NaNs before sorting
    # only for figures, keep for calc
-   valid_rows = ~(np.sum(np.isnan(tc),axis=1)>0)
-   tc_fail_valid = tc[valid_rows,:]
    # tc_fail_valid = tc
-   tc_z = normalize_rows_0_to_1(tc_fail_valid)
+   tc_z = normalize_rows_0_to_1(tc)
+   valid_rows = ~(np.sum(np.isnan(tc_z),axis=1)>0)
+   tc_z = tc_z[valid_rows,:]
    peak_bins = np.argmax(tc_z, axis=1)
    sort_idx = np.argsort(peak_bins)
    if len(tc_z)>0:
       im2 = ax.imshow(tc_z[sort_idx], vmin=vmin, vmax=vmax, aspect='auto', cmap='viridis')
       ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
-      ax.set_xticklabels([0, 135, 270])
-      ax.spines[['top', 'right']].set_visible(False)
+      ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
       ax.set_title('Incorrect Trials')
-
    # Colorbar
    cbar_ax = axes[2]
    cbar = fig.colorbar(im, cax=cbar_ax)
-   cbar_ax.set_ylabel('Av. Norm. $\Delta$F/F across epochs', rotation=270, labelpad=15)
+   cbar_ax.set_ylabel('Norm. $\Delta$F/F', rotation=270)
    cbar_ax.yaxis.set_label_position('left')
    cbar_ax.yaxis.tick_left()
    cbar.set_ticks([vmin, vmax])
@@ -313,7 +326,8 @@ for animal in animals_test:
    ax.plot(m, color='seagreen')
    ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='seagreen', alpha=0.5)
    ax.set_xticks([0, len(m) // 2, len(m)])
-   ax.set_xticklabels([0, 135, 270])
+   ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
+   ax.set_xlabel('Reward-centric distance ($\Theta$)')
    ax.spines[['top', 'right']].set_visible(False)
    ax.set_ylabel('$\Delta$F/F')
    height = m.max() + m.max()/2
@@ -328,16 +342,43 @@ for animal in animals_test:
    ax.plot(m, color='firebrick')
    ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='firebrick', alpha=0.5)
    ax.set_xticks([0, len(m) // 2, len(m)])
-   ax.set_xticklabels([0, 135, 270])
+   ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
    ax.spines[['top', 'right']].set_visible(False)
-   ax.set_xlabel('Track Position (cm)')
    ax.set_ylabel('$\Delta$F/F')
    ax.set_ylim([0, height])
    ax.set_title('Incorrect Mean')
+   # mean velocity correct
+   ax=axes[6]
+   tc_all = np.vstack(vel_corr)
+   m = np.nanmean(tc_all, axis=0)
+   sem = scipy.stats.sem(tc_all, axis=0, nan_policy='omit')
+   ax.plot(m, color='k')
+   ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='k', alpha=0.5)
+   ax.set_xticks([0, len(m) // 2, len(m)])
+   ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
+   ax.set_xlabel('Reward-centric distance ($\Theta$)')
+   ax.spines[['top', 'right']].set_visible(False)
+   ax.set_ylabel('Velocity (cm/s)')
+   height = m.max() + m.max()/2
+   ax.set_ylim([0, height])   
+   ax=axes[7]
+   tc_all = np.vstack(vel_fail)
+   m = np.nanmean(tc_all, axis=0)
+   sem = scipy.stats.sem(tc_all, axis=0, nan_policy='omit')
+   ax.plot(m, color='k')
+   ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='k', alpha=0.5)
+   ax.set_xticks([0, len(m) // 2, len(m)])
+   ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
+   ax.spines[['top', 'right']].set_visible(False)
+   ax.set_ylabel('Velocity (cm/s)')
+   height = m.max() + m.max()/2
+   ax.set_ylim([0, height])   
    # Hide empty axis
+   axes[8].axis('off')
    axes[5].axis('off')
    fig.suptitle(cell_type)
    # plt.close(fig)        
+   # plt.tight_layout()
    plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_place_correctvfail.svg'),bbox_inches='tight')
 
 # %%
@@ -347,12 +388,12 @@ for animal in animals_test:
 dfsall = []
 animals_unique = animals_test
 df=pd.DataFrame()
-correct = np.concatenate([np.concatenate(xx) for xx in dff_correct_per_an])
-incorrect = np.concatenate([np.concatenate(xx) for xx in dff_fail_per_an])
+correct = np.concatenate([np.concatenate(xx) for xx in dff_correct_per_an if len(xx)>0])
+incorrect = np.concatenate([np.concatenate(xx) for xx in dff_fail_per_an if len(xx)>0])
 df['mean_dff'] = np.concatenate([correct,incorrect])
 df['trial_type']=np.concatenate([['correct']*len(correct),['incorrect']*len(incorrect)])
-ancorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_correct_per_an)])
-anincorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_fail_per_an)])
+ancorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_correct_per_an) if len(xx)>0])
+anincorr = np.concatenate([[animals_unique[ii]]*len(np.concatenate(xx)) for ii,xx in enumerate(dff_fail_per_an) if len(xx)>0])
 df['animal'] = np.concatenate([ancorr, anincorr])
 df['cell_type'] = ['place']*len(df)
 dfsall.append(df)
@@ -361,7 +402,7 @@ dfsall.append(df)
 bigdf = pd.concat(dfsall)
 bigdf=bigdf.groupby(['animal', 'trial_type', 'cell_type']).mean(numeric_only=True)
 bigdf=bigdf.reset_index()
-bigdf=bigdf[(bigdf.animal!='e189') & (bigdf.animal!='e190')]
+bigdf=bigdf[(bigdf.animal!='e189') & (bigdf.animal!='z16') & (bigdf.animal!='e145')]
 s=12
 fig,ax = plt.subplots(figsize=(2.5,5))
 sns.stripplot(x='trial_type', y='mean_dff', data=bigdf,hue='trial_type',palette={'correct':'seagreen', 'incorrect': 'firebrick'},
@@ -387,15 +428,6 @@ for animal in bigdf['animal'].unique():
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
 from scipy.stats import ttest_rel
-
-# 1) Two-way repeated measures ANOVA
-aov = AnovaRM(
-    data=bigdf,
-    depvar='mean_dff',
-    subject='animal',
-    within=['trial_type']
-).fit()
-print(aov)    # F-stats and p-values for main effects and interaction
 
 # 2) Post-hoc paired comparisons: correct vs incorrect within each cell_type
 ct='place'
