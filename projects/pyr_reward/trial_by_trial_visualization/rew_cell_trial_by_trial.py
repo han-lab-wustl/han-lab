@@ -20,7 +20,7 @@ bounds = [-1.5, -0.5, 0.5, 1.5]  # boundaries between categories
 norm = BoundaryNorm(bounds, cmap.N)
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.memory.behavior import consecutive_stretch
-from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_by_trialtype_w_darktime, make_tuning_curves_time_trial_by_trial_w_darktime, intersect_arrays,make_tuning_curves
+from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_by_trialtype_w_darktime, make_tuning_curves_time_trial_by_trial, make_tuning_curves_time_trial_by_trial_w_darktime, intersect_arrays,make_tuning_curves
 from projects.pyr_reward.rewardcell import get_radian_position,\
     get_radian_position_first_lick_after_rew, get_rewzones, get_goal_cells, goal_cell_shuffle
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -136,7 +136,9 @@ else:
         goal_cells=[]
 
 # trial by trial raster
-trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max, vels_all =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
+# abs distance
+trialstates, licks_all, tcs, coms =make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc3[:,goal_cells], trialnum, rewards, forwardvel, rewsize, bin_size)
+# (eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
 #%%
 plt.rc('font', size=16)
 # plot the distance tuning
@@ -146,17 +148,19 @@ def moving_average(x, window_size=3):
 fig, axes = plt.subplots(ncols=len(tcs_correct),nrows = 3,figsize=(7,4.5),sharex=True,sharey=True)
 axes=axes.flatten()
 typrz = ['Near', 'Far', 'Near']
-gcs=[24,4] # pre and post
+gcs=[24] # pre and post
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 color_typ = sns.color_palette('Dark2')
 for ep in range(len(tcs_correct)):
         ax=axes[ep]
         m=moving_average(tcs_correct_abs[ep, goal_cells[gcs[0]]].T, window_size=3)
+        sem=scipy.stats.sem(tcs[ep][gcs[0],:,:],axis=0, nan_policy='omit')
         m=m/np.nanmax(m)
         ax.plot(m,color=color_typ[0],label='Pre')
-        m=moving_average(tcs_correct_abs[ep, goal_cells[gcs[1]]].T, window_size=3)
-        m=m/np.nanmax(m)
-        ax.plot(m,color=color_typ[1],label='Post')
+        ax.fill_between(np.arange(len(m)), m - sem, m + sem, color=color_typ[0], alpha=0.5)
+        # m=moving_average(tcs_correct_abs[ep, goal_cells[gcs[1]]].T, window_size=3)
+        # m=m/np.nanmax(m)
+        # ax.plot(m,color=color_typ[1],label='Post')
         ax.axvline(rewlocs[ep]/bin_size,color=colors[ep],linestyle='--')
         ax.spines[['top', 'right']].set_visible(False)
         ax.set_title(f'Epoch {ep+1}\n Reward @ {int(rewlocs[ep]-5)} cm\n{typrz[ep]} Reward Zone',fontsize=14)
@@ -197,7 +201,7 @@ for ep in range(len(tcs_correct)):
         #     )  
 ax.set_xlabel('Track position (cm)')
 # plt.tight_layout()               
-plt.savefig(os.path.join(savedst, f'{animal}_{day}_pre_reward_f{gc}.svg'))
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_pre_reward_.svg'))
 
 #%%
 # cells raster

@@ -25,7 +25,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-ii=56
+ii=65
 cm_window=20
 day = int(conddf.days.values[ii])
 animal = conddf.animals.values[ii]
@@ -36,7 +36,8 @@ print(params_pth)
 
 fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
 'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-'stat', 'licks'])
+'stat', 'licks','putative_pcs'])
+pcs=fall['putative_pcs'][0]
 VR = fall['VR'][0][0][()]
 scalingf = VR['scalingFACTOR'][0][0]
 try:
@@ -72,37 +73,6 @@ bins=90
 rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
 track_length_rad = track_length*(2*np.pi/track_length)
 bin_size=track_length_rad/bins
-#%%
-# behavior eg
-# example plot during learning
-eprng = np.arange(eps[0],eps[2])
-# mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
-mask = np.zeros_like(trialnum).astype(bool)
-mask[0:34000]=1
-# mask[eps[0]+8500:eps[1]+2700]=True
-import matplotlib.patches as patches
-fig, ax = plt.subplots(figsize=(9,5))
-ypos=ybinned
-rew=rewards==1
-lick[ybinned<2]=0
-ax.plot(ypos[mask],zorder=1)
-ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2)
-ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
-    zorder=2)
-# ax.add_patch(
-# patches.Rectangle(
-#     xy=(0,newrewloc-10),  # point of origin.
-#     width=len(ypos[mask]), height=20, linewidth=1, # width is s
-#     color='slategray', alpha=0.3))
-ax.add_patch(
-patches.Rectangle(
-    xy=(0,rewlocs[1]-10),  # point of origin.
-    width=len(ypos[mask]), height=20, linewidth=1, # width is s
-    color='slategray', alpha=0.3))
-
-ax.set_ylim([0,270])
-ax.spines[['top','right']].set_visible(False)
-
 #%%
 if True:  
 # takes time
@@ -160,9 +130,8 @@ if True:
    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
    #if pc in all but 1
-   pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
    # looser restrictions
-   pc_bool = np.sum(pcs,axis=0)>=1
+   pc_bool = np.squeeze(np.sum(pcs,axis=0)>=1)
    Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
    # if no cells pass these crit
    if Fc3.shape[1]==0:
@@ -186,6 +155,7 @@ if True:
 
 #%%
 # place v rew v far rew
+# individual cell tc
 def moving_average(x, window_size=5):
     return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 plt.rc('font', size=16) 
@@ -222,6 +192,7 @@ plt.savefig(os.path.join(savedst, 'fig1_tc.svg'), bbox_inches='tight')
 
 #%% 
 # add tuning curves
+# place map
 # Function for row-wise normalization
 def normalize_rows(x):
     x_min = np.min(x, axis=1, keepdims=True)
@@ -264,6 +235,7 @@ plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_place_map.svg'), bbox_in
 
 #%%
 # add tuning curves
+# rew map
 # Function for row-wise normalization
 def normalize_rows(x):
     x_min = np.min(x, axis=1, keepdims=True)
@@ -303,3 +275,45 @@ cbar = fig.colorbar(im_list[1], ax=axes[1], orientation='vertical', fraction=0.0
 cbar.set_label('Normalized activity')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_rew_map.svg'), bbox_inches='tight')
+
+#%% fig 2 eg
+# add tuning curves
+# Function for row-wise normalization
+def normalize_rows(x):
+    x_min = np.min(x, axis=1, keepdims=True)
+    x_max = np.max(x, axis=1, keepdims=True)
+    return (x - x_min) / (x_max - x_min + 1e-10)
+# Moving average function
+def moving_average(x, window_size=5):
+    return np.convolve(x, np.ones(window_size)/window_size, mode='same')
+plt.rc('font', size=16)
+fig, axes = plt.subplots(ncols=3, figsize=(10,5), sharex=True, sharey=True)
+im_list = []  # to store imshow objects for colorbar
+for en,ep in enumerate([0,1,2]):
+   ax = axes[en]
+   # Apply moving average and stack
+   pltt = [moving_average(tcs_correct[ep, cll, :]) for cll in goal_cells]
+   pltt = np.array(pltt)
+   # Sort by COM
+   pltt = pltt[np.argsort(coms_correct[0][goal_cells])]
+   # Normalize each row
+   pltt = normalize_rows(pltt)
+   # Plot
+   im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
+   im_list.append(im)
+   thres1=75-75/4; thres2=75+(75/4)
+   ax.axvline(thres1, color='y', linestyle='--',linewidth=1)
+   ax.axvline(thres2, color='y', linestyle='--',linewidth=1)
+   ax.axvline(bins_dt//2, color='w', linestyle='--',linewidth=2)
+   if ep == 0:
+      ax.set_ylabel('Reward cell #')
+   ax.set_title(f'Epoch {en+1}\n Reward @ {int(rewlocs[ep])} cm')
+
+ax.set_xlabel('Reward-centric distance ($\Theta$)')
+ax.set_xticks([0, thres1, bins_dt/2, thres2, bins_dt])
+ax.set_xticklabels(['-$\\pi$','-$\\pi/4$',0,'$\\pi/4$','$\\pi$'])
+# Add colorbar
+cbar = fig.colorbar(im_list[1], ax=axes[2], orientation='vertical', fraction=0.08, pad=0)
+cbar.set_label('Normalized $\Delta F/F$')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig2_rew_map.svg'), bbox_inches='tight')

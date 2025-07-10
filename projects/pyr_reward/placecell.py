@@ -1911,7 +1911,7 @@ def make_time_tuning_curves_radians(eps, time, Fc3, trialnum, rewards, licks, yb
     return tcs_correct, coms_correct, tcs_fail, coms_fail, trial_times
 
 def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc3, trialnum, rewards, forwardvel, rewsize, bin_size, lasttr=8, bins=90):
-    trialstates = []; licks_all = []; tcs = []; coms = []
+    trialstates = []; licks_all = []; tcs = []; coms = []; vel_all=[]
 
     for ep in range(len(eps) - 1):
         eprng = np.arange(eps[ep], eps[ep + 1])
@@ -1923,6 +1923,7 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
         ypos_ep = ybinned[eprng]
         time_ep = time[eprng]
         F_ep = Fc3[eprng, :]
+        vel_ep = forwardvel[eprng]
 
         # Get successful and failed trials
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trial_ep, reward_ep)
@@ -1935,7 +1936,7 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
         trial_time_list = []
         F_trial_list = []
         lick_trial_list = []
-
+        vel_trial_list = []
         for trial in trials:
             mask = trial_ep == trial
             if np.sum(mask) == 0:
@@ -1945,6 +1946,7 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
             lick_trial = lick_ep[mask]
             ypos_trial = ypos_ep[mask]
             reward_trial = reward_ep[mask]
+            vel_trial=vel_ep[mask]
             # Align time to reward location
             if sum(reward_trial) > 0:
                 try:
@@ -1962,6 +1964,7 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
             trial_time_list.append(t_rel)
             F_trial_list.append(F_trial)
             lick_trial_list.append(lick_trial)
+            vel_trial_list.append(vel_trial)
 
         if len(ttr) > lasttr and len(trial_time_list) > 0:
             max_len = max(len(t) for t in trial_time_list)
@@ -1971,8 +1974,8 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
             tcs_per_trial = np.ones((n_cells, n_trials, bins)) * np.nan
             coms_per_trial = np.ones((n_cells, n_trials)) * np.nan
             licks_per_trial = np.ones((n_trials, bins)) * np.nan
-
-            for i, (t_rel, F_trial, lick_trial) in enumerate(zip(trial_time_list, F_trial_list, lick_trial_list)):
+            vel_per_trial = np.ones((n_trials, bins)) * np.nan
+            for i, (t_rel, F_trial, lick_trial, vel_trial) in enumerate(zip(trial_time_list, F_trial_list, lick_trial_list, vel_trial_list)):
                 for celln in range(n_cells):
                     tc = get_tuning_curve(t_rel, F_trial[:, celln], bins=bins)
                     tc[np.isnan(tc)] = 0
@@ -1984,12 +1987,16 @@ def make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc
                 lick_tc = get_tuning_curve(t_rel, lick_trial, bins=bins)
                 lick_tc[np.isnan(lick_tc)] = 0
                 licks_per_trial[i, :] = lick_tc
+                vel_tc = get_tuning_curve(t_rel, vel_trial, bins=bins)
+                vel_tc[np.isnan(vel_tc)] = 0
+                vel_per_trial[i, :] = vel_tc
 
             tcs.append(tcs_per_trial)
             coms.append(coms_per_trial)
             licks_all.append(licks_per_trial)
+            vel_all.append(vel_per_trial)
 
-    return trialstates, licks_all, tcs, coms
+    return trialstates, licks_all, vel_all, tcs, coms
 
 def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3,
                                                       trialnum, rewards, forwardvel, scalingf,
