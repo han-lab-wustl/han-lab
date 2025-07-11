@@ -375,6 +375,7 @@ rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(
 #%%
 # plot
 plt.rc('font', size=20) 
+import itertools
 df=pd.DataFrame()
 nrewstops_wo_licks_trials_per_an_av_concat = np.concatenate(nrewstops_wo_licks_trials_per_an_av)
 an_nrewstops_wo_licks_trials_per_an_av_concat = np.concatenate([[animals[ii]]*len(xx) for ii,xx in enumerate(nrewstops_wo_licks_trials_per_an_av)])
@@ -512,6 +513,94 @@ ax.set_ylabel('')
 ax.set_xlabel('Trial type')
 fig.suptitle('Stops\nPost-reward cells')
 plt.savefig(os.path.join(savedst, 'postrew_cells_by_stop_trial_type.svg'),bbox_inches='tight')
+
+#%%
+# combined nonrew 
+non_reward_df = df[df['trial_type'].isin(['non_rewarded_stops_wo_licks', 'non_reward_stops_w_licks'])]
+non_reward_avg = non_reward_df.groupby('animal')['activity'].mean().reset_index()
+non_reward_avg['trial_type'] = 'non_rewarded_stops'
+
+# Step 2: Keep rewarded trials as they are
+reward_df = df[df['trial_type'] == 'rewarded_stops']
+reward_avg = reward_df.groupby('animal')['activity'].mean().reset_index()
+reward_avg['trial_type'] = ['rewarded_stops']*len(reward_avg)
+# Step 3: Combine the averaged non-reward and rewarded data
+df = pd.concat([non_reward_avg, reward_avg], ignore_index=True)
+df=df.reset_index()
+palette = {'rewarded_stops':'seagreen', 'non_rewarded_stops': 'firebrick'}
+#%%
+# plot all cells
+fig,ax=plt.subplots(figsize=(2.5,5))
+s=12
+order=['non_rewarded_stops','rewarded_stops']
+sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,ax=ax,palette=palette,order=order)
+sns.barplot(x='trial_type', y='activity',hue='trial_type', data=df, fill=False,ax=ax,palette=palette,order=order)
+ax.spines[['top','right']].set_visible(False)
+
+ax.set_xticklabels(ax.get_xticklabels(), rotation=20)
+ans = df.animal.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x='trial_type', y='activity', 
+    data=df[df.animal==ans[i]],
+    errorbar=None, color='dimgray', linewidth=1.5,alpha=0.5)
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+import itertools
+from statsmodels.stats.multitest import multipletests
+
+# Perform ANOVA
+# Group data by trial type
+grouped = [group['activity'].values for name, group in df.groupby('trial_type')]
+# Perform Kruskal-Wallis test
+stat, pval = scipy.stats.kruskal(*grouped)
+print(f'Kruskal-Wallis H={stat:.3f}, p={pval:.3g}')
+v# Get unique trial types
+trial_types = df['trial_type'].unique()
+# Create all pairwise comparisons
+comparisons = list(itertools.combinations(trial_types, 2))
+# Store p-values
+p_values = []
+test_results = {}
+for group1, group2 in comparisons:
+    # Extract paired data (same animals)
+    paired_data = df.pivot(index="animal", columns="trial_type", values="activity").dropna()
+    # Perform paired t-test
+    t_stat, p_val = scipy.stats.wilcoxon(paired_data[group1], paired_data[group2])
+    p_values.append(p_val)
+    test_results[(group1, group2)] = p_val
+
+# Apply Bonferroni correction
+reject, pvals_corrected, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
+# Print results
+for (group1, group2), corrected_p in zip(comparisons, pvals_corrected):
+    print(f"Paired t-test: {group1} vs {group2}, Corrected p-value: {corrected_p:.4f}")
+    
+# Get unique trial types and positions
+group_names = df["trial_type"].unique()
+group_positions = {name: i for i, name in enumerate(group_names)}
+
+# Get max y-value for annotation positioning
+y_max = df["activity"].max()
+y_offset = (y_max - df["activity"].min()) * 0.1  # Adjust spacing
+
+# Define height adjustment for each comparison
+bar_heights = [y_max + (i + 1) * y_offset for i in range(len(comparisons))]
+
+# Iterate through pairwise comparisons
+for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corrected)):
+    x1, x2 = group_positions[group1], group_positions[group2]
+    y = bar_heights[i]  # Assign height for this comparison
+    # Draw significance bar
+    plt.plot([x1, x1, x2, x2], [y, y + y_offset * 0.2, y + y_offset * 0.2, y], 'k', lw=1.5)
+    # Annotate with corrected p-value
+    p_text = f"p = {corrected_p:.3g}"
+    ax.text((x1 + x2) / 2, y + y_offset * 0.3, p_text, 
+             ha='center', va='bottom', fontsize=12)
+ax.set_xticklabels(['Unrewarded','Rewarded'])
+ax.set_ylabel('Mean $\Delta F/F$')
+ax.set_xlabel('Trial type')
+fig.suptitle('Stops\nPost-reward cells')
+plt.savefig(os.path.join(savedst, 'postrew_cells_by_stop_trial_type_combined.svg'),bbox_inches='tight')
 
 # %%
 

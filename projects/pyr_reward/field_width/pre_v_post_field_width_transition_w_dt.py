@@ -88,12 +88,13 @@ anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
 anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
-sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
-    palette='Dark2',hue_order=hue_order)
-h_strip, l_strip = ax.get_legend_handles_labels()
+# multiple by binsize
+anrzdf['width_cm'] =anrzdf['width_cm'] *3
+# sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,palette='Dark2',hue_order=hue_order)
 sns.boxplot(x='epoch',y='width_cm',hue='cell_type',data=anrzdf,
         fill=False,palette='Dark2',hue_order=hue_order,
            showfliers=False)
+h_strip, l_strip = ax.get_legend_handles_labels()
 ax.spines[['top','right']].set_visible(False)
 
 ans = anrzdf.animal.unique()
@@ -120,7 +121,7 @@ ax.legend(
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Field width (cm)')
 ax.set_xlabel('')
-ax.set_xticklabels(['Near', 'Far'],rotation=45)
+ax.set_xticklabels(['Near', 'Far'],rotation=20)
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
 palette=sns.color_palette('Dark2')
@@ -271,6 +272,7 @@ rzdf4 = bigdf[(bigdf.epoch.str.contains('epoch4_rz1') | bigdf.epoch.str.contains
 rzdf = pd.concat([rzdf,rzdf2,rzdf3,rzdf4])
 rzdf=rzdf.reset_index()
 rzdf['epoch'] = [xx[-3:] for xx in rzdf.epoch.values]
+
 # only get super close rz1 rewlocs
 rzdf['rewloc_cm'] = [float(xx[-5:]) for xx in rzdf.rewloc.values]
 
@@ -378,6 +380,7 @@ fig, ax = plt.subplots(figsize=(4,5))
 sns.stripplot(x='epoch',y='width_cm',data=rzdf,hue='cell_type',alpha=0.05,dodge=True)
 sns.boxplot(x='epoch',y='width_cm',data=rzdf,fill=False,hue='cell_type')
 ax.spines[['top','right']].set_visible(False)
+#%%
 # per animal
 s=10
 hue_order = ['Pre','Post']
@@ -387,15 +390,17 @@ anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
 anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
+anrzdf['width_cm']=anrzdf['width_cm']*3
 #              & (anrzdf.animal!='e216')]
 # anrzdf=anrzdf[(anrzdf.animal!='z16')]
 order = ['rz3', 'rz1']
-sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
-    palette='Dark2',hue_order=hue_order,order=order)
-h_strip, l_strip = ax.get_legend_handles_labels()
+# sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
+#     palette='Dark2',hue_order=hue_order,order=order)
 sns.boxplot(x='epoch',y='width_cm',hue='cell_type',data=anrzdf,
         fill=False,palette='Dark2',hue_order=hue_order,order=order,
            showfliers=False)
+h_strip, l_strip = ax.get_legend_handles_labels()
+
 ax.spines[['top','right']].set_visible(False)
 
 ans = anrzdf.animal.unique()
@@ -416,13 +421,13 @@ ax.legend(
     h_strip, l_strip,
     title='Cell Type',
     loc='upper left',
-    bbox_to_anchor=(1.02, 1),
+    bbox_to_anchor=(.8, 1),
     borderaxespad=0.
 )
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Field width (cm)')
 ax.set_xlabel('')
-ax.set_xticklabels(['Far', 'Near'],rotation=45)
+ax.set_xticklabels(['Far', 'Near'],rotation=20)
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
 palette=sns.color_palette('Dark2')
@@ -463,6 +468,7 @@ for _, row in posthoc.iterrows():
     ax.text(x, ymax+1, stars, ha='center', va='bottom',fontsize=42)
     ax.text(x, ymax+4, f'{ct} far v near\np={p:.2g}', ha='center', va='bottom',fontsize=12,
             rotation=45)
+# fig.tight_layout()
 plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_width.svg')))
 #%%
 

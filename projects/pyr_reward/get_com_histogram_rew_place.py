@@ -110,7 +110,7 @@ for ii in range(len(conddf)):
             rewards,forwardvel,rewsize,bin_size)      
         # allocentric ref
         bin_size=track_length/bins 
-        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
             Fc3,trialnum,rewards,forwardvel,
             rewsize,bin_size)
         coms_rewrel_abs = np.array([xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)])
@@ -172,7 +172,7 @@ for ii in range(len(conddf)):
         # skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         # Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
         # get tc again
-        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        tcs_correct_abs, coms_correct_ab,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
         Fc3,trialnum,rewards,forwardvel,
         rewsize,bin_size)
         coms_rewrel_abs = np.array([xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)])
@@ -195,35 +195,40 @@ plt.rc('font', size=24)
 fig,axes = plt.subplots(ncols = 4,nrows = 1,figsize=(18,4),sharex=True,sharey=True)
 ax=axes[0]
 vmin=0
-vmax = .01
-ax.hist(np.concatenate(com_spatial_tuned_all),density=True,color='slategray')
-ax.set_ylabel('Density of COM')
-ax.set_title(f'Spatially tuned cells\n n={len(np.concatenate(com_spatial_tuned_all))} cells')
+vmax = .017
+binnum=15
+ax.hist(np.concatenate(com_spatial_tuned_all),density=True,color='slategray',bins=binnum)
+ax.set_ylabel('Density of cells')
+ax.set_title(f'All spatially tuned\n n={len(np.concatenate(com_spatial_tuned_all))} cells')
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylim([vmin,vmax])
+ax.axvline(0,color='k',linestyle='--',linewidth=2)
 ax=axes[1]
-ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue')
-ax.set_title(f'Reward cells\n n={len(np.concatenate(coms_mean_rewrel))} cells')
+ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue',bins=binnum)
+ax.set_title(f'Reward\n n={len(np.concatenate(coms_mean_rewrel))} cells')
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylim([vmin,vmax])
+ax.axvline(0,color='k',linestyle='--',linewidth=2)
 ax=axes[2]
-ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo')
-ax.set_title(f'Place cells\n n={len(np.concatenate(coms_mean_abs))} cells')
+ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo',bins=binnum)
+ax.set_title(f'Place\n n={len(np.concatenate(coms_mean_abs))} cells')
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylim([vmin,vmax])
+ax.axvline(0,color='k',linestyle='--',linewidth=2)
 ax=axes[3]
 alpha=0.4
 ax.hist(np.concatenate(com_spatial_tuned_all),density=True,
         color='slategray',alpha=alpha,
-        label='Spatially tuned cells')
+        label='Spatially tuned',bins=binnum)
 ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue',alpha=alpha,
-        label='Reward cells')
+        label='Reward',bins=binnum)
 ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo',alpha=alpha,
-        label='Place cells')
-ax.set_xlabel('Center-of-mass (COM)-rew. loc.(cm)')
+        label='Place',bins=binnum)
+ax.set_xlabel('Normalized center-of-mass')
 ax.set_ylim([vmin,vmax])
 ax.legend()
 ax.spines[['top','right']].set_visible(False)
+ax.axvline(0,color='k',linestyle='--',linewidth=2)
 savedst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures"
 plt.savefig(os.path.join(savedst, 'com_hist_rew_place.svg'),bbox_inches='tight')
 

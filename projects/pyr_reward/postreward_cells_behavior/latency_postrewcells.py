@@ -35,139 +35,142 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 plt.close('all')
 dfs=[]
+#%%
+# radian_alignment_saved=dict(list(radian_alignment_saved.items())[117:])
 for k,v in radian_alignment_saved.items():
-    radian_alignment=radian_alignment_saved
-    tcs_correct, coms_correct, tcs_fail, coms_fail,\
-            com_goal, goal_cell_shuf_ps_per_comp_av,\
-                    goal_cell_shuf_ps_av=radian_alignment[k]
-    track_length=270
-    goal_window = goal_window_cm*(2*np.pi/track_length) 
-    # change to relative value 
-    coms_rewrel = np.array([com-np.pi for com in coms_correct])
-    # only get cells near reward        
-    perm = list(combinations(range(len(coms_correct)), 2))     
-    com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])                
-    # tuning curves that are close to each other across epochs
-    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-    # in addition, com near but after goal
-    upperbound=np.pi/4
-    com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-            xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
-            xx], axis=0)>0))] for com in com_goal if len(com)>0]
-    # get goal cells across all epochs        
-    goal_cells = intersect_arrays(*com_goal)
+    if 'e145' not in k and 'e139' not in k:
+        radian_alignment=radian_alignment_saved
+        tcs_correct, coms_correct, tcs_fail, coms_fail,\
+                com_goal, goal_cell_shuf_ps_per_comp_av,\
+                        goal_cell_shuf_ps_av=radian_alignment[k]
+        track_length=270
+        goal_window = goal_window_cm*(2*np.pi/track_length) 
+        # change to relative value 
+        coms_rewrel = np.array([com-np.pi for com in coms_correct])
+        # only get cells near reward        
+        perm = list(combinations(range(len(coms_correct)), 2))     
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])                
+        # tuning curves that are close to each other across epochs
+        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        # in addition, com near but after goal
+        upperbound=np.pi/4
+        com_goal = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+                xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
+                xx], axis=0)>0))] for com in com_goal if len(com)>0]
+        # get goal cells across all epochs        
+        goal_cells = intersect_arrays(*com_goal)
 
-    goal_cell_iind = goal_cells
-    tc = tcs_correct
-    animal,day,trash = k.split('_'); day=int(day)
-    if animal=='e145': pln=2
-    else: pln=0
-    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"        
-    print(params_pth)
-    fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'licks',
-    'pyr_tc_s2p_cellind', 'timedFF','ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat'])
-    fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-    Fc3 = fall_fc3['Fc3']
-    dFF = fall_fc3['dFF']
-    VR = fall['VR'][0][0][()]
-    scalingf = VR['scalingFACTOR'][0][0]
-    try:
-        rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
-    except:
-        rewsize = 10
+        goal_cell_iind = goal_cells
+        tc = tcs_correct
+        animal,day,trash = k.split('_'); day=int(day)
+        if animal=='e145': pln=2
+        else: pln=0
+        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"        
+        print(params_pth)
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'licks',
+        'pyr_tc_s2p_cellind', 'timedFF','ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+                'stat'])
+        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+        Fc3 = fall_fc3['Fc3']
+        dFF = fall_fc3['dFF']
+        VR = fall['VR'][0][0][()]
+        scalingf = VR['scalingFACTOR'][0][0]
+        try:
+            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+        except:
+            rewsize = 10
 
-    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-    # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
-    # skew_mask = skew_filter>2
-    Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-    dFF = dFF[:, skew>2]
-    scalingf=2/3
-    ybinned = fall['ybinned'][0]/scalingf
-    track_length=180/scalingf    
-    forwardvel = fall['forwardvel'][0]    
-    changeRewLoc = np.hstack(fall['changeRewLoc'])
-    trialnum=fall['trialnum'][0]
-    rewards = fall['rewards'][0]
-    timedFF=fall['timedFF'][0]
-    if animal=='e145':
-        ybinned=ybinned[:-1]
-        forwardvel=forwardvel[:-1]
-        changeRewLoc=changeRewLoc[:-1]
-        trialnum=trialnum[:-1]
-        rewards=rewards[:-1]        # set vars
-        timedFF=timedFF[:-1]
-    eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-    velocity = fall['forwardvel'][0]
-    veldf = pd.DataFrame({'velocity': velocity})
-    velocity = np.hstack(veldf.rolling(5).mean().values)
-    # velocity - ndarray: velocity of the animal
-    # thres - float: Threshold speed in cm/s
-    # Fs - int: Number of frames minimum to be considered stopped
-    # ftol - int: Frame tolerance for merging stop periods
-    moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
-    pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
-    nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
-    rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
-            velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
-            max_reward_stop=31.25*5)    
-    # nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
-    #         post_win_framesALL,velocity, fall['rewards'][0])
-    nonrew_stop_without_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
-    nonrew_stop_without_lick_per_plane[nonrew_stop_without_lick.astype(int)] = 1
-    nonrew_stop_with_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
-    nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
-    movement_starts=mov_success_tmpts.astype(int)
-    rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
-    rew_per_plane[rew_stop_with_lick.astype(int)] = 1
-    move_start = np.zeros_like(fall['changeRewLoc'][0])
-    move_start[movement_starts.astype(int)] = 1
-    range_val=7;binsize=0.1
-    gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
-    # get latencies based on average of trials
-    for gc in goal_cell_iind:
-        # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
-        #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
-        #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-        if np.nanmax(meanrew)>1: # only get highly active cells?
-            _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-            
-            iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
-            
-            transient_after_rew=iind[iind>int(range_val/binsize)]
-            if len(transient_after_rew)>0:
-                transient_after_rew=transient_after_rew[0]
-            else:
-                transient_after_rew=np.nan
-            gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
-            iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
-            transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+3/binsize))]
-            if len(transient_before_move)>0:
-                transient_before_move=transient_before_move[0]
-            else:
-                transient_before_move=np.nan
-            gc_latencies_mov.append((transient_before_move-int(range_val/binsize))*binsize)
-            cellid.append(gc)
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+        # skew_filter = skew[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+        # skew_mask = skew_filter>2
+        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+        dFF = dFF[:, skew>2]
+        scalingf=2/3
+        ybinned = fall['ybinned'][0]/scalingf
+        track_length=180/scalingf    
+        forwardvel = fall['forwardvel'][0]    
+        changeRewLoc = np.hstack(fall['changeRewLoc'])
+        trialnum=fall['trialnum'][0]
+        rewards = fall['rewards'][0]
+        timedFF=fall['timedFF'][0]
+        if animal=='e145':
+            ybinned=ybinned[:-1]
+            forwardvel=forwardvel[:-1]
+            changeRewLoc=changeRewLoc[:-1]
+            trialnum=trialnum[:-1]
+            rewards=rewards[:-1]        # set vars
+            timedFF=timedFF[:-1]
+        eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+        velocity = fall['forwardvel'][0]
+        veldf = pd.DataFrame({'velocity': velocity})
+        velocity = np.hstack(veldf.rolling(5).mean().values)
+        # velocity - ndarray: velocity of the animal
+        # thres - float: Threshold speed in cm/s
+        # Fs - int: Number of frames minimum to be considered stopped
+        # ftol - int: Frame tolerance for merging stop periods
+        moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
+        pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
+        nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
+        rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
+                velocity, (fall['rewards'][0]==.5).astype(int), fall['licks'][0], 
+                max_reward_stop=31.25*5)    
+        # nonrew,rew = get_stops(moving_middle, stop, pre_win_framesALL, 
+        #         post_win_framesALL,velocity, fall['rewards'][0])
+        nonrew_stop_without_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+        nonrew_stop_without_lick_per_plane[nonrew_stop_without_lick.astype(int)] = 1
+        nonrew_stop_with_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+        nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
+        movement_starts=mov_success_tmpts.astype(int)
+        rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+        rew_per_plane[rew_stop_with_lick.astype(int)] = 1
+        move_start = np.zeros_like(fall['changeRewLoc'][0])
+        move_start[movement_starts.astype(int)] = 1
+        range_val=7;binsize=0.1
+        gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
+        # get latencies based on average of trials
+        for gc in goal_cell_iind:
+            # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+            #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+            #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
+                fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+            if np.nanmax(meanrew)>1: # only get highly active cells?
+                _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+                
+                iind = np.where(meanrew>(np.nanmean(meanrew[int(range_val/binsize):])+1*np.nanstd(meanrew[int(range_val/binsize):])))[0]
+                
+                transient_after_rew=iind[iind>int(range_val/binsize)]
+                if len(transient_after_rew)>0:
+                    transient_after_rew=transient_after_rew[0]
+                else:
+                    transient_after_rew=np.nan
+                gc_latencies_rew.append((transient_after_rew-int(range_val/binsize))*binsize)
+                iind = np.where(meanrstops>(np.nanmean(meanrstops[int(range_val/binsize-3/binsize):])+1*np.nanstd(meanrstops[int(range_val/binsize-3/binsize):])))[0]
+                transient_before_move=iind[(iind>int(range_val/binsize-5/binsize)) & (iind<int(range_val/binsize+3/binsize))]
+                if len(transient_before_move)>0:
+                    transient_before_move=transient_before_move[0]
+                else:
+                    transient_before_move=np.nan
+                gc_latencies_mov.append((transient_before_move-int(range_val/binsize))*binsize)
+                cellid.append(gc)
 
-        # fig,ax=plt.subplots()
-        # ax.scatter(range(len(latencies_to_movement)),latencies_to_movement,color='k')
-        # ax2 = ax.twinx()
-        # ax2.scatter(range(len(latencies_to_rewards)),latencies_to_rewards,color='orchid')
-    # concat by cell
-    df=pd.DataFrame()
-    df['latency (s)']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
-    df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
-                    ['Movement Start']*len(gc_latencies_mov)])
-    df['animal']=[animal]*len(df)
-    df['day']=[day]*len(df)
-    df['cellid']=np.concatenate([cellid]*2)
+            # fig,ax=plt.subplots()
+            # ax.scatter(range(len(latencies_to_movement)),latencies_to_movement,color='k')
+            # ax2 = ax.twinx()
+            # ax2.scatter(range(len(latencies_to_rewards)),latencies_to_rewards,color='orchid')
+        # concat by cell
+        df=pd.DataFrame()
+        df['latency (s)']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
+        df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
+                        ['Movement Start']*len(gc_latencies_mov)])
+        df['animal']=[animal]*len(df)
+        df['day']=[day]*len(df)
+        df['cellid']=np.concatenate([cellid]*2)
 
-    dfs.append(df)
+        dfs.append(df)
 
 #%%
 #plot all cells
@@ -210,27 +213,63 @@ ax.set_ylabel('Latency (s) to transient')
 ax.set_xlabel('')
 #%%
 # histogram of latencies
+# fig 4
 plt.rc('font', size=20) 
-fig,axes=plt.subplots(ncols=2,figsize=(10,4),sharey=True)
-# per animal
-sns.histplot(x='latency (s)',hue='animal',data=df[df.behavior=='Reward'],kde=True,ax=axes[0],bins=20)
-axes[0].set_ylabel('# Post-reward cells')
-axes[0].set_xlabel('Latency from reward (s)')
-mean_val = df[df.behavior=='Reward']['latency (s)'].values.mean()
-sem = scipy.stats.sem(df[df.behavior=='Reward']['latency (s)'].values)
-axes[0].axvline(mean_val, color='k', linestyle='--', linewidth=2)
-ax=axes[0]
-ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g} +/- {sem:.2g}', color='k', ha='center', va='bottom', fontsize=14)
+# Prepare data
+df=df[df.animal!='e200']
+subset = df[df.behavior == 'Reward']
+animals = subset['animal'].unique()
+palette = sns.color_palette('tab10', len(animals))
 
-axes[0].spines[['top','right']].set_visible(False)
-sns.histplot(x='latency (s)',hue='animal',data=df[df.behavior=='Movement Start'],kde=True,ax=axes[1],legend=False,bins=20)
-axes[1].set_xlabel('Latency from movement initiation (s)')
-axes[1].spines[['top','right']].set_visible(False)
-mean_val = np.nanmean(df[df.behavior=='Movement Start']['latency (s)'].values)
-sem = scipy.stats.sem(df[df.behavior=='Movement Start']['latency (s)'].values,nan_policy='omit')
-axes[1].axvline(mean_val, color='k', linestyle='--', linewidth=2)
-ax=axes[1]
+fig, axes = plt.subplots(ncols=2,figsize=(10, 5),sharey=True)
+ax=axes[0]
+x_vals = np.linspace(subset['latency (s)'].min(), subset['latency (s)'].max(), 500)
+kde_vals_all = []
+# Plot KDE for each animal and store for averaging
+for i, animal in enumerate(animals):
+    data_animal = subset[subset['animal'] == animal]['latency (s)'].dropna()
+    if len(data_animal)>1:
+        kde = scipy.stats.gaussian_kde(data_animal)
+        y_vals = kde(x_vals)
+    else:
+        kde = scipy.stats.norm.pdf(x_vals, loc=data_animal.values[0], scale=.5)
+        y_vals=kde
+    kde_vals_all.append(y_vals)
+    sns.lineplot(x=x_vals, y=y_vals, ax=ax, label=animal, color=palette[i], linewidth=1.5)
+# Compute mean KDE across animals
+mean_kde_vals = np.mean(kde_vals_all, axis=0)
+ax.plot(x_vals, mean_kde_vals, color='black', linewidth=3, label='Mean KDE')
+mean_val = np.nanmean(df[df.behavior=='Reward']['latency (s)'].values)
+sem= scipy.stats.sem(df[df.behavior=='Reward']['latency (s)'].values,nan_policy='omit')
+ax.axvline(mean_val, color='k', linestyle='--', linewidth=2)
 ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g} +/- {sem:.2g}', color='k', ha='center', va='bottom', fontsize=14)
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('# Post-reward cells')
+ax.set_xlabel('Latency from reward (s)')
+
+ax=axes[1]
+subset = df[df.behavior == 'Movement Start']
+kde_vals_all = []
+x_vals = np.linspace(subset['latency (s)'].min(), subset['latency (s)'].max(), 500)
+# Plot KDE for each animal and store for averaging
+for i, animal in enumerate(animals):
+    data_animal = subset[subset['animal'] == animal]['latency (s)'].dropna()
+    if len(data_animal)>1:
+        kde = scipy.stats.gaussian_kde(data_animal)
+        y_vals = kde(x_vals)
+        kde_vals_all.append(y_vals)
+    
+        sns.lineplot(x=x_vals, y=y_vals, ax=ax, label=animal, color=palette[i], linewidth=1.5)
+# Compute mean KDE across animals
+mean_kde_vals = np.mean(kde_vals_all, axis=0)
+ax.plot(x_vals, mean_kde_vals, color='black', linewidth=3, label='Mean KDE')
+mean_val = np.nanmean(df[df.behavior=='Movement Start']['latency (s)'].values)
+sem= scipy.stats.sem(df[df.behavior=='Movement Start']['latency (s)'].values,nan_policy='omit')
+ax.axvline(mean_val, color='k', linestyle='--', linewidth=2)
+ax.text(mean_val, ax.get_ylim()[1], f'Mean={mean_val:.2g} +/- {sem:.2g}', color='k', ha='center', va='bottom', fontsize=14)
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('# Post-reward cells')
+ax.set_xlabel('Latency from movement start (s)')
 
 plt.savefig(os.path.join(savedst, 'latency_postrew_hist.svg'))
 #%%

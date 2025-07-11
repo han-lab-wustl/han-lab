@@ -214,11 +214,13 @@ plt.rc('font', size=20)
 s=10
 fig,axes=plt.subplots(ncols=2, figsize=(8,5),sharex=True,width_ratios=[1.3,1])
 ax=axes[0]
-df=df[(df.animal!='e139') & (df.animal!='e145') & (df.animal!='e189') & (df.animal!='e190')]
+df=df[(df.animal!='e139') & (df.animal!='e145') & (df.animal!='e189')]
 # only get last day
 day_per_animal = [df.loc[(df.animal==an), 'day'].unique()[-1] for an in df.animal.unique()]
 df_day = pd.concat([df[(df.animal==an) & (df.day==day_per_animal[ii])] for ii,an in enumerate(df.animal.unique())])
 celln_per_animal = [[len(df_day[(df_day.animal==an)&(df_day.cell_type==ct)]) for ii,an in enumerate(df.animal.unique())] for ct in cell_types ]
+order=['Reward', 'Movement Start']
+hue_order=['pre', 'post']
 sns.violinplot(x='behavior',y='dff',data=df_day,order=order,hue_order=hue_order,ax=ax,legend=False,
         dodge=True,hue='cell_type',palette='Dark2')
 comparisons=[];pvals=[]
@@ -336,6 +338,77 @@ ax.legend(by_label.values(), by_label.keys(), title='Cell Type', fontsize=12, ti
 
 plt.savefig(os.path.join(savedst, 'postrew_dff_reward_v_movement.svg'),bbox_inches='tight')
 # %%
+# new fig 4
+fig,ax=plt.subplots(figsize=(4,6))
+colors = ['cornflowerblue', 'k']
+sns.stripplot(x='cell_type',y='dff',data=dfagg,order=hue_order,s=s,alpha=0.7,hue_order=order,ax=ax,dodge=True,hue='behavior',palette=colors)
+sns.barplot(x='cell_type',y='dff',hue='behavior',order=hue_order,hue_order=order,ax=ax,
+            data=dfagg,fill=False,palette=colors,legend=False)
+ax.set_xticklabels(['Pre-reward','Post-reward'])
+ax.set_xlabel('Cell type')
+ax.set_ylabel('Mean $\Delta F/F$')
+# sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
+ax.spines[['top','right']].set_visible(False)
+pvals = []
+comparisons = []
+for ct in cell_types:
+    d1 = dfagg[(dfagg.behavior == 'Movement Start') & (dfagg.cell_type == ct)]['dff']
+    d2 = dfagg[(dfagg.behavior == 'Reward') & (dfagg.cell_type == ct)]['dff']
+    stat, p = scipy.stats.wilcoxon(d1, d2)
+    pvals.append(p)
+    comparisons.append((ct, 'Reward', 'Movement Start'))
+        
+from statsmodels.stats.multitest import multipletests
+# --- Correct p-values using FDR ---
+reject, pvals_corrected, _, _ = multipletests(pvals, method='fdr_bh')
+# --- Plot comparisons with corrected p-values ---
+y_max = dfagg['dff'].max()
+y_start = y_max + 0.05
+y_step = 0.07
+fs = 30
+behavior_positions = {'Reward': 0, 'Movement Start': .4}
+for i, ((ct, b1, b2), p_corr, sig) in enumerate(zip(comparisons, pvals_corrected, reject)):
+    x1 = behavior_positions[b1] + (-0.2 if ct == 'pre' else .8)
+    x2 = behavior_positions[b2] + (-0.2 if ct == 'pre' else .8)
+    y = y_start + i * y_step
+    h=0.05
+    ax.plot([x1, x1, x2, x2], [y-h, y, y, y-h], lw=1.5, c='black')
+    if p_corr<0.05:
+        star='*'
+    if p_corr<0.01:
+        star='**'
+    if p_corr<0.001:
+        star='***'n
+    if p_corr>0.05: star=''
+    ax.text((x1 + x2)/2, y + 0.01, f"{star}", 
+            ha='center', va='bottom', fontsize=46)
+    ax.text((x1 + x2)/2, y + 0.05, f"p={p_corr:.3g}", 
+            ha='center', va='bottom', fontsize=12)
+# Remove all current legends
+ax.legend_.remove()
+cell_type_order = hue_order  # same as used in plotting
+behavior_order = ['Reward','Movement Start']
+offset = 0.2  # half of the dodge width
+for i, ct in enumerate(cell_type_order):
+    df_ct = dfagg[dfagg.cell_type == ct]
+    df_pivot = df_ct.pivot(index='animal', columns='behavior', values='dff')
+
+    # Drop animals with missing values
+    df_pivot = df_pivot.dropna(subset=behavior_order)
+
+    for _, row in df_pivot.iterrows():
+        x1 = i - offset  # Movement Start
+        x2 = i + offset  # Reward
+        y1 = row[behavior_order[0]]
+        y2 = row[behavior_order[1]]
+        ax.plot([x1, x2], [y1, y2], color='dimgray', linewidth=1.5, alpha=0.5, zorder=0)
+
+# Create a single legend for cell type
+handles, labels = ax.get_legend_handles_labels()
+by_label = dict(zip(labels, handles))  # Remove duplicates
+ax.legend(by_label.values(), by_label.keys())
+
+plt.savefig(os.path.join(savedst, 'postrew_dff_reward_v_movement.svg'),bbox_inches='tight')
 
 # %%
 

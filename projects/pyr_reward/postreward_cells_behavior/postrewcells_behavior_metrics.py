@@ -113,9 +113,15 @@ nonrew_stop_with_lick_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
 rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
+movement_starts=mov_success_tmpts.astype(int)
+rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
+rew_per_plane[rew_stop_with_lick.astype(int)] = 1
+move_start = np.zeros_like(fall['changeRewLoc'][0])
+move_start[movement_starts.astype(int)] = 1
 #%%
+# pre and post side by side
 plt.rc('font', size=16)
-range_val,binsize=10, .1
+range_val,binsize=5, .1
 def moving_average(x, window_size):
     return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 goal_cell_iind=np.array(goal_cell_iind)
@@ -124,29 +130,11 @@ fig, axes = plt.subplots(nrows=3,sharex=True,figsize=(3,4),height_ratios=[2,1,1]
 # pre and post eg cell
 for iii,gc in enumerate(goal_cell_iind[[28,2]]):
     # TODO: make condensed
-    _, meannstops, __, rewnstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_without_lick_per_plane, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanvelnonrew, __, velnonrew = perireward_binned_activity(velocity, nonrew_stop_without_lick_per_plane, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanlicknonrew, __, licknonrew = perireward_binned_activity(fall['licks'][0], nonrew_stop_without_lick_per_plane, 
-        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanrewnonrew, __, rewnonrew = perireward_binned_activity(fall['rewards'][0], nonrew_stop_without_lick_per_plane, 
+    _, meanrstops, __, rewrstops = perireward_binned_activity(Fc3[:,gc], move_start, 
     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-
-    _, meannlstops, __, rewnlstops = perireward_binned_activity(Fc3[:,gc], nonrew_stop_with_lick_per_plane, 
+    _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
             fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanvelnonrewl, __, velnonrewl = perireward_binned_activity(velocity, nonrew_stop_with_lick_per_plane, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanlicknonrewwl, __, licknonrewwl = perireward_binned_activity(fall['licks'][0], nonrew_stop_with_lick_per_plane, 
-        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanrewnonrewl, __, rewnonrewl = perireward_binned_activity(fall['rewards'][0], nonrew_stop_with_lick_per_plane, 
-        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-
-    _, meanrstops, __, rewrstops = perireward_binned_activity(Fc3[:,gc], rew_per_plane, 
-    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanvelrew, __, velrew = perireward_binned_activity(velocity, rew_per_plane, 
-            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-    _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], rew_per_plane, 
+    _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
     _, meanrewrewstops, __, rewrewstops = perireward_binned_activity(fall['rewards'][0], rew_per_plane, 
         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
@@ -181,7 +169,7 @@ alpha=0.5, color=excolor
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_ylabel('Velocity (cm/s)')
-ax.set_xlabel('Time from stop (s)')
+ax.set_xlabel('Time from movement start (s)')
 
 ax=axes[1]
 # meanlickrew, __, lickrew
@@ -205,3 +193,165 @@ ax.set_ylabel('Norm. licks')
 ax.legend().set_visible(False)
 
 plt.savefig(os.path.join(savedst, f'postrew_traces_cell{gc}.svg'))
+#%% 
+# new fig 4
+# pre and post side by side
+plt.rc('font', size=16)
+range_val,binsize=3, .3
+def moving_average(x, window_size):
+    return np.convolve(x, np.ones(window_size)/window_size, mode='same')
+goal_cell_iind=np.array(goal_cell_iind)
+colors=sns.color_palette('Dark2')
+fig, axes = plt.subplots(nrows=3,sharex=True,figsize=(3,5))
+axes=axes.flatten()
+# pre and post eg cell
+for iii,gc in enumerate(goal_cell_iind[[0]]):
+    # TODO: make condensed
+    _, meanrstops, __, rewrstops = perireward_binned_activity(Fc3[:,gc], move_start, 
+    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+    _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+            fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+    _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+    _, meanrewrewstops, __, rewrewstops = perireward_binned_activity(fall['rewards'][0], move_start, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+    ax1 = axes[0]  # base axis for first cell
+    ax1.plot(meanrstops, color=colors[1], label=f'Cell {gc}')
+    ax1.fill_between(
+        range(0, int(range_val / binsize) * 2),
+        meanrstops - scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
+        meanrstops + scipy.stats.sem(rewrstops, axis=1, nan_policy='omit'),
+        alpha=0.5, color=colors[1]
+    )
+    ax1.spines[['top', 'right']].set_visible(False)
+    ax1.set_ylabel('$\Delta F/F$')
+    ax1.axvline(int(range_val / binsize), color='k', linestyle='--')
+
+excolor='dimgrey'
+ax=axes[1]
+ax.plot(meanvelrew,color=excolor, label='rewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanvelrew - scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
+meanvelrew + scipy.stats.sem(velrew, axis=1, nan_policy='omit'),
+alpha=0.5, color=excolor
+)               
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('Velocity (cm/s)')
+
+ax=axes[2]
+# meanlickrew, __, lickrew
+lickrew = np.array([moving_average(xx,3) for xx in lickrew.T]).T
+lickrew=lickrew/np.nanmax(lickrew,axis=0)
+meanlickrew=np.nanmean(lickrew,axis=1)
+ax.plot(moving_average(meanlickrew,3),alpha=0.5,color=excolor, label='rewarded stops')
+ax.fill_between(
+range(0, int(range_val / binsize) * 2),
+meanlickrew - scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
+meanlickrew + scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
+alpha=0.5, color=excolor
+)                 
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.spines[['top', 'right']].set_visible(False)    
+ax.set_ylabel('Norm. Licks')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('Norm. licks')
+ax.legend().set_visible(False)
+ax.set_xlabel('Time from movement start (s)')
+
+plt.savefig(os.path.join(savedst, f'postrew_traces_cell{gc}.svg'))
+#%%
+# per trial
+gc=goal_cell_iind[0]
+range_val,binsize=3, .3
+# TODO: make condensed
+_, meanrstops, __, rewrstops = perireward_binned_activity(Fc3[:,gc], move_start, 
+fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanrewrewstops, __, rewrewstops = perireward_binned_activity(fall['rewards'][0], move_start, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+# reward
+range_val,binsize=10, .3
+rew=(fall['rewards'][0]==1)
+rew=rew.astype(int)
+rew[:5000]=0
+_, meanrew, __, rewall = perireward_binned_activity(Fc3[:,gc], rew, 
+fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanvel, __, velall = perireward_binned_activity(velocity, rew, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanlick, __, lickall = perireward_binned_activity(fall['licks'][0], rew, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+
+#%%
+fig, axes = plt.subplots(ncols=2,nrows=3,figsize=(5,7),height_ratios=[3,1,1])
+axes=axes.flatten()
+
+range_val,binsize=10, .3
+rewall[np.isnan(rewall)]=0
+ax1 = axes[0]  # base axis for first cell
+im1=ax1.imshow(rewall.T, aspect='auto')
+ax1.set_ylabel('Trials')
+ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticklabels([])
+ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
+
+ax=axes[2]
+velall[np.isnan(velall)]=0
+im2=ax.imshow(velall.T, aspect='auto',cmap='Greys')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([])
+ax.set_ylabel('Trials')
+ax.legend().set_visible(False)
+
+ax=axes[4]
+lickall[np.isnan(lickall)]=0
+im2=ax.imshow(lickall.T, aspect='auto',cmap='Blues')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.set_ylabel('Trials')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.legend().set_visible(False)
+ax.set_xlabel('Time from reward (s)')
+
+range_val,binsize=3, .3
+rewrstops[np.isnan(rewrstops)]=0
+ax1 = axes[1]  # base axis for first cell
+im1=ax1.imshow(rewrstops.T, aspect='auto')
+ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
+velrew[np.isnan(velrew)]=0
+ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticklabels([])
+ax1.set_yticklabels([])
+cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('$\Delta F/F$')
+
+ax=axes[3]
+im2=ax.imshow(velrew.T, aspect='auto',cmap='Greys')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.legend().set_visible(False)
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([])
+ax.set_yticklabels([])
+cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Velocity (cm/s)')
+
+lickrew[np.isnan(lickrew)]=np.nanmean(lickrew)
+ax=axes[5]
+im2=ax.imshow(lickrew.T, aspect='auto',cmap='Blues')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.set_yticklabels([])
+
+ax.legend().set_visible(False)
+ax.set_xlabel('Time from movement start (s)')
+cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Norm. licks')
+
+plt.savefig(os.path.join(savedst, f'trail_postrew_traces_cell{gc}.svg'))

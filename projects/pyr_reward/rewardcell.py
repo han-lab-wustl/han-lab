@@ -1884,7 +1884,7 @@ def trail_type_activity_quant(ii,params_pth,animal,day,bins,radian_alignment,
     bins_dt=150 
     bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
     # tc w/ dark time added to the end of track
-    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
         rewsize,ybinned,time,lick,
         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
         bins=bins_dt)  

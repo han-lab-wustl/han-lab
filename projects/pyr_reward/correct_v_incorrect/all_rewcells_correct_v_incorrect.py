@@ -13,8 +13,8 @@ from collections import Counter
 from itertools import combinations, chain
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
@@ -77,7 +77,7 @@ plt.rc('font', size=20)
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
 animals_test = [ 'e145', 'e186', 'e189', 'e190', 'e200', 'e201', 'e216',
-       'e218', 'z8', 'z9']
+       'e218', 'z8', 'z9','z16']
 cell_types = ['pre', 'post', 'far_pre', 'far_post']
 bins = 150
 # recalc tc
@@ -103,6 +103,8 @@ for cll, cell_type in enumerate(cell_types):
         for ii, tcs_corr in enumerate(tcs_correct_ct):
             if animals[ii] == animal and tcs_corr.shape[1] > 0:
                 tc = np.nanmean(tcs_corr, axis=0)
+                # all epochs
+                tc=np.vstack(tcs_corr)
                 if tc.ndim == 1: tc = np.expand_dims(tc, 0)
                 tcs_correct.append(tc)
                 # Quantile per trial
@@ -117,6 +119,7 @@ for cll, cell_type in enumerate(cell_types):
         for ii, tcs_f in enumerate(tcs_fail_ct):
             if animals[ii] == animal and tcs_f.shape[1] > 0:
                 tc = np.nanmean(tcs_f, axis=0)
+                tc=np.vstack(tcs_f)
                 if tc.ndim == 1: tc = np.expand_dims(tc, 0)
                 tcs_fail.append(tc)
                 if np.sum(np.isnan(tc)) == 0:
@@ -132,15 +135,17 @@ for cll, cell_type in enumerate(cell_types):
             for i in range(np.vstack(tcs_correct).shape[0])]
         cs=np.array(cs); cs_per_an.append(cs)
         # --- Plotting ---
-        fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(10, 12),
-                                 gridspec_kw={'height_ratios': [2, 1], 'width_ratios': [1, 1, 0.05]},
-                                 constrained_layout=True)
+        fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(10, 10),
+            gridspec_kw={'height_ratios': [2, 1], 'width_ratios': [1, 1, 0.05]},
+            constrained_layout=True)
         axes = axes.flatten()
 
         # Panel: Correct Trials Heatmap
         ax = axes[0]
         tc = np.vstack(tcs_correct)
         tc_z = normalize_rows_0_to_1(tc)
+        valid_rows = ~(np.sum(np.isnan(tc_z),axis=1)>0)
+        tc_z=tc_z[valid_rows,:]
         peak_bins = np.argmax(tc_z, axis=1)
         sort_idx = np.argsort(peak_bins)
         vmin, vmax = 0,1
@@ -148,8 +153,8 @@ for cll, cell_type in enumerate(cell_types):
         ax.axvline(bins // 2, color='w', linestyle='--')
         ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
-        ax.set_ylabel('Reward cells (sorted)')
-        ax.set_xlabel('Reward-relative distance ($\\Theta$)')
+        ax.set_ylabel('Reward cell # (sorted)')
+        ax.set_xlabel('Reward-centric distance ($\\Theta$)')
         ax.set_title(f'{animal}\nCorrect Trials')
 
         # Panel: Failed Trials Heatmap
@@ -157,21 +162,24 @@ for cll, cell_type in enumerate(cell_types):
         tc = np.vstack(tcs_fail)[sort_idx]
         # Remove rows with all NaNs before sorting
         # only for figures, keep for calc
+        # tc_fail_valid = tc
+        tc = normalize_rows_0_to_1(tc)
         valid_rows = ~(np.sum(np.isnan(tc),axis=1)>0)
         tc_fail_valid = tc[valid_rows,:]
-        # tc_fail_valid = tc
-        tc_fail_norm = np.array([xx/np.nanmax(xx) if np.nanmax(xx)>0 else np.zeros_like(xx) for xx in tc_fail_valid])
+        peak_bins = np.argmax(tc_fail_valid, axis=1)
+        sort_idx = np.argsort(peak_bins)
         if len(tc_fail_norm)>0:
-            im2 = ax.imshow(tc_fail_norm, aspect='auto', cmap='viridis')
+            im2 = ax.imshow(tc_fail_valid[sort_idx], aspect='auto', cmap='viridis')
             ax.axvline(bins // 2, color='w', linestyle='--')
             ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
             ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+            # ax.set_yticklabels([])
             ax.set_title('Incorrect Trials')
 
         # Colorbar
         cbar_ax = axes[2]
         cbar = fig.colorbar(im, cax=cbar_ax)
-        cbar_ax.set_ylabel('Av. Norm. $\Delta$F/F across epochs', rotation=270, labelpad=15)
+        cbar_ax.set_ylabel('Norm. $\Delta$F/F', rotation=270)
         cbar_ax.yaxis.set_label_position('left')
         cbar_ax.yaxis.tick_left()
         cbar.set_ticks([vmin, vmax])
@@ -187,6 +195,8 @@ for cll, cell_type in enumerate(cell_types):
         ax.axvline(bins // 2, color='k', linestyle='--')
         ax.set_xticks([0, len(m) // 2, len(m)])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+        ax.set_xlabel('Reward-centric distance ($\\Theta$)')
+
         ax.spines[['top', 'right']].set_visible(False)
         ax.set_ylabel('$\Delta$F/F')
         height = m.max() + m.max()/2
@@ -204,15 +214,14 @@ for cll, cell_type in enumerate(cell_types):
         ax.set_xticks([0, len(m) // 2, len(m)])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
         ax.spines[['top', 'right']].set_visible(False)
-        ax.set_xlabel('Reward-relative distance ($\\Theta$)')
-        ax.set_ylabel('$\Delta$F/F')
+        ax.set_ylabel('')
         ax.set_ylim([0, height])
         ax.set_title('Incorrect Mean')
         # Hide empty axis
         axes[5].axis('off')
         fig.suptitle(cell_type)
-        plt.close(fig)        
-        # plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_correctvfail.svg'),bbox_inches='tight')
+        # plt.close(fig)        
+        plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_correctvfail.svg'),bbox_inches='tight')
     dff_correct_per_type.append(dff_correct_per_an)
     dff_fail_per_type.append(dff_fail_per_an)
     cs_per_type.append(cs_per_an)
@@ -238,7 +247,7 @@ for cll,celltype in enumerate(cell_types):
 bigdf = pd.concat(dfsall)
 bigdf=bigdf.groupby(['animal', 'trial_type', 'cell_type']).mean(numeric_only=True)
 bigdf=bigdf.reset_index()
-bigdf=bigdf[bigdf.animal!='e189']
+bigdf=bigdf[(bigdf.animal!='e189') & (bigdf.animal!='z16') & (bigdf.animal!='e145')]
 s=12
 cell_order = cell_types
 fig,ax = plt.subplots(figsize=(6,4))
@@ -247,10 +256,10 @@ sns.stripplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
         s=s,alpha=0.7,    order=cell_order)
 sns.barplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
         fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
-            order=cell_order)
+            order=cell_order,legend=False)
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Mean $\Delta F/F$ rel. to rew.')
+ax.set_ylabel('Mean $\Delta F/F$')
 ax.set_xlabel('Reward cell type')
 ax.legend_.remove()
 ax.set_xticklabels(['Pre', 'Post', 'Far pre', 'Far post'])
@@ -296,14 +305,18 @@ aov = AnovaRM(
     within=['trial_type','cell_type']
 ).fit()
 print(aov)    # F-stats and p-values for main effects and interaction
+aov_table = aov.anova_table
 
+# Print full p-values
+with pd.option_context('display.precision', 10):
+    print(aov_table)
 # 2) Post-hoc paired comparisons: correct vs incorrect within each cell_type
 posthoc = []
 for ct in cell_order:
     sub = bigdf[bigdf['cell_type']==ct]
     cor = sub[sub['trial_type']=='correct']['mean_dff']
     inc = sub[sub['trial_type']=='incorrect']['mean_dff']
-    t, p_unc = scipy.stats.ttest_rel(cor, inc)
+    t, p_unc = scipy.stats.wilcoxon(cor, inc)
     posthoc.append({
         'cell_type': ct,
         't_stat':    t,
@@ -312,8 +325,10 @@ for ct in cell_order:
 
 posthoc = pd.DataFrame(posthoc)
 # Bonferroni
-posthoc['p_bonferroni'] = np.minimum(posthoc['p_uncorrected'] * len(posthoc), 1.0)
-print(posthoc)
+import statsmodels
+reject, pvals_corrected, _, _ = statsmodels.stats.multitest.multipletests(posthoc['p_uncorrected'], method='fdr_bh')
+posthoc['p_fdr_bh'] = pvals_corrected
+posthoc['significant'] = reject
 # map cell_type → x-position
 xpos = {ct: i for i, ct in enumerate(cell_order)}
 for _, row in posthoc.iterrows():
@@ -321,7 +336,7 @@ for _, row in posthoc.iterrows():
     y = bigdf[
         (bigdf['cell_type']==row['cell_type'])
     ]['mean_dff'].quantile(.7) + 0.1  # just above the tallest bar
-    p = row['p_bonferroni']
+    p = row['p_fdr_bh']
     stars = '***' if p<0.001 else '**' if p<0.01 else '*' if p<0.05 else ''
     ax.text(x, y, stars, ha='center', va='bottom', fontsize=42)
     if p>0.05:
@@ -339,7 +354,7 @@ for _, row in posthoc.iterrows():
 # -- The interaction is significant: the difference between correct vs. incorrect ΔF/F depends on which cell type you look at.
 
 # Because the interaction is significant, you should then examine post-hoc tests (e.g., the paired comparisons you ran) to see for each cell type whether correct vs. incorrect is significant.
-# plt.savefig(os.path.join(savedst, 'allcelltype_trialtype.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'allcelltype_trialtype.svg'),bbox_inches='tight')
 #%%
 # quantify cosine sim
 # TODO: get COM per cell
@@ -354,9 +369,11 @@ for cll,celltype in enumerate(cell_types):
     df['animal'] = ancorr
     df['cell_type'] = [celltype]*len(df)
     dfsall.append(df)
-    
+
 # average
 bigdf = pd.concat(dfsall)
+bigdf=bigdf[(bigdf.animal!='e189') & (bigdf.animal!='z16') & (bigdf.animal!='e145')]
+
 bigdf_avg = bigdf.groupby(['animal', 'cell_type'])['cosine_sim'].mean().reset_index()
 bigdf = bigdf.groupby(['animal', 'cell_type']).mean().reset_index()
 # Step 2: Check if data is balanced
@@ -440,8 +457,7 @@ for i, row in posthoc.iterrows():
 
 # Axis formatting
 ax.set_ylabel("Cosine similarity\n Correct vs. Incorrect tuning curve")
-ax.set_xlabel("Cell type")
+ax.set_xlabel("Reward cell type")
 ax.spines[['top', 'right']].set_visible(False)
 plt.tight_layout()
-fig.suptitle('Tuning properties')
 plt.savefig(os.path.join(savedst, 'allcelltype_corr_v_incorr_cs.svg'),bbox_inches='tight')

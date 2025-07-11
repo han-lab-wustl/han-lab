@@ -49,7 +49,7 @@ com_ep2_comb = [xx[1] for xx in ep_dicts if 1 in xx.keys()]
 com_ep3_comb = [xx[2] for xx in ep_dicts if 2 in xx.keys()]
 com_ep4_comb = [xx[3] for xx in ep_dicts if 3 in xx.keys()]
 # com_ep5_comb = [xx[4] for xx in ep_dicts if 4 in xx.keys()]
-#%%
+
 from scipy.stats import gaussian_kde
 
 # plot histograms
@@ -63,26 +63,26 @@ data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb]
 for i, data in enumerate(data_sets):
     all_data = np.concatenate(data)
 
-    # Plot histogram
-    ax.hist(
-        all_data, bins=20, density=True, alpha=a,
-        label=f'{labels[i]}, {len(all_data)} cells',
-        color=colors[i], edgecolor=colors[i], linewidth=lw
-    )
-
     # Smooth Gaussian KDE
-    kde = gaussian_kde(all_data[np.isfinite(all_data)])  # remove NaNs
+    kde = gaussian_kde(all_data)
     x_vals = np.linspace(-np.pi, np.pi, 500)
-    ax.plot(x_vals, kde(x_vals), color=colors[i], linewidth=2)
+    y_vals = kde(x_vals)
+
+    # Plot the KDE line
+    ax.plot(x_vals, y_vals, color=colors[i], linewidth=2,
+            label=f'{labels[i]}, {len(all_data)} cells')
+
+    # Fill area under the curve
+    ax.fill_between(x_vals, y_vals, alpha=0.2, color=colors[i])
 
     # 95% CI lines
     ci_low = np.nanpercentile(all_data, 2.5)
     ci_high = np.nanpercentile(all_data, 97.5)
 
-    vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
-    vline_low.set_dashes([10, 8])
-    vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
-    vline_high.set_dashes([10, 8])
+    # vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
+    # vline_low.set_dashes([10, 8])
+    # vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
+    # vline_high.set_dashes([10, 8])
 
 
 # # Add label for one CI line only
@@ -102,12 +102,12 @@ h_strip, l_strip = ax.get_legend_handles_labels()
 if ax.legend_: ax.legend_.remove()
 ax.legend(
     h_strip, l_strip,
-    title='Epoch #',
+    title='# of epochs',
     loc='upper left',
-    bbox_to_anchor=(1.02, 1),
+    bbox_to_anchor=(.6, 1),
     borderaxespad=0.
 )
-ax.axvline(0,color='dimgrey')
+ax.axvline(0,linestyle='--',color='grey',linewidth=3)
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 plt.savefig(os.path.join(savedst, 'com_hist_across_ep.svg'),bbox_inches='tight')

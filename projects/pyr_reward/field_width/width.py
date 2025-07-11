@@ -325,7 +325,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
     Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
     # tc w/ dark time added to the end of track
-    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
         rewsize,ybinned,time,lick,
         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
         bins=bins_dt)  
