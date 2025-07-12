@@ -383,14 +383,16 @@ if pivoted.isnull().any().any():
 else:
     print("✅ Data is balanced.")
 
-# Step 3: One-way repeated measures ANOVA
-aov = AnovaRM(
-    data=bigdf_avg,
-    depvar='cosine_sim',
-    subject='animal',
-    within=['cell_type']
-).fit()
-print(aov)
+# Step 2: Split cosine similarity by cell_type into a list of arrays
+groups = [
+    group['cosine_sim'].values
+    for name, group in bigdf_avg.groupby('cell_type')
+]
+# Step 3: Kruskal–Wallis test
+stat, p = scipy.stats.kruskal(*groups)
+# Print results
+print(f"Kruskal–Wallis H-statistic: {stat:.4f}")
+print(f"p-value: {p:.6g}")
 
 # Step 4: Post-hoc paired comparisons between all cell types
 posthoc = []

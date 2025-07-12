@@ -226,7 +226,7 @@ for ii in range(len(conddf)):
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,dFF,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
         # early tc
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         results_pre = process_goal_cell_proportions(eptest, 
@@ -257,7 +257,7 @@ for ii in range(len(conddf)):
         )
         print('#############making place tcs#############\n')
         tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
-        dFF,trialnum,rewards,forwardvel,
+        Fc3,trialnum,rewards,forwardvel,
         rewsize,bin_size) # last 5 trials
         # tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
         # rewsize,bin_size) # last 5 trials
@@ -290,6 +290,7 @@ savepickle=r'Z:\condition_df\circ_shuffle_vip_opto_si_only.p'
 with open(savepickle, "wb") as fp: 
    pickle.dump(datadct, fp) 
 #%%
+plt.rc('font', size=20)   
 # per cell prop comparison
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
 placecell_p=[v[1] for k,v in datadct.items()]
@@ -300,22 +301,38 @@ df=pd.DataFrame()
 df['proportions']=np.concatenate([spatially_tuned_not_rew_place,placecell_p,pre_p,post_p])
 allty=[spatially_tuned_not_rew_place,placecell_p,pre_p,post_p]
 lbl=['other_spatially_tuned','place','pre','post']
+# or combine rew
+lbl=['Other Spatially Tuned','place','reward','reward']
 df['type']=np.concatenate([[lbl[i]]*len(allty[i]) for i in range(len(lbl))])
 df['animals']=[k.split('_')[0] for k,v in datadct.items()]*len(allty)
 df['days']=[int(k.split('_')[1]) for k,v in datadct.items()]*len(allty)
 df = df.merge(conddf[['animals','days', 'optoep', 'in_type']], on=['animals', 'days'], how='left')
-df['opto']=df['optoep']>1
+opto = []
+for xx in df.optoep.values:
+   if xx<1:
+      opto.append(False)
+   elif xx==1:
+      opto.append(np.nan)
+   else:
+      opto.append(True)
+df['opto']=opto#df['optoep']>1
 df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
 df['proportions']=df['proportions']*100
-# keep = ~((df.animals == 'z14') & (df.days < 15))
-# keep &= ~((df.animals == 'z15') & (df.days < 8))
-# keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days == 26)))
-# keep &= ~((df.animals == 'e216') & (df.days < 32))
-# keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
-# keep &= ~((df.animals=='z16') | (df.animals=='e200'))
-# keep &= ~((df.animals=='e218')&(df.days>44))
-df = df[keep].reset_index(drop=True)
+df=df[df['proportions']>0]
+df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')]
+# remove outlier days
+# df=df[~((df.animals=='e201')&((df.days>62)))]
+df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
+df=df[~((df.animals=='z17')&((df.days<13)))]
+df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
+# 11,16,31, from other sp tuned
+df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([11,16,31,21,29,30,26]))))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+df = df.reset_index()
 df.to_csv(r'Z:\condition_df\dff_shuffle_results_IMPORTANT.csv')
+df=df[df.type!='other_spatially_tuned']
 # Get non-opto averages to subtract
 non_opto_means = (
     df[df.opto == False]
@@ -324,24 +341,31 @@ non_opto_means = (
     .reset_index()
     .rename(columns={'proportions': 'baseline'})
 )
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+
 # Merge with opto trials
 df_opto = df[df.opto == True].copy()
 df_opto = df_opto.merge(non_opto_means, on=['animals','type', 'condition'], how='left')
 # Compute normalized proportions
 df_opto['norm_proportions'] = df_opto['proportions']-df_opto['baseline']
-df_opto = df_opto.groupby(['animals', 'type', 'condition']).mean(numeric_only=True).reset_index()
+df_opto = df_opto.groupby(['animals', 'type', 'condition']).median(numeric_only=True).reset_index()
 # Define comparison groups and types
 conditions_to_compare = df_opto['condition'].unique()
+df_opto['type'] = df_opto['type'].str.capitalize()
 cell_types = df_opto['type'].unique()
 
 # Set up plot
-plt.figure(figsize=(5, 6))
-ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto, errorbar='se',fill=False)
-sns.stripplot(y='norm_proportions', x='type', hue='condition', data=df_opto,dodge=True)
+plt.figure(figsize=(9, 6))
+ax = sns.barplot(y='norm_proportions', x='type', hue='condition', data=df_opto, errorbar='se',fill=False,palette=pl,legend=False)
+sns.stripplot(y='norm_proportions', x='type', hue='condition', data=df_opto,dodge=True,palette=pl,s=10,alpha=.7)
+# Remove duplicate legends (from both barplot and stripplot)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles[:len(pl)], labels[:len(pl)],
+          title='Condition', bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 
-ax.set_xlabel('Opto - No-Opto Δ (Proportion)')
-ax.set_ylabel('Cell Type')
-ax.set_title('Optogenetic Modulation of Goal/Place Cell Proportions')
+ax.set_ylabel('Δ Cell % (LEDon-LEDoff)')
+ax.set_xlabel('Cell Type')
+ax.set_title('Circ. shuffle with dFF',fontsize=14)
 ax.spines[['top', 'right']].set_visible(False)
 
 # Perform tests and annotate
@@ -364,7 +388,7 @@ for t in cell_types:
             # Set y-position for annotation
             bar_heights = data.groupby('condition')['norm_proportions'].mean()
             max_height = max(bar_heights.get(cond, 0), bar_heights.get('ctrl', 0))
-            y = max_height + y_offset
+            y = max_height + y_offset-20
 
             # Significance annotation
             if pval < 0.001:
@@ -383,7 +407,7 @@ for t in cell_types:
             xopto = xpos
 
             ax.plot([xctrl, xopto], [y, y], lw=1.2, c='k')
-            ax.text((xctrl + xopto)/2, y + y_offset/2, star, ha='center', va='bottom', fontsize=10)
+            ax.text((xctrl + xopto)/2, y + y_offset/2, f'{cond} vs ctrl: p = {pval:.2g}', ha='center', va='bottom', fontsize=10)
 
 plt.tight_layout()
 plt.show()

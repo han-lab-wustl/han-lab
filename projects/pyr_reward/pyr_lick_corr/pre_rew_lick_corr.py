@@ -267,10 +267,12 @@ palette='Dark2'
 order=['pre','post','place']
 df = bigdf.groupby(['animal','cell_type']).mean(numeric_only=True)
 df=df.reset_index()
-fig, ax = plt.subplots(figsize=(4,5))
+df=df[(df.animal!='e189') & (df.animal!='e139')& (df.animal!='e145')]
+fig, axes = plt.subplots(ncols=2,figsize=(7,5))
 
-sns.barplot(x='cell_type',y='cs_lick_v_tc',data=df,fill=False,palette=palette,order=order)
-sns.stripplot(x='cell_type',y='cs_lick_v_tc',data=df,s=s,palette=palette,order=order,alpha=a)
+ax=axes[0]
+sns.barplot(x='cell_type',y='cs_lick_v_tc',data=df,fill=False,palette=palette,order=order,ax=ax)
+sns.stripplot(x='cell_type',y='cs_lick_v_tc',data=df,s=s,palette=palette,order=order,alpha=a,ax=ax)
 groups = [g['cs_lick_v_tc'].values for _, g in df.groupby('cell_type')]
 kw_stat, kw_p = scipy.stats.kruskal(*groups)
 print(f"Kruskal–Wallis H = {kw_stat:.4f}, p = {kw_p:.4g}")
@@ -307,16 +309,17 @@ for i, ((a, b), pval, sig) in enumerate(zip(comparisons, pvals_fdr, reject)):
         label = 'ns'
     ax.text((x1 + x2) / 2, y + y_step * 0.6, label, ha='center', va='bottom', fontsize=25)
 
-ax.set_ylabel('Lick cosine similarity')
+ax.set_ylabel('Lick Spearman $\\rho$')
 # Final formatting
-ax.set_xlabel('')
+ax.set_xlabel('Cell type')
 ax.set_xticklabels(['Pre', 'Post', 'Place'])
 ax.set_title(f'Kruskal–Wallis H={kw_stat:.2f}, p = {kw_p:.3g}',fontsize=12)
 sns.despine()
 plt.tight_layout()
-#%%
+
+
 # vel
-fig, ax = plt.subplots(figsize=(4,5))
+ax=axes[1]
 a=0.7
 sns.barplot(x='cell_type',y='cs_vel_v_tc',data=df,fill=False,palette=palette,order=order)
 sns.stripplot(x='cell_type',y='cs_vel_v_tc',data=df,s=s,palette=palette,order=order,alpha=a)
@@ -356,10 +359,13 @@ for i, ((a, b), pval, sig) in enumerate(zip(comparisons, pvals_fdr, reject)):
         label = 'ns'
     ax.text((x1 + x2) / 2, y + y_step * 0.6, label, ha='center', va='bottom', fontsize=25)
 
-ax.set_ylabel('Velocity cosine similarity')
+ax.set_ylabel('Velocity Spearman $\\rho$')
 # Final formatting
 ax.set_xlabel('')
 ax.set_xticklabels(['Pre', 'Post', 'Place'])
 ax.set_title(f'Kruskal–Wallis H={kw_stat:.2f}, p = {kw_p:.3g}',fontsize=12)
 sns.despine()
 plt.tight_layout()
+plt.savefig(os.path.join(savedst,'lick_vel_rho.svg'),bbox_inches='tight')
+
+# %%
