@@ -95,8 +95,8 @@ for ii in range(len(conddf)):
         bin_size=3 # cm
         # get abs dist tuning 
         tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
-                Fc3,trialnum,rewards,forwardvel,
-                rewsize,bin_size)
+        Fc3,trialnum,rewards,forwardvel,
+        rewsize,bin_size)
         # get cells that maintain their coms across at least 2 epochs
         place_window = 20 # cm converted to rad                
         perm = list(combinations(range(len(coms_correct_abs)), 2))     

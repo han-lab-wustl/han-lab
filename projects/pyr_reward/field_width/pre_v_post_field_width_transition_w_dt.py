@@ -37,10 +37,11 @@ dfs = []; lick_dfs = [] # licks and velocity
 # cm_window = [10,20,30,40,50,
 # 60,70,80] # cm
 # iterate through all animals
+
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
+    if ((animal!='e217') & (animal!='e145') & (animal!='e139')) & (conddf.optoep.values[ii]<2):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -79,49 +80,46 @@ rzdf = extract_transition_epochs(bigdf, transition=('rz1', 'rz3'), max_epoch=5)
 
 # per animal
 s=12
-hue_order = ['Pre','Post']
-fig, ax = plt.subplots(figsize=(3,6))
+pl=['k']
+hue_order = ['Pre','Post','Place']
+fig, ax = plt.subplots(figsize=(4,5))
 # only get super close rz1 rewlocs
 rzdf = rzdf[((rzdf.epoch=='rz3')&(rzdf.rewloc_cm.values>210))|((rzdf.epoch=='rz1')&(rzdf.rewloc_cm.values<120))]
 anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
+anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e216')]
 # multiple by binsize
 anrzdf['width_cm'] =anrzdf['width_cm'] *3
 # sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,palette='Dark2',hue_order=hue_order)
-sns.boxplot(x='epoch',y='width_cm',hue='cell_type',data=anrzdf,
-        fill=False,palette='Dark2',hue_order=hue_order,
+sns.boxplot(x='cell_type',y='width_cm',hue='epoch',data=anrzdf,
+        fill=False,palette=pl,order=hue_order,
            showfliers=False)
 h_strip, l_strip = ax.get_legend_handles_labels()
 ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-ind = ['Pre','Post']
-for j,ct in enumerate(ind):
-    for i in range(len(ans)):    
-        df_ = anrzdf[(anrzdf.animal==ans[i]) & (anrzdf.cell_type==ct)]
-        df_ = df_.sort_values(by="epoch", ascending=True)     
-        color=sns.color_palette('Dark2')[j]   
-        ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='width_cm',
-        data=df_,
-        errorbar=None, color=color, linewidth=1.5, alpha=0.5,ax=ax)
-
-# 3) remove whatever legend was just created
+# Remove the existing legend
 ax.legend_.remove()
-# 4) re-add only the stripplot legend, placing it outside
-ax.legend(
-    h_strip, l_strip,
-    title='Cell Type',
-    loc='upper left',
-    bbox_to_anchor=(1.02, 1),
-    borderaxespad=0.
-)
-ax.spines[['top','right']].set_visible(False)
+
+# X-position mapping based on the order
+xpos_map = {'Pre': 0, 'Post': 1, 'Place': 2}
+
+# Draw lines per animal, per cell type
+for cell in hue_order:
+    subdf = anrzdf[anrzdf.cell_type == cell]
+    animals = subdf.animal.unique()
+    for animal in animals:
+        df_an = subdf[subdf.animal == animal]
+        if len(df_an) == 2:  # has both rz1 and rz3
+            rz1_val = df_an[df_an.epoch == 'rz1']['width_cm'].values[0]
+            rz3_val = df_an[df_an.epoch == 'rz3']['width_cm'].values[0]
+            x = xpos_map[cell]
+            # Slight jitter in x for visual separation
+            ax.plot([x - 0.2, x + 0.2], [rz1_val, rz3_val],
+                    color='gray', alpha=0.5, linewidth=1.5)
 ax.set_ylabel('Field width (cm)')
 ax.set_xlabel('')
-ax.set_xticklabels(['Near', 'Far'],rotation=20)
+
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
 palette=sns.color_palette('Dark2')
@@ -130,39 +128,56 @@ palette=sns.color_palette('Dark2')
 anrzdf['epoch'] = anrzdf['epoch'].astype('category')
 anrzdf['cell_type'] = anrzdf['cell_type'].astype('category')
 
-aov = AnovaRM(
-    data=anrzdf,
-    depvar='width_cm',
-    subject='animal',
-    within=['epoch','cell_type']
-).fit()
-print(aov)
-
 results = []
-for ct in ['Pre','Post']:
+for ct in ['Pre','Post', 'Place']:
     sub = anrzdf[anrzdf['cell_type']==ct]
     near = sub[sub['epoch']=='rz1']['width_cm']
     far  = sub[sub['epoch']=='rz3']['width_cm']
     t, p = scipy.stats.ttest_rel(near, far)
     results.append({'cell_type':ct, 't_stat':t, 'p_uncorrected':p})
-
 posthoc = pd.DataFrame(results)
-posthoc['p_bonferroni'] = np.minimum(posthoc['p_uncorrected']*len(posthoc), 1.0)
+results = []
+for ct in ['Pre','Post', 'Place']:
+    sub = anrzdf[anrzdf['cell_type'] == ct]
+    near = sub[sub['epoch'] == 'rz1']['width_cm']
+    far  = sub[sub['epoch'] == 'rz3']['width_cm']
+    t, p = scipy.stats.ttest_rel(near, far)
+    results.append({'cell_type': ct, 't_stat': t, 'p_uncorrected': p})
+posthoc = pd.DataFrame(results)
+# FDR correction
+_, p_fdr, _, _ = multipletests(posthoc['p_uncorrected'], method='fdr_bh')
+posthoc['p_fdr'] = p_fdr
 print(posthoc)
 # mapping epoch→x-position (as you offset earlier)
-x_map = {'Pre':0, 'Post':1}
-offset = {'Pre':-0.1, 'Post':+0.1}
+x_map = {'Pre':0, 'Post':1,'Place':2}
+offset = {'Pre':-0.1, 'Post':+0.1,'Place':+0.1}
+
+# === Add significance bars ===
+bar_height = 3   # height of the bar above the max value
+tick_height = 3  # vertical height of the small bar ends
+text_offset = 1.5  # text offset above the bar
+bar_width = 0.2   # how far apart the ends of the bar should go (aligned with box offsets)
 
 for _, row in posthoc.iterrows():
     ct = row['cell_type']
-    p = row['p_bonferroni']
-    stars = '***' if p<0.001 else '**' if p<0.01 else '*' if p<0.05 else ''
-    x = x_map[ct]+offset[ct]  # test is Pre vs Post, annotate at Pre position
-    # y-height: just above max for that group
-    ymax = anrzdf[(anrzdf.cell_type==ct)]['width_cm'].max()
-    ax.text(x, ymax, stars, ha='center', va='bottom',fontsize=42)
-    ax.text(x, ymax+5, f'{ct} near v far\np={p:.2g}', ha='center', va='bottom',fontsize=12,
-            rotation=45)
+    p = row['p_fdr']
+    stars = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else f'{p:.2f}'
+    
+    # X positions for rz3 and rz1 within this cell_type
+    x_center = x_map[ct]
+    x1 = x_center - 0.2  # rz3 box
+    x2 = x_center + 0.2  # rz1 box
+    
+    # Y position: max height for this cell type + padding
+    ymax = anrzdf[(anrzdf.cell_type == ct)]['width_cm'].max()
+    y = ymax + bar_height
+
+    # Draw line and ticks
+    ax.plot([x1, x1, x2, x2], [y, y + tick_height, y + tick_height, y], lw=1.5, c='k')
+    # Draw text
+    ax.text((x1 + x2)/2, y + tick_height + text_offset, stars,
+            ha='center', va='bottom', fontsize=18)
+
 plt.savefig(os.path.join(os.path.join(savedst, 'near_to_far_dark_time_field_width.svg')))
 
 #%%
@@ -376,58 +391,48 @@ rzdf['epoch'] = [xx[-3:] for xx in rzdf.epoch.values]
 # only get super close rz1 rewlocs
 rzdf['rewloc_cm'] = [float(xx[-5:]) for xx in rzdf.rewloc.values]
 rzdf = rzdf[((rzdf.epoch=='rz3')&(rzdf.rewloc_cm.values>210))|((rzdf.epoch=='rz1')&(rzdf.rewloc_cm.values<120))]
-fig, ax = plt.subplots(figsize=(4,5))
-sns.stripplot(x='epoch',y='width_cm',data=rzdf,hue='cell_type',alpha=0.05,dodge=True)
-sns.boxplot(x='epoch',y='width_cm',data=rzdf,fill=False,hue='cell_type')
-ax.spines[['top','right']].set_visible(False)
-#%%
 # per animal
-s=10
-hue_order = ['Pre','Post']
-fig, ax = plt.subplots(figsize=(3,6))
+s=12
+pl=['k']
+order=['rz3','rz1']
+hue_order = ['Pre','Post','Place']
+fig, ax = plt.subplots(figsize=(4,5))
+# only get super close rz1 rewlocs
 anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190')]
-anrzdf['width_cm']=anrzdf['width_cm']*3
-#              & (anrzdf.animal!='e216')]
-# anrzdf=anrzdf[(anrzdf.animal!='z16')]
-order = ['rz3', 'rz1']
-# sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,
-#     palette='Dark2',hue_order=hue_order,order=order)
-sns.boxplot(x='epoch',y='width_cm',hue='cell_type',data=anrzdf,
-        fill=False,palette='Dark2',hue_order=hue_order,order=order,
+anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e216')]
+# multiple by binsize
+anrzdf['width_cm'] =anrzdf['width_cm'] *3
+# sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,palette='Dark2',hue_order=hue_order)
+sns.boxplot(x='cell_type',y='width_cm',hue='epoch',data=anrzdf,hue_order=order,
+        fill=False,palette=pl,order=hue_order,
            showfliers=False)
 h_strip, l_strip = ax.get_legend_handles_labels()
-
 ax.spines[['top','right']].set_visible(False)
-
-ans = anrzdf.animal.unique()
-ind = ['Pre','Post']
-for j,ct in enumerate(ind):
-    for i in range(len(ans)):    
-        df_ = anrzdf[(anrzdf.animal==ans[i]) & (anrzdf.cell_type==ct)]
-        df_ = df_.sort_values(by="epoch", ascending=False)
-        color=sns.color_palette('Dark2')[j]
-        ax = sns.lineplot(x=np.arange(len(df_.epoch.values))+(j*.2)-.1,y='width_cm',
-        data=df_,
-        errorbar=None, color=color, linewidth=1.5, alpha=0.5,ax=ax)
-
-# 3) remove whatever legend was just created
+# Remove the existing legend
 ax.legend_.remove()
-# 4) re-add only the stripplot legend, placing it outside
-ax.legend(
-    h_strip, l_strip,
-    title='Cell Type',
-    loc='upper left',
-    bbox_to_anchor=(.8, 1),
-    borderaxespad=0.
-)
-ax.spines[['top','right']].set_visible(False)
+
+# X-position mapping based on the order
+xpos_map = {'Pre': 0, 'Post': 1, 'Place': 2}
+
+# Draw lines per animal, per cell type
+for cell in hue_order:
+    subdf = anrzdf[anrzdf.cell_type == cell]
+    animals = subdf.animal.unique()
+    for animal in animals:
+        df_an = subdf[subdf.animal == animal]
+        if len(df_an) == 2:  # has both rz1 and rz3
+            rz1_val = df_an[df_an.epoch == 'rz1']['width_cm'].values[0]
+            rz3_val = df_an[df_an.epoch == 'rz3']['width_cm'].values[0]
+            x = xpos_map[cell]
+            # Slight jitter in x for visual separation
+            ax.plot([x - 0.2, x + 0.2], [rz3_val, rz1_val],
+                    color='gray', alpha=0.5, linewidth=1.5)
 ax.set_ylabel('Field width (cm)')
 ax.set_xlabel('')
-ax.set_xticklabels(['Far', 'Near'],rotation=20)
+
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
 palette=sns.color_palette('Dark2')
@@ -435,40 +440,56 @@ palette=sns.color_palette('Dark2')
 # make sure epoch & cell_type are categorical
 anrzdf['epoch'] = anrzdf['epoch'].astype('category')
 anrzdf['cell_type'] = anrzdf['cell_type'].astype('category')
-aov = AnovaRM(
-    data=anrzdf,
-    depvar='width_cm',
-    subject='animal',
-    within=['epoch','cell_type']
-).fit()
-print(aov)
 
 results = []
-for ct in ['Pre','Post']:
+for ct in ['Pre','Post', 'Place']:
     sub = anrzdf[anrzdf['cell_type']==ct]
-    near = sub[sub['epoch']=='rz3']['width_cm']
-    far  = sub[sub['epoch']=='rz1']['width_cm']
-    t, p = scipy.stats.ttest_rel(near[~np.isnan(near)], far[~np.isnan(far)])
+    near = sub[sub['epoch']=='rz1']['width_cm']
+    far  = sub[sub['epoch']=='rz3']['width_cm']
+    t, p = scipy.stats.ttest_rel(near, far)
     results.append({'cell_type':ct, 't_stat':t, 'p_uncorrected':p})
-
 posthoc = pd.DataFrame(results)
-posthoc['p_bonferroni'] = np.minimum(posthoc['p_uncorrected']*len(posthoc), 1.0)
+results = []
+for ct in ['Pre','Post', 'Place']:
+    sub = anrzdf[anrzdf['cell_type'] == ct]
+    near = sub[sub['epoch'] == 'rz1']['width_cm']
+    far  = sub[sub['epoch'] == 'rz3']['width_cm']
+    t, p = scipy.stats.ttest_rel(near, far)
+    results.append({'cell_type': ct, 't_stat': t, 'p_uncorrected': p})
+posthoc = pd.DataFrame(results)
+# FDR correction
+_, p_fdr, _, _ = multipletests(posthoc['p_uncorrected'], method='fdr_bh')
+posthoc['p_fdr'] = p_fdr
 print(posthoc)
 # mapping epoch→x-position (as you offset earlier)
-x_map = {'Pre':0, 'Post':1}
-offset = {'Pre':-0.1, 'Post':+0.1}
+x_map = {'Pre':0, 'Post':1,'Place':2}
+offset = {'Pre':-0.1, 'Post':+0.1,'Place':+0.1}
+# === Add significance bars ===
+bar_height = 3   # height of the bar above the max value
+tick_height = 3  # vertical height of the small bar ends
+text_offset = 1.5  # text offset above the bar
+bar_width = 0.2   # how far apart the ends of the bar should go (aligned with box offsets)
 
 for _, row in posthoc.iterrows():
     ct = row['cell_type']
-    p = row['p_bonferroni']
-    stars = '***' if p<0.001 else '**' if p<0.01 else '*' if p<0.05 else ''
-    x = x_map[ct]+offset[ct]  # test is Pre vs Post, annotate at Pre position
-    # y-height: just above max for that group
-    ymax = anrzdf[(anrzdf.cell_type==ct)]['width_cm'].max()
-    ax.text(x, ymax+1, stars, ha='center', va='bottom',fontsize=42)
-    ax.text(x, ymax+4, f'{ct} far v near\np={p:.2g}', ha='center', va='bottom',fontsize=12,
-            rotation=45)
-# fig.tight_layout()
+    p = row['p_fdr']
+    stars = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else f'{p:.2f}'
+    
+    # X positions for rz3 and rz1 within this cell_type
+    x_center = x_map[ct]
+    x1 = x_center - 0.2  # rz3 box
+    x2 = x_center + 0.2  # rz1 box
+    
+    # Y position: max height for this cell type + padding
+    ymax = anrzdf[(anrzdf.cell_type == ct)]['width_cm'].max()
+    y = ymax + bar_height
+
+    # Draw line and ticks
+    ax.plot([x1, x1, x2, x2], [y, y + tick_height, y + tick_height, y], lw=1.5, c='k')
+    # Draw text
+    ax.text((x1 + x2)/2, y + tick_height + text_offset, stars,
+            ha='center', va='bottom', fontsize=18)
+
 plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_width.svg')))
 #%%
 

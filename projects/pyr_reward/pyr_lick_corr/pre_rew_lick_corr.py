@@ -374,47 +374,92 @@ plt.tight_layout()
 plt.savefig(os.path.join(savedst,f'{typ}_lick_vel_rho.svg'),bbox_inches='tight')
 
 # %%
+plt.rc('font', size=18)
 # --- Prepare pre-reward data ---
 df = bigdf.groupby(['animal','cell_type','trial_type']).mean(numeric_only=True)
 df=df.reset_index()
-typ='incorrect'
-df=df[df.trial_type==typ]
-
+df=df[(df.animal!='z16')]
 df_pre = df[df['cell_type'] == 'pre'].copy()
-
 df_pre = df_pre.dropna(subset=['cs_lick_v_tc', 'cs_vel_v_tc'])
 # Group by animal and compute mean Spearman correlations
-df_agg = df_pre.groupby('animal')[['cs_lick_v_tc', 'cs_vel_v_tc']].mean().reset_index()
+df_agg = df_pre.groupby(['animal','trial_type'])[['cs_lick_v_tc', 'cs_vel_v_tc']].mean().reset_index()
 df_agg = df_agg.rename(columns={'cs_lick_v_tc': 'Lick', 'cs_vel_v_tc': 'Velocity'})
-
 # Melt to long format for plotting
-df_long = df_agg.melt(id_vars='animal', var_name='Variable', value_name='Spearman_rho')
-
+df_long = df_agg.melt(id_vars=['animal','trial_type'], var_name='Variable', value_name='Spearman_rho')
 # --- Paired test ---
-stat, pval = scipy.stats.wilcoxon(df_agg['Lick'], abs(df_agg['Velocity']), alternative='two-sided')
-print(f"Wilcoxon signed-rank test: p = {pval:.4g}")
-df_long['Spearman_rho']=abs(df_long['Spearman_rho'])
-df_agg['Lick']=abs(df_agg['Lick'])
-df_agg['Velocity']=abs(df_agg['Velocity'])
+# stat, pval = scipy.stats.wilcoxon(df_agg['Lick'], abs(df_agg['Velocity']), alternative='two-sided')
+# print(f"Wilcoxon signed-rank test: p = {pval:.4g}")
+# df_long['Spearman_rho']=abs(df_long['Spearman_rho'])
+# df_agg['Lick']=abs(df_agg['Lick'])
+# df_agg['Velocity']=abs(df_agg['Velocity'])
 # --- Plot ---
-plt.figure(figsize=(4, 5))
-ax = sns.barplot(data=df_long, x='Variable', y='Spearman_rho', errorbar='se', palette=['dodgerblue', 'darkorange'], edgecolor='black',legend=True)
-sns.stripplot(data=df_long, x='Variable', y='Spearman_rho', dodge=False, alpha=0.7, size=8, linewidth=1, edgecolor='gray',legend=True)
+pl=['seagreen','firebrick']
+plt.figure(figsize=(4.5, 5))
+ax = sns.barplot(data=df_long, x='Variable', y='Spearman_rho',hue='trial_type', errorbar='se', palette=pl, fill=False,legend=False)
+sns.stripplot(data=df_long, x='Variable', y='Spearman_rho',hue='trial_type', dodge=True, alpha=0.5, size=12, legend=True,palette=pl)
+# --- Run paired Wilcoxon tests per behavior (Lick, Velocity) comparing correct vs incorrect ---
+results = []
+for beh in ['Lick', 'Velocity']:
+    df_pivot = df_agg.pivot(index='animal', columns='trial_type', values=beh)
+    if {'correct', 'incorrect'}.issubset(df_pivot.columns):
+        stat, p = scipy.stats.wilcoxon(df_pivot['correct'], df_pivot['incorrect'])
+        results.append({'behavior': beh, 'p': p})
+    else:
+        results.append({'behavior': beh, 'p': np.nan})
+# Convert to DataFrame
+results_df = pd.DataFrame(results)
+# Apply FDR correction
+results_df['p_fdr'] = multipletests(results_df['p'], method='fdr_bh')[1]
+# Map from (trial_type, behavior) to x-axis positions in the plot
+xpos = {
+    ('Lick', 'correct'): -0.2,
+    ('Lick', 'incorrect'): 0.2,
+    ('Velocity', 'correct'): 0.8,
+    ('Velocity', 'incorrect'): 1.2,
+}
 
-# Connect paired points
-for i, row in df_agg.iterrows():
-    ax.plot(['Lick', 'Velocity'], [row['Lick'], row['Velocity']], color='gray', alpha=0.5, linewidth=1)
+# --- Draw connecting lines between correct and incorrect for each behavior ---
+for beh in ['Lick', 'Velocity']:
+    df_pivot = df_agg.pivot(index='animal', columns='trial_type', values=beh)
+    for animal, row in df_pivot.iterrows():
+        if 'correct' in row and 'incorrect' in row:
+            x1 = xpos[(beh, 'correct')]
+            x2 = xpos[(beh, 'incorrect')]
+            y1 = row['correct']
+            y2 = row['incorrect']
+            ax.plot([x1, x2], [y1, y2], color='gray', alpha=0.5, linewidth=1.5)
+            
+# --- Add significance bars and asterisks manually ---
+def add_sig_bar(ax, x1, x2, y, height=0.02, p=0.04, fontsize=14):
+    bar_x = [x1, x1, x2, x2]
+    bar_y = [y, y+height, y+height, y]
+    ax.plot(bar_x, bar_y, color='black', linewidth=1.5)
+    if p < 0.001:
+        text = '***'
+    elif p < 0.01:
+        text = '**'
+    elif p < 0.05:
+        text = '*'
+    else:
+        text = 'n.s.'
+    ax.text((x1+x2)/2, y+height*1.1, text, ha='center', va='bottom', fontsize=fontsize)
 
-# Annotate p-value
+# Add bars for each variable (Lick, Velocity)
 y_max = df_long['Spearman_rho'].max()
-y_text = y_max + 0.05
-ax.text(0.5, y_text, f'p = {pval:.3g}', ha='center', fontsize=14)
+offset = 0.05 * y_max  # Vertical space between bars
+
+for i, beh in enumerate(['Lick', 'Velocity']):
+    pval = results_df.loc[results_df['behavior']==beh, 'p_fdr'].values[0]  # assuming same order
+    y_bar = y_max + (i+1)*offset
+    x1 = xloc_map[('correct', beh)]
+    x2 = xloc_map[('incorrect', beh)]
+    add_sig_bar(ax, x1, x2, y_bar, height=offset*0.5, p=pval)
 
 # Final formatting
-ax.set_ylabel("|Spearman $\\rho$|")
+ax.set_ylabel("Spearman $\\rho$")
 ax.set_xlabel("")
-ax.set_title("Pre-reward cells: Lick vs Velocity")
+ax.set_title("Pre-reward cells")
 sns.despine()
 plt.tight_layout()
-# plt.savefig(os.path.join(savedst, f'{typ}_pre_rho_barplot_paired.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, f'correctvincorrect_lick_vel_prereward.svg'), bbox_inches='tight')
 plt.show()

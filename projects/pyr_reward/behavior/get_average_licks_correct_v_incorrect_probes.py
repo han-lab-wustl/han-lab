@@ -239,14 +239,14 @@ if all_tcs_correct:
    tccorr = tccorr[valid_rows]
    max_per_row = np.nanmax(tccorr, axis=1)
    tccorr = tccorr.T / max_per_row
-   im = ax.imshow(tccorr.T, vmin=0, vmax=1,aspect='auto',cmap='Purples')
+   im = ax.imshow(tccorr.T, vmin=0, vmax=1,aspect='auto',cmap='Greys')
    ax.axvline(45, color='k', linestyle='--')
    ax.set_xticks(np.arange(0, bins, 30))
    ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi + .6, np.pi), 2), rotation=45)
    ax.set_ylabel('Epochs')
    ax.set_xticks([0,45,90])
    ax.set_xticklabels(['-$\\pi$',0,'$\\pi$'])
-   ax.set_xlabel('Reward-relative distance ($\Theta$)')
+   ax.set_xlabel('Reward-centric distance ($\Theta$)')
    ax.set_title('All animals\nCorrect')
 
 # --- Heatmap: incorrect trials ---
@@ -256,7 +256,7 @@ if all_tcs_fail:
    max_per_row = np.nanmax(tc, axis=1)
    #   max_per_row[max_per_row == 0] = np.nan
    tc=tc.T / max_per_row
-   im = ax.imshow(tc.T, vmin=0, vmax=1,aspect='auto',cmap='Purples')
+   im = ax.imshow(tc.T, vmin=0, vmax=1,aspect='auto',cmap='Greys')
    ax.axvline(45, color='k', linestyle='--')
    ax.set_xticks(np.arange(0, bins, 30))
    ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi + .6, np.pi), 2), rotation=45)
@@ -306,7 +306,7 @@ for i, probe in enumerate([0, 1, 2]):
    max_per_row = np.nanmax(tc, axis=1)
    tc = tc.T / max_per_row
    tc=tc.T
-   im = ax.imshow(tc, vmin=0, vmax=1, aspect='auto',cmap='Purples')
+   im = ax.imshow(tc, vmin=0, vmax=1, aspect='auto',cmap='Greys')
    ax.axvline(45, color='k', linestyle='--')
    ax.set_xticks(np.arange(0, bins, 30))
    ax.set_xticklabels(np.round(np.arange(-np.pi, np.pi + .6, np.pi), 2), rotation=45)
@@ -325,7 +325,7 @@ for i, probe in enumerate([0, 1, 2]):
    ax.set_title(f'Probe {probe+1}')
    # ax.set_ylim([0, .4])
    if i==2:
-      ax.set_xlabel('Reward-relative distance ($\Theta$)')
+      ax.set_xlabel('Reward-centric distance ($\Theta$)')
 
 cbar = fig.colorbar(im, ax=axes[4], fraction=0.046)
 cbar.ax.set_ylabel('Norm. velocity', rotation=270, labelpad=15)

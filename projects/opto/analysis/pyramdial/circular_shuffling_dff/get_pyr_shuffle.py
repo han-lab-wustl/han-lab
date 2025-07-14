@@ -25,9 +25,9 @@ import numpy as np
 from joblib import Parallel, delayed
 from scipy.ndimage import gaussian_filter1d
 
-savepickle=r'Z:\condition_df\circ_shuffle_vip_opto.p'
-with open(savepickle, "rb") as fp: #unpickle
-   datadct = pickle.load(fp)
+# savepickle=r'Z:\condition_df\circ_shuffle_vip_opto.p'
+# with open(savepickle, "rb") as fp: #unpickle
+#    datadct = pickle.load(fp)
 # initialize var
 
 def compute_spatial_info(p_i, f_i):
@@ -137,8 +137,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 savepth = os.path.join(savedst, 'vip_opto_rew.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 # initialize var
-# datadct = {} # overwrite
-save_shuf_info=[]
+datadct = {} # overwrite
 place_window = 20
 num_iterations=50
 bin_size=3 # cm
@@ -206,7 +205,7 @@ for ii in range(202,len(conddf)):
         # per epoch si
         # nshuffles=100   
         rz = get_rewzones(rewlocs,1/scalingf)
-        pcs_ep=[]; si_ep=[]
+        pcs_ep=[]; si_ep=[]; all_results=[]
         for ep in range(len(eps)-1):
             eprng = np.arange(eps[ep], eps[ep+1])
             trials=trialnum[eprng]
@@ -242,6 +241,7 @@ for ii in range(202,len(conddf)):
             real_sis = [r[1] for r in results]
             shuffle_sis = [r[2] for r in results]
             p_values = [r[3] for r in results]
+            all_results.append(results)
             pcs_ep.append(np.array(p_values)<a); si_ep.append(real_sis)
         spatially_tuned = np.sum(np.array(pcs_ep),axis=0)>0 # if tuned in any epoch
         save_shuf_info.append([pcs_ep,si_ep,spatially_tuned])
@@ -327,7 +327,7 @@ for ii in range(202,len(conddf)):
         spatially_tuned_not_rew_place = [xx for xx in range(Fc3.shape[1]) if xx not in not_sp_tuned and xx not in pcs_all and xx not in goal_cells]
         spatially_tuned_not_rew_place_p=len(spatially_tuned_not_rew_place)/len(coms_correct_abs[0])
         print(spatially_tuned_not_rew_place_p,pc_p,results_pre['goal_cell_prop'],results_post['goal_cell_prop'])
-        datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned]
+        datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned,all_results]
 #%%
 with open(savepickle, "wb") as fp: 
    pickle.dump(datadct, fp) 
