@@ -22,7 +22,7 @@ from projects.memory.dopamine import get_rewzones, extract_vars
 
 plt.close('all')
 # save to pdf
-dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
+dst = r"E:\Ziyi"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
     f"halo_opto_peri_analysis.pdf"))
 

@@ -20,11 +20,12 @@ plt.rcParams["font.family"] = "Arial"
 plt.close('all')
 # save to pdf
 animal = ''
-src = r"E:\Ziyi\Data\halo_snc_grabda3m\e241"
+src = r"E:\Ziyi\Data\VTA_mice\hrz\E277"
 src = os.path.join(src,animal)
 dst = r"E:\Ziyi"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = np.arange(27,32)
+#days = np.arange(15,19)
+days = [21,24]
 range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -37,6 +38,7 @@ for day in days:
         params = scipy.io.loadmat(path)
         VR = params['VR'][0][0][()]
         gainf = VR['scalingFACTOR'][0][0]
+        scalingf=2/3
         try:
             rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
         except:
@@ -216,6 +218,7 @@ for pln in range(4):
     fig.tight_layout()
 
 #%%
+'''
 # find linear fit for each plane
 import numpy as np
 import matplotlib.pyplot as plt
@@ -257,5 +260,5 @@ print("Slopes for each PLN:")
 for pln, slope in enumerate(slopes):
     print(f"PLN {pln}: {slope}")
 # Result: slopes = [slope0, slope1, slope2, slope3]
-
+'''
 # %%

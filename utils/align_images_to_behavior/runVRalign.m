@@ -5,10 +5,10 @@
 clear all;
 mouse_name = "e221";
 days = [1];
-src = 'Y:\opto_control_grabda_2m';
+src = 'E:\Ziyi\Data\Calb_mice_E301';
 
 for day=days
-    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior\vr\*.mat"));
+    daypth = dir(fullfile(src, sprintf('%i',day), "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
     savepthfmat = VRalign_dopamine_w_opto_events(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
@@ -42,13 +42,13 @@ end
 % has to have combined cells
 clear all;
 mouse_name = "z9";
-days = [28];
-src = "X:\vipcre";
+days = [1];
+src = "E:\Ziyi\Data\Calb_mice_E301";
 planes = 2;
 for day=days
-    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior", "vr\*.mat"));
+    daypth = dir(fullfile(src, sprintf('%i',day), "vr\*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
-    fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\Fall.mat')); 
+    fmatfl = dir(fullfile(src, sprintf('%i',day), '**\Fall.mat')); 
     fmatfl = fmatfl(1); % combined
     savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
     disp(savepthfmat)
