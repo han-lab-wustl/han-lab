@@ -360,7 +360,8 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-    goal_all = np.unique(np.concatenate(com_goal_postrew)).astype(int)        
+    goal_all = np.unique(np.concatenate(com_goal_postrew)).astype(int)     
+    goal_cells_prepost=[];goal_cells_prepost.append(goal_all)   
     # example:
     plt.close('all')
     # rectangular method
@@ -399,95 +400,9 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
         plt.show()
     except Exception as e:
         print(e)
-
-#%%        
-#     # # trial by trial raster
-#     trialstates, licks_all_dist, tcs_dist, coms_dist, ypos_max =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_all],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
-#     # # eg
-# #%%
-#     cll=3
-#     fig, axes_all = plt.subplots(nrows=len(tcs_dist), ncols=3,figsize=(15,10), sharex=True,width_ratios=[1.5,1.5,1])
-#     from mpl_toolkits.axes_grid1 import make_axes_locatable
-#     from matplotlib.colors import ListedColormap, BoundaryNorm
-#     cmap = ListedColormap(['gray', 'red', 'lime'])  # -1 = gray, 0 = red, 1 = green
-#     colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']        
-#     bounds = [-1.5, -0.5, 0.5, 1.5]  # boundaries between categories
-#     norm = BoundaryNorm(bounds, cmap.N)
-#     # Normalize activity by row
-#     # per epoch
-#     vmin = 0
-#     lw=1.5
-#     vmax = np.nanmax(tcs_correct[:, goal_all[cll]])
-#     for ep in range(len(tcs_dist)):
-#         axes=axes_all[ep,:]
-#         data = tcs_dist[ep][cll]
-#         norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
-#                 (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
-
-#         # Add divider to move colorbar outside of axes[0]
-#         divider = make_axes_locatable(axes[0])
-#         cax = divider.append_axes("right", size="5%", pad=0.05)
-#         im = axes[0].imshow(norm_data, aspect='auto',cmap='Greys')
-#         fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. $\Delta F/F$')
-#         trial_mask = np.array(trialstates[ep])  # shape (n_trials,)
-#         trial_mask_2d = trial_mask[:, np.newaxis] * np.ones((1, data.shape[1]))  # shape (n_trials, n_timebins)
-#         a=0.4
-#         axes[0].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
-#         # plot com
-#         bin_size_dt = [ypos/bins_dt for ypos in ypos_max[ep]]
-#         axes[0].scatter(coms_dist[ep][cll]/bin_size_dt, np.arange(len(coms_dist[ep][cll])),color='w',marker='|')
-#         axes[2].plot(tcs_correct[ep, goal_all[cll]].T, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm')  
-#         axes[2].set_ylim([vmin,vmax])
-#         axes[2].legend()
-#         axes[2].set_ylabel('$\Delta F/F$')              
-#         # lick com
-#         com_trial = []
-#         for lick_trial in licks_all_dist[ep]:
-#             arr = np.nan_to_num(lick_trial, nan=0.0)  # Replace NaNs with 0    
-#             bins = np.arange(len(arr))
-#             total = np.sum(arr)
-#             if total == 0:
-#                 com= np.nan  # Avoid divide-by-zero
-#             else: com = np.sum(bins * arr) / total
-#             com_trial.append(com)
-#         # norm licks
-#         data = licks_all_dist[ep]
-#         norm_data = (data - np.nanmin(data, axis=1, keepdims=True)) / \
-#                 (np.nanmax(data, axis=1, keepdims=True) - np.nanmin(data, axis=1, keepdims=True) + 1e-10)
-#         axes[1].imshow(norm_data, aspect='auto', cmap='Blues')      
-#         axes[1].scatter(com_trial, np.arange(len(com_trial)),color='k',marker='|')
-#         axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
-#         center_bin = bins_dt/2                              
-#         for ax in axes:
-#                 ax.axvline(center_bin,color='k',linestyle='--',linewidth=lw)
-#         axes[0].axvline(center_bin, color='k',linestyle='--',linewidth=lw)  # for contrast on heatmap                
-#         axes[0].set_title(f'{animal}, {day}, cell: {goal_all[cll]}')        
-#         ticks = [0, bins_dt/2, bins_dt - 1]
-#         # Set x-ticks on both the heatmap and the licks plot
-#         axes[2].set_xticks(ticks)
-#         axes[2].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
-#         axes[2].set_xlabel('Reward-relative distance ($\Theta$)')
-#         axes[1].set_ylabel('Norm. Licks')
-#         axes[0].set_ylabel('Trial #')
-#         axes[2].spines[['top','right']].set_visible(False)
-#         axes[2].set_title(f"Field width={df.loc[df.cellid==goal_all[cll], 'width_cm'].values[ep]:.0f} cm")
-#     from matplotlib.patches import Patch
-#     # Custom legend for trial states
-#     trial_legend = [
-#         Patch(facecolor='gray', edgecolor='black', label='Probe'),
-#         Patch(facecolor='red', edgecolor='black', label='Incorrect'),
-#         Patch(facecolor='lime', edgecolor='black', label='Correct')
-#     ]
-#     # Add to figure
-#     fig.legend(handles=trial_legend, loc='upper right', title='Trial Type', frameon=True)
-#     plt.tight_layout()
-#     savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-#     plt.savefig(os.path.join(os.path.join(savedst, f'eg_prerew_lick_cell_{animal}_{day}.svg')))
-
-#%%
-
     alldf.append(df)
-    # post reward
+    
+    ################ post reward
     com_goal_postrew = [[xx for xx in com if (np.nanmedian(coms_rewrel[:,
         xx], axis=0)>0)] if len(com)>0 else [] for com in com_goal]
     # get goal cells across all epochs        
@@ -518,6 +433,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     df['animal'] = [animal]*len(df)
     df['day'] = [day]*len(df)
     df['cell_type'] = ['Post']*len(df)
+    goal_cells_prepost.append(goal_all)   
     # try:
     #     ii=0
     #     plt.figure()
@@ -528,7 +444,40 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
     # plt.show()
     # add add pre and post dfs
     alldf.append(df)
-
+    ################################### PLACE
+    tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
+        Fc3,trialnum,rewards,forwardvel,
+        rewsize,bin_size)
+    # get cells that maintain their coms across at least 2 epochs
+    place_window = 20 # cm converted to rad                
+    perm = list(combinations(range(len(coms_correct_abs)), 2))     
+    com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
+    compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+    # get cells across all epochs that meet crit
+    pcs = np.unique(np.concatenate(compc))
+    pcs = [xx for xx in pcs if xx not in np.concatenate(goal_cells_prepost)]
+    # goal_all = goal_cells
+    widths_per_ep = []
+    peak_per_ep = []
+    for ep in range(len(tcs_correct)):
+        sigma = 1   # in bin-units; start small (0.5–2 bins)
+        tcs_smoothed = gaussian_filter1d(tcs_correct[ep,pcs], sigma=sigma, axis=1)
+        r = [circular_fwhm(tc, bin_size) for tc in tcs_smoothed]
+        w = [xx[0] for xx in r]
+        w = [eq_rectangular_width(tc, bin_size) for tc in tcs_smoothed]
+        widths_per_ep.append(w)
+        peak_per_ep.append([np.quantile(tc,.75) for tc in tcs_correct[ep,pcs]])
+    widths_per_ep=np.array(widths_per_ep)
+    df = pd.DataFrame()
+    df['width_cm'] = np.concatenate(widths_per_ep)
+    df['75_quantile'] = np.concatenate(peak_per_ep)
+    df['cellid'] = np.concatenate([pcs]*len(widths_per_ep))
+    df['epoch'] = np.concatenate([[f'epoch{ep+1}_rz{int(rz[ep])}']*len(widths_per_ep[ep]) for ep in range(len(tcs_correct))])        
+    df['rewloc'] = np.concatenate([[f'epoch{ep+1}_rewloc{rewlocs[ep]}']*len(widths_per_ep[ep]) for ep in range(len(tcs_correct))])  
+    df['animal'] = [animal]*len(df)
+    df['day'] = [day]*len(df)
+    df['cell_type'] = ['Place']*len(df)    
+    alldf.append(df)
     # lick
     pre_lick_locs = []
     pre_lick_times = []
@@ -595,6 +544,7 @@ def get_pre_post_field_widths(params_pth,animal,day,ii,goal_window_cm=20,bins=90
 
     # Optional: return this alongside widths
     return pd.concat(alldf), lick_df
+
 
 def get_beh_in_field(params_pth,animal,day,ii,goal_window_cm=20,bins=90):
     fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 

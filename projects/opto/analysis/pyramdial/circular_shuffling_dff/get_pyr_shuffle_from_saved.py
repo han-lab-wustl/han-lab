@@ -226,7 +226,7 @@ for ii in range(len(conddf)):
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,dFF,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt) 
         # early tc
         goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
         results_pre = process_goal_cell_proportions(eptest, 
@@ -256,9 +256,7 @@ for ii in range(len(conddf)):
             goal_window=goal_window
         )
         print('#############making place tcs#############\n')
-        tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,
-        Fc3,trialnum,rewards,forwardvel,
-        rewsize,bin_size) # last 5 trials
+        tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,dFF,trialnum,rewards,forwardvel,rewsize,bin_size) # last 5 trials
         # tcs_correct_abs_early, coms_correct_abs_early,tcs_fail_abs_early, coms_fail_abs_early = make_tuning_curves_early(eps,rewlocs,ybinned, Fc3,trialnum,rewards,forwardvel,
         # rewsize,bin_size) # last 5 trials
         # # all goal
@@ -294,6 +292,7 @@ plt.rc('font', size=20)
 # per cell prop comparison
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
 placecell_p=[v[1] for k,v in datadct.items()]
+
 pre_p=[v[2]['goal_cell_prop'] for k,v in datadct.items()]
 post_p=[v[3]['goal_cell_prop'] for k,v in datadct.items()]
 
@@ -322,11 +321,11 @@ df=df[df['proportions']>0]
 df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')]
 # remove outlier days
 # df=df[~((df.animals=='e201')&((df.days>62)))]
-df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
-df=df[~((df.animals=='z17')&((df.days<13)))]
-df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
+# df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
+df=df[~((df.animals=='z17')&((df.days.isin([16,17,24,18,20]))))]
+# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
 # 11,16,31, from other sp tuned
-df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([11,16,31,21,29,30,26]))))]
+df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([11,16,31]))))]
 df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
 df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
 df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]

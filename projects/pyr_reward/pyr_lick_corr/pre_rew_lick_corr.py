@@ -265,8 +265,13 @@ bigdf = pd.concat(df_all)
 s=12;a=0.7
 palette='Dark2'
 order=['pre','post','place']
-df = bigdf.groupby(['animal','cell_type']).mean(numeric_only=True)
+df = bigdf.groupby(['animal','cell_type','trial_type']).mean(numeric_only=True)
 df=df.reset_index()
+typ='correct'
+df=df[df.trial_type==typ]
+typs=['correct','incorrect']
+# df=df[df.trial_type=='incorrect']
+df=df.dropna()
 df=df[(df.animal!='e189') & (df.animal!='e139')& (df.animal!='e145')]
 fig, axes = plt.subplots(ncols=2,figsize=(7,5))
 
@@ -291,7 +296,7 @@ reject, pvals_fdr, _, _ = multipletests(pvals, method='fdr_bh')
 
 # --- 5) Annotate significant comparisons ---
 y_max = df['cs_lick_v_tc'].max()
-y_step = 0.05 * y_max
+y_step = 0.1 * y_max
 start_y = y_max + y_step
 
 for i, ((a, b), pval, sig) in enumerate(zip(comparisons, pvals_fdr, reject)):
@@ -341,7 +346,7 @@ reject, pvals_fdr, _, _ = multipletests(pvals, method='fdr_bh')
 
 # --- 5) Annotate significant comparisons ---
 y_max = df['cs_vel_v_tc'].max()
-y_step = 0.05 * y_max
+y_step = 0.2 * y_max
 start_y = y_max + y_step
 
 for i, ((a, b), pval, sig) in enumerate(zip(comparisons, pvals_fdr, reject)):
@@ -366,6 +371,50 @@ ax.set_xticklabels(['Pre', 'Post', 'Place'])
 ax.set_title(f'Kruskal–Wallis H={kw_stat:.2f}, p = {kw_p:.3g}',fontsize=12)
 sns.despine()
 plt.tight_layout()
-plt.savefig(os.path.join(savedst,'lick_vel_rho.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst,f'{typ}_lick_vel_rho.svg'),bbox_inches='tight')
 
 # %%
+# --- Prepare pre-reward data ---
+df = bigdf.groupby(['animal','cell_type','trial_type']).mean(numeric_only=True)
+df=df.reset_index()
+typ='incorrect'
+df=df[df.trial_type==typ]
+
+df_pre = df[df['cell_type'] == 'pre'].copy()
+
+df_pre = df_pre.dropna(subset=['cs_lick_v_tc', 'cs_vel_v_tc'])
+# Group by animal and compute mean Spearman correlations
+df_agg = df_pre.groupby('animal')[['cs_lick_v_tc', 'cs_vel_v_tc']].mean().reset_index()
+df_agg = df_agg.rename(columns={'cs_lick_v_tc': 'Lick', 'cs_vel_v_tc': 'Velocity'})
+
+# Melt to long format for plotting
+df_long = df_agg.melt(id_vars='animal', var_name='Variable', value_name='Spearman_rho')
+
+# --- Paired test ---
+stat, pval = scipy.stats.wilcoxon(df_agg['Lick'], abs(df_agg['Velocity']), alternative='two-sided')
+print(f"Wilcoxon signed-rank test: p = {pval:.4g}")
+df_long['Spearman_rho']=abs(df_long['Spearman_rho'])
+df_agg['Lick']=abs(df_agg['Lick'])
+df_agg['Velocity']=abs(df_agg['Velocity'])
+# --- Plot ---
+plt.figure(figsize=(4, 5))
+ax = sns.barplot(data=df_long, x='Variable', y='Spearman_rho', errorbar='se', palette=['dodgerblue', 'darkorange'], edgecolor='black',legend=True)
+sns.stripplot(data=df_long, x='Variable', y='Spearman_rho', dodge=False, alpha=0.7, size=8, linewidth=1, edgecolor='gray',legend=True)
+
+# Connect paired points
+for i, row in df_agg.iterrows():
+    ax.plot(['Lick', 'Velocity'], [row['Lick'], row['Velocity']], color='gray', alpha=0.5, linewidth=1)
+
+# Annotate p-value
+y_max = df_long['Spearman_rho'].max()
+y_text = y_max + 0.05
+ax.text(0.5, y_text, f'p = {pval:.3g}', ha='center', fontsize=14)
+
+# Final formatting
+ax.set_ylabel("|Spearman $\\rho$|")
+ax.set_xlabel("")
+ax.set_title("Pre-reward cells: Lick vs Velocity")
+sns.despine()
+plt.tight_layout()
+# plt.savefig(os.path.join(savedst, f'{typ}_pre_rho_barplot_paired.svg'), bbox_inches='tight')
+plt.show()
