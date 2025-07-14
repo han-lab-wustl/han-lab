@@ -140,7 +140,8 @@ for ii in range(len(conddf)):
             eptest = random.randint(2,3)      
         if len(eps)<4: eptest = 2 # if no 3 epochs
         comp = [eptest-2,eptest-1] # eps to compare    
-        threshold=5; bin_size=track_length_dt/bins_dt
+        threshold=5; 
+        bin_size=track_length_dt/bins_dt
         differentially_inactivated_cells = find_differentially_inactivated_cells(tcs_correct[eptest-2,:,:], tcs_correct[eptest-1,:,:], threshold, bin_size)
         differentially_activated_cells = find_differentially_activated_cells(tcs_correct[eptest-2,:,:], tcs_correct[eptest-1,:,:], threshold, bin_size)
         affected_gc = [xx for xx in np.concatenate([differentially_inactivated_cells,differentially_activated_cells]) if xx in goal_cells]
@@ -157,3 +158,54 @@ with open(r'Z:\dcts_active_v_inactive.p', "wb") as fp:   #Pickling
     pickle.dump(maindct, fp)   
 
 #%%
+savepickle=r'Z:\dcts_active_v_inactive.p'
+with open(savepickle, "rb") as fp: #unpickle
+    maindct = pickle.load(fp)
+
+#%%
+p_inactive_rew=[len([xx for xx in v[2] if xx in v[1]])/len(v[2]) if len(v[2])>0 else np.nan for k,v in maindct.items()]
+p_active_rew=[len([xx for xx in v[3] if xx in v[1]])/len(v[3]) if len(v[3])>0 else np.nan for k,v in maindct.items()]
+p_inactive_place=[len([xx for xx in v[2] if xx in v[0]])/len(v[2]) if len(v[2])>0 else np.nan for k,v in maindct.items()]
+p_active_place=[len([xx for xx in v[3] if xx in v[0]])/len(v[3]) if len(v[3])>0 else np.nan for k,v in maindct.items()]
+df=pd.DataFrame()
+df['animals'] = [k.split('_')[0] for k,v in maindct.items()]
+df['days'] = [int(k.split('_')[1]) for k,v in maindct.items()]
+df['p_inactive_rew']=p_inactive_rew
+df['p_active_rew']=p_active_rew
+df['p_inactive_place']=p_inactive_place
+df['p_active_place']=p_active_place
+df = pd.merge(df, conddf, on=['animals', 'days'], how='inner')  # or how='left' if you want to keep all rows from df
+df['opto']=df.optoep>1
+df_long = df.melt(
+    id_vars=['animals', 'days', 'opto',"in_type"], 
+    value_vars=['p_inactive_rew', 'p_active_rew', 'p_inactive_place', 'p_active_place'],
+    var_name='group', 
+    value_name='percent'
+)
+df_long['group'] = df_long['group'].str.replace('p_', '')
+df_long['percent']=df_long['percent']*100
+df=df_long
+df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
+df=df.drop(columns=['in_type'])
+df=df[df.percent>20]
+df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')]
+# remove outlier days
+# df=df[~((df.animals=='e201')&((df.days>62)))]
+# df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
+df=df[~((df.animals=='z17')&((df.days.isin([16,17,24,18,20]))))]
+# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
+# 11,16,31, from other sp tuned
+df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([11,16,31]))))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+s=12;a=0.7
+df=df.groupby(['animals','group','opto','condition']).mean(numeric_only=True)
+df=df.reset_index()
+# df=df[(df.group=='active_rew')|(df.group=='inactive_rew')]
+for cond in df.condition.unique():
+    plt.figure()
+    plt.title(cond)
+    sns.stripplot(x='group',y='percent',hue='opto',data=df[df.condition==cond],dodge=True,s=s,alpha=a)
+    sns.barplot(x='group',y='percent',hue='opto',data=df[df.condition==cond],fill=False)
+# %%

@@ -145,7 +145,7 @@ bins=90
 a=0.05 # threshold for si detection
 #%%
 # iterate through all animals
-for ii in range(202,len(conddf)):
+for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
     # check if its the last 3 days of animal behavior

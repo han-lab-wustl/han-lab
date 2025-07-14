@@ -346,7 +346,7 @@ for i in range(len(ans)):
     errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
+ax.set_xlabel('# of epochs')
 ax.set_ylabel('')
 ax.set_title('Place cell %-shuffle',pad=30)
 ax.set_ylim([-1,20
