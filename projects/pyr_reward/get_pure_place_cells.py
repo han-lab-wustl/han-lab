@@ -43,7 +43,7 @@ place_cell_null=[]
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if (animal!='e217') and (conddf.optoep.values[ii]==-1):
+    if (animal!='e217') and (conddf.optoep.values[ii]<2):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -305,7 +305,7 @@ for ii,ep in enumerate(eps):
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
 from statsmodels.stats.multitest import multipletests
-reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='fdr_bh')
 
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
@@ -342,7 +342,18 @@ for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='place_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
-
+y=15
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+        
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of epochs')
 ax.set_ylabel('')

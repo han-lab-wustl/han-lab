@@ -30,7 +30,7 @@ from projects.pyr_reward.rewardcell import get_days_from_cellreg_log_file, find_
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 animals = ['e218','e216','e201','e186',
-        'e190', 'e145', 'z8', 'z9']
+        'e190', 'e145', 'z8', 'z9','z16']
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 radian_tuning_dct = r'Z:\\saved_datasets\\radian_tuning_curves_rewardcentric_all.p'
 with open(radian_tuning_dct, "rb") as fp: #unpickle
@@ -46,9 +46,11 @@ maxep = 5
 shuffles = 1000
 # redo across days analysis but init array per animal
 coms_per_an = []
+dy_comb_per_an=[]
 for animal in animals:
     # all rec days
     dys = conddf.loc[conddf.animals==animal, 'days'].values
+    dys=dys[conddf.loc[conddf.animals==animal, 'optoep'].values<2]
     # index compared to org df
     dds = list(conddf[conddf.animals==animal].index)
     # init 
@@ -59,19 +61,9 @@ for animal in animals:
     suite2p_iind_goal_cells_all_per_day_shuf=[]
     perm_per_day = []
     coms = []
-    # check if day 1 has 3 epochs
-    day = dys[0]
-    if animal=='e145': pln=2
-    else: pln=0
-    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-    fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc'])
-    changeRewLoc=fall['changeRewLoc'][0]
-    eps = np.where(changeRewLoc>0)[0]
-    eps = np.append(eps, len(changeRewLoc))    # set vars
-    epochs = len(eps)-1
-    i=1
+    # get all days with 3 ep
     dynm = []
-    if epochs!=3: 
+    for i in range(len(dys)):        
         day = dys[i]
         if animal=='e145': pln=2
         else: pln=0
@@ -82,10 +74,9 @@ for animal in animals:
         eps = np.append(eps, len(changeRewLoc))    # set vars
         epochs = len(eps)-1
         i+=1
-        if epochs==3: dynm.append(i)
-    if len(dynm)==0: dynm=0
-    else:
-        dynm =min(dynm)
+        if epochs==4: dynm.append(i)
+        # print(epochs)
+    dynm =min(dynm)
     # make sure first day has only 3 epochs
     print(dynm)
     for ii, day in enumerate(dys[dynm:dynm+2]): # iterate per day
@@ -104,10 +95,29 @@ for animal in animals:
         goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
         # find key
         k = [k for k,v in radian_alignment_saved.items() if f'{animal}_{day:03d}' in k][0]
-        tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,\
-            goal_cell_shuf_ps_av = radian_alignment_saved[k]     
+        _, __, ___, ____,tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[k]     
         perm = list(combinations(range(len(coms_correct)), 2))       
+        goal_window = 20*(2*np.pi/track_length) # cm converted to rad
+        coms_rewrel = np.array([com-np.pi for com in coms_correct])
+        print(perm)
+        # account for cells that move to the end/front
+        # Define a small window around pi (e.g., epsilon)
+        epsilon = .7 # 20 cm
+        # Find COMs near pi and shift to -pi
+        com_loop_w_in_window = []
+        for pi,p in enumerate(perm):
+            for cll in range(coms_rewrel.shape[1]):
+                com1_rel = coms_rewrel[p[0],cll]
+                com2_rel = coms_rewrel[p[1],cll]
+                # print(com1_rel,com2_rel,com_diff)
+                if ((abs(com1_rel - np.pi) < epsilon) and 
+                (abs(com2_rel + np.pi) < epsilon)):
+                        com_loop_w_in_window.append(cll)
+        # get abs value instead
+        coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+        com_goal_all=np.unique(np.concatenate(com_goal))
 
         ########### shuffle
         shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]

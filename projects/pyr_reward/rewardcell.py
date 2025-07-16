@@ -3043,13 +3043,14 @@ def get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all'):
     perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
     rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm] 
     rz_perm=[p for jj,p in enumerate(rz_perm) if len(com_goal_postrew[jj])>0]
+    # remove empty epochs
     com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
 
     if len(com_goal_postrew)>0:
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-    return goal_cells, com_goal_postrew, perm, rz_perm
+    return goal_cells, com_goal, perm, rz_perm
 
 def get_goal_cells_time(rz, goal_window, coms_correct, cell_type = 'all'):    
     # change to relative value 
@@ -3299,15 +3300,17 @@ def get_tracking_vars(params_pth):
     print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['changeRewLoc', 
         'ybinned', 'VR', 'forwardvel', 
-        'trialnum', 'rewards', 'iscell', 'bordercells', 'dFF'])
+        'trialnum', 'rewards', 'iscell', 'bordercells', 'dFF','putative_pcs'])
+    pcs = np.vstack(np.array(fall['putative_pcs'][0]))
     # to remove skew cells
     dFF = fall['dFF']
     suite2pind = np.arange(fall['iscell'][:,0].shape[0])
-    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-    suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool))]
+    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
+    suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
     # we need to find cells to map back to suite2p indexes
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-    suite2pind_remain = suite2pind_remain[skew>2]
+    pc_bool = np.sum(pcs,axis=0)>0
+    suite2pind_remain = suite2pind_remain[((skew>2)&pc_bool)]
     VR = fall['VR'][0][0][()]
     scalingf = VR['scalingFACTOR'][0][0]
     # mainly for e145

@@ -109,14 +109,16 @@ for ii in range(len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+        #if pc in all but 1
+        # looser restrictions
+        pc_bool = np.sum(pcs,axis=0)>0
+        Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew 
         #################### tc w/ time ###################
         tcs_correct_time, coms_correct_time, tcs_fail_time, coms_fail_time, trial_times = make_time_tuning_curves_radians(eps, 
-                time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize,
-                lasttr=8, bins=bins, velocity_filter=False)
+                time, Fc3, trialnum, rewards, licks, ybinned, rewlocs, rewsize, forwardvel, lasttr=8, bins=bins, velocity_filter=True)
         # filter by in/out field firing
         # selected_cells, in_field_fraction = filter_cells_by_field_selectivity(tcs_correct_time, 
         #                 threshold=0.5, fraction_cutoff=0.6)
@@ -140,14 +142,14 @@ for ii in range(len(conddf)):
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, raddt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
         rewsize,ybinned,time,licks,
         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
         bins=bins_dt)  
         # get abs dist tuning for rew cells
         # binsize = 3 for place
         ################### get place cells ###################
-        tcs_correct_abs, coms_correct_abs = make_tuning_curves(eps,rewlocs,ybinned,
+        tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
                 Fc3,trialnum,rewards,forwardvel,
                 rewsize,3)
         goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
@@ -480,6 +482,8 @@ df_plt2_dt=df_plt2_dt.reset_index()
 df_plt2['type'] = ['Distance']*len(df_plt2)
 df_plt2_dt['type'] = ['Time']*len(df_plt2_dt)
 df_new = pd.concat([df_plt2_dt,df_plt2])
+df_new=df_new[df_new.animals!='e200']
+# df_new=df_new[df_new.animals!='e189']
 df_new['prop_diff'] = df_new['goal_cell_prop'] - df_new['goal_cell_prop_shuffle']
 df_av = df_new.groupby(['animals', 'type']).median(numeric_only=True)
 df_av = df_av.reset_index()
@@ -489,14 +493,14 @@ time_diff = df_av[df_av['type'] == 'Time']['prop_diff'].reset_index(drop=True)
 t_stat, p_val = scipy.stats.wilcoxon(distance_diff, time_diff)
 df_new = df_new.reset_index()
 
-fig,axes = plt.subplots(figsize=(10,5),ncols=2,sharex=True)
+fig,axes = plt.subplots(figsize=(14,5),ncols=3,width_ratios=[3,3,1])
 ax=axes[0]
-custom_palette = ['black', 'navy']
+custom_palette = ['cornflowerblue', 'k']
 sns.set_palette(custom_palette)
 hue_order = ['Distance', 'Time']
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',hue='type',
-        data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop',hue='type',
+        # data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
 sns.barplot(x='num_epochs', y='goal_cell_prop',hue='type',
         data=df_new,hue_order=hue_order,
         fill=False,ax=ax, errorbar='se')
@@ -519,20 +523,64 @@ for epoch in df_lines['num_epochs'].unique():
         if len(sub) == 2:  # Ensure both Distance and Time are present
             x = ['Distance', 'Time']
             y = sub.sort_values('type')['goal_cell_prop'].values
-            ax.plot([epoch-2 - 0.2, epoch-2 + 0.2], y, color='dimgray', alpha=0.5, linewidth=2)
+            ax.plot([epoch-2 - 0.2, epoch-2 + 0.2], y, color='grey', alpha=0.5, linewidth=1.5)
 ax.legend().set_visible(False)
 
 ax=axes[1]
-sns.stripplot(x='num_epochs', y='prop_diff',hue='type',
-        data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
+# sns.stripplot(x='num_epochs', y='prop_diff',hue='type',
+#         data=df_new,s=10,alpha=0.7,ax=ax,dodge=True,hue_order=hue_order)
 sns.barplot(x='num_epochs', y='prop_diff',hue='type',
         data=df_new,hue_order=hue_order,
         fill=False,ax=ax, errorbar='se')
 ax.spines[['top','right']].set_visible(False)
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 ax.set_ylabel('Cell %-shuffle')
-ax.set_xlabel('# of rew. loc. switches')
+ax.set_xlabel('# of epochs')
+# ax.text(.5, 25, f'p={p_val:.3g}', fontsize=12)
+# One value per animal per epoch per type
+df_lines = df_new.groupby(['animals', 'num_epochs', 'type'])['prop_diff'].median().reset_index()
+for epoch in df_lines['num_epochs'].unique():
+    df_ep = df_lines[df_lines['num_epochs'] == epoch]
+    for animal in df_ep['animals'].unique():
+        sub = df_ep[df_ep['animals'] == animal]
+        if len(sub) == 2:  # Ensure both Distance and Time are present
+            x = ['Distance', 'Time']
+            y = sub.sort_values('type')['prop_diff'].values
+            ax.plot([epoch-2 - 0.2, epoch-2 + 0.2], y, color='grey', alpha=0.5, linewidth=1.5)
+ax.legend().set_visible(False)
+
+ax=axes[2]
+sns.barplot(x='type', y='prop_diff',hue='type',
+        data=df_av, fill=False,ax=ax, errorbar='se')
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Cell %-shuffle')
+ax.set_xlabel('')
 ax.text(.5, 25, f'p={p_val:.3g}', fontsize=12)
+# One value per animal per epoch per type
+df_lines = df_av.groupby(['animals', 'type'])['prop_diff'].median().reset_index()
+df_ep = df_lines
+for animal in df_ep['animals'].unique():
+        sub = df_ep[df_ep['animals'] == animal]
+        if len(sub) == 2:  # Ensure both Distance and Time are present
+                x = ['Distance', 'Time']
+                y = sub.sort_values('type')['prop_diff'].values
+                ax.plot([0,1], y, color='grey', alpha=0.5, linewidth=1.5)
+ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+# Add comparison bar with significance asterisk
+# Adjust y-bar height as needed
+y_bar = df_av['prop_diff'].max() + 5
+y_bracket_top = y_bar + 1
+
+x1, x2 = 0, 1  # positions of "Distance" and "Time" on x-axis
+# Draw bracket: vertical up from bars, horizontal top, vertical down
+ax.plot([x1, x1], [y_bar, y_bracket_top], color='black', linewidth=1.5)  # left |
+ax.plot([x2, x2], [y_bar, y_bracket_top], color='black', linewidth=1.5)  # right |
+ax.plot([x1, x2], [y_bracket_top, y_bracket_top], color='black', linewidth=1.5)  # top —
+ax.set_title('Mean of epochs')
+# Add significance text
+ax.text((x1 + x2) / 2, y_bracket_top + 1, '*' if p_val < 0.05 else 'n.s.',
+        ha='center', va='bottom', fontsize=14)
+
+fig.suptitle('Time v. Distance Reward cells during movement')
 plt.savefig(os.path.join(savedst, 'time_v_reward_sidebyside.svg'), 
         bbox_inches='tight')
 #%%

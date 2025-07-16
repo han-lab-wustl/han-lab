@@ -193,11 +193,11 @@ df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')&(df.animals!
 # df=df[~((df.animals=='e201')&((df.days>62)))]
 df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
 df=df[~((df.animals=='z17')&((df.days.isin([16,17,24,18,20]))))]
-df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
+df=df[~((df.animals=='z15')&((df.days<13)))]
 # 11,16,31, from other sp tuned
-df=df[~((df.animals=='e217')&((df.days<9)))]
+# df=df[~((df.animals=='e217')&((df.days<9)))]
 # df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
-df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+# df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
 # df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 s=12;a=0.7
 df=df.groupby(['animals','group','opto','condition']).mean(numeric_only=True)
@@ -226,7 +226,6 @@ for cond in df.condition.unique():
     plt.axhline(0, color='gray', linestyle='--', linewidth=1)
     plt.ylabel('Δ % relative to opto OFF')
     plt.xlabel('Cell group')
-    plt.legend(title='Opto ON', loc='upper right')
     plt.tight_layout()
 
 # %%

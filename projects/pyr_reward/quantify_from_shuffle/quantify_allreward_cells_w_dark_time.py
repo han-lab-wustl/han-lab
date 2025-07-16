@@ -156,6 +156,9 @@ for ii in range(len(conddf)):
         datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 pdf.close()
+with open(saveddataset, "wb") as fp:   #Pickling
+        pickle.dump(datadct, fp) 
+
 ####################################### RUN CODE #######################################
 #%%
 plt.rc('font', size=16)          # controls default text sizes
@@ -289,7 +292,7 @@ ax=axes[0]
         # data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
+        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
 # bar plot of shuffle instead
 ax = sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
@@ -361,7 +364,7 @@ sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
 ax.spines[['top','right']].set_visible(False)
 ax.set_title('Reward cell %-shuffle')
-ax.set_ylim([0, 18])
+ax.set_ylim([0, 22])
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
@@ -371,6 +374,22 @@ for i in range(len(ans)):
     
 ax.set_xlabel('# of epochs')
 ax.set_ylabel('')
+y=18
+# Step 3: Annotate plot
+for ii, (ep, pval_corr, sig) in enumerate(zip(eps, pvals_fdr, reject)):
+    if pval_corr < 0.001:
+        stars = "***"
+    elif pval_corr < 0.01:
+        stars = "**"
+    elif pval_corr < 0.05:
+        stars = "*"
+    else:
+        stars = "n.s."
+    if sig:
+        ax.text(ii, y, stars, ha='center', fontsize=fs)
+    else:
+        ax.text(ii, y, stars, ha='center', fontsize=fs, color='gray')  # Optional: fade non-sig
+
 # fig.suptitle('Including delay period')
 plt.savefig(os.path.join(savedst, 'allreward_w_darktime_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
