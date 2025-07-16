@@ -180,7 +180,6 @@ df = df[((df.animals!='e217')) & (df.index.isin(inds))]
 df['num_epochs'] = num_epochs
 df['place_cell_prop'] = [xx[1] for xx in pc_prop]
 df['opto'] = df.optoep.values>1
-df['condition'] = ['vip' if xx=='vip' else 'ctrl' for xx in df.in_type.values]
 df['p_value'] = pvals
 df['place_cell_prop_shuffle'] = [xx[1] for xx in place_cell_null]
 df['session_num'] = np.concatenate([[ii for ii,xx in enumerate(df[df.animals==an].days.values)] for an in np.unique(df.animals.values)])
@@ -273,11 +272,11 @@ df_plt2=df_plt2.reset_index()
 df_plt2=df_plt2[df_plt2.animals!='e189']
 # number of epochs vs. reward cell prop incl combinations    
 # number of epochs vs. reward cell prop incl combinations    
-fig,axes = plt.subplots(ncols=2,figsize=(7,5))
+fig,axes = plt.subplots(ncols=2,figsize=(6.5,4))
 ax=axes[0]
 # av across mice
-sns.stripplot(x='num_epochs', y='place_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='place_cell_prop',color='k',
+        # data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='place_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -296,7 +295,7 @@ ax.set_ylabel('Place cell %')
 eps = [2,3,4]
 y = 28
 pshift = 1
-fs=36
+fs=46
 pvalues=[]
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop']
@@ -332,11 +331,10 @@ ax=axes[1]
 # df_plt2=df_plt2.reset_index()
 df_plt2['place_cell_prop_sub_shuffle'] = df_plt2['place_cell_prop']-df_plt2['place_cell_prop_shuffle']
 # av across mice
-sns.stripplot(x='num_epochs', y='place_cell_prop_sub_shuffle',color='cornflowerblue',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='place_cell_prop_sub_shuffle',color='cornflowerblue',data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='place_cell_prop_sub_shuffle',
         data=df_plt2,
-        fill=False,ax=ax, color='cornflowerblue', errorbar='se')
+        fill=False,ax=ax, color='indigo', errorbar='se')
 # make lines
 df_plt2=df_plt2.reset_index()
 ans = df_plt2.animals.unique()

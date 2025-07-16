@@ -136,11 +136,11 @@ for ii in range(len(conddf)):
         # pcs that are not goal cells
         pcs = [xx for xx in pcs if xx not in goal_cells]  
         # Find differentially inactivated cells
-        if conddf.optoep.values[dd]<2: 
+        if conddf.optoep.values[ii]<2: 
             eptest = random.randint(2,3)      
         if len(eps)<4: eptest = 2 # if no 3 epochs
         comp = [eptest-2,eptest-1] # eps to compare    
-        threshold=5; 
+        threshold=0; 
         bin_size=track_length_dt/bins_dt
         differentially_inactivated_cells = find_differentially_inactivated_cells(tcs_correct[eptest-2,:,:], tcs_correct[eptest-1,:,:], threshold, bin_size)
         differentially_activated_cells = find_differentially_activated_cells(tcs_correct[eptest-2,:,:], tcs_correct[eptest-1,:,:], threshold, bin_size)
@@ -187,25 +187,46 @@ df_long['percent']=df_long['percent']*100
 df=df_long
 df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
 df=df.drop(columns=['in_type'])
-df=df[df.percent>20]
-df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')]
+df=df[df.percent>0]
+df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')&(df.animals!='e200')]
 # remove outlier days
 # df=df[~((df.animals=='e201')&((df.days>62)))]
-# df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
+df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
 df=df[~((df.animals=='z17')&((df.days.isin([16,17,24,18,20]))))]
-# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
+df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([10,15,16]))))]
 # 11,16,31, from other sp tuned
-df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([11,16,31]))))]
-df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e217')&((df.days<9)))]
+# df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
 df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
-df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+# df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 s=12;a=0.7
 df=df.groupby(['animals','group','opto','condition']).mean(numeric_only=True)
 df=df.reset_index()
 # df=df[(df.group=='active_rew')|(df.group=='inactive_rew')]
+# for cond in df.condition.unique():
+#     plt.figure()
+#     plt.title(cond)
+#     sns.stripplot(x='group',y='percent',hue='opto',data=df[df.condition==cond],dodge=True,s=s,alpha=a)
+#     sns.barplot(x='group',y='percent',hue='opto',data=df[df.condition==cond],fill=False)
+# Get baseline means for each group × condition from opto=False rows
+baseline = df[df['opto'] == False].groupby(['group', 'condition'])['percent'].mean().reset_index()
+baseline = baseline.rename(columns={'percent': 'baseline_percent'})
+# Merge with original df to align baseline for subtraction
+df = pd.merge(df, baseline, on=['group', 'condition'], how='left')
+
+# Normalize by subtracting the baseline
+df['percent_norm'] = df['percent'] - df['baseline_percent']
+df=df[df['percent_norm']>-30]
 for cond in df.condition.unique():
-    plt.figure()
-    plt.title(cond)
-    sns.stripplot(x='group',y='percent',hue='opto',data=df[df.condition==cond],dodge=True,s=s,alpha=a)
-    sns.barplot(x='group',y='percent',hue='opto',data=df[df.condition==cond],fill=False)
+    plt.figure(figsize=(5,4))
+    plt.title(f'{cond} (normalized to opto OFF)', fontsize=14)
+    sns.stripplot(x='group', y='percent_norm', hue='opto', data=df[(df.condition == cond) & (df.opto==True)],dodge=True, s=5, alpha=a)
+    sns.barplot(x='group', y='percent_norm', data=df[(df.condition == cond) & (df.opto==True)],
+                fill=False, errorbar='se')
+    plt.axhline(0, color='gray', linestyle='--', linewidth=1)
+    plt.ylabel('Δ % relative to opto OFF')
+    plt.xlabel('Cell group')
+    plt.legend(title='Opto ON', loc='upper right')
+    plt.tight_layout()
+
 # %%

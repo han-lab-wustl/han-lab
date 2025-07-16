@@ -3,6 +3,8 @@
 zahra
 get tuning curves with dark time
 get cells in 2, 3, or 4 epochs
+only use spatially tuned!!!
+july 2025
 """
 #%%
 import numpy as np, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -55,8 +57,9 @@ for ii in range(len(conddf)):
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
         fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF',
-                'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-                'stat', 'licks'])
+        'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+        'stat', 'licks'])
+        pcs = np.vstack(np.array(fall['putative_pcs'][0]))
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
         try:
@@ -92,24 +95,25 @@ for ii in range(len(conddf)):
             total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
             rates.append(success/total_trials)
         rate=np.nanmean(np.array(rates))
-        rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,
-                    trialnum, track_length) # get radian coordinates
-
+        rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates
         # added to get anatomical info
         # takes time
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+        #if pc in all but 1
+        # looser restrictions
+        pc_bool = np.sum(pcs,axis=0)>0
+        Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greateer than 2
         # tc w/ dark time
         track_length_dt = 550 # cm estimate based on 99.9% of ypos
         track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
         bins_dt=150 
         bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+        tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt,raddt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
         # normal tc
@@ -149,8 +153,7 @@ for ii in range(len(conddf)):
         goal_cell_null.append([[goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av],
                         [goal_cell_shuf_ps_per_comp_av_dt,goal_cell_shuf_ps_av_dt]])
         pvals.append([p_value,p_value_dt]); 
-        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,
-                tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
+        datadct[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct, coms_correct, tcs_fail, coms_fail,tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av]
 
 pdf.close()
 ####################################### RUN CODE #######################################
@@ -269,6 +272,7 @@ df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 #%%
 # compare to shuffle
+plt.rc('font', size=20)          # controls default text sizes
 df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('animals')!='e189']
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
@@ -278,11 +282,11 @@ df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
 df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
 df_plt2=df_plt2[df_plt2.animals!='e200']
 # number of epochs vs. reward cell prop incl combinations    
-fig,axes = plt.subplots(figsize=(7,5),ncols=2,sharex=True)
+fig,axes = plt.subplots(figsize=(6.5,4),ncols=2,sharex=True)
 ax=axes[0]
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
+        # data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -299,7 +303,7 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=alpha,ax=ax)
+    errorbar=None, color='gray', alpha=0.5, linewidth=1.5,ax=ax)
 ax.set_xlabel('')
 ax.set_ylabel('Reward cell % ')
 
@@ -334,7 +338,7 @@ for ii, (ep, pval_corr, sig) in enumerate(zip(eps, pvals_fdr, reject)):
         ax.text(ii, y, stars, ha='center', fontsize=fs)
     else:
         ax.text(ii, y, stars, ha='center', fontsize=fs, color='gray')  # Optional: fade non-sig
-
+ax.set_title('Reward cells')
 
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
@@ -350,8 +354,8 @@ df_plt2['goal_cell_prop_sub_shuffle']=sub
 # vs. average within animal
 df_plt2['goal_cell_prop_sub_shuffle']=df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
 ax=axes[1]# av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
+#         data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
@@ -363,10 +367,10 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=alpha)
+    errorbar=None, color='gray', alpha=0.5, linewidth=1.5)
     
-ax.set_xlabel('# of reward loc. switches')
+ax.set_xlabel('# of epochs')
 ax.set_ylabel('')
-fig.suptitle('Including delay period')
+# fig.suptitle('Including delay period')
 plt.savefig(os.path.join(savedst, 'allreward_w_darktime_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')

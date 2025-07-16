@@ -142,6 +142,7 @@ place_window = 20
 num_iterations=50
 bin_size=3 # cm
 bins=90
+save_shuf_info=[]
 a=0.05 # threshold for si detection
 #%%
 # iterate through all animals

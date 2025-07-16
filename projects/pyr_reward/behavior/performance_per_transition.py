@@ -30,8 +30,7 @@ for ii in range(len(conddf)):
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         tcs_correct,tcs_fail,rates,rz_perm,lick_selectivity=performance_by_trialtype(params_pth, animal,bins=90)
-        data_df[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct,tcs_fail,
-                rates,rz_perm,lick_selectivity]
+        data_df[f'{animal}_{day:03d}_index{ii:03d}'] = [tcs_correct,tcs_fail,rates,rz_perm,lick_selectivity]
 # lick selectivity
 # 0 = early
 # 1 = late
@@ -195,21 +194,21 @@ df['rewzone_transition_2'] = np.concatenate(rz_perm)[:,1]
 df = df[(df.ep_transition_1==1) & (df.ep_transition_2==2)]
 df = df.groupby(['animal','rewzone_transition_1','rewzone_transition_2']).mean(numeric_only=True)
 df = df.reset_index()
-df = df[df.animal!='z16']
+df = df[(df.animal!='e189') & (df.animal!='z16')]
 s=10
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 rz_palette = 'Set1_r'#sns.color_palette(colors)  # Set custom palette
 
-fig,ax = plt.subplots(figsize=(6,5))
-sns.stripplot(x='rewzone_transition_2',
-    y='performance_transition_2',hue='rewzone_transition_1',data=df,palette=rz_palette,
-    dodge=True,s=s,alpha=0.7)
+fig,ax = plt.subplots(figsize=(5,4))
+# sns.stripplot(x='rewzone_transition_2',
+#     y='performance_transition_2',hue='rewzone_transition_1',data=df,palette=rz_palette,
+#     dodge=True,s=s,alpha=0.7)
 sns.barplot(x='rewzone_transition_2',
     y='performance_transition_2',hue='rewzone_transition_1',data=df,palette=rz_palette,
     fill=False)
 handles, labels = ax.get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
-ax.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(1.0, 0.5), 
+ax.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(.8, 0.5), 
         title='Previous Reward Zone')
 ax.set_ylabel('% Correct trials')
 ax.set_xlabel('Reward Zone')
@@ -222,6 +221,7 @@ for rz2 in sorted(df['rewzone_transition_2'].unique()):
     grouped = df_rz.groupby('rewzone_transition_1')['performance_transition_2'].apply(list)
     # Filter out groups with fewer than 2 entries
     valid_groups = [vals for vals in grouped if len(vals) > 1]
+    valid_groups = [[xx for xx in vals if xx!=np.nan] for vals in valid_groups]
 
     if len(valid_groups) > 1:
         stat, p = scipy.stats.kruskal(*valid_groups)
@@ -229,6 +229,31 @@ for rz2 in sorted(df['rewzone_transition_2'].unique()):
         print(f"  H-statistic = {stat:.3f}, p = {p:.4f}")
     else:
         print(f"Not enough valid groups to test for reward zone {rz2}.")
+# --- Draw connecting lines between reward zone transitions for each animal ---
+from collections import defaultdict
+
+# Get unique reward zones to establish consistent plotting positions
+rz2_unique = sorted(df['rewzone_transition_2'].unique())
+rz1_unique = sorted(df['rewzone_transition_1'].unique())
+
+# Map (x, hue) positions used by seaborn for dodge logic
+x_offset_map = defaultdict(dict)
+dodge_amount = 0.2
+for i, rz2 in enumerate(rz2_unique):
+    for j, rz1 in enumerate(rz1_unique):
+        x_pos = i - dodge_amount + j * (2 * dodge_amount / (len(rz1_unique)-1))  # calculate dodge position
+        x_offset_map[rz2][rz1] = x_pos
+
+# Draw lines per animal
+for animal, df_animal in df.groupby('animal'):
+    for rz2 in rz2_unique:
+        df_sub = df_animal[df_animal['rewzone_transition_2'] == rz2]
+        if len(df_sub) < 2:
+            continue  # need at least 2 points to draw a line
+        df_sub = df_sub.sort_values('rewzone_transition_1')  # sort by hue for line continuity
+        x_vals = [x_offset_map[rz2][rz1] for rz1 in df_sub['rewzone_transition_1']]
+        y_vals = df_sub['performance_transition_2'].values
+        ax.plot(x_vals, y_vals, color='gray', alpha=0.5, linewidth=1.5)
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 plt.savefig(os.path.join(savedst, 'rewzone_performance.svg'),bbox_inches='tight')

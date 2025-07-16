@@ -25,7 +25,8 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-ii=65
+ii=65# for maps
+ii=60
 cm_window=20
 day = int(conddf.days.values[ii])
 animal = conddf.animals.values[ii]
@@ -95,7 +96,7 @@ if True:
    bins_dt=150 
    bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
    tcs_correct_abs_no_si, coms_correct_abs_no_si,_,__ = make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,
-         rewsize,bin_size)
+         rewsize,3)
 
    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
          bins=bins_dt,lasttr=8) 
@@ -151,6 +152,7 @@ if True:
    # get cells across all epochs that meet crit
    pcs = np.unique(np.concatenate(compc))
    pcs_all = intersect_arrays(*compc)
+   pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
    # pcs_all = pcs
 
 #%%
@@ -163,20 +165,28 @@ colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 lbls=['Place', 'Reward','Reward-aligned']
 
 fig,axes=plt.subplots(ncols=3,figsize=(10,2.5),sharey=True)
-clls=[2,9]
+clls=[6,8]
 for ll,cll in enumerate(clls):
    ax=axes[ll]
-   for ep in range(len(tcs_correct_abs)):
-      pltt = moving_average(tcs_correct_abs_no_si[ep,cll,:])
-      ax.plot(pltt,color=colors[ep],linewidth=2)
+   for ep in range(3):
+      if ll==0: # pc
+         pltt = moving_average(tcs_correct_abs[ep,cll,:])
+      else:
+         pltt = moving_average(tcs_correct_abs_no_si[ep,cll,:])
+      ax.plot(pltt,color=colors[ep],linewidth=2,label=f'Epoch {ep+1}')
       ax.axvline(rewlocs[ep]/3,color=colors[ep],linestyle='--')
-      ax.axvline(coms_correct_abs_no_si[ep,cll]/3,color=colors[ep],linestyle='-.')
+      if ll==0:
+         ax.axvline(coms_correct_abs[ep,cll]/3,color=colors[ep],linestyle='-.')
+      else:
+         ax.axvline(coms_correct_abs_no_si[ep,cll]/3,color=colors[ep],linestyle='-.')
    if ll==0:
       ax.set_ylabel('$\Delta$ F/F')
    ax.spines[['top', 'right']].set_visible(False)
    ax.set_title(lbls[ll])
    ax.set_xticks([0,90])
    ax.set_xticklabels([0,270])
+   ax.legend()
+
 ax.set_xlabel('Track position (cm)')
 ax=axes[2]
 for ep in range(len(tcs_correct_abs)):
@@ -185,10 +195,11 @@ for ep in range(len(tcs_correct_abs)):
 ax.set_title(lbls[2])
 ax.axvline(75,color='k',linestyle='--')
 ax.spines[['top', 'right']].set_visible(False)
-ax.set_xlabel('\nReward-relative distance ($\Theta$)')
+ax.set_xlabel('\nReward-centric distance ($\Theta$)')
 ax.set_xticks([0,75,150])
 ax.set_xticklabels(['$-\pi$',0,'$\pi$'])
-plt.savefig(os.path.join(savedst, 'fig1_tc.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(
+                         , f'{animal}_{day}_fig1_tc.svg'), bbox_inches='tight')
 
 #%% 
 # add tuning curves

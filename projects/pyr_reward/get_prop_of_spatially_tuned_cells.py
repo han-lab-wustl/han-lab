@@ -30,7 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # initialize var
 # radian_alignment_saved = {} # overwrite
-spatial_tuned_per_ep_all = []
+spatial_tuned_per_ep_all = {}
 rates_all = []
 goal_window_cm = 20
 lasttr=8 # last trials
@@ -90,27 +90,45 @@ for ii in range(len(conddf)):
             rates.append(success/total_trials)
         rate=np.nanmean(np.array(rates))
         total_trials_all=np.array(total_trials_all)
-        # only get for epochs trials > 10
-        rates_all.append(np.array(rates)[total_trials_all>10])
-        spatial_tuned_per_ep_all.append(spatial_tuned_per_ep[total_trials_all>10])
+        # only get for epochs trials > 10        
+        spatial_tuned_per_ep_all[f'{animal}_{day}']=[spatial_tuned_per_ep[total_trials_all>10],np.array(rates)[total_trials_all>10]]
 #%%
 plt.rc('font', size=20)          # controls default text sizes
 df = conddf.copy()
 df = df[((df.animals!='e217')) & (df.optoep<2)]
 df = pd.DataFrame()
-df['rates_all']=np.concatenate(rates_all)
-df['spatial_tuned_per_ep_all']=np.concatenate(spatial_tuned_per_ep_all)*100
+rates_all=[v[1] for k,v in spatial_tuned_per_ep_all.items()]
+an=[k.split('_')[0] for k,v in spatial_tuned_per_ep_all.items()]
+df['rates_all']=np.concatenate([v[1] for k,v in spatial_tuned_per_ep_all.items()])
+df['animal']=np.concatenate([[an[ii]]*len(v[1]) for ii,(k,v) in enumerate(spatial_tuned_per_ep_all.items())])
+df['spatial_tuned_per_ep_all']=np.concatenate([v[0] for k,v in spatial_tuned_per_ep_all.items()])*100
 df['epoch']=np.concatenate([np.arange(len(xx))+1 for xx in rates_all])
 df=df[df.epoch<5]
+df=df.groupby(['animal','epoch']).mean(numeric_only=True)
+df=df.reset_index()
+df=df[(df.animal!='e189')]
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
-
-fig,ax=plt.subplots(figsize=(4,5))
-sns.boxplot(x='epoch', y='spatial_tuned_per_ep_all', data=df, hue='epoch', palette=colors)
+s=10
+a=.7
+fig,ax=plt.subplots(figsize=(3.3,4))
+sns.barplot(x='epoch', y='spatial_tuned_per_ep_all', data=df, hue='epoch', palette=colors,fill=False,errorbar='se',legend=False)
+# sns.stripplot(x='epoch', y='spatial_tuned_per_ep_all', data=df, hue='epoch', palette=colors,legend=False,s=s,alpha=a)
 # sns.stripplot(x='epoch', y='spatial_tuned_per_ep_all', data=df)
+# df=
+grouped = df.groupby('animal')
+
+for name, group in grouped:
+    group_sorted = group.sort_values('epoch')
+    ax.plot(
+        group_sorted['epoch'] - 1,  # bar/strip x-positions start at 0
+        group_sorted['spatial_tuned_per_ep_all'],
+        color='gray', alpha=0.5, linewidth=1.5
+    )
+
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('% of Spatially tuned cells')
+ax.set_ylabel('Spatially tuned cells %')
 ax.set_xlabel('Epoch #')
-ax.set_ylim([0,100])
+ax.set_ylim([0,80])
 plt.savefig(os.path.join(savedst, 'p_spatially_tuned_cells.svg'),bbox_inches='tight')
 
 #%%from scipy.stats import kruskal

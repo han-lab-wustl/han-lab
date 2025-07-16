@@ -16,7 +16,7 @@ mpl.rcParams["ytick.major.size"] = 10
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, make_tuning_curves
+from placecell import make_tuning_curves_by_trialtype_w_darktime, intersect_arrays, make_tuning_curves
 from rewardcell import get_radian_position_first_lick_after_rew,create_mask_from_coordinates,pairwise_distances,get_rewzones,\
     normalize_values
 from projects.opto.behavior.behavior import get_success_failure_trials
@@ -43,9 +43,8 @@ for ii in range(len(conddf)):
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
         print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
-            'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-            'stat', 'licks', 'putative_pcs'])
+        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc',  'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+            'stat', 'licks', 'putative_pcs', 'timedFF'])
         putative_pcs=np.vstack(fall['putative_pcs'][0])
         VR = fall['VR'][0][0][()]
         scalingf = VR['scalingFACTOR'][0][0]
@@ -60,6 +59,7 @@ for ii in range(len(conddf)):
         trialnum=fall['trialnum'][0]
         rewards = fall['rewards'][0]
         lick = fall['licks'][0]
+        time = fall['timedFF'][0]
         if animal=='e145':
             ybinned=ybinned[:-1]
             forwardvel=forwardvel[:-1]
@@ -71,8 +71,7 @@ for ii in range(len(conddf)):
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
         lasttr=8 # last trials
         bins=90
-        rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,
-                                    trialnum, track_length) # get radian coordinates
+        rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates
         track_length_rad = track_length*(2*np.pi/track_length)
         bin_size=track_length_rad/bins 
         rz = get_rewzones(rewlocs,1/scalingf)       
@@ -95,19 +94,21 @@ for ii in range(len(conddf)):
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
         Fc3 = fall_fc3['Fc3']
         dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
+        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+        #if pc in atleast 1
+        # looser restrictions
+        pc_bool = np.sum(putative_pcs,axis=0)>0
+        Fc3 = Fc3[:,pc_bool] # only keep cells with skew than 2
         # get tuning curves trial by trial and get calculate radians
-        if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-            com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
-        else:# remake tuning curves relative to reward        
-            # 9/19/24
-            # find correct trials within each epoch!!!!
-            tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size)      
+        # find correct trials within each epoch!!!!        
+        track_length_dt = 550 # cm estimate based on 99.9% of ypos
+        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+        bins_dt=150 
+        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+        tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, ybinned_dt,raddt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+            bins=bins_dt)
         # allocentric ref
         bin_size=track_length/bins 
         tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
@@ -143,11 +144,9 @@ for ii in range(len(conddf)):
         perm=[p for ii,p in enumerate(perm) if len(com_goal[ii])>0]
         rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal[ii])>0]
         com_goal=[com for com in com_goal if len(com)>0]
-        # get goal cells across all epochs   
-        if len(com_goal)>0:
-            goal_cells = intersect_arrays(*com_goal); 
-        else:
-            goal_cells=[]
+        # get goal cells in any 2 epoch combination   
+        # goal_cells=np.unique(np.concatenate(com_goal))
+        goal_cells=intersect_arrays(*com_goal) if len(com_goal)>0 else []
         ########## PLACE
         # get cells that maintain their coms across at least 2 epochs
         place_window = 20 # cm 
@@ -156,7 +155,8 @@ for ii in range(len(conddf)):
         compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
         # get cells across all epochs that meet crit
         pcs = np.unique(np.concatenate(compc))
-        pcs_all = intersect_arrays(*compc)
+        pcs_all = pcs#intersect_arrays(*compc)
+        pcs_all=intersect_arrays(*compc)
         # get mean com for rew vs place
         pc_com_mean = np.nanmean(coms_rewrel_abs[:, pcs_all],axis=0)
         rew_com_mean = np.nanmean(coms_rewrel_abs[:, goal_cells],axis=0)
@@ -164,28 +164,15 @@ for ii in range(len(conddf)):
         coms_mean_abs.append(pc_com_mean)
 
         ######## OTHER SPATIAL TUNED CELLS
-        Fc3 = fall_fc3['Fc3']
-        dFF = fall_fc3['dFF']
-        # boolean with border cells bc thats how spatial info shuffle is done
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
-        # skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        # Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
-        # get tc again
-        tcs_correct_abs, coms_correct_ab,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
-        Fc3,trialnum,rewards,forwardvel,
-        rewsize,bin_size)
-        coms_rewrel_abs = np.array([xx-rewlocs[ii] for ii,xx in enumerate(coms_correct_abs)])
-        # get com of cell in spatial tuned ep
-        coms_spatial_tuned = []        
-        for cll in range(putative_pcs.shape[1]):
-            ep_st = np.where(putative_pcs[:,cll])[0]
-            try:
-                coms_spatial_tuned.append(coms_rewrel_abs[ep_st, cll])
-            except Exception as e:
-                print(e)
-        coms_spatial_tuned=np.concatenate(coms_spatial_tuned)
+        other_cells = [xx for xx in np.arange(Fc3.shape[1]) if xx not in pcs_all and xx not in goal_cells]
+        # across all but one ep
+        # does not matter if they are also place and rew
+        pc_bool = np.where(np.sum(putative_pcs,axis=0)>0)[0]
+        other_cells=np.where(np.sum(putative_pcs[:,pc_bool],axis=0)==putative_pcs.shape[0]-1)[0]
+        # other_cells = [xx for xx in sp if xx not in pcs_all and xx not in goal_cells]
+
         # add spatially tuned cells
+        coms_spatial_tuned=np.nanmean(coms_rewrel_abs[:, other_cells],axis=0)
         com_spatial_tuned_all.append(coms_spatial_tuned)
 
 
@@ -196,7 +183,7 @@ fig,axes = plt.subplots(ncols = 4,nrows = 1,figsize=(18,4),sharex=True,sharey=Tr
 ax=axes[0]
 vmin=0
 vmax = .017
-binnum=15
+binnum=30
 ax.hist(np.concatenate(com_spatial_tuned_all),density=True,color='slategray',bins=binnum)
 ax.set_ylabel('Density of cells')
 ax.set_title(f'All spatially tuned\n n={len(np.concatenate(com_spatial_tuned_all))} cells')
@@ -230,6 +217,6 @@ ax.legend()
 ax.spines[['top','right']].set_visible(False)
 ax.axvline(0,color='k',linestyle='--',linewidth=2)
 savedst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures"
-plt.savefig(os.path.join(savedst, 'com_hist_rew_place.svg'),bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'com_hist_rew_place_ALL_ep.svg'),bbox_inches='tight')
 
 #%%

@@ -131,7 +131,7 @@ df2['num_epochs'] = [2]*len(df2)
 df=pd.concat([df,df2])
 df=df[df.animals!='e189']
 # number of epochs vs. rates    
-fig,ax = plt.subplots(figsize=(3,5))
+fig,ax = plt.subplots(figsize=(3,4))
 df_plt=df[df.num_epochs<5]
 # av across mice
 df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
@@ -165,7 +165,7 @@ print(summary)
 
 plt.savefig(os.path.join(savedst, 'p_correct_trials.svg'))
 
-
+#%%
 fig,ax = plt.subplots(figsize=(3,5))
 sns.stripplot(x='num_epochs', y='lick_selectivity',color='k',
         data=df_plt,alpha=0.7,
