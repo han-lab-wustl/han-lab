@@ -25,7 +25,7 @@ import numpy as np
 from joblib import Parallel, delayed
 from scipy.ndimage import gaussian_filter1d
 
-# savepickle=r'Z:\condition_df\circ_shuffle_vip_opto.p'
+savepickle=r'Z:\condition_df\circ_shuffle_vip_opto.p'
 # with open(savepickle, "rb") as fp: #unpickle
 #    datadct = pickle.load(fp)
 # initialize var
@@ -331,7 +331,7 @@ for ii in range(len(conddf)):
         datadct[f'{animal}_{day:03d}'] = [spatially_tuned_not_rew_place_p,pc_p,results_pre, results_post,spatially_tuned,all_results]
 #%%
 with open(savepickle, "wb") as fp: 
-   pickle.dump(datadct, fp) 
+    pickle.dump(datadct, fp) 
 #%%
 # per cell prop comparison
 spatially_tuned_not_rew_place=[v[0] for k,v in datadct.items()]
@@ -357,7 +357,7 @@ df['proportions']=df['proportions']*100
 # keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
 # keep &= ~((df.animals=='z16') | (df.animals=='e200'))
 # keep &= ~((df.animals=='e218')&(df.days>44))
-df = df[keep].reset_index(drop=True)
+# df = df[keep].reset_index(drop=True)
 df.to_csv(r'Z:\condition_df\dff_shuffle_results_IMPORTANT.csv')
 # Get non-opto averages to subtract
 non_opto_means = (

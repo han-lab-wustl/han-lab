@@ -131,24 +131,23 @@ df_perms['session_num'] = np.concatenate(df_perm_days)
 df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_permsav2=df_permsav2.reset_index()
-
+#%%
 # compare to shuffle
 # df_permsav2=df_permsav2.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189')]
+df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189') & (df_plt2.animals!='e139') & (df_plt2.animals!='z16')]
 df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
 df_plt2 = df_plt2[df_plt2.animals!='e139']
-
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(ncols=2,figsize=(7,5))
 ax=axes[0]
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
+#         data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -160,12 +159,13 @@ sns.barplot(x='num_epochs', y='goal_cell_prop',
 sns.barplot(data=df_plt2, # correct shift
         x='num_epochs', y='goal_cell_prop_shuffle',color='grey', 
         label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
+ax.set_xlabel('# of epochs')
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
 ax.set_ylabel('Far post-reward cell %')
 eps = [2,3,4]
-y = 28
+y = 12
 pshift = 1
 fs=36
 pvalues=[]
@@ -176,7 +176,7 @@ for ii,ep in enumerate(eps):
         pvalues.append(pval)
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
-reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='fdr_bh')
 
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
@@ -193,17 +193,16 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
 ax.set_title('Far post-reward cells',pad=30)
-ax.set_xlabel('')
-ax.set_ylim([0,30])
+ax.set_ylim([0,20])
 ax=axes[1]
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
+#         data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
@@ -213,13 +212,27 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
+y=9
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('')
+ax.set_xlabel('# of epochs')
+ax.set_ylabel('Real-shuffle %')
 ax.set_title('Far post-reward cell %-shuffle',pad=30)
-ax.set_ylim([-1,14])
+ax.set_ylim([-1,10])
+plt.tight_layout()
+df_plt2['cell_type']=['Far post-reward']*len(df_plt2)
+df_plt2.to_csv(r'Z:\saved_datasets\far_post_counts.csv',index=None)
 
 plt.savefig(os.path.join(savedst, 'post_farreward_dark_time_cell_prop-shuffle_per_an.svg'), 
         bbox_inches='tight')
@@ -233,6 +246,7 @@ from scipy.optimize import curve_fit
 def exponential_decay(t, A, tau):
     return A * np.exp(-t / tau)
 tau_all = []; y_fit_all = []
+
 # df_plt2=df_plt2.reset_index()
 for an in df_plt2.animals.unique():
         # Initial guesses for the optimization
@@ -253,6 +267,7 @@ fig,ax = plt.subplots(figsize=(3,5))
 sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
         data=df_plt2,s=10,alpha=0.7)
 plt.plot(np.array(y_fit_all).T,color='grey')
+df_plt2['cell_type']=['Far post-reward']*len(df_plt2)
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
@@ -262,17 +277,17 @@ ax.set_ylabel('Reward cell %')
 #         bbox_inches='tight')
 
 #%%
+# an order = array(['e145', 'e186', 'e190', 'e201', 'e216', 'e218', 'z16', 'z8', 'z9'],
+
 # compare to persistent cells
-tau_all_postrew = [2.698197384420134,
- 2.5974534632101327,
- 145687601.49233776,
- 4.482881342687014,
- 3.5076596832575033,
- 1.7445113074552658,
- 1.9689062668783275,
- 3.604632347724085,
- 1.4094815613603535,
- 10.282389548100406]
+tau_all_postrew = [3.0489636175501236,
+ 4.9695907, # mod
+ 3.8341630353568457,
+ 3.633185663248898,
+ 1.887423357676723,
+ 2.024701367032217,
+ 1.394899512202025,
+ 8.285634427250967]
 
 tau_all_prerew = [2.603930689454063,
  2.0352245377108544,
@@ -285,41 +300,42 @@ tau_all_prerew = [2.603930689454063,
  1.7114437369218594,
  2.7605152082963307]
 
-tau_far_prerew = [1.9315038039770107,
- 0.5945420766038523,
- 1.298598071771899,
- 0.7622143467727189,
- 0.694001838738672,
- 1.0911256261609898,
- 0.7125677083403448,
- 1.356804131299727,
- 0.7287799232189978,
- 0.9571086134149618]
-
-df = pd.DataFrame()
-df['tau'] = np.concatenate([tau_far_prerew,tau_all,tau_all_postrew,tau_all_prerew])
-df['cell_type'] =np.concatenate([['Far pre']*len(tau_far_prerew),
-                                ['Far post']*len(tau_all),
-                                ['Post']*len(tau_all_postrew),
-                                ['Pre']*len(tau_all_prerew)])
+tau_far_prerew = [0.6836690821310514,
+ 1.0352307170375459,
+ 0.7997558933924453,
+ 0.6322625138957906,
+ 1.0936686907074666,
+ 0.7142383247936395,
+ 0.7429834561831965,
+ 0.9829182265060615]
+animals=['e145', 'e186', 'e190', 'e201', 'e216', 'e218', 'z16', 'z8', 'z9']
+df = pd.DataFrame({
+    'animal': animals * 4,
+    'tau': np.concatenate([tau_far_prerew, tau_all, tau_all_postrew, tau_all_prerew]),
+    'cell_type': (['Far pre']*len(animals) +
+                  ['Far post']*len(animals) +
+                  ['Post']*len(animals) +
+                  ['Pre']*len(animals))
+})
 order = ['Pre', 'Post', 'Far pre','Far post']
 # number of epochs vs. reward cell prop incl combinations    
 # make sure outlier numbers aren't there?
 df=df[(df.tau<10) & (df.tau>0)]
-fig,ax = plt.subplots(figsize=(3.5,5))
-# av across mice
-sns.stripplot(x='cell_type', y='tau',color='k',
-        data=df,s=10,alpha=0.7,
-        order=order,
-)
-sns.barplot(x='cell_type', y='tau',
-        data=df, fill=False,ax=ax, color='k', errorbar='se',
-        order=order)
-ax.spines[['top','right']].set_visible(False)
-ax.legend().set_visible(False)
-ax.set_ylabel(f'Decay over epochs ($\\tau$)')
+# Plot lines for each animal
+for animal, group in df.groupby('animal'):
+    if group['cell_type'].nunique() == len(order):
+        sorted_group = group.set_index('cell_type').loc[order].reset_index()
+        ax.plot(order, sorted_group['tau'], color='gray', alpha=0.5, lw=1)
+
+# Overlay barplot (mean ± SEM)
+sns.barplot(x='cell_type', y='tau', data=df, order=order,
+            errorbar='se', fill=False, edgecolor='black', linewidth=2, ax=ax)
+
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel(r'Decay over epochs ($\tau$)')
 ax.set_xlabel('')
 ax.tick_params(axis='x', rotation=45)
+
 
 import scipy.stats as stats
 from scikit_posthocs import posthoc_dunn
@@ -339,8 +355,8 @@ for group1, group2 in comparisons:
     p_values.append(p)
 
 # Apply Bonferroni correction
-rej, pvals_corrected, _, _ = multipletests(p_values, method='bonferroni')
-adjusted_p_values = adjusted[1]
+rej, pvals_corrected, _, _ = multipletests(p_values, method='fdr_bh')
+adjusted_p_values = pvals_corrected[1]
 # Define y-position for annotations
 
 y_max = df['tau'].max()

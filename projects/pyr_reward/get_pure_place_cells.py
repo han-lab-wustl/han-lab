@@ -73,6 +73,10 @@ for ii in range(len(conddf)):
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf
         eps = np.append(eps, len(changeRewLoc))        
+        diff =np.insert(np.diff(eps), 0, 1e15)
+        eps=eps[diff>2000]
+        epochs = len(eps)-1
+        # if epochs>3:   
         lasttr=8 # last trials
         bins=90
         fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
@@ -269,7 +273,7 @@ df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2['place_cell_prop']=df_plt2['place_cell_prop']*100
 df_plt2['place_cell_prop_shuffle']=df_plt2['place_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
-df_plt2=df_plt2[df_plt2.animals!='e189']
+df_plt2=df_plt2[(df_plt2.animals!='e189') & (df_plt2.animals!='e139')]
 # number of epochs vs. reward cell prop incl combinations    
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(ncols=2,figsize=(6.5,4))
@@ -279,7 +283,7 @@ ax=axes[0]
         # data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='place_cell_prop',
         data=df_plt2,
-        fill=False,ax=ax, color='k', errorbar='se')
+        fill=False,ax=ax, color='indigo', errorbar='se')
 # ax = sns.lineplot(data=df_plt2, # correct shift
 #         x=df_plt2.index.get_level_values('num_epochs').astype(int)-2, 
 #         y='goal_cell_prop_shuffle',color='grey', 

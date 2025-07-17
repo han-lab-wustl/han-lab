@@ -70,9 +70,7 @@ def normalize_rows_0_to_1(arr):
     row_max = np.nanmax(arr, axis=1, keepdims=True)
     normed = arr / row_max
     return normed
-
 plt.rc('font', size=20)
-
 # --- Settings ---
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
@@ -168,7 +166,7 @@ for cll, cell_type in enumerate(cell_types):
         tc_fail_valid = tc[valid_rows,:]
         peak_bins = np.argmax(tc_fail_valid, axis=1)
         sort_idx = np.argsort(peak_bins)
-        if len(tc_fail_norm)>0:
+        if len(tc_fail_valid)>0:
             im2 = ax.imshow(tc_fail_valid[sort_idx], aspect='auto', cmap='viridis')
             ax.axvline(bins // 2, color='w', linestyle='--')
             ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
@@ -220,8 +218,8 @@ for cll, cell_type in enumerate(cell_types):
         # Hide empty axis
         axes[5].axis('off')
         fig.suptitle(cell_type)
-        # plt.close(fig)        
-        plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_correctvfail.svg'),bbox_inches='tight')
+        plt.close(fig)        
+        # plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_correctvfail.svg'),bbox_inches='tight')
     dff_correct_per_type.append(dff_correct_per_an)
     dff_fail_per_type.append(dff_fail_per_an)
     cs_per_type.append(cs_per_an)
@@ -247,29 +245,34 @@ for cll,celltype in enumerate(cell_types):
 bigdf = pd.concat(dfsall)
 bigdf=bigdf.groupby(['animal', 'trial_type', 'cell_type']).mean(numeric_only=True)
 bigdf=bigdf.reset_index()
+bigdf2=pd.read_csv(r'Z:\saved_datasets\performance_place.csv')
 bigdf=bigdf[(bigdf.animal!='e189') & (bigdf.animal!='z16') & (bigdf.animal!='e145')]
-s=12
-cell_order = cell_types
-fig,ax = plt.subplots(figsize=(6,4))
-sns.stripplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
-        dodge=True,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
-        s=s,alpha=0.7,    order=cell_order)
+bigdf=pd.concat([bigdf,bigdf2])
+bigdf=bigdf.drop(columns=['Unnamed: 0'])
+s=10
+bigdf['trial_type'] = bigdf['trial_type'].str.capitalize()
+
+cell_order = ['pre', 'post', 'far_pre', 'far_post', 'place']
+fig,ax = plt.subplots(figsize=(7.5,4))
+# sns.stripplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
+#         dodge=True,palette={'Correct':'seagreen', 'Incorrect': 'firebrick'},
+#         s=s,alpha=0.7,order=cell_order)
 sns.barplot(x='cell_type', y='mean_dff', data=bigdf,hue='trial_type',
-        fill=False,palette={'correct':'seagreen', 'incorrect': 'firebrick'},
-            order=cell_order,legend=False)
+        fill=False,palette={'Correct':'seagreen', 'Incorrect': 'firebrick'},
+            order=cell_order,errorbar='se')
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Mean $\Delta F/F$')
-ax.set_xlabel('Reward cell type')
-ax.legend_.remove()
-ax.set_xticklabels(['Pre', 'Post', 'Far pre', 'Far post'])
+ax.set_xlabel('Cell type')
+
+ax.set_xticklabels(['Pre', 'Post', 'Far pre', 'Far post', 'Place'])
 # Use the last axis to get handles/labels
 handles, labels = ax.get_legend_handles_labels()
 # Create a single shared legend with title "Trial type"
 ax.legend(
     handles, labels,
     loc='upper left',
-    bbox_to_anchor=(1.02, 1),
+    bbox_to_anchor=(.7, 1),
     borderaxespad=0.,
     title='Trial type'
 )
@@ -314,8 +317,8 @@ with pd.option_context('display.precision', 10):
 posthoc = []
 for ct in cell_order:
     sub = bigdf[bigdf['cell_type']==ct]
-    cor = sub[sub['trial_type']=='correct']['mean_dff']
-    inc = sub[sub['trial_type']=='incorrect']['mean_dff']
+    cor = sub[sub['trial_type']=='Correct']['mean_dff']
+    inc = sub[sub['trial_type']=='Incorrect']['mean_dff']
     t, p_unc = scipy.stats.wilcoxon(cor, inc)
     posthoc.append({
         'cell_type': ct,

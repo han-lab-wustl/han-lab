@@ -248,32 +248,17 @@ realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
-realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
+# realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
 realdf=realdf[~((realdf.animal=='z14')&((realdf.day<33)))]
-realdf=realdf[~((realdf.animal=='z16')&((realdf.day>15)))]
+realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
 realdf=realdf[~((realdf.animal=='z15')&((realdf.day<8)|(realdf.day.isin([15]))))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,29,30,26]))))]
-realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([57]))))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([47,55,57]))))]
 realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
 realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
 # realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
-#%%
-pl = {False: "slategray", True: 'darkorange'}
-dfagg = realdf.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
-cllty = ['Pre-reward, early', 'Post-reward, early', 'Pre-reward, late', 'Post-reward, late']
-a=0.7;s=12
-fig,axes=plt.subplots(ncols=4,figsize=(16,5),sharey=True,sharex=True,)
-for cl,cll in enumerate(dfagg.cell_type.unique()):
-    ax=axes[cl]
-    sns.barplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],fill=False,ax=ax,palette=pl,legend=False)
-    sns.stripplot(x='condition',y='goal_cell_prop',hue='opto',data=dfagg[dfagg.cell_type==cll],s=10,alpha=a,ax=ax,palette=pl,legend=False,dodge=True)
-    ax.set_title(cllty[cl])
-    ax.set_xlabel('')
-    ax.set_ylabel('Reward cell %')
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
-plt.savefig(os.path.join(savedst, 'ledoff_v_ledon_reward_cellp_opto.svg'), bbox_inches='tight')
+
 #%%
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
@@ -426,6 +411,83 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_reward_cellp_opto.svg'), bbox_inches='tight')
 #%%
+# average all trials
+
+# Map old cell types to new ones
+cell_type_map = {
+    'pre_late': 'all',
+    'pre_early': 'all',
+    'post_late': 'all',
+    'post_early': 'all'
+}
+# Copy and remap
+realdf_avg = realdf.copy()
+realdf_avg['cell_type'] = realdf_avg['cell_type'].map(cell_type_map)
+
+# Average across pre_early/late and post_early/late per animal/condition/opto
+dfagg_avg = realdf_avg.groupby(['animal', 'opto', 'cell_type', 'condition']).mean(numeric_only=True).reset_index()
+pivoted_avg = dfagg_avg.pivot_table(
+    index=['animal', 'cell_type', 'condition'],
+    columns='opto',
+    values='goal_cell_prop'
+).reset_index()
+
+pivoted_avg.columns.name = None
+pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
+pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on'] - pivoted_avg['goal_cell_prop_off']
+pivoted_avg['difference']=pivoted_avg['difference']*100
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+a = 0.7
+s = 12
+# pivoted_avg=pivoted_avg[pivoted_avg.animal!='e201']
+lbls = ['All trials']
+fig, ax = plt.subplots(figsize=(4,6), sharey=True)
+for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
+    sns.barplot(
+        x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        ax=ax, palette=pl, errorbar='se', fill=False
+    )
+    sns.stripplot(
+        x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
+        ax=ax, palette=pl, alpha=a, s=s
+    )
+    ax.set_title(lbls[cl])
+    ax.set_ylabel('$\\Delta$ Reward cell %\n(LEDon-LEDoff)')
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
+    ax.set_xlabel('')
+    # --- Stats + annotation ---
+    data = pivoted_avg[pivoted_avg['cell_type'] == cll]
+
+    conds = data['condition'].unique()
+    pairs = list(combinations(conds, 2))[:2]
+    if cl==0:
+        y_max = data['difference'].quantile(.85)
+        y_step = 0.4 * abs(y_max)
+
+    for i, (cond1, cond2) in enumerate(pairs):
+        vals1 = data[data['condition'] == cond1]['difference']
+        vals2 = data[data['condition'] == cond2]['difference']
+        stat, pval = scipy.stats.ranksums(vals1, vals2)
+        # Annotation text
+        if pval < 0.001:
+            text = '***'
+        elif pval < 0.01:
+            text = '**'
+        elif pval < 0.05:
+            text = '*'
+        else:
+            text = f""
+
+        # Get x-locations
+        x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+        y = y_max + y_step * (i + 1)
+        ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+        ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
+        ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'all_reward_cellp_opto.svg'), bbox_inches='tight')
+#%%
 # correlate with behavior
 
 realdf= pd.DataFrame()
@@ -442,11 +504,13 @@ realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
-realdf=realdf[~((realdf.animal=='z15')&(realdf.day<8))]
-realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,26]))))]
-realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([57]))))]
+realdf=realdf[~((realdf.animal=='z14')&((realdf.day<33)))]
+realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
+realdf=realdf[~((realdf.animal=='z15')&((realdf.day<8)|(realdf.day.isin([15]))))]
+realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,29,30,26]))))]
+realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([47,55,57]))))]
 realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
-realdf=realdf[~((realdf.animal=='e218')&(realdf.day==55))]
+realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
 cell_type_map = {
     'pre_late': 'all',
     'pre_early': 'all',

@@ -115,61 +115,35 @@ for ep in eps:
     
 # include all comparisons 
 df_perms = pd.DataFrame()
-# epcomp= [str(tuple(xx)) for xx in np.concatenate(epoch_perm)]
 goal_cell_perm = [xx[0] for xx in goal_cell_prop]
 goal_cell_perm_shuf = [xx[0][~np.isnan(xx[0])] for xx in goal_cell_null]
-# df_perms['epoch_comparison']=
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-# df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)[:len(df_perms)]
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
 df_perms['session_num'] = np.concatenate(df_perm_days)
-
-df_perms = df_perms[df_perms.animals!='e189']
-# skipped fro now because it wasn't working
-# df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
-
-# fig,ax = plt.subplots(figsize=(7,5))
-# sns.stripplot(x='epoch_comparison', y='goal_cell_prop',
-#         hue='animals',data=df_permsav,
-#         s=8,ax=ax)
-# sns.barplot(x='epoch_comparison', y='goal_cell_prop',
-#         data=df_permsav,
-#         fill=False,ax=ax, color='k', errorbar='se')
-# ax = sns.lineplot(data=df_permsav, # correct shift
-#         x='epoch_comparison', y='goal_cell_prop_shuffle',
-#         color='grey', label='shuffle')
-
-# ax.spines[['top','right']].set_visible(False)
-# ax.legend(bbox_to_anchor=(1.01, 1.05))
-# #%%
-# eps = df_permsav.index.get_level_values("epoch_comparison").unique()
-# for ep in eps:
-#     # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
-#     rewprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop'].values
-#     shufprop = df_permsav.loc[(df_permsav.index.get_level_values('epoch_comparison')==ep), 'goal_cell_prop_shuffle'].values
-#     t,pval = scipy.stats.ranksums(rewprop, shufprop)
-#     print(f'{ep} epochs, pval: {pval}')
-
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-s=10
+df_permsav2=df_permsav2.reset_index()
+df_plt=df_plt.reset_index()
+# compare to shuffl
+# df_permsav2=df_permsav2.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
+# df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
-df_plt2=df_plt2.reset_index()
-df_plt2 = df_plt2[(df_plt2.animals!='e189') & (df_plt2.animals!='e200')]
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
-# number of epochs vs. reward cell prop incl combinations    
+df_plt2=df_plt2.reset_index()
+df_plt2=df_plt2[df_plt2.num_epochs<5]
+#%%     
 fig,axes = plt.subplots(ncols=2,figsize=(7,5))
 ax=axes[0]
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,
-        s=s,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
+#         data=df_plt2,
+#         s=s,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -185,10 +159,9 @@ for i in range(len(ans)):
     errorbar=None, color='dimgray', linewidth=lw, alpha=0.5,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
-ax.set_ylabel('Pre-reward cell %')
-ax.set_xlabel('')
+ax.set_ylabel('Near pre-reward cell %')
+ax.set_xlabel('# of epochs')
 eps = [2,3,4]
-y = 28
 pshift=3
 fs=36
 pvalues = []
@@ -199,8 +172,8 @@ for ii,ep in enumerate(eps):
         pvalues.append(pval)
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
-reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
-
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='fdr_bh')
+y=12
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
         # statistical annotation        
@@ -211,15 +184,15 @@ for ii,ep in enumerate(eps):
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
-ax.set_title('Pre-reward cells',pad=30)
-ax.set_ylim([0, 30])
+ax.set_title('Near pre-reward cells',pad=30)
+ax.set_ylim([0, 22])
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
 ax=axes[1]
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
-        data=df_plt2,s=s,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
+#         data=df_plt2,s=s,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
@@ -230,12 +203,26 @@ for i in range(len(ans)):
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=lw, alpha=0.5,ax=ax)
 
+y=9
+pshift=1
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('')
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylim([-1,14])
-ax.set_title('Pre-reward cell %-shuffle',pad=30)
-
+ax.set_ylabel('Real-shuffle %')
+ax.set_xlabel('# of epochs')
+ax.set_ylim([-1,15])
+ax.set_title('Near re-reward cell %-shuffle',pad=30)
+plt.tight_layout()
+df_plt2['cell_type']=['Near Pre-reward']*len(df_plt2)
+df_plt2.to_csv(r'Z:\saved_datasets\near_pre_counts.csv',index=None)
 plt.savefig(os.path.join(savedst, 'prereward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')
 

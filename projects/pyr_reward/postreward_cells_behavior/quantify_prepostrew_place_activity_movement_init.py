@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch, \
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays, consecutive_stretch,make_tuning_curves, \
     make_velocity_tuning_curves
 from projects.opto.behavior.behavior import get_success_failure_trials
 from projects.pyr_reward.rewardcell import get_radian_position, extract_data_nearrew, perireward_binned_activity, get_rewzones
@@ -39,154 +39,180 @@ plt.close('all')
 bins=90
 dfs=[]
 for ii in range(len(conddf)):
-    day = conddf.days.values[ii]
-    animal = conddf.animals.values[ii]
-    if (animal!='e217') & (conddf.optoep.values[ii]<2):
-        if animal=='e145' or animal=='e139': pln=2 
-        else: pln=0
-        params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        print(params_pth)
-        fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF',
-                'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-                'stat', 'licks'])
-        VR = fall['VR'][0][0][()]
-        scalingf = VR['scalingFACTOR'][0][0]
-        try:
-                rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
-        except:
-                rewsize = 10
-        ybinned = fall['ybinned'][0]/scalingf
-        track_length=180/scalingf    
-        forwardvel = fall['forwardvel'][0]    
-        changeRewLoc = np.hstack(fall['changeRewLoc'])
-        trialnum=fall['trialnum'][0]
-        rewards = fall['rewards'][0]
-        licks=fall['licks'][0]
-        time=fall['timedFF'][0]
-        if animal=='e145':
-            ybinned=ybinned[:-1]
-            forwardvel=forwardvel[:-1]
-            changeRewLoc=changeRewLoc[:-1]
-            trialnum=trialnum[:-1]
-            rewards=rewards[:-1]
-            licks=licks[:-1]
-            time=time[:-1]
-        # set vars
-        eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
-        track_length_rad = track_length*(2*np.pi/track_length)
-        bin_size=track_length_rad/bins 
-        rz = get_rewzones(rewlocs,1/scalingf)       
-        rad = get_radian_position_first_lick_after_rew(eps, ybinned, licks, rewards, rewsize,rewlocs,
-                    trialnum, track_length) # get radian coordinates
-        
-        # added to get anatomical info
-        # takes time
-        fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
-        Fc3 = fall_fc3['Fc3']
-        dFF = fall_fc3['dFF']
-        Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
-        dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-        skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-        dFF = dFF[:, skew>2]
-        # tc w/ dark time
-        track_length_dt = 550 # cm estimate based on 99.9% of ypos
-        track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
-        bins_dt=150 
-        bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
-        tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
-            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
-            bins=bins_dt)
+   day = conddf.days.values[ii]
+   animal = conddf.animals.values[ii]
+   if (animal!='e217') & (conddf.optoep.values[ii]<2):
+      if animal=='e145' or animal=='e139': pln=2 
+      else: pln=0
+      params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+      print(params_pth)
+      fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'timedFF',
+               'pyr_tc_s2p_cellind', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+               'stat', 'licks'])
+      VR = fall['VR'][0][0][()]
+      scalingf = VR['scalingFACTOR'][0][0]
+      try:
+               rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+      except:
+               rewsize = 10
+      ybinned = fall['ybinned'][0]/scalingf
+      track_length=180/scalingf    
+      forwardvel = fall['forwardvel'][0]    
+      changeRewLoc = np.hstack(fall['changeRewLoc'])
+      trialnum=fall['trialnum'][0]
+      rewards = fall['rewards'][0]
+      licks=fall['licks'][0]
+      time=fall['timedFF'][0]
+      if animal=='e145':
+         ybinned=ybinned[:-1]
+         forwardvel=forwardvel[:-1]
+         changeRewLoc=changeRewLoc[:-1]
+         trialnum=trialnum[:-1]
+         rewards=rewards[:-1]
+         licks=licks[:-1]
+         time=time[:-1]
+      # set vars
+      eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+      diff =np.insert(np.diff(eps), 0, 1e15)
+      eps=eps[diff>2000]
+      track_length_rad = track_length*(2*np.pi/track_length)
+      bin_size=track_length_rad/bins 
+      rz = get_rewzones(rewlocs,1/scalingf)       
+      
+      # takes time
+      fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
+      Fc3 = fall_fc3['Fc3']
+      dFF = fall_fc3['dFF']
+      Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+      dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+      skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+      ######### place
+      # looser restrictions
+      # pc_bool = np.sum(pcs,axis=0)>=1
+      Fc3 = Fc3[:,((skew>2))] # only keep cells with skew greateer than 2
+      dFF = dFF[:,((skew>2))]
+      # if no cells pass these crit
+      if Fc3.shape[1]==0:
+         Fc3 = fall_fc3['Fc3']
+         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
+         pc_bool = np.sum(pcs,axis=0)>=1
+         Fc3 = Fc3[:,((skew>1.2))]
+         dFF = dFF[:,((skew>1.2))]
+      bin_size=3 # cm
+      # get abs dist tuning 
+      tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,
+      Fc3,trialnum,rewards,forwardvel,
+      rewsize,bin_size)
+      # get cells that maintain their coms across at least 2 epochs
+      place_window = 20 # cm converted to rad                
+      perm = list(combinations(range(len(coms_correct_abs)), 2))     
+      com_per_ep = np.array([(coms_correct_abs[perm[jj][0]]-coms_correct_abs[perm[jj][1]]) for jj in range(len(perm))])        
+      compc = [np.where((comr<place_window) & (comr>-place_window))[0] for comr in com_per_ep]
+      # get cells across all epochs that meet crit
+      pcs_all = intersect_arrays(*compc)
+      coms_correct_abs_rewrel=np.array([com-rewlocs[kk] for kk, com in enumerate(coms_correct_abs)])
+      ######### place END
+      ######### rew
+      # tc w/ dark time
+      track_length_dt = 550 # cm estimate based on 99.9% of ypos
+      track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
+      bins_dt=150 
+      bin_size_dt=track_length_rad_dt/bins_dt # typically 3 cm binswith ~ 475 track length
+      tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
+         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+         bins=bins_dt)
 
-        track_length=270
-        goal_window = goal_window_cm*(2*np.pi/track_length) 
-        # change to relative value 
-        coms_rewrel = np.array([com-np.pi for com in coms_correct])
-        # only get cells near reward        
-        perm = list(combinations(range(len(coms_correct)), 2))     
-        com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])                
-        # tuning curves that are close to each other across epochs
-        com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-        # in addition, com near but after goal
-        # do same quantification for both pre and post rew cells 
-        cell_types = ['pre', 'post', 'place']
-        velocity = fall['forwardvel'][0]
-        veldf = pd.DataFrame({'velocity': velocity})
-        velocity = np.hstack(veldf.rolling(5).mean().values)
-        # velocity - ndarray: velocity of the animal
-        # thres - float: Threshold speed in cm/s
-        # Fs - int: Number of frames minimum to be considered stopped
-        # ftol - int: Frame tolerance for merging stop periods
-        moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
-        pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
-        nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
-        rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, 
-                    pre_win_framesALL, post_win_framesALL,\
-                velocity, (rewards==1).astype(int), licks, 
-                max_reward_stop=31.25*5)    
-        # get different stops
-        nonrew_stop_without_lick_per_plane = np.zeros_like(changeRewLoc)
-        nonrew_stop_without_lick_per_plane[nonrew_stop_without_lick.astype(int)] = 1
-        nonrew_stop_with_lick_per_plane = np.zeros_like(changeRewLoc)
-        nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
-        movement_starts=mov_success_tmpts.astype(int)
-        rew_per_plane = np.zeros_like(changeRewLoc)
-        rew_per_plane[rew_stop_with_lick.astype(int)] = 1
-        move_start = np.zeros_like(changeRewLoc)
-        move_start[movement_starts.astype(int)] = 1
-        range_val=8;binsize=0.1
-        # per cell
-        celltydf = []
-        bound= np.pi/4
-        for cell_type in cell_types:
-            if cell_type=='post':
-                com_goal_subtype = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-                    xx], axis=0)<=bound) & (np.nanmedian(coms_rewrel[:,
-                    xx], axis=0)>0))] for com in com_goal if len(com)>0]
-            elif cell_type=='pre': # pre
-                com_goal_subtype = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-                    xx], axis=0)>=-bound) & (np.nanmedian(coms_rewrel[:,
-                    xx], axis=0)<0))] for com in com_goal if len(com)>0]
-            # get goal cells across all epochs        
-            goal_cells = intersect_arrays(*com_goal_subtype) if len(com_goal_subtype)>0 else []
-            goal_cell_iind = goal_cells
+      track_length=270
+      goal_window = goal_window_cm*(2*np.pi/track_length) 
+      # change to relative value 
+      coms_rewrel = np.array([com-np.pi for com in coms_correct])
+      # only get cells near reward        
+      perm = list(combinations(range(len(coms_correct)), 2))     
+      com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])                
+      # tuning curves that are close to each other across epochs
+      com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+      # in addition, com near but after goal
+      # do same quantification for both pre and post rew cells 
+      cell_types = ['pre', 'post', 'place']
+      velocity = fall['forwardvel'][0]
+      veldf = pd.DataFrame({'velocity': velocity})
+      velocity = np.hstack(veldf.rolling(5).mean().values)
+      # velocity - ndarray: velocity of the animal
+      # thres - float: Threshold speed in cm/s
+      # Fs - int: Number of frames minimum to be considered stopped
+      # ftol - int: Frame tolerance for merging stop periods
+      moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
+      pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
+      nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, \
+      rew_stop_with_lick,mov_success_tmpts=get_stops_licks(moving_middle, stop, 
+                  pre_win_framesALL, post_win_framesALL,\
+               velocity, (rewards==1).astype(int), licks, 
+               max_reward_stop=31.25*5)    
+      # get different stops
+      nonrew_stop_without_lick_per_plane = np.zeros_like(changeRewLoc)
+      nonrew_stop_without_lick_per_plane[nonrew_stop_without_lick.astype(int)] = 1
+      nonrew_stop_with_lick_per_plane = np.zeros_like(changeRewLoc)
+      nonrew_stop_with_lick_per_plane[nonrew_stop_with_lick.astype(int)] = 1
+      movement_starts=mov_success_tmpts.astype(int)
+      rew_per_plane = np.zeros_like(changeRewLoc)
+      rew_per_plane[rew_stop_with_lick.astype(int)] = 1
+      move_start = np.zeros_like(changeRewLoc)
+      move_start[movement_starts.astype(int)] = 1
+      range_val=8;binsize=0.1
+      # per cell
+      celltydf = []
+      bound= np.pi/4
+      for cell_type in cell_types:
+         if cell_type=='post':
+            com_goal_subtype = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+               xx], axis=0)<=bound) & (np.nanmedian(coms_rewrel[:,
+               xx], axis=0)>0))] for com in com_goal if len(com)>0]
+         elif cell_type=='pre': # pre
+            com_goal_subtype = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
+               xx], axis=0)>=-bound) & (np.nanmedian(coms_rewrel[:,
+               xx], axis=0)<0))] for com in com_goal if len(com)>0]
+         elif cell_type=='place':
+            # post place
+            com_goal_subtype = [[xx for xx in com if np.nanmedian(coms_correct_abs_rewrel,axis=0)[xx]>0] for com in compc if len(com)>0]
+            
+         # get goal cells across all epochs        
+         goal_cells = intersect_arrays(*com_goal_subtype) if len(com_goal_subtype)>0 else []
+         goal_cell_iind = goal_cells
+         if cell_type!='place':
             tc = tcs_correct
-            # instead of latencies quantify dff
-            gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
-            # get latencies based on average of trials
-            for gc in goal_cell_iind:
-                # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
-                #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-                # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
-                #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-                _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
-                    time, trialnum, range_val,binsize)
-                if np.nanmax(meanrew)>.5: # only get highly active cells?
-                    _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
-                    time, trialnum, range_val,binsize)
-                    # quantify dff
-                    transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(0/binsize):int(range_val/binsize)+int(2/binsize)])
-                    gc_latencies_rew.append(transient_around_rew)
-                    transient_after_rew = np.nanmean(meanrstops[int(range_val/binsize)-int(1/binsize):int(range_val/binsize)+int(1/binsize)])
-                    gc_latencies_mov.append(transient_after_rew)
-                    cellid.append(gc)
-
-                # fig,ax=plt.subplots()
-                # ax.scatter(range(len(latencies_to_movement)),latencies_to_movement,color='k')
-                # ax2 = ax.twinx()
-                # ax2.scatter(range(len(latencies_to_rewards)),latencies_to_rewards,color='orchid')
-            # concat by cell
-            df=pd.DataFrame()
-            df['dff']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
-            df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
-                            ['Movement Start']*len(gc_latencies_mov)])
-            df['animal']=[animal]*len(df)
-            df['day']=[day]*len(df)
-            df['cellid']=np.concatenate([cellid]*2)
-            df['cell_type'] = [cell_type]*len(df)
-            print(cell_type, len(df))
-            celltydf.append(df)
-        dfs.append(pd.concat(celltydf))
+         else: 
+            tc = tcs_correct_abs
+         # instead of latencies quantify dff
+         gc_latencies_mov=[];gc_latencies_rew=[];cellid=[]
+         # get latencies based on average of trials
+         for gc in goal_cell_iind:
+               # _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
+               #         fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+               # _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
+               #     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+               _, meanrew, __, rewall = perireward_binned_activity(dFF[:,gc], rewards==1, 
+                  time, trialnum, range_val,binsize)
+               if np.nanmax(meanrew)>.5: # only get highly active cells?
+                  _, meanrstops, __, rewrstops = perireward_binned_activity(dFF[:,gc], move_start, 
+                  time, trialnum, range_val,binsize)
+                  # quantify dff
+                  transient_around_rew = np.nanmean(meanrew[int(range_val/binsize)-int(0/binsize):int(range_val/binsize)+int(2/binsize)])
+                  gc_latencies_rew.append(transient_around_rew)
+                  transient_after_rew = np.nanmean(meanrstops[int(range_val/binsize)-int(1/binsize):int(range_val/binsize)+int(1/binsize)])
+                  gc_latencies_mov.append(transient_after_rew)
+                  cellid.append(gc)
+         # concat by cell
+         df=pd.DataFrame()
+         df['dff']=np.concatenate([gc_latencies_rew,gc_latencies_mov])
+         df['behavior']=np.concatenate([['Reward']*len(gc_latencies_rew),
+                           ['Movement Start']*len(gc_latencies_mov)])
+         df['animal']=[animal]*len(df)
+         df['day']=[day]*len(df)
+         df['cellid']=np.concatenate([cellid]*2)
+         df['cell_type'] = [cell_type]*len(df)
+         print(cell_type, len(df))
+         celltydf.append(df)
+      dfs.append(pd.concat(celltydf))
 
 #%%
 #plot all cells
@@ -260,7 +286,7 @@ for i, ((ct, b1, b2), p_corr, sig) in enumerate(zip(comparisons, pvals_corrected
 
 # per animal
 dfagg = df.groupby(['animal','behavior','cell_type']).mean(numeric_only=True)
-hue_order=['pre', 'post']
+hue_order=['pre', 'post','place']
 order = ['Reward','Movement Start']
 ax.set_xticklabels(ax.get_xticklabels(), rotation=10, ha="right")
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
@@ -339,12 +365,12 @@ ax.legend(by_label.values(), by_label.keys(), title='Cell Type', fontsize=12, ti
 plt.savefig(os.path.join(savedst, 'postrew_dff_reward_v_movement.svg'),bbox_inches='tight')
 # %%
 # new fig 4
-fig,ax=plt.subplots(figsize=(4,6))
+fig,ax=plt.subplots(figsize=(6,5))
 colors = ['cornflowerblue', 'k']
-sns.stripplot(x='cell_type',y='dff',data=dfagg,order=hue_order,s=s,alpha=0.7,hue_order=order,ax=ax,dodge=True,hue='behavior',palette=colors)
+# sns.stripplot(x='cell_type',y='dff',data=dfagg,order=hue_order,s=s,alpha=0.7,hue_order=order,ax=ax,dodge=True,hue='behavior',palette=colors)
 sns.barplot(x='cell_type',y='dff',hue='behavior',order=hue_order,hue_order=order,ax=ax,
-            data=dfagg,fill=False,palette=colors,legend=False)
-ax.set_xticklabels(['Pre-reward','Post-reward'])
+            data=dfagg,fill=False,palette=colors)
+# ax.set_xticklabels(['Pre-reward','Post-reward'])
 ax.set_xlabel('Cell type')
 ax.set_ylabel('Mean $\Delta F/F$')
 # sns.barplot(x='behavior',y='latency (s)',data=df,fill=False)
@@ -367,28 +393,37 @@ y_start = y_max + 0.05
 y_step = 0.07
 fs = 30
 behavior_positions = {'Reward': 0, 'Movement Start': .4}
+
 for i, ((ct, b1, b2), p_corr, sig) in enumerate(zip(comparisons, pvals_corrected, reject)):
-    x1 = behavior_positions[b1] + (-0.2 if ct == 'pre' else .8)
-    x2 = behavior_positions[b2] + (-0.2 if ct == 'pre' else .8)
-    y = y_start + i * y_step
-    h=0.05
-    ax.plot([x1, x1, x2, x2], [y-h, y, y, y-h], lw=1.5, c='black')
-    if p_corr<0.05:
-        star='*'
-    if p_corr<0.01:
-        star='**'
-    if p_corr<0.001:
-        star='***'n
-    if p_corr>0.05: star=''
-    ax.text((x1 + x2)/2, y + 0.01, f"{star}", 
-            ha='center', va='bottom', fontsize=46)
-    ax.text((x1 + x2)/2, y + 0.05, f"p={p_corr:.3g}", 
-            ha='center', va='bottom', fontsize=12)
+   if ct=='pre':
+      ps = -0.2
+   elif ct=='post':
+      ps = .8
+   else:
+      ps = 2
+   x1 = behavior_positions[b1] + ps
+   x2 = behavior_positions[b2] + ps
+   y = y_start + i * y_step
+   h=0.05
+   ax.plot([x1, x1, x2, x2], [y-h, y, y, y-h], lw=1.5, c='black')
+   if p_corr<0.05:
+      star='*'
+   if p_corr<0.01:
+      star='**'
+   if p_corr<0.001:
+      star='***'
+   if p_corr>0.05: star=''
+   ax.text((x1 + x2)/2, y + 0.01, f"{star}", 
+         ha='center', va='bottom', fontsize=46)
+   ax.text((x1 + x2)/2, y + 0.05, f"p={p_corr:.3g}", 
+         ha='center', va='bottom', fontsize=12)
+   
 # Remove all current legends
 ax.legend_.remove()
 cell_type_order = hue_order  # same as used in plotting
 behavior_order = ['Reward','Movement Start']
 offset = 0.2  # half of the dodge width
+
 for i, ct in enumerate(cell_type_order):
     df_ct = dfagg[dfagg.cell_type == ct]
     df_pivot = df_ct.pivot(index='animal', columns='behavior', values='dff')
@@ -401,8 +436,8 @@ for i, ct in enumerate(cell_type_order):
         x2 = i + offset  # Reward
         y1 = row[behavior_order[0]]
         y2 = row[behavior_order[1]]
-        ax.plot([x1, x2], [y1, y2], color='dimgray', linewidth=1.5, alpha=0.5, zorder=0)
-
+        ax.plot([x1, x2], [y1, y2], color='gray', linewidth=1.5, alpha=0.5, zorder=0)
+ax.set_xticklabels(['Pre-reward','Post-reward','Post-place'])
 # Create a single legend for cell type
 handles, labels = ax.get_legend_handles_labels()
 by_label = dict(zip(labels, handles))  # Remove duplicates

@@ -374,7 +374,7 @@ rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(
 
 #%%
 # plot
-plt.rc('font', size=20) 
+plt.rc('font', size=18) 
 import itertools
 df=pd.DataFrame()
 nrewstops_wo_licks_trials_per_an_av_concat = np.concatenate(nrewstops_wo_licks_trials_per_an_av)
@@ -391,7 +391,7 @@ df['trial_type'] = np.concatenate([['non_rewarded_stops_wo_licks']*len(nrewstops
                 ['rewarded_stops']*len(rewstops_trials_per_an_av_concat)])
 df['animal'] = np.concatenate([an_nrewstops_wo_licks_trials_per_an_av_concat,
             an_nrewstops_w_licks_trials_per_an_av_concat,an_rewstops_trials_per_an_av_concat])
-df=df[(df.animal!='e189')&(df.animal!='e139')&(df.animal!='e200')&(df.animal!='e145')]
+df=df[(df.animal!='e189')&(df.animal!='e139')&(df.animal!='e145')]
 # combined nonrew 
 # non_reward_df = df[df['trial_type'].isin(['non_rewarded_stops_wo_licks', 'non_reward_stops_w_licks'])]
 # non_reward_avg = non_reward_df.groupby('animal')['activity'].mean().reset_index()
@@ -406,44 +406,12 @@ df=df[(df.animal!='e189')&(df.animal!='e139')&(df.animal!='e200')&(df.animal!='e
 df=df.reset_index()
 palette = {'rewarded_stops':'seagreen', 'non_rewarded_stops_wo_licks': 'firebrick', 'non_reward_stops_w_licks': 'sienna'}
 # plot all cells
-fig,axes=plt.subplots(ncols = 2, figsize=(7.5,5))
-ax=axes[0]
-sns.violinplot(x='trial_type', y='activity',hue='trial_type', data=df, palette=palette,ax=ax)
-df=df[df.activity>0]
-# Group data by trial type
-grouped = [group['activity'].values for name, group in df.groupby('trial_type')]
-# Perform Kruskal-Wallis test
-stat, pval = scipy.stats.kruskal(*grouped)
-print(f'Kruskal-Wallis H={stat:.3f}, p={pval:.3g}')
-# Get unique trial types
-trial_types = df['trial_type'].unique()
-# Create all pairwise comparisons
-comparisons = list(itertools.combinations(trial_types, 2))
-ax.set_xticklabels(['No licks','Licks','Rewarded'],rotation=20)
-ax.set_xlabel('')
-ax.set_ylabel('Mean $\Delta$ F/F (after-before mov.)')
-fig.suptitle('Stops\nPost-reward cells')
-ax.spines[['top','right']].set_visible(False)
-# Count number of cells per trial type
-cell_counts = df.groupby('trial_type').size()
-# Add count annotations to the plot
-for i, trial_type in enumerate(ax.get_xticks()):
-    count = cell_counts.iloc[i]
-    ax.text(
-        i, 
-        ax.get_ylim()[1] * 0.95,  # 95% of y-axis height
-        f'n={count}', 
-        ha='center', 
-        va='top', 
-        fontsize=10, 
-        color='black'
-    )
+fig,ax=plt.subplots(figsize=(4,6))
     
 df = df.groupby(['animal', 'trial_type']).mean().reset_index()
-ax=axes[1]
 s=12
 order=['non_rewarded_stops_wo_licks','non_reward_stops_w_licks','rewarded_stops']
-sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,ax=ax,palette=palette,order=order)
+# sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,ax=ax,palette=palette,order=order)
 sns.barplot(x='trial_type', y='activity',hue='trial_type', data=df, fill=False,ax=ax,palette=palette,order=order)
 ax.spines[['top','right']].set_visible(False)
 
@@ -490,11 +458,11 @@ group_names = df["trial_type"].unique()
 group_positions = {name: i for i, name in enumerate(group_names)}
 
 # Get max y-value for annotation positioning
-y_max = df["activity"].max()
+y_max = df["activity"].max()-.1
 y_offset = (y_max - df["activity"].min()) * 0.1  # Adjust spacing
 
 # Define height adjustment for each comparison
-bar_heights = [y_max + (i + 1) * y_offset for i in range(len(comparisons))]
+bar_heights = [y_max + (i) * y_offset for i in range(len(comparisons))]
 
 # Iterate through pairwise comparisons
 for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corrected)):
@@ -505,13 +473,17 @@ for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corre
     plt.plot([x1, x1, x2, x2], [y, y + y_offset * 0.2, y + y_offset * 0.2, y], 'k', lw=1.5)
     
     # Annotate with corrected p-value
-    p_text = f"p = {corrected_p:.3g}"
+    p_text = f"p = {corrected_p:.3g}"    
     ax.text((x1 + x2) / 2, y + y_offset * 0.3, p_text, 
              ha='center', va='bottom', fontsize=12)
+    ax.text((x1 + x2) / 2, y, '*', 
+            ha='center', va='bottom', fontsize=42)
+
 ax.set_xticklabels(['Licks','No licks','Rewarded'])
-ax.set_ylabel('')
+ax.set_ylabel('Mean $\Delta F/F$ (after-before mov.)')
 ax.set_xlabel('Trial type')
-fig.suptitle('Stops\nPost-reward cells')
+# fig.suptitle('Stops\nNear post-reward cells')
+plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'postrew_cells_by_stop_trial_type.svg'),bbox_inches='tight')
 
 #%%
@@ -533,7 +505,7 @@ palette = {'rewarded_stops':'seagreen', 'non_rewarded_stops': 'firebrick'}
 fig,ax=plt.subplots(figsize=(2.5,5))
 s=12
 order=['non_rewarded_stops','rewarded_stops']
-sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,ax=ax,palette=palette,order=order)
+# sns.stripplot(x='trial_type', y='activity',hue='trial_type', data=df, s=s, alpha=0.7,ax=ax,palette=palette,order=order)
 sns.barplot(x='trial_type', y='activity',hue='trial_type', data=df, fill=False,ax=ax,palette=palette,order=order)
 ax.spines[['top','right']].set_visible(False)
 
@@ -580,11 +552,11 @@ group_names = df["trial_type"].unique()
 group_positions = {name: i for i, name in enumerate(group_names)}
 
 # Get max y-value for annotation positioning
-y_max = df["activity"].max()
-y_offset = (y_max - df["activity"].min()) * 0.1  # Adjust spacing
+y_max = df["activity"].max()-.3
+y_offset = (y_max - df["activity"].min()) * 0.4  # Adjust spacing
 
 # Define height adjustment for each comparison
-bar_heights = [y_max + (i + 1) * y_offset for i in range(len(comparisons))]
+bar_heights = [y_max + (i + 2) * y_offset for i in range(len(comparisons))]
 
 # Iterate through pairwise comparisons
 for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corrected)):
@@ -596,10 +568,12 @@ for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corre
     p_text = f"p = {corrected_p:.3g}"
     ax.text((x1 + x2) / 2, y + y_offset * 0.3, p_text, 
              ha='center', va='bottom', fontsize=12)
+    ax.text((x1 + x2) / 2, y + y_offset * 0.3, '**', 
+             ha='center', va='bottom', fontsize=42)
 ax.set_xticklabels(['Unrewarded','Rewarded'])
-ax.set_ylabel('Mean $\Delta F/F$')
+ax.set_ylabel('Mean $\Delta F/F$ (after-before mov.)')
 ax.set_xlabel('Trial type')
-fig.suptitle('Stops\nPost-reward cells')
+fig.suptitle('Types of stops\nPost-reward cells')
 plt.savefig(os.path.join(savedst, 'postrew_cells_by_stop_trial_type_combined.svg'),bbox_inches='tight')
 
 # %%

@@ -424,7 +424,7 @@ for animal in bigdf['animal'].unique():
       y_vals = sub.sort_values('trial_type')['mean_dff'].values
       x_vals = [x_base + offset for offset in offsets]
       ax.plot(x_vals, y_vals, color='dimgray', alpha=0.5, linewidth=1)
-
+bigdf.to_csv(r'Z:\saved_datasets\performance_place.csv')
 import statsmodels.api as sm
 from statsmodels.stats.anova import AnovaRM
 from scipy.stats import ttest_rel

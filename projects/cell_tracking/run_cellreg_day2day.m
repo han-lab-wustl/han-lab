@@ -44,7 +44,7 @@ planes = [0];
 for plane=planes
 
 % Defining the results_directory and creating the figures_directory:
-animal = 'z16'; % CHANGE
+animal = 'e216'; % CHANGE
 results_directory= fullfile(pth,sprintf('%s_daily_tracking_plane%i',animal, plane), 'Results') ; % CHANGE WEEK NO
 
 figures_directory=fullfile(results_directory,'Figures');
@@ -54,7 +54,7 @@ end
 
 figures_visibility='on'; % either 'on' or 'off' (in any case figures are saved)
 % define path of sample data
-fls = dir(fullfile(pth, sprintf("%s\\days\\converted*plane%i*.mat", animal, plane))); %format to your folder structure
+fls = dir(fullfile(pth, sprintf("%s\\days\\to_track\\converted*plane%i*.mat", animal, plane))); %format to your folder structure
 number_of_sessions=length(fls); %remember to change no of sessions
 file_names=cell(1,number_of_sessions);
 

@@ -18,7 +18,7 @@ from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
-plt.rc('font', size=22)          # controls default text sizes
+plt.rc('font', size=18)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 
 fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\DecodingResults"
@@ -69,9 +69,10 @@ palette={'Correct':'seagreen', 'Incorrect': 'firebrick'}
 s = 12
 a=0.7
 df['mean_error'] = df['mean_error']*270
-fig, ax = plt.subplots(figsize=(5,7))
-sns.stripplot(x='condition', y='mean_error', data=df, alpha=a,
-              hue='trial_type', dodge=True, size=s, palette=palette)
+
+fig, ax = plt.subplots(figsize=(4,5))
+# sns.stripplot(x='condition', y='mean_error', data=df, alpha=a,
+            #   hue='trial_type', dodge=True, size=s, palette=palette)
 sns.barplot(x='condition', y='mean_error', data=df, 
               hue='trial_type', dodge=True,fill=False, palette=palette)
 
@@ -90,7 +91,7 @@ for trial_type in ['Pre-reward', 'Post-reward']:
 
 ax.set_ylabel('Mean decoding error (cm)')
 ax.set_xlabel('Position on track (cm)')
-ax.get_legend().remove()  # optional: hide legend if redundant
+ax.get_legend()  # optional: hide legend if redundant
 for tick in ax.get_xticklabels():
     tick.set_rotation(20)
 # Pairwise comparisons
@@ -129,22 +130,93 @@ def pval_to_asterisk(p):
 ymax = df['mean_error'].max()
 step = 9  # vertical spacing between annotations
 step2 = 3
+# for i, ((g1, g2), pval_corr, show) in enumerate(zip(pairs, pvals_corrected, rej)):
+#     if not show:
+#         continue
+#     x1 = label_positions[g1]
+#     x2 = label_positions[g2]
+#     y = ymax + step * i
+#     ax.plot([x1, x1, x2, x2], [y, y+3, y+3, y], lw=1.5, color='black')
+#     ax.text((x1+x2)/2, y+step2, f"p = {pval_corr:.3g}", ha='center', va='bottom', fontsize=10)
+#     asterisk = pval_to_asterisk(pval_corr)
+#     ax.text((x1+x2)/2, y, f"{asterisk}", ha='center', va='bottom', fontsize=46)
+
+ax.spines[['top', 'right']].set_visible(False)
+plt.tight_layout()
+
+plt.savefig(os.path.join(os.path.join(savedst, 'pre_v_post_trialtype_decoding.svg')))
+#%%
+fig, ax = plt.subplots(figsize=(3,5))
+# sns.stripplot(x='condition', y='mean_error', data=df, alpha=a,
+            #   hue='trial_type', dodge=True, size=s, palette=palette)
+df=df[df.condition=='Pre-reward']
+sns.barplot(x='trial_type', y='mean_error', data=df, 
+              hue='trial_type',fill=False, palette=palette)
+
+# Get the x positions for each hue/condition combination using the dodge offset
+# This works assuming the seaborn internals haven't changed; 0.2 is seaborn's default dodge value
+x_base = {'Pre-reward': 0}  # Shift Incorrect right to separate
+# Add grey lines per trial type (no cross-connections)
+for trial_type in ['Pre-reward']:
+    base_x = x_base[trial_type]
+    for mouse in mice:
+        subdf = df[(df['mouse'] == mouse) & (df['condition'] == trial_type)]
+        if len(subdf) == 2:
+            y0 = subdf[subdf['trial_type'] == 'Correct']['mean_error'].values[0]
+            y1 = subdf[subdf['trial_type'] == 'Incorrect']['mean_error'].values[0]
+            ax.plot([base_x, base_x + 1], [y0, y1], color='grey', alpha=0.5,linewidth=1.5)
+
+ax.set_ylabel('Mean decoding error (cm)')
+ax.set_xlabel('')
+for tick in ax.get_xticklabels():
+    tick.set_rotation(20)
+# Pairwise comparisons
+pairs = [
+    (('Pre-reward', 'Correct'), ('Pre-reward', 'Incorrect')),
+]
+
+pvals = []
+for (cond1, ttype1), (cond2, ttype2) in pairs:
+    vals1 = df[(df['condition'] == cond1) & (df['trial_type'] == ttype1)].sort_values('mouse')['mean_error']
+    vals2 = df[(df['condition'] == cond2) & (df['trial_type'] == ttype2)].sort_values('mouse')['mean_error']
+    stat, p = scipy.stats.wilcoxon(vals1.values, vals2.values)
+    pvals.append(p)
+
+# Bonferroni correction
+rej, pvals_corrected, _, _ = multipletests(pvals, method='fdr_bh')
+# Helper for annotation
+def get_bar_height(x1, x2, y, h=1):
+    return (x1 + x2) / 2, y + h
+# Define plot x positions
+label_positions = {
+    ('Pre-reward', 'Correct'): 0,
+    ('Pre-reward', 'Incorrect'): 1,
+}
+def pval_to_asterisk(p):
+    if p < 0.001: return '***'
+    elif p < 0.01: return '**'
+    elif p < 0.05: return '*'
+    else: return ''
+# Annotate plot with corrected p-values
+ymax = df['mean_error'].max()
+step = 9  # vertical spacing between annotations
+step2 = 2
 for i, ((g1, g2), pval_corr, show) in enumerate(zip(pairs, pvals_corrected, rej)):
     if not show:
         continue
     x1 = label_positions[g1]
     x2 = label_positions[g2]
     y = ymax + step * i
-    ax.plot([x1, x1, x2, x2], [y, y+3, y+3, y], lw=1.5, color='black')
+    ax.plot([x1, x1, x2, x2], [y, y+step2, y+step2, y], lw=1.5, color='black')
     ax.text((x1+x2)/2, y+step2, f"p = {pval_corr:.3g}", ha='center', va='bottom', fontsize=10)
     asterisk = pval_to_asterisk(pval_corr)
     ax.text((x1+x2)/2, y, f"{asterisk}", ha='center', va='bottom', fontsize=46)
 
 ax.spines[['top', 'right']].set_visible(False)
+ax.set_title('Pre-reward region')
 plt.tight_layout()
 
-plt.savefig(os.path.join(os.path.join(savedst, 'pre_v_post_trialtype_decoding.svg')))
-
+plt.savefig(os.path.join(os.path.join(savedst, 'pre_trialtype_decoding.svg')))
 #%%
 # plot eg
 fl = r'c:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\Truth_Pred_Rewloc2'

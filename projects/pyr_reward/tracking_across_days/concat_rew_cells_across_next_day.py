@@ -46,8 +46,9 @@ maxep = 5
 shuffles = 1000
 # redo across days analysis but init array per animal
 coms_per_an = []
-dy_comb_per_an=[]
-for animal in animals:
+
+dy_comb_per_an=[6,0,2,4,0,0,3,0,3]
+for kk,animal in enumerate(animals):
     # all rec days
     dys = conddf.loc[conddf.animals==animal, 'days'].values
     dys=dys[conddf.loc[conddf.animals==animal, 'optoep'].values<2]
@@ -72,11 +73,14 @@ for animal in animals:
         changeRewLoc=fall['changeRewLoc'][0]
         eps = np.where(changeRewLoc>0)[0]
         eps = np.append(eps, len(changeRewLoc))    # set vars
+        # need enough trials
+        diff =np.insert(np.diff(eps), 0, 1e15)
+        eps=eps[diff>5000]
         epochs = len(eps)-1
+        if epochs==3: dynm.append(i)
         i+=1
-        if epochs==4: dynm.append(i)
         # print(epochs)
-    dynm =min(dynm)
+    dynm =dy_comb_per_an[kk]
     # make sure first day has only 3 epochs
     print(dynm)
     for ii, day in enumerate(dys[dynm:dynm+2]): # iterate per day
@@ -623,7 +627,7 @@ df=df.reset_index()
 # only some epochs
 df=df[df.epoch_number<9]
 fig, ax = plt.subplots(figsize=(6,5))
-sns.stripplot(x='epoch_number',y='reward_cell_count',data=df, dodge=True, color='k',
+sns.stripplot(x='epoch_number',y='reward_cell_count',hue='animal',data=df, dodge=True,
     s=s,alpha=0.7)
 sns.barplot(x='epoch_number',y='reward_cell_count',data=df,fill=False,color='k')
 # make lines
@@ -631,7 +635,7 @@ ans = df.animal.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df.epoch_number-2, y='reward_cell_count', 
     data=df[df.animal==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2)
+    errorbar=None, color='gray', linewidth=1.5,alpha=0.5)
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Reward cell count')
 ax.set_xlabel('# reward loc. switches')
@@ -754,7 +758,7 @@ plt.savefig(os.path.join(savedst, 'reward_cell_com_2days.svg'), bbox_inches='tig
 #%%
 # plot percent
 fig, ax = plt.subplots(figsize=(6,5))
-sns.stripplot(x='epoch_number',y='reward_cell_p',data=dfplt, dodge=True, color='k',
+sns.stripplot(x='epoch_number',y='reward_cell_p',data=dfplt, dodge=True, hue='animal',
     s=s,alpha=0.7)
 sns.barplot(x='epoch_number',y='reward_cell_p',data=dfplt,fill=False,color='k')
 # add shuffle

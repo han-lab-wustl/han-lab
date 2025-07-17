@@ -17,7 +17,7 @@ plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import make_tuning_curves, intersect_arrays
-from projects.pyr_reward.rewardcell import get_radian_position
+from projects.pyr_reward.rewardcell import get_radian_position,cosine_sim_ignore_nan
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -73,7 +73,10 @@ for ii in range(len(conddf)):
       # set vars
       eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf
       eps = np.append(eps, len(changeRewLoc))     
-      if len(eps)>3:   
+      diff =np.insert(np.diff(eps), 0, 1e15)
+      eps=eps[diff>2000]
+      epochs = len(eps)-1
+      if epochs>2:   
          print(params_pth)
          lasttr=8 # last trials
          bins=90
@@ -107,122 +110,199 @@ for ii in range(len(conddf)):
          # get cells across all epochs that meet crit
          pcs = np.unique(np.concatenate(compc))
          pcs_all = intersect_arrays(*compc)
-         pcs_ep12 = intersect_arrays(*compc[:1])
-         dropped = [xx for xx in pcs_ep12 if xx not in pcs_all]
-         dataraster[f'{animal}_{day}']=[tcs_correct_abs[:,pcs_all], tcs_correct_abs[:,dropped]]
+         # dropped cells
+         ep12 = [(0,1)]
+         arr=[]
+         for kk, p in enumerate(perm):
+            if p in ep12:
+               arr.append(compc[kk])
+         pcs_ep12 = intersect_arrays(*arr)
+         ep23 = [(1,2)]
+         arr=[]
+         for kk, p in enumerate(perm):
+               if p in ep23:
+                  arr.append(compc[kk])
+         pcs_ep23 = intersect_arrays(*arr)
+         ep13 = [(0,2)]
+         arr=[]
+         for kk, p in enumerate(perm):
+               if p in ep23:
+                  arr.append(compc[kk])
+         pcs_ep13 = intersect_arrays(*arr)
+
+         dropped3 = [xx for xx in pcs_ep12 if xx not in pcs_all]
+         dropped1 = [xx for xx in pcs_ep23 if xx not in pcs_all]
+         dropped2 = [xx for xx in pcs_ep13 if xx not in pcs_all]
+
+         dataraster[f'{animal}_{day}']=[tcs_correct_abs[:,pcs_all], tcs_correct_abs[:,dropped3],tcs_correct_abs[:,dropped1],tcs_correct_abs[:,dropped2]]
 
 #%%
 from sklearn.preprocessing import minmax_scale
 import numpy as np
 import matplotlib.pyplot as plt
+def get_mean_and_cosine_similarity(mat1, mat2,results, label='', typ=''):
+   mean1 = np.nanmean(mat1)
+   mean2 = np.nanmean(mat2)
+
+   cosines = np.array([cosine_sim_ignore_nan(mat1[i], mat2[i]) for i in range((mat1).shape[0])])
+   mean_cosine = np.nanmean(cosines)
+
+   # Append results
+   results['animal'].append(an)
+   results['label'].append(label)
+   results['type'].append(typ)
+   results['mean_init'].append(mean1)
+   results['mean_dropped'].append(mean2)
+   results['cos_sim'].append(mean_cosine)
+
+   print(f"{label}:\n  Mean act. Epoch {init_ep[i]+1}: {mean1:.3f}, Epoch {dropped_ep[i]+1}: {mean2:.3f}\n  Cosine similarity: {mean_cosine:.3f}")
 
 animals = ['e218', 'e216', 'e201', 'e186', 'e190',
        'z8', 'z9', 'z16']
 plt.rc('font', size=16) 
-for an in animals:
-   # Stack and drop rows with NaNs
-   # first epoch of both types
-   dedicated_place = np.vstack([v[0][0,:,:] for k, v in dataraster.items() if an in k])
-   dedicated_place = np.vstack([v[0][0,:,:] for k, v in dataraster.items() if an in k])
-   dedicated_place_ep3 = np.vstack([v[0][-1,:,:] for k, v in dataraster.items() if an in k])
-   dropped_place = np.vstack([v[1][0,:,:] for k, v in dataraster.items() if an in k])
-   dropped_place_ep = np.vstack([v[1][-1,:,:] for k, v in dataraster.items() if an in k])
-   dedicated_place[np.isnan(dedicated_place).any(axis=1)]=0
-   dropped_place[np.isnan(dropped_place).any(axis=1)]=0
-   dropped_place_ep[np.isnan(dropped_place_ep).any(axis=1)]=0
-   dedicated_place_ep3[np.isnan(dedicated_place_ep3).any(axis=1)]=0
-   # or drop nans
-   # dedicated_place = dedicated_place[~np.isnan(dedicated_place).any(axis=1)]
-   # dedicated_place_ep3 = dedicated_place_ep3[~np.isnan(dedicated_place_ep3).any(axis=1)]
-   # dropped_place = dropped_place[~np.isnan(dropped_place).any(axis=1)]
-   # dropped_place_ep = dropped_place_ep[~np.isnan(dropped_place_ep).any(axis=1)]
+comb_types = [1,2,3] # 1 = dropped in ep 3; 2 = dropped in ep 1; 3 = dropped in ep 2 but not in ep 1 or 3
+lbls = ['Place in epoch 1, 2', 'Place in epoch 2, 3', 'Place in epoch 1, 3']
+init_ep = [0,1,0] # initial ep to plot
+dropped_ep = [2,0,1]
+# Store results across animals
+results = {
+    'animal': [],
+    'label': [],
+    'type': [],  # 'dedicated' or 'dropped'
+    'mean_init': [],
+    'mean_dropped': [],
+    'cos_sim': []
+}
 
-   # Normalize each row to 0–1
-   # dedicated_place = minmax_scale(dedicated_place, axis=1)
-   # dropped_place = minmax_scale(dropped_place, axis=1)
-   # Sort each by peak (argmax of each row)
-   dedicated_sort_idx = np.argmax(dedicated_place, axis=1).argsort()
-   dedicated_sort_idx_ep3 = np.argmax(dedicated_place, axis=1).argsort()
-   dropped_sort_idx = np.argmax(dropped_place, axis=1).argsort()
-   dropped_ep_sort_idx = np.argmax(dropped_place, axis=1).argsort()
+for i in range(len(lbls)):
+   for an in animals:
+      # Stack and drop rows with NaNs
+      # first epoch of both types
+      dedicated_place = np.vstack([v[0][init_ep[i],:,:] for k, v in dataraster.items() if an in k])
+      # dedicated_place = np.vstack([v[0][0,:,:] for k, v in dataraster.items() if an in k])
+      dedicated_place_ep3 = np.vstack([v[0][dropped_ep[i],:,:] for k, v in dataraster.items() if an in k])
+      dropped_place = np.vstack([v[comb_types[i]][init_ep[i],:,:] for k, v in dataraster.items() if an in k])
+      dropped_place_ep = np.vstack([v[comb_types[i]][dropped_ep[i],:,:] for k, v in dataraster.items() if an in k])
+      dedicated_place[np.isnan(dedicated_place).any(axis=1)]=0
+      dropped_place[np.isnan(dropped_place).any(axis=1)]=0
+      dropped_place_ep[np.isnan(dropped_place_ep).any(axis=1)]=0
+      dedicated_place_ep3[np.isnan(dedicated_place_ep3).any(axis=1)]=0
+      get_mean_and_cosine_similarity(dedicated_place, dedicated_place_ep3,results,
+                           label=f"{lbls[i]}", typ='place in all epochs')
 
-   dedicated_place_ep3 = dedicated_place_ep3[dedicated_sort_idx_ep3]
-   dedicated_place = dedicated_place[dedicated_sort_idx]
-   dropped_place = dropped_place[dropped_sort_idx]
-   dropped_place_ep = dropped_place_ep[dropped_ep_sort_idx]
-   # Gamma normalization (e.g., gamma=0.5 for square root)
-   gamma = 0.5
-   import matplotlib.colors as mcolors
-   norm = mcolors.PowerNorm(gamma=gamma)
+      get_mean_and_cosine_similarity(dropped_place, dropped_place_ep,results,
+                                    label=f"{lbls[i]}", typ='place in some epochs')
 
-   fig,axes=plt.subplots(ncols=4,nrows=2,sharex=True,figsize=(10,5))
-   # Top row: imshow with gamma + colorbar
-   fs=12
-   img0 = axes[0, 0].imshow(dedicated_place, aspect='auto', norm=norm, cmap='viridis')
-   axes[0, 0].set_title("Dedicated Epoch 1",fontsize=fs)
-   fig.colorbar(img0, ax=axes[0, 0], orientation='vertical')
-   axes[0,0].set_ylabel('Place cell #')
+      # or drop nans
+      # dedicated_place = dedicated_place[~np.isnan(dedicated_place).any(axis=1)]
+      # dedicated_place_ep3 = dedicated_place_ep3[~np.isnan(dedicated_place_ep3).any(axis=1)]
+      # dropped_place = dropped_place[~np.isnan(dropped_place).any(axis=1)]
+      # dropped_place_ep = dropped_place_ep[~np.isnan(dropped_place_ep).any(axis=1)]
 
-   img0 = axes[0, 1].imshow(dedicated_place_ep3, aspect='auto', norm=norm, cmap='viridis')
-   axes[0, 1].set_title("Dedicated Epoch 3\nSorted by Epoch 1",fontsize=fs)
-   fig.colorbar(img0, ax=axes[0, 1], orientation='vertical')
+      # Normalize each row to 0–1
+      # dedicated_place = minmax_scale(dedicated_place, axis=1)
+      # dropped_place = minmax_scale(dropped_place, axis=1)
+      # Sort each by peak (argmax of each row)
+      dedicated_sort_idx = np.argmax(dedicated_place, axis=1).argsort()
+      dedicated_sort_idx_ep3 = np.argmax(dedicated_place, axis=1).argsort()
+      dropped_sort_idx = np.argmax(dropped_place, axis=1).argsort()
+      dropped_ep_sort_idx = np.argmax(dropped_place, axis=1).argsort()
 
-   img1 = axes[0, 2].imshow(dropped_place, aspect='auto', norm=norm, cmap='viridis')
-   axes[0,2].set_title("Non-dedicated Epoch 1",fontsize=fs)
-   fig.colorbar(img1, ax=axes[0, 2], orientation='vertical')
+      dedicated_place_ep3 = dedicated_place_ep3[dedicated_sort_idx_ep3]
+      dedicated_place = dedicated_place[dedicated_sort_idx]
+      dropped_place = dropped_place[dropped_sort_idx]
+      dropped_place_ep = dropped_place_ep[dropped_ep_sort_idx]
+      # Gamma normalization (e.g., gamma=0.5 for square root)
+      gamma = 1
+      import matplotlib.colors as mcolors
+      norm = mcolors.PowerNorm(gamma=gamma)
 
-   img2 = axes[0, 3].imshow(dropped_place_ep, aspect='auto', norm=norm, cmap='viridis')
-   axes[0, 3].set_title("Non-dedicated Epoch 3\nSorted by Epoch 1",fontsize=fs)
-   fig.colorbar(img2, ax=axes[0, 3], orientation='vertical')
-   dedicated_place = np.vstack([v[0][0,:,:] for k, v in dataraster.items() if an in k])
-   dedicated_place_ep3 = np.vstack([v[0][-1,:,:] for k, v in dataraster.items() if an in k])
-   dropped_place = np.vstack([v[1][0,:,:] for k, v in dataraster.items() if an in k])
-   dropped_place_ep = np.vstack([v[1][-1,:,:] for k, v in dataraster.items() if an in k])
-   dedicated_place[np.isnan(dedicated_place).any(axis=1)]=0
-   dropped_place[np.isnan(dropped_place).any(axis=1)]=0
-   dropped_place_ep[np.isnan(dropped_place_ep).any(axis=1)]=0
-   dedicated_place_ep3[np.isnan(dedicated_place_ep3).any(axis=1)]=0
+      fig,axes=plt.subplots(ncols=4,nrows=2,sharex=True,figsize=(10,5),height_ratios=[2,1])
+      # Top row: imshow with gamma + colorbar
+      fs=12
+      img0 = axes[0, 0].imshow(dedicated_place, aspect='auto', norm=norm, cmap='viridis')
+      axes[0, 0].set_title(f'Place cell in epochs 1,2,3\nEpoch {init_ep[i]+1}',fontsize=fs)
+      fig.colorbar(img0, ax=axes[0, 0], orientation='vertical')
+      axes[0,0].set_ylabel('Place cell #')
 
-   vmin = 0
-   vmax = 0.6
-   if an == 'z16':
-      vmax = 1
+      img0 = axes[0, 1].imshow(dedicated_place_ep3, aspect='auto', norm=norm, cmap='viridis')
+      axes[0, 1].set_title(f"Place cell in epochs 1,2,3\nEpoch {dropped_ep[i]+1}\nSorted by epoch {init_ep[i]+1}",fontsize=fs)
+      fig.colorbar(img0, ax=axes[0, 1], orientation='vertical')
 
-   # Calculate mean and SEM
-   def plot_mean_with_sem(ax, data, color='k', label=''):
-      mean = np.nanmean(data, axis=0)
-      error = np.nanstd(data, axis=0) / np.sqrt(np.sum(~np.isnan(data), axis=0))
-      x = np.arange(data.shape[1])
-      ax.plot(x, mean, color=color, label=label)
-      ax.fill_between(x, mean - error, mean + error, color=color, alpha=0.3)
-      ax.set_ylim([vmin, vmax])
+      img1 = axes[0, 2].imshow(dropped_place, aspect='auto', norm=norm, cmap='viridis')
+      axes[0,2].set_title(f'{lbls[i]}\nEpoch {init_ep[i]+1}',fontsize=fs)
+      fig.colorbar(img1, ax=axes[0, 2], orientation='vertical')
 
-   # Dedicated
-   col='indigo'
-   ax = axes[1, 0]
-   plot_mean_with_sem(ax, dedicated_place, color=col, label='Dedicated')
-   ax.set_title("Mean $\pm$ SEM")
-   ax.set_xticks([0,90])
-   ax.set_xticklabels([0,270])
-   ax.spines[['top', 'right']].set_visible(False)
-   ax = axes[1, 1]
-   plot_mean_with_sem(ax, dedicated_place_ep3, color=col, label='Dedicated')
-   ax.set_xticks([0,90])
-   ax.spines[['top', 'right']].set_visible(False)
+      img2 = axes[0, 3].imshow(dropped_place_ep, aspect='auto', norm=norm, cmap='viridis')
+      axes[0, 3].set_title(f'{lbls[i]}\nEpoch {dropped_ep[i]+1}\nSorted by epoch {init_ep[i]+1}',fontsize=fs)
+      fig.colorbar(img2, ax=axes[0, 3], orientation='vertical')
+      vmin = 0
+      vmax = 0.6
+      if an == 'z16':
+         vmax = 1
 
-   # Dropped
-   ax = axes[1, 2]
-   plot_mean_with_sem(ax, dropped_place, color=col, label='Dropped')
-   ax.set_xticks([0,90])
-   ax.set_yticklabels([])
-   ax.spines[['top', 'right']].set_visible(False)
-   # Dropped EP
-   ax = axes[1, 3]
-   plot_mean_with_sem(ax, dropped_place_ep, color=col, label='Dropped EP')
-   ax.set_xticks([0,90])
-   ax.set_yticklabels([])
-   ax.spines[['top', 'right']].set_visible(False)
-   ax.set_xlabel('Track positon (cm)')
+      # Calculate mean and SEM
+      def plot_mean_with_sem(ax, data, color='k', label=''):
+         mean = np.nanmean(data, axis=0)
+         error = np.nanstd(data, axis=0) / np.sqrt(np.sum(~np.isnan(data), axis=0))
+         x = np.arange(data.shape[1])
+         ax.plot(x, mean, color=color, label=label)
+         ax.fill_between(x, mean - error, mean + error, color=color, alpha=0.3)
+         ax.set_ylim([vmin, vmax])
 
-   fig.suptitle(an)
+      # Dedicated
+      col='indigo'
+      ax = axes[1, 0]
+      plot_mean_with_sem(ax, dedicated_place, color=col, label='Dedicated')
+      ax.set_title("Mean $\pm$ SEM")
+      ax.set_xticks([0,90])
+      ax.set_xticklabels([0,270])
+      ax.spines[['top', 'right']].set_visible(False)
+      ax = axes[1, 1]
+      plot_mean_with_sem(ax, dedicated_place_ep3, color=col, label='Dedicated')
+      ax.set_xticks([0,90])
+      ax.spines[['top', 'right']].set_visible(False)
+
+      # Dropped
+      ax = axes[1, 2]
+      plot_mean_with_sem(ax, dropped_place, color=col, label='Dropped')
+      ax.set_xticks([0,90])
+      ax.set_yticklabels([])
+      ax.spines[['top', 'right']].set_visible(False)
+      # Dropped EP
+      ax = axes[1, 3]
+      plot_mean_with_sem(ax, dropped_place_ep, color=col, label='Dropped EP')
+      ax.set_xticks([0,90])
+      ax.set_yticklabels([])
+      ax.spines[['top', 'right']].set_visible(False)
+      ax.set_xlabel('Track positon (cm)')
+
+      fig.suptitle(an)
    # ax.imshow(dropped_place_ep, aspect='auto',vmin=0,vmax=5)
+#%%
+import pandas as pd
+import seaborn as sns
+
+# Convert to DataFrame
+dfres = pd.DataFrame(results)
+
+# Plot cosine similarity summary
+plt.figure(figsize=(8, 4))
+sns.barplot(data=dfres, x='label', y='cos_sim', hue='type', palette='Set2', errorbar='se',fill=False)
+sns.stripplot(data=dfres, x='label', y='cos_sim', hue='type', palette='Set2',dodge=True)
+plt.title("Cosine similarity between initial and dropped epoch")
+plt.ylabel("Cosine similarity")
+plt.xlabel("Place cell transition type")
+plt.ylim(0, 1)
+plt.legend(title="Cell type")
+plt.tight_layout()
+
+# Plot mean activity drop
+plt.figure(figsize=(8, 4))
+dfres['mean_drop'] = dfres['mean_init'] - dfres['mean_dropped']
+sns.barplot(data=dfres, x='label', y='mean_drop', hue='type', palette='Set1', errorbar='se',legend=False)
+sns.stripplot(data=dfres, x='label', y='mean_drop', hue='type', palette='Set1',dodge=True)
+plt.title("Drop in mean activity between initial and dropped epoch")
+plt.ylabel("Δ Mean Activity (initial-dropped ep)")
+plt.xlabel("Place cell transition type")
+plt.tight_layout()

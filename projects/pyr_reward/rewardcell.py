@@ -1038,7 +1038,7 @@ def extract_data_post_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, raddt = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
             rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)  
@@ -1250,7 +1250,7 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, raddt = make_tuning_curves_by_trialtype_w_darktime(eps,
             rewlocs,rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)
@@ -1289,27 +1289,6 @@ def extract_data_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     com_goal_postrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
         xx], axis=0)<=upperbound) & (np.nanmedian(coms_rewrel[:,
         xx], axis=0)>0))] if len(com)>0 else [] for com in com_goal]
-    # acc = fall['forwardvel'][0][1:]/np.diff(fall['timedFF'][0])
-    # acc=np.hstack(pd.DataFrame({'acc': acc}).rolling(5).mean().values)    
-    # nans,x = nan_helper(acc)
-    # acc[nans] = np.interp(x(nans), x(~nans), acc[~nans])
-    # # check to make sure just a subset
-    # # calc acc corr
-    # raccs_all = []
-    # for com in com_goal_postrew:
-    #     raccs = []
-    #     if len(com)>0:
-    #         for cll in com:
-    #             try: # if dff is nans
-    #                 dFF[1:,cll][nans] = np.interp(x(nans), x(~nans), dFF[1:,cll][~nans])
-    #                 _,racc = scipy.stats.pearsonr(acc, dFF[1:,cll])
-    #             except Exception as e:
-    #                 racc = np.nan
-    #             raccs.append(racc)
-    #     raccs_all.append(raccs)
-    # thres=1e-50 # correlation thres
-    # com_goal_postrew = [[xx for jj,xx in enumerate(com) if raccs_all[ii][jj]>thres] 
-    #     if len(com)>0 else [] for ii,com in enumerate(com_goal_postrew)]
     #only get perms with non zero cells
     perm=[p for ii,p in enumerate(perm) if len(com_goal_postrew[ii])>0]
     rz_perm=[p for ii,p in enumerate(rz_perm) if len(com_goal_postrew[ii])>0]
@@ -1542,7 +1521,7 @@ def extract_data_pre_farrew(ii,params_pth,animal,day,bins,radian_alignment,
     else:# remake tuning curves relative to reward        
         # 9/19/24
         # tc w/ dark time added to the end of track
-        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime(eps,
+        tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,raddt = make_tuning_curves_by_trialtype_w_darktime(eps,
             rewlocs,rewsize,ybinned,time,lick,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
             bins=bins_dt)  

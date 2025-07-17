@@ -133,21 +133,25 @@ df_permsav2=df_permsav2.reset_index()
 
 # compare to shuffle
 # df_permsav2=df_permsav2.reset_index()
+df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
+df_plt=df_plt.reset_index()
+df_plt=df_plt[df_plt.num_epochs<5]
+
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189')]
-df_plt2 = df_plt2[df_plt2.num_epochs<5]
+df_plt2 = df_plt2[(df_plt2.animals!='e189') & (df_plt2.animals!='e139')]
+# df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
 # df_plt2 = df_plt2[df_plt2.animals!='z9']
-
+#%%
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(ncols=2,figsize=(7,5))
 ax=axes[0]
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+# sns.stripplot(x='num_epochs', y='goal_cell_prop',color='k',
+        # data=df_plt2,s=10,alpha=0.7,ax=ax)
 sns.barplot(x='num_epochs', y='goal_cell_prop',
         data=df_plt2,
         fill=False,ax=ax, color='k', errorbar='se')
@@ -162,7 +166,7 @@ sns.barplot(data=df_plt2, # correct shift
 
 ax.spines[['top','right']].set_visible(False)
 ax.legend()#.set_visible(False)
-ax.set_ylabel('Far reward cell %')
+ax.set_ylabel('Far pre-reward cell %')
 eps = [2,3,4]
 y = 28
 pshift = 1
@@ -175,7 +179,7 @@ for ii,ep in enumerate(eps):
         pvalues.append(pval)
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
-reject, pvals_corrected, _, _ = multipletests(pvalues, method='bonferroni')
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='fdr_bh')
 
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
@@ -192,17 +196,16 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
 ax.set_title('Far pre-reward cells',pad=30)
-ax.set_xlabel('')
+ax.set_xlabel('# of epochs')
 ax.set_ylim([0,30])
 ax=axes[1]
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
 # av across mice
-sns.stripplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',color='cornflowerblue',
-        data=df_plt2,s=10,alpha=0.7,ax=ax)
+
 sns.barplot(x='num_epochs', y='goal_cell_prop_sub_shuffle',
         data=df_plt2,
         fill=False,ax=ax, color='cornflowerblue', errorbar='se')
@@ -212,21 +215,36 @@ ans = df_plt2.animals.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2, alpha=0.7,ax=ax)
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
+y=12
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_xlabel('# of reward loc. switches')
-ax.set_ylabel('')
+ax.set_xlabel('# of epochs')
+ax.set_ylabel('Real-shuffle %')
 ax.set_title('Far pre-reward cell %-shuffle',pad=30)
-ax.set_ylim([-1,14])
+ax.set_ylim([-1,15])
+plt.tight_layout()
+df_plt2['cell_type']=['Far Pre-reward']*len(df_plt2)
+df_plt2.to_csv(r'Z:\saved_datasets\far_pre_counts.csv',index=None)
 
 plt.savefig(os.path.join(savedst, 'pre_farreward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')
-
+len(df_plt2.animals.unique())
 #%% 
 # find tau/decay
 
 from scipy.optimize import curve_fit
+
 
 # Define the exponential decay function
 def exponential_decay(t, A, tau):
