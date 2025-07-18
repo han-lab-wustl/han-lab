@@ -64,15 +64,15 @@ for i, data in enumerate(data_sets):
 
    # Smooth Gaussian KDE
    kde = gaussian_kde(all_data)
-   x_vals = np.linspace(0,270, 500)
-   y_vals = kde(x_vals)
+   x_vals = np.linspace(0,270, 270)
+   y_vals = kde(x_vals)*100
 
    # Plot the KDE line
-   ax.plot(x_vals, y_vals, color=colors[i], linewidth=2,
+   ax.plot(x_vals, y_vals, color=colors[i], linewidth=4,
          label=f'{labels[i]}, {len(all_data)} cells')
 
    # Fill area under the curve
-   ax.fill_between(x_vals, y_vals, alpha=0.2, color=colors[i])
+#    ax.fill_between(x_vals, y_vals, alpha=0.2, color=colors[i])
 
    # 95% CI lines
    ci_low = np.nanpercentile(all_data, 2.5)
@@ -90,12 +90,11 @@ for i, data in enumerate(data_sets):
 # ax.axvline(ci_high, color=colors[1], linewidth=lw, linestyle='--', label='95% CI').set_dashes([10, 8])
 
 # Style and labels
-ax.set_ylabel('Relative cell density\n(across all sessions)')
+ax.set_ylabel('% Density\n(across all sessions)')
 ax.set_xticks([0, 135, 270])
 # ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
-ax.set_xlabel('Track position (cm)')
+ax.set_xlabel('Center-of-mass (cm)')
 ax.spines[['top', 'right']].set_visible(False)
-
 # Legend
 h_strip, l_strip = ax.get_legend_handles_labels()
 if ax.legend_: ax.legend_.remove()

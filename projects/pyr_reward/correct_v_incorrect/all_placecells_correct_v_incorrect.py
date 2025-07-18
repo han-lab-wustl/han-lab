@@ -205,7 +205,7 @@ def normalize_rows_0_to_1(arr):
     normed = arr / row_max
     return normed
 vmin=0;vmax=1
-plt.rc('font', size=20)
+plt.rc('font', size=26)
 # --- Settings ---
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
@@ -222,7 +222,7 @@ cell_type='pre'
 dff_correct_per_an = []
 dff_fail_per_an = []
 cs_per_an=[]
-
+# animals_test=['e216']
 for animal in animals_test:
    dff_correct, dff_fail = [], []
    tcs_correct, tcs_fail = [], []
@@ -290,15 +290,16 @@ for animal in animals_test:
    im = ax.imshow(tc_z[sort_idx], vmin=vmin, vmax=vmax, aspect='auto', cmap='viridis')
    ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
    ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
+   ax.set_yticks([0,tc_z.shape[0]])
+   ax.set_yticklabels([0,tc_z.shape[0]])
    ax.set_xlabel('Reward-centric distance ($\Theta$)')
-   ax.set_ylabel('Place cell # (sorted)')
+   ax.set_ylabel('Place cell # per epoch (sorted)')
    ax.set_title(f'{animal}\nCorrect Trials')
+   ax.axvline(75, color='w',linestyle='--',linewidth=3)
    # Panel: Failed Trials Heatmap
    ax = axes[1]
    tc = np.vstack(tcs_fail)
-   # Remove rows with all NaNs before sorting
-   # only for figures, keep for calc
-   # tc_fail_valid = tc
+   # Remove rows with all NaNs before sorting   
    tc_z = normalize_rows_0_to_1(tc)
    valid_rows = ~(np.sum(np.isnan(tc_z),axis=1)>0)
    tc_z = tc_z[valid_rows,:]
@@ -309,6 +310,9 @@ for animal in animals_test:
       ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
       ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
       ax.set_title('Incorrect Trials')
+      ax.set_yticks([0,tc_z.shape[0]])
+      ax.set_yticklabels([0,tc_z.shape[0]])
+      ax.axvline(75, color='w',linestyle='--',linewidth=3)
    # Colorbar
    cbar_ax = axes[2]
    cbar = fig.colorbar(im, cax=cbar_ax)
@@ -327,12 +331,12 @@ for animal in animals_test:
    ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='seagreen', alpha=0.5)
    ax.set_xticks([0, len(m) // 2, len(m)])
    ax.set_xticklabels(['$-\\pi$',0,'$\\pi$'])
-   ax.set_xlabel('Reward-centric distance ($\Theta$)')
    ax.spines[['top', 'right']].set_visible(False)
    ax.set_ylabel('$\Delta$F/F')
    height = m.max() + m.max()/2
    ax.set_ylim([0, height])
    ax.set_title('Correct Mean')
+   ax.axvline(75, color='k',linestyle='--',linewidth=3)
 
    # Panel: Failed Mean
    ax = axes[4]
@@ -347,6 +351,7 @@ for animal in animals_test:
    ax.set_ylabel('$\Delta$F/F')
    ax.set_ylim([0, height])
    ax.set_title('Incorrect Mean')
+   ax.axvline(75, color='k',linestyle='--',linewidth=3)
    # mean velocity correct
    ax=axes[6]
    tc_all = np.vstack(vel_corr)
@@ -361,6 +366,7 @@ for animal in animals_test:
    ax.set_ylabel('Velocity (cm/s)')
    height = m.max() + m.max()/2
    ax.set_ylim([0, height])   
+   ax.axvline(75, color='gray',linestyle='--',linewidth=3)
    ax=axes[7]
    tc_all = np.vstack(vel_fail)
    m = np.nanmean(tc_all, axis=0)
@@ -373,10 +379,12 @@ for animal in animals_test:
    ax.set_ylabel('Velocity (cm/s)')
    height = m.max() + m.max()/2
    ax.set_ylim([0, height])   
+   ax.set_xlabel('Reward-centric distance ($\Theta$)')
+   ax.axvline(75, color='gray',linestyle='--',linewidth=3)
    # Hide empty axis
    axes[8].axis('off')
    axes[5].axis('off')
-   fig.suptitle(cell_type)
+   fig.suptitle('Place')
    # plt.close(fig)        
    # plt.tight_layout()
    plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_place_correctvfail.svg'),bbox_inches='tight')

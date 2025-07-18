@@ -99,13 +99,13 @@ df['lick_selectivity_early']=[np.nanmean(dct['lick_selectivity_early'][1])-np.na
 df['rewzone_transition'] = [str(tuple(dct['rewzones'])) for dct in dcts]
 df['opto'] = conddf.optoep.values>1
 df['condition'] = ['ctrl' if 'vip' not in xx else xx for xx in conddf.in_type.values]
-df = df[(df.animals!='e189')]
+df = df[(df.animals!='e189') & (df.animals!='e190')]
 df=df[(df.optoep.values>1)]
 df=df[~((df.animals=='z15')&((df.days<6)|(df.days.isin([15,16]))))]
 df=df[~((df.animals=='z14')&(df.days<33))]
 df=df[~((df.animals=='z17')&(df.days.isin([3,4,11,12,18,22,23])))]
 df=df[~((df.animals=='z9')&(df.days.isin([20,15])))]
-df=df[~((df.animals=='e201')&((df.days.isin([58,61]))))]
+# df=df[~((df.animals=='e201')&((df.days.isin([58,61]))))]
 # df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
 df=df[~((df.animals=='e200')&((df.days.isin([85]))))]
 df=df[~((df.animals=='e218')&(df.days==55))]
@@ -161,7 +161,7 @@ for i, (c1, c2) in enumerate(comparisons):
     y_start += gap
 # ax.set_ylim([-35,10])
 plt.tight_layout()
-# plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'),  bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'),  bbox_inches='tight')
 # df.to_csv(r'Z:\condition_df\vip_opto_behavior.csv')
 #%%
 # Step 1: Calculate the means and standard deviations
@@ -184,6 +184,62 @@ sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=powe
 print(f"Cohen's d: {cohens_d:.4f}")
 print(f"Required sample size per group: {sample_size:.2f}")
 #%%
+# velocity diff
+
+# plot lick selectivity and lick com
+# bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
+a=0.7
+fig,ax = plt.subplots(figsize=(4,6))
+sns.barplot(x="condition", y="velocity",hue='condition', data=bigdf_plot,
+    palette=pl,                
+            errorbar='se', fill=False,ax=ax)
+sns.stripplot(x="condition", y="velocity",hue='condition', data=bigdf_plot,
+            palette=pl,alpha=a,                
+            s=s,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
+ax.set_ylabel(f'Velocity (cm/s; LEDon)')
+ax.set_xlabel('')
+
+# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
+conds = ['ctrl', 'vip', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+p_vals = []
+for c1, c2 in comparisons:
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['velocity'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['velocity'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+# Add significance annotations
+p_vals_corrected=p_vals
+def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + height, y_pos + height, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+
+# Plot all pairwise comparisons
+y_start = bigdf_plot['velocity'].max()
+gap = 2
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],height=1.5)
+    y_start += gap
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'velocity_opto_all.svg'),  bbox_inches='tight')
+
+#%%
 # plot lick selectivity and lick com
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 a=0.7
@@ -196,7 +252,7 @@ sns.stripplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_pl
             s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
-ax.set_ylabel(f'Late lick Selectivity (LEDon-LEDoff)')
+ax.set_ylabel(f'Lick Selectivity (LEDon-LEDoff)')
 ax.set_xlabel('')
 
 model = ols('lick_selectivity ~ C(condition)', data=bigdf_plot).fit()
@@ -237,6 +293,7 @@ for i, (c1, c2) in enumerate(comparisons):
     add_sig(ax, c1, c2, y_start, p_vals_corrected[i])
     y_start += gap
 plt.tight_layout()
+ax.set_title('Last 8 trials')
 plt.savefig(os.path.join(savedst, 'lick_selectivity_opto_all.svg'),  bbox_inches='tight')
 # plt.savefig(os.path.join(savedst, 'com.svg'),  bbox_inches='tight')
 #%%
@@ -245,6 +302,8 @@ plt.savefig(os.path.join(savedst, 'lick_selectivity_opto_all.svg'),  bbox_inches
 bigdf_plot = df.groupby(['animals', 'days','condition', 'opto','rewzone_transition']).mean(numeric_only=True)
 bigdf_plot = bigdf_plot.reset_index()
 df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(3.0, 1.0)')|(bigdf_plot.rewzone_transition=='(2.0, 1.0)')|(bigdf_plot.rewzone_transition=='(3.0, 2.0)')]
+df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(3.0, 1.0)')|(bigdf_plot.rewzone_transition=='(2.0, 1.0)')|(bigdf_plot.rewzone_transition=='(3.0, 2.0)')]
+
 df2plt = df2plt.groupby(['animals', 'days','condition', 'opto']).mean(numeric_only=True).reset_index()
 df2plt = df2plt[(df2plt.animals!='e189')&(df2plt.animals!='e190')]
 
@@ -256,11 +315,20 @@ sns.stripplot(x="condition", y="com",hue='condition', data=df2plt, palette=pl, a
             s=9,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Norm. COM Licks')
+ax.set_ylabel(f'Normalized center-of-mass licks')
 # ax.axhline(0, color='k')
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
-ax.set_title('Far to Near')
+ax.set_title('Reward zone 3 $\\rightarrow$ 1')
 ax.set_xlabel('')
+# Get N per condition
+n_per_condition = (
+    df2plt
+    .groupby('condition')[['animals', 'days']]
+    .nunique()  # counts unique animals/days per condition
+    .reset_index()
+)
+n_per_condition['n'] = n_per_condition[['animals', 'days']].max(axis=1)
+
 # Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
 conds = ['ctrl', 'vip', 'vip_ex']
 comparisons = list(itertools.combinations(conds, 2))[:2]
@@ -440,3 +508,5 @@ for i, (c1, c2) in enumerate(comparisons):
     y_start += gap
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'lick_selectivity_early_opto_all.svg'),  bbox_inches='tight')
+#%%
+#%%

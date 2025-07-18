@@ -83,46 +83,40 @@ for ii in iis:
 
    mask = np.zeros_like(trialnum).astype(bool)
    mask[5850:14900]=1
-   # mask[:]=1
-   probes = np.where(trialnum[mask]<3)[0]
    # mask[eps[0]+8500:eps[1]+2700]=True
    import matplotlib.patches as patches
-   fig, ax = plt.subplots(figsize=(7,3))
+   fig, ax = plt.subplots(figsize=(6,3))
    ypos=ybinned
    rew=rewards
-   lick[ybinned<5]=0
+   lick[ybinned<2]=0
+   ybinned[ybinned<2]=np.nan
    # incorrect licks
    trials=trialnum[mask]
-   incorrlick=[]
-   for ep in range(3):
-      trial_ep = trialnum[eps[ep]:eps[ep+1]]
-      l=np.zeros_like(trial_ep)
-      for trial in np.unique(trial_ep):
-         tr = trial_ep==trial
-         if trial>2:
-            if sum(rew[eps[ep]:eps[ep+1]][tr])==0:
-               l[tr]=lick[eps[ep]:eps[ep+1]][tr]
-      incorrlick.append(l)
-   incorrlick=np.concatenate(incorrlick)[mask]                          
+   incorrlick=np.zeros_like(lick[mask])
+   for trial in np.unique(trials):
+      tr = trials==trial
+      if trial>2:
+         if sum(rew[mask][tr])<1.5:
+            incorrlick[tr]=lick[mask][tr]
    nolick = [tr for tr in np.unique(trials) if sum(lick[mask][trials==tr])==0]
    mask2 = np.ones_like(trials).astype(bool)
    mask2[[ii for ii,xx in enumerate(trials) if xx in nolick]]=0
-   ax.plot(ypos[mask],zorder=1,label='Mouse Postion',color='slategray',linewidth=.8)
+   ax.plot(ypos[mask],zorder=1,label='Mouse Postion',color='slategray')
    s=9
-   ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,label='Lick',alpha=0.3)
-   ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s, label='Incorrect lick',alpha=0.3)
+   ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,label='Lick')
+   ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s, label='Lick in incorrect trial')
    ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12, label='Reward')
-   ax.add_patch(
-   patches.Rectangle(
-      xy=(probes[0],0),  # point of origin.
-      width=probes[-1]-probes[0], height=270, linewidth=1, # width is s
-      color='royalblue', alpha=0.2,
-      label='Probe trials'))
+   # ax.add_patch(
+   # patches.Rectangle(
+   #    xy=(probes[0],0),  # point of origin.
+   #    width=probes[-1]-probes[0], height=270, linewidth=1, # width is s
+   #    color='royalblue', alpha=0.2,
+   #    label='Probe trials'))
    ax.add_patch(
    patches.Rectangle(
       xy=(0,rewlocs[1]-rewsize/2),  # point of origin.
       width=len(ypos[mask]), height=rewsize, linewidth=1, # width is s
-      color='dimgrey', alpha=0.2,label='Reward zone'))
+      color='#42a5f5ff', alpha=0.3,label='Reward zone'))
    ax.set_ylim([0,270])
    ax.set_yticks([0,270])
    ax.set_yticklabels([0,270])
@@ -131,5 +125,61 @@ for ii in iis:
    ax.set_xticks([0, len(ypos[mask])])
    ax.set_xticklabels([0, int(np.ceil((len(ypos[mask])/(31.25/2))/60))])
    ax.set_xlabel('Time (minutes)')
-   ax.legend()
+   probe_y = 267  # Y position above track
+   from itertools import groupby
+   from operator import itemgetter
+   # Group contiguous indices
+   probe_groups = []
+   for k, g in groupby(enumerate(probes), lambda ix: ix[0] - ix[1]):
+      group = list(map(itemgetter(1), g))
+      probe_groups.append((group[0], group[-1]))
+   ax.legend(fontsize=10)
+   bar_height=3
+   # Plot bars per contiguous span
+   for i, (start, end) in enumerate(probe_groups):
+      ax.add_patch(
+         patches.Rectangle(
+               (start, probe_y),
+               end - start + 1,
+               bar_height,
+               color='royalblue',
+               linewidth=2,
+               label='Probes' if i == 0 else None,
+               zorder=3
+         )
+      )
+   # --- Epoch and probe bar params ---
+   epoch_y = 267
+   epoch_bar_height = 2
+
+   # Define x-ranges for each epoch (in sample indices)
+   epoch_spans = [
+      (probe_groups[0][0], probe_groups[0][1], 'Probe', 'royalblue'),
+      (probe_groups[0][1]+1, len(ypos[mask])-1, 'Epoch 2', '#42a5f5ff'),
+      (probe_groups[1][0], probe_groups[1][1], 'Probe', 'royalblue'),
+   ]
+
+   # Draw bars
+   for i, (start, end, label, color) in enumerate(epoch_spans):
+      ax.add_patch(
+         patches.Rectangle(
+               (start, epoch_y),           # x = start index, y = above track
+               end - start + 1,            # width = duration
+               epoch_bar_height,
+               color=color,
+               edgecolor=None,
+               linewidth=0,
+               zorder=3,
+         )
+      )
+      # Add text label above the bar
+      ax.text(
+         (start + end) / 2,
+         epoch_y + 3.5,
+         label,
+         ha='center',
+         va='bottom',
+         fontsize=14,
+         zorder=4
+      )
    plt.savefig(os.path.join(savedst, f'supp_fig1_beh_{animal}_{day}.svg'),bbox_inches='tight')

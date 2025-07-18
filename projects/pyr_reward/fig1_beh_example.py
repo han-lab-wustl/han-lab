@@ -74,12 +74,13 @@ for ii in iis:
    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
    track_length_rad = track_length*(2*np.pi/track_length)
    bin_size=track_length_rad/bins
+   #%%
    # behavior eg
    # example plot during learning
    eprng = np.arange(eps[0],eps[2])
    # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
    mask = np.zeros_like(trialnum).astype(bool)
-   mask[15090:21920]=1
+   mask[12920:21920]=1
    # mask[:]=1
    probes = np.where(trialnum[mask]<3)[0]
    # mask[eps[0]+8500:eps[1]+2700]=True
@@ -88,6 +89,7 @@ for ii in iis:
    ypos=ybinned
    rew=rewards
    lick[ybinned<2]=0
+   ybinned[ybinned<2]=np.nan
    # incorrect licks
    trials=trialnum[mask]
    incorrlick=np.zeros_like(lick[mask])
@@ -101,20 +103,20 @@ for ii in iis:
    mask2[[ii for ii,xx in enumerate(trials) if xx in nolick]]=0
    ax.plot(ypos[mask],zorder=1,label='Mouse Postion',color='slategray')
    s=9
-   ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,rasterized=True,label='Lick')
-   ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s,rasterized=True, label='Incorrect lick')
-   ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12,rasterized=True, label='Reward')
-   ax.add_patch(
-   patches.Rectangle(
-      xy=(probes[0],0),  # point of origin.
-      width=probes[-1]-probes[0], height=270, linewidth=1, # width is s
-      color='royalblue', alpha=0.2,
-      label='Probe trials'))
+   ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,label='Lick')
+   ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s, label='Lick in incorrect trial')
+   ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12, label='Reward')
+   # ax.add_patch(
+   # patches.Rectangle(
+   #    xy=(probes[0],0),  # point of origin.
+   #    width=probes[-1]-probes[0], height=270, linewidth=1, # width is s
+   #    color='royalblue', alpha=0.2,
+   #    label='Probe trials'))
    ax.add_patch(
    patches.Rectangle(
       xy=(0,rewlocs[1]-rewsize/2),  # point of origin.
       width=len(ypos[mask]), height=rewsize, linewidth=1, # width is s
-      color='dimgrey', alpha=0.2,label='Reward zone'))
+      color='#42a5f5ff', alpha=0.3,label='Reward zone'))
    ax.set_ylim([0,270])
    ax.set_yticks([0,270])
    ax.set_yticklabels([0,270])
@@ -123,5 +125,62 @@ for ii in iis:
    ax.set_xticks([0, len(ypos[mask])])
    ax.set_xticklabels([0, int(np.ceil((len(ypos[mask])/(31.25/2))/60))])
    ax.set_xlabel('Time (minutes)')
-   ax.legend()
+   probe_y = 267  # Y position above track
+   from itertools import groupby
+   from operator import itemgetter
+   # Group contiguous indices
+   probe_groups = []
+   for k, g in groupby(enumerate(probes), lambda ix: ix[0] - ix[1]):
+      group = list(map(itemgetter(1), g))
+      probe_groups.append((group[0], group[-1]))
+   ax.legend(fontsize=10)
+
+   # Plot bars per contiguous span
+   for i, (start, end) in enumerate(probe_groups):
+      ax.add_patch(
+         patches.Rectangle(
+               (start, probe_y),
+               end - start + 1,
+               bar_height,
+               color='royalblue',
+               linewidth=2,
+               label='Probes' if i == 0 else None,
+               zorder=3
+         )
+      )
+   # --- Epoch and probe bar params ---
+   epoch_y = 267
+   epoch_bar_height = 2
+
+   # Define x-ranges for each epoch (in sample indices)
+   epoch_spans = [
+      (0, probes[0]-1, 'Epoch 1', '#42a5f5ff'),
+      (probes[0], probes[-1], 'Probe', 'royalblue'),
+      (probes[-1]+1, len(ypos[mask])-1, 'Epoch 2', '#42a5f5ff'),
+   ]
+
+   # Draw bars
+   for i, (start, end, label, color) in enumerate(epoch_spans):
+      ax.add_patch(
+         patches.Rectangle(
+               (start, epoch_y),           # x = start index, y = above track
+               end - start + 1,            # width = duration
+               epoch_bar_height,
+               color=color,
+               edgecolor=None,
+               linewidth=0,
+               zorder=3,
+         )
+      )
+      # Add text label above the bar
+      ax.text(
+         (start + end) / 2,
+         epoch_y + 3.5,
+         label,
+         ha='center',
+         va='bottom',
+         fontsize=14,
+         zorder=4
+      )
+
    plt.savefig(os.path.join(savedst, f'fig1_beh_{animal}_{day}.svg'),bbox_inches='tight')

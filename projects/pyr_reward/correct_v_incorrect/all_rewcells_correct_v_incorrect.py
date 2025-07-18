@@ -70,12 +70,13 @@ def normalize_rows_0_to_1(arr):
     row_max = np.nanmax(arr, axis=1, keepdims=True)
     normed = arr / row_max
     return normed
-plt.rc('font', size=20)
+plt.rc('font', size=26)
 # --- Settings ---
 animals = [xx for ii, xx in enumerate(conddf.animals.values) if (xx != 'e217') and (conddf.optoep.values[ii] < 2)]
 animals_test = np.unique(animals)
 animals_test = [ 'e145', 'e186', 'e189', 'e190', 'e200', 'e201', 'e216',
-       'e218', 'z8', 'z9','z16']
+    'e218', 'z8', 'z9','z16']
+animals_test=['e186','z8','z9','e201']
 cell_types = ['pre', 'post', 'far_pre', 'far_post']
 bins = 150
 # recalc tc
@@ -150,8 +151,10 @@ for cll, cell_type in enumerate(cell_types):
         im = ax.imshow(tc_z[sort_idx], vmin=vmin, vmax=vmax, aspect='auto', cmap='viridis')
         ax.axvline(bins // 2, color='w', linestyle='--')
         ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
+        ax.set_yticks([0,tc_z.shape[0]])
+        ax.set_yticklabels([0,tc_z.shape[0]])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
-        ax.set_ylabel('Reward cell # (sorted)')
+        ax.set_ylabel('Reward cell # per epoch (sorted)')
         ax.set_xlabel('Reward-centric distance ($\\Theta$)')
         ax.set_title(f'{animal}\nCorrect Trials')
 
@@ -171,7 +174,8 @@ for cll, cell_type in enumerate(cell_types):
             ax.axvline(bins // 2, color='w', linestyle='--')
             ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
             ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
-            # ax.set_yticklabels([])
+            ax.set_yticks([0,tc_fail_valid.shape[0]])
+            ax.set_yticklabels([0,tc_fail_valid.shape[0]])
             ax.set_title('Incorrect Trials')
 
         # Colorbar
@@ -215,11 +219,12 @@ for cll, cell_type in enumerate(cell_types):
         ax.set_ylabel('')
         ax.set_ylim([0, height])
         ax.set_title('Incorrect Mean')
+        ax.set_xlabel('Reward-centric distance ($\\Theta$)')
         # Hide empty axis
         axes[5].axis('off')
         fig.suptitle(cell_type)
-        plt.close(fig)        
-        # plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_correctvfail.svg'),bbox_inches='tight')
+        # plt.close(fig)        
+        plt.savefig(os.path.join(savedst, f'{animal}_{cell_type}_correctvfail.svg'),bbox_inches='tight')
     dff_correct_per_type.append(dff_correct_per_an)
     dff_fail_per_type.append(dff_fail_per_an)
     cs_per_type.append(cs_per_an)
