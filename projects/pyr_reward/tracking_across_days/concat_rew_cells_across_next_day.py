@@ -47,7 +47,7 @@ shuffles = 1000
 # redo across days analysis but init array per animal
 coms_per_an = []
 
-dy_comb_per_an=[6,0,2,4,0,0,3,0,3]
+dy_comb_per_an=[8,13,2,4,0,0,3,0,3]
 for kk,animal in enumerate(animals):
     # all rec days
     dys = conddf.loc[conddf.animals==animal, 'days'].values
@@ -63,6 +63,7 @@ for kk,animal in enumerate(animals):
     perm_per_day = []
     coms = []
     # get all days with 3 ep
+    # to check init now, otherwise i just automatically set the day num
     dynm = []
     for i in range(len(dys)):        
         day = dys[i]
@@ -625,7 +626,7 @@ s=10
 df=df.groupby(['animal','epoch_number']).max(numeric_only=True)
 df=df.reset_index()
 # only some epochs
-df=df[df.epoch_number<9]
+df=df[df.epoch_number<6]
 fig, ax = plt.subplots(figsize=(6,5))
 sns.stripplot(x='epoch_number',y='reward_cell_count',hue='animal',data=df, dodge=True,
     s=s,alpha=0.7)
@@ -640,101 +641,85 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Reward cell count')
 ax.set_xlabel('# reward loc. switches')
 #%%
-## zoom
-df_plt = df[(df.epoch_number>3) & (df.epoch_number<7)]
-fig, ax = plt.subplots(figsize=(3,5))
-sns.stripplot(x='epoch_number',y='reward_cell_p',data=df_plt, dodge=True, color='k',
-    s=s,alpha=0.7)
-sns.barplot(x='epoch_number',y='reward_cell_p',data=df_plt,fill=False,color='k')
-# add shuffle
-sns.barplot(x='epoch_number',y='reward_cell_p_shuf',data=df_plt,color='dimgrey',label='shuffle',alpha=0.3,
-        err_kws={'color': 'grey'},errorbar=None)
+# p 
+df=df[df.animal!='z16']
+fig, ax = plt.subplots(figsize=(5,5))
+sns.stripplot(x='epoch_number',y='reward_cell_p',data=df, dodge=True,
+    alpha=0.7)
+sns.barplot(x='epoch_number',y='reward_cell_p',data=df,fill=False,color='cornflowerblue',errorbar='se')
+sns.barplot(data=df, # correct shift
+        x='epoch_number', y='reward_cell_p_shuf',color='grey',
+        alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax,legend=False)
 
 # make lines
-ans = df_plt.animal.unique()
+ans = df.animal.unique()
 for i in range(len(ans)):
-    ax = sns.lineplot(x=df_plt.epoch_number-4, y='reward_cell_p', 
-    data=df_plt[df_plt.animal==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2,alpha=0.7)
+    ax = sns.lineplot(x=df.epoch_number-2, y='reward_cell_p', 
+    data=df[df.animal==ans[i]],
+    errorbar=None, color='gray', linewidth=1.5,alpha=0.5)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('% Reward cells')
-ax.set_xlabel('# reward loc. switches')
-# significance
-eps = [4,5,6]
-y = 7
-pshift = 1
-fs=36
+ax.set_ylabel('Tracked reward cell %')
+ax.set_xlabel('# of epochs')
+pvals = []
+epochs = [2,3,4]
+for ep in epochs:
+    dsub = df[df.epoch_number == ep]
+    if 'reward_cell_p_shuf' in dsub.columns:
+        stat, pval = scipy.stats.wilcoxon(
+            dsub['reward_cell_p'], 
+            dsub['reward_cell_p_shuf'],
+            alternative='greater'  # adjust if needed
+        )
+        pvals.append(pval)
+    else:
+        pvals.append(np.nan)
+# 2. FDR correction
+from statsmodels.stats.multitest import multipletests
+rej, pvals_corr, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+# 3. Annotate plot
+for i, ep in enumerate(epochs):
+    dsub = df[df.epoch_number == ep]
+    y_max = 42
+    xpos = ep - 2  # match x-axis shift in lineplot
+    # Choose significance level
+    if pvals_corr[i] < 0.001:
+        star = '***'
+    if pvals_corr[i] < 0.01:
+        star = '**'
+    if pvals_corr[i] < 0.05:
+        star = '*'
+    if pvals_corr[i] > 0.05: star=''
+    # Plot text if significant
+    ax.text(xpos, y_max + 0.5, star, ha='center', va='bottom', fontsize=30)
+ax.axvline(1.5, linestyle='--',color='k',linewidth=3)
+ax.text(0.5, y_max+7, 'Day 1', ha='center', va='bottom', fontsize=20)
+ax.text(2.5, y_max+7, 'Day 2', ha='center', va='bottom', fontsize=20)
+ax.set_title('Next day cell tracking')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'reward_cell_p_2days.svg'), bbox_inches='tight')
 
-for ii,ep in enumerate(eps):
-    rewprop = dfplt.loc[(dfplt.epoch_number==ep), 'reward_cell_p']
-    shufprop = dfplt.loc[(dfplt.epoch_number==ep), 'reward_cell_p_shuf']
-    t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
-    # statistical annotation        
-    if pval < 0.001:
-            plt.text(ii, y, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
-            plt.text(ii, y, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
-            plt.text(ii, y, "*", ha='center', fontsize=fs)
-    # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
-
-y=8
-# session num
-ax.text(-.1, y, 'Session 2',fontsize=22)
-plt.savefig(os.path.join(savedst, 'reward_cell_p_shuffle_zoom_session_2.svg'), bbox_inches='tight')
-
-#%%
-# zoom count
-## zoom
-df_plt = df[(df.epoch_number>3) & (df.epoch_number<7)]
-fig, ax = plt.subplots(figsize=(3,5))
-s=15
-sns.stripplot(x='epoch_number',y='reward_cell_count',data=df_plt, hue='animal',dodge=True, 
-    s=s,alpha=0.7)
-sns.barplot(x='epoch_number',y='reward_cell_count',data=df_plt,fill=False,color='k')
-
-# make lines
-ans = df_plt.animal.unique()
-for i in range(len(ans)):
-    ax = sns.lineplot(x=df_plt.epoch_number-4, y='reward_cell_count', 
-    data=df_plt[df_plt.animal==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2,alpha=0.7)
-ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('# Reward cell')
-ax.set_xlabel('# reward loc. switches')
-ax.legend(
-    bbox_to_anchor=(1.05, 1),  # X, Y (X > 1 moves it outside)
-    loc='upper left', 
-    borderaxespad=0.
-)
-y=32
-# session num
-ax.text(-.1, y, 'Session 2',fontsize=22)
-plt.savefig(os.path.join(savedst, 'reward_cell_p_shuffle_zoom_session_2_per_an.svg'), bbox_inches='tight')
-
-# plt.savefig(os.path.join(savedst, 'reward_cell_count_over_many_ep.png'), bbox_inches='tight',dpi=500)
 #%%
 # plot com
-dfplt = df[df.animal != 'e216'].dropna(subset=['average_com', 'epoch_number'])
-fig, ax = plt.subplots(figsize=(6,5))
-sns.stripplot(x='epoch_number',y='average_com',data=dfplt, dodge=True, color='k',
-    s=s,alpha=0.7)
-sns.barplot(x='epoch_number',y='average_com',data=dfplt,fill=False,color='k')
+dfplt=df
+# dfplt = df[df.animal != 'e218'].dropna(subset=['average_com', 'epoch_number'])
+fig, ax = plt.subplots(figsize=(4,5))
+# sns.stripplot(x='epoch_number',y='average_com',data=dfplt, dodge=True, color='k',
+#     s=s,alpha=0.7)
+sns.barplot(x='epoch_number',y='average_com',data=dfplt,fill=False,color='cornflowerblue',errorbar='se')
 # make lines
 ans = dfplt.animal.unique()
 for i in range(len(ans)):
     ax = sns.lineplot(x=dfplt.epoch_number-2, y='average_com', 
     data=dfplt[dfplt.animal==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2)
+    errorbar=None, color='gray', linewidth=1.5,alpha=0.5)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Average COM of cell')
-ax.set_xlabel('# reward loc. switches')
+ax.set_ylabel('Mean center-of-mass ($\Theta$)')
+ax.set_xlabel('# of epochs')
 ax.axvline(1.5, color='k', linestyle='--', linewidth=3)
 # test significance; epoch 2 vs. 3, 4 vs. 5 etc
 # Define groups
-group_early = dfplt[dfplt.epoch_number.isin([2, 3])]
-group_late = dfplt[dfplt.epoch_number.isin([4, 5, 6])]
+group_early = dfplt[dfplt.epoch_number.isin([2])]
+group_late = dfplt[dfplt.epoch_number.isin([4])]
 
 # Average within animal across those epochs
 early_avg = group_early.groupby('animal')['average_com'].mean()
@@ -745,61 +730,31 @@ common_animals = early_avg.index.intersection(late_avg.index)
 early_vals = early_avg.loc[common_animals].values
 late_vals = late_avg.loc[common_animals].values
 # --- Mann-Whitney U test ---
-u_stat, p_val = scipy.stats.ranksums(early_vals, late_vals, alternative='two-sided')
-ii=1.5
-y = .5
-pshift = .1
-fs=36
-# statistical annotation        
-if p_val < 0.05:
-    ax.text(ii, y, "*", ha='center', fontsize=fs)
-    ax.text(ii, y+pshift, f"p={p_val:.3f}", ha='center', fontsize=10)
+u_stat, p_val = scipy.stats.ranksums(early_vals[~np.isnan(early_vals)], late_vals[~np.isnan(late_vals)])
+# --- Add comparison bar across Day 1 and Day 2 ---
+y = 0.63  # adjust based on your data range
+x1, x2 = 0, 2  # bar from first to last bar (epoch 2 to 5 are at x=0 to 3 after subtracting 2)
+ax.plot([x1, x1, x2, x2], [y, y+0.015, y+0.015, y], lw=1.5, c='k')
+
+# Statistical annotation
+if p_val < 0.001:
+    star = '***'
+elif p_val < 0.01:
+    star = '**'
+elif p_val < 0.05:
+    star = '*'
+else:
+    star = f"p={p_val:.2g}"
+
+ax.text((x1 + x2)/2, y+0.02, star, ha='center', va='bottom', fontsize=40)
+
+ax.text(0.5, .7, 'Day 1', ha='center', va='bottom', fontsize=20)
+ax.text(2.3, .7, 'Day 2', ha='center', va='bottom', fontsize=20)
+# ax.set_title('Next day cell tracking')
+ax.axhline(0,linewidth=2,color='slategrey')
+ax.text(2.2, -.05, 'Reward loc.', ha='center', va='bottom', fontsize=14,color='slategrey')
+# plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'reward_cell_com_2days.svg'), bbox_inches='tight')
-#%%
-# plot percent
-fig, ax = plt.subplots(figsize=(6,5))
-sns.stripplot(x='epoch_number',y='reward_cell_p',data=dfplt, dodge=True, hue='animal',
-    s=s,alpha=0.7)
-sns.barplot(x='epoch_number',y='reward_cell_p',data=dfplt,fill=False,color='k')
-# add shuffle
-sns.barplot(x='epoch_number',y='reward_cell_p_shuf',data=dfplt,color='dimgrey',label='shuffle',alpha=0.3,
-        err_kws={'color': 'grey'},errorbar=None)
-# make lines
-ans = dfplt.animal.unique()
-for i in range(len(ans)):
-    ax = sns.lineplot(x=dfplt.epoch_number-2, y='reward_cell_p', 
-    data=dfplt[dfplt.animal==ans[i]],
-    errorbar=None, color='dimgray', linewidth=2,alpha=0.7)
-ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Reward cell %')
-ax.set_xlabel('# reward loc. switches')
-ax.axvline(1.5, color='k', linestyle='--', linewidth=3)
-
-# significance
-eps = [2,3,4,5,6]
-y = 35
-pshift = 4
-fs=36
-for ii,ep in enumerate(eps):
-    rewprop = dfplt.loc[(dfplt.epoch_number==ep), 'reward_cell_p']
-    shufprop = dfplt.loc[(dfplt.epoch_number==ep), 'reward_cell_p_shuf']
-    t,pval = scipy.stats.ttest_rel(rewprop, shufprop)
-    print(f'{ep} epochs, pval: {pval}')
-    # statistical annotation        
-    if pval < 0.001:
-            plt.text(ii, y, "***", ha='center', fontsize=fs)
-    elif pval < 0.01:
-            plt.text(ii, y, "**", ha='center', fontsize=fs)
-    elif pval < 0.05:
-            plt.text(ii, y, "*", ha='center', fontsize=fs)
-    # ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
-y=41
-# session num
-ax.text(-.5, y, 'Session 1',fontsize=22)
-ax.text(2, y, 'Session 2',fontsize=22)
-
-plt.savefig(os.path.join(savedst, 'reward_cell_percent_shuffle_2days.svg'), bbox_inches='tight')
-# plt.savefig(os.path.join(savedst, 'com_over_many_ep.png'), bbox_inches='tight',dpi=500)
 
 #%%
 # example

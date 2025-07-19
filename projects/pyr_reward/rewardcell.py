@@ -1867,6 +1867,11 @@ def trail_type_activity_quant(ii,params_pth,animal,day,bins,radian_alignment,
         rewsize,ybinned,time,lick,
         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
         bins=bins_dt)  
+    # get vel tc too
+    vel_correct, _, vel_fail, _, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,np.array([forwardvel]).T,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+        bins=bins_dt,lasttr=8,velocity_filter=True) 
+    vel_correct=np.squeeze(vel_correct)
+    vel_fail=np.squeeze(vel_fail)
     goal_window = goal_cm_window*(2*np.pi/track_length) # cm converted to rad
     # change to relative value 
     coms_rewrel = np.array([com-np.pi for com in coms_correct])
@@ -1947,7 +1952,7 @@ def trail_type_activity_quant(ii,params_pth,animal,day,bins,radian_alignment,
     epoch_perm.append([perm,rz_perm]) 
     df=pd.concat(dfs)
     # get mean tuning curve correct vs. incorrect
-    return df,tcs_corr,tcs_f
+    return df,tcs_corr,tcs_f,vel_correct,vel_fail
 
 def reward_act_nearrew(ii,params_pth,animal,day,bins,radian_alignment,
     radian_alignment_saved,goal_cm_window,pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,
@@ -2562,7 +2567,7 @@ def licks_by_trialtype(params_pth, animal,bins=90):
     bin_size=track_length_rad/bins 
     rz = get_rewzones(rewlocs,1/scalingf)       
     # get average success rate
-    rates = []; lick_rate=[]
+    rates = []; lick_rate=[]; vel = []
     for ep in range(len(eps)-1):
         eprng = range(eps[ep],eps[ep+1])
         success, fail, str_trials, ftr_trials, ttr, \
@@ -2579,6 +2584,7 @@ def licks_by_trialtype(params_pth, animal,bins=90):
         # rew=[(rewards==1)[eprng][trials==tr] for tr in str_trials]
         # mask = [y[:int(np.where(rew[i])[0])] for i,y in enumerate(ypos)]
         corr_lr = smooth_lick_rate(lick[eprng][mask][(ybinned[eprng][mask]<(rewlocs[ep]-(rewsize)))], dt)       
+        corr_vel = forwardvel[eprng][mask][(ybinned[eprng][mask]<(rewlocs[ep]-(rewsize)))]
         try: # if no failed trials that met criteria
             failed_inbtw = np.array([int(xx)-str_trials[0] for xx in ftr_trials])
             failed_inbtw=np.array(ftr_trials)[failed_inbtw>0]
@@ -2589,9 +2595,13 @@ def licks_by_trialtype(params_pth, animal,bins=90):
             # pre-rew
             incorr_lr_pre = smooth_lick_rate(lick[eprng][mask][(ybinned[eprng][mask]<(rewlocs[ep]-(rewsize)))], dt) # not just pre-rew
             incorr_lr = smooth_lick_rate(lick[eprng][mask], dt) # not just pre-rew
+            incorr_vel_pre = forwardvel[eprng][mask][(ybinned[eprng][mask]<(rewlocs[ep]-(rewsize)))]
+            incorr_vel = forwardvel[eprng][mask]
         except:
             incorr_lr = [np.nan]
+            incorr_vel = [np.nan]
         lick_rate.append([corr_lr,incorr_lr_pre,incorr_lr])
+        vel.append([corr_vel,incorr_vel,incorr_vel_pre])
     rate=np.nanmean(np.array(rates))
     #lick
     tcs_correct, tcs_fail, tcs_probes = make_tuning_curves_radians_by_trialtype_behavior(eps,rewlocs,ybinned,rad,
@@ -2601,7 +2611,7 @@ def licks_by_trialtype(params_pth, animal,bins=90):
         forwardvel,trialnum,rewards,forwardvel,rewsize,bin_size) 
     ## get pre-reward lick rate
     # get mean tuning curve correct vs. incorrect
-    return tcs_correct,tcs_fail,tcs_probes,tcs_correct_vel, tcs_fail_vel,tcs_probes_vel, lick_rate
+    return tcs_correct,tcs_fail,tcs_probes,tcs_correct_vel, tcs_fail_vel,tcs_probes_vel, lick_rate,vel
 
 def extract_data_df(ii, params_pth, animal, day, radian_alignment, radian_alignment_saved, 
                     goal_cm_window, pdf, pln):

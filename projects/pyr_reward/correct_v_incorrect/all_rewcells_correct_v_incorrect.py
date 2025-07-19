@@ -40,6 +40,8 @@ num_epochs=[]
 goal_cell_null=[]
 pvals=[]
 total_cells=[]
+vel_corr_all=[]
+vel_fail_all=[]
 # iterate through all animals
 dfs = []
 for ii in range(len(conddf)):
@@ -49,14 +51,15 @@ for ii in range(len(conddf)):
         if animal=='e145' or animal=='e139': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
-        df,tcs_correct,tcs_fail=trail_type_activity_quant(ii,params_pth,\
-                animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,
+        df,tcs_correct,tcs_fail,vel_correct,vel_fail=trail_type_activity_quant(ii,params_pth,animal,day,bins,radian_alignment,radian_alignment_saved,goal_cm_window,\
                 pdf,epoch_perm,goal_cell_iind,goal_cell_prop,num_epochs,goal_cell_null,
                 pvals,
                 total_cells)
         dfs.append(df)
         tcs_correct_all.append(tcs_correct)
         tcs_fail_all.append(tcs_fail)
+        vel_corr_all.append(vel_correct)
+        vel_fail_all.append(vel_fail)
 pdf.close()
 
 #%%
@@ -149,14 +152,14 @@ for cll, cell_type in enumerate(cell_types):
         sort_idx = np.argsort(peak_bins)
         vmin, vmax = 0,1
         im = ax.imshow(tc_z[sort_idx], vmin=vmin, vmax=vmax, aspect='auto', cmap='viridis')
-        ax.axvline(bins // 2, color='w', linestyle='--')
+        ax.axvline(bins // 2, color='w', linestyle='--',linewidth=3)
         ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
         ax.set_yticks([0,tc_z.shape[0]])
         ax.set_yticklabels([0,tc_z.shape[0]])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
         ax.set_ylabel('Reward cell # per epoch (sorted)')
         ax.set_xlabel('Reward-centric distance ($\\Theta$)')
-        ax.set_title(f'{animal}\nCorrect Trials')
+        ax.set_title(f'mouse {animal}\nCorrect Trials')
 
         # Panel: Failed Trials Heatmap
         ax = axes[1]
@@ -171,7 +174,7 @@ for cll, cell_type in enumerate(cell_types):
         sort_idx = np.argsort(peak_bins)
         if len(tc_fail_valid)>0:
             im2 = ax.imshow(tc_fail_valid[sort_idx], aspect='auto', cmap='viridis')
-            ax.axvline(bins // 2, color='w', linestyle='--')
+            ax.axvline(bins // 2, color='w', linestyle='--',linewidth=3)
             ax.set_xticks([0, tc.shape[1] // 2, tc.shape[1]])
             ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
             ax.set_yticks([0,tc_fail_valid.shape[0]])
@@ -194,7 +197,7 @@ for cll, cell_type in enumerate(cell_types):
         sem = scipy.stats.sem(tc_all, axis=0, nan_policy='omit')
         ax.plot(m, color='seagreen')
         ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='seagreen', alpha=0.5)
-        ax.axvline(bins // 2, color='k', linestyle='--')
+        ax.axvline(bins // 2, color='k', linestyle='--',linewidth=3)
         ax.set_xticks([0, len(m) // 2, len(m)])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
         ax.set_xlabel('Reward-centric distance ($\\Theta$)')
@@ -212,7 +215,7 @@ for cll, cell_type in enumerate(cell_types):
         sem = scipy.stats.sem(tc_all, axis=0, nan_policy='omit')
         ax.plot(m, color='firebrick')
         ax.fill_between(np.arange(len(m)), m - sem, m + sem, color='firebrick', alpha=0.5)
-        ax.axvline(bins // 2, color='k', linestyle='--')
+        ax.axvline(bins // 2, color='k', linestyle='--',linewidth=3)
         ax.set_xticks([0, len(m) // 2, len(m)])
         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
         ax.spines[['top', 'right']].set_visible(False)

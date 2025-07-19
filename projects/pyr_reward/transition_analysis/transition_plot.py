@@ -155,13 +155,14 @@ with open(fl, "rb") as fp: #unpickle
 placec = 'indigo'
 rewc = 'cornflowerblue'
 a=0.7
+animal='e145'
 # histogram of shufflel v. real
 fig, axes = plt.subplots(nrows=2,ncols=2,sharex=True, sharey=True,figsize=(8,7))
 axes=axes.flatten()
 ax=axes[0]
-shuf = [xx*100 for xx in dct['z9'][1]]
+shuf = [xx*100 for xx in dct[animal][1]]
 ax.hist(shuf, color='grey',alpha=a,label='shuffle')
-ax.axvline(dct['z9'][0]*100, color=placec, linewidth=3
+ax.axvline(dct[animal][0]*100, color=placec, linewidth=4
            )
 p2p=[[dct[an][0] for an,v in dct.items()], [np.nanmean(dct[an][1]) for an,v in dct.items()]]
 ax.set_ylabel('Shuffles')
@@ -173,9 +174,9 @@ fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\T
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
 ax=axes[1]
-shuf = [xx*100 for xx in dct['z9'][1]]
+shuf = [xx*100 for xx in dct[animal][1]]
 ax.hist(shuf, color='grey',alpha=a)
-ax.axvline(dct['z9'][0]*100, color=rewc, linewidth=3
+ax.axvline(dct[animal][0]*100, color=rewc, linewidth=4
            )
 r2p=[[dct[an][0] for an,v in dct.items()], [np.nanmean(dct[an][1]) for an,v in dct.items()]]
 ax.set_ylabel('')
@@ -187,9 +188,9 @@ fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\T
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
 ax=axes[2]
-shuf = [xx*100 for xx in dct['z9'][1]]
+shuf = [xx*100 for xx in dct[animal][1]]
 ax.hist(shuf, color='grey',alpha=a)
-ax.axvline(dct['z9'][0]*100, color=placec, linewidth=3
+ax.axvline(dct[animal][0]*100, color=placec, linewidth=4
            )
 p2r=[[dct[an][0] for an,v in dct.items()], [np.nanmean(dct[an][1]) for an,v in dct.items()]]
 ax.set_ylabel('')
@@ -201,9 +202,9 @@ fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\T
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
 ax=axes[3]
-shuf = [xx*100 for xx in dct['z9'][1]]
+shuf = [xx*100 for xx in dct[animal][1]]
 ax.hist(shuf, color='grey',alpha=a)
-ax.axvline(dct['z9'][0]*100, color=rewc, linewidth=3
+ax.axvline(dct[animal][0]*100, color=rewc, linewidth=4
            )
 # for each mouse
 r2r=[[dct[an][0] for an,v in dct.items()], [np.nanmean(dct[an][1]) for an,v in dct.items()]]
@@ -211,7 +212,7 @@ ax.set_ylabel('')
 ax.set_xlabel('')
 ax.set_title('Reward-Reward')
 ax.spines[['top','right']].set_visible(False)
-fig.suptitle('z9')
+fig.suptitle(f'mouse {animal}')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'place2place_transition_shuffle.svg'), bbox_inches='tight')
 #%%
@@ -255,11 +256,11 @@ for animal in df['Animal'].unique():
             x_shuffle = tr + 0.2
             y_real = d_an[d_an['Condition']=='Real']['Value'].values[0]
             y_shuffle = d_an[d_an['Condition']=='Shuffle']['Value'].values[0]
-            ax.plot([x_real, x_shuffle], [y_real, y_shuffle], color='lightgray', linewidth=1.5, zorder=0)
+            ax.plot([x_real, x_shuffle], [y_real, y_shuffle], color='gray', linewidth=1.5, zorder=0,alpha=0.5)
 
 # Stripplot with dodge for side-by-side points
-sns.stripplot(data=df, x='Transition', y='Value', hue='Group',
-              dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
+# sns.stripplot(data=df, x='Transition', y='Value', hue='Group',
+#               dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
 
 # Barplot with dodge for side-by-side bars
 sns.barplot(data=df, x='Transition', y='Value', hue='Group',
@@ -297,15 +298,15 @@ def pval_to_asterisks(p):
         return ''  # no label for ns
 
 # Step 4: Add asterisks to plot
-y_max = df['Value'].max()
+y_max = df['Value'].max()-10
 for i, (trans, p_corr) in enumerate(zip(transitions, p_vals_corrected)):
     stars = pval_to_asterisks(p_corr)
     ax.text(i, y_max + y_max*0.05, stars, ha='center', va='bottom', fontsize=46)
-    ax.text(i, y_max + y_max*0.05-5, p_corr, ha='center', va='bottom', fontsize=8)
+    # ax.text(i, y_max + y_max*0.05-5, p_corr, ha='center', va='bottom', fontsize=8)
 
 ax.spines[['top','right']].set_visible(False)
-ax.set_title('Real vs Shuffle Transitions')
-
+# ax.set_title('Real vs Shuffle Transitions')
+ax.legend()
 fig.tight_layout(rect=[0, 0, 0.85, 1])
 plt.savefig(os.path.join(savedst, 'transition_stats_v_shuffle.svg'), bbox_inches='tight')
 #%%
@@ -377,9 +378,6 @@ for animal in df['Animal'].unique():
 palette = 'Dark2'
 
 # Stripplot
-sns.stripplot(data=df, x='Transition', y='Value', hue='Period',
-              dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
-
 # Barplot
 sns.barplot(data=df, x='Transition', y='Value', hue='Period',
             palette=palette, dodge=True, errorbar='se', fill=False, ax=ax)
@@ -390,20 +388,20 @@ for i, row in results_df.iterrows():
     tr = row['Transition']
     sig = row['significance']
     p = row['p_val_corrected']
+    xpos = list(x_ticks).index(tr)
+    y_pre = df[(df['Transition'] == tr) & (df['Period'] == 'Pre')]['Value'].mean()
+    y_post = df[(df['Transition'] == tr) & (df['Period'] == 'Post')]['Value'].mean()
+    y_max = max(y_pre, y_post) + 15  # adjust spacing
     if sig != 'ns':
-        xpos = list(x_ticks).index(tr)
-        y_pre = df[(df['Transition'] == tr) & (df['Period'] == 'Pre')]['Value'].mean()
-        y_post = df[(df['Transition'] == tr) & (df['Period'] == 'Post')]['Value'].mean()
-        y_max = max(y_pre, y_post) + 15  # adjust spacing
         ax.text(xpos, y_max, sig, ha='center', va='bottom', fontsize=46, color='black')
-        ax.text(xpos, y_max-3, f'{p:.2g}', ha='center', va='bottom', fontsize=12, color='black')
+    ax.text(xpos, y_max-3, f'{p:.2g}', ha='center', va='bottom', fontsize=12, color='black')
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('% Cell transition')
 ax.set_title('Pre v. Post Transitions')
 plt.xticks(rotation=25)
 plt.savefig(os.path.join(savedst, 'pre_post_transition.svg'), bbox_inches='tight')
-
+#%%
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
@@ -543,3 +541,114 @@ ax.set_ylim(-2,2)
 ax.axis('off')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'transition_diagram.svg'), bbox_inches='tight')
+#%%
+# untuned transitions 
+fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\ShuffleDistribution_NL2NL"
+with open(fl, "rb") as fp: #unpickle
+    untunt = pickle.load(fp)
+# get average per tranisiton
+fl=r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\ShuffleDistribution_NL2PP"
+with open(fl, "rb") as fp: #unpickle
+    untp = pickle.load(fp)
+# get average per tranisiton
+fl=r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\ShuffleDistribution_NL2RR"
+with open(fl, "rb") as fp: #unpickle
+    untr = pickle.load(fp)
+
+untunt_shuf = [np.nanmean(xx[1]) for k,xx in untunt.items()]
+untp_shuf =[np.nanmean(xx[1]) for k,xx in untp.items()]
+untr_shuf = [np.nanmean(xx[1]) for k,xx in untr.items()]
+untunt = [xx[0] for k,xx in untunt.items()]
+untp =[xx[0] for k,xx in untp.items()]
+untr = [xx[0] for k,xx in untr.items()]
+
+real_transitions = np.concatenate([untunt,untp,untr])
+shuf_transitions = np.concatenate([untunt_shuf,untp_shuf,untr_shuf])
+transition_type = np.concatenate([['Untuned-Untuned']*len(untunt),['Untuned-Place']*len(untp),['Untuned-Reward']*len(untr)])
+# Create a DataFrame
+# Combine into a DataFrame
+animals = list(dct.keys())
+df = pd.DataFrame({
+    'Animal': np.concatenate([animals]*6),
+    'Transition': np.concatenate([transition_type] * 2),
+    'Value': np.concatenate([real_transitions, shuf_transitions]),
+    'Condition': ['Real'] * len(real_transitions) + ['Shuffle'] * len(shuf_transitions)
+})
+df['Value']=df['Value']*100
+n = len(untp)  # assuming all arrays same length
+animals = np.tile(np.arange(n), 3)  # 4 transition types
+palette = {
+    'Real': 'mediumslateblue',
+    'Shuffle': 'grey'
+}
+# Create combined category for hue
+df['Group'] = df.apply(
+    lambda row: f"Real" if row['Condition'] == 'Real' else 'Shuffle',
+    axis=1
+)
+fig, ax = plt.subplots(figsize=(7,6))
+s = 10
+
+# Plot lines connecting real and shuffle for each animal and transition
+for animal in df['Animal'].unique():
+    for tr, trans in enumerate(df['Transition'].unique()):
+        d_an = df[(df['Animal'] == animal) & (df['Transition'] == trans)]
+        if len(d_an) == 2:  # has both real and shuffle
+            # x positions adjusted for dodge:
+            x_real = tr - 0.2
+            x_shuffle = tr + 0.2
+            y_real = d_an[d_an['Condition']=='Real']['Value'].values[0]
+            y_shuffle = d_an[d_an['Condition']=='Shuffle']['Value'].values[0]
+            ax.plot([x_real, x_shuffle], [y_real, y_shuffle], color='gray', linewidth=1.5, zorder=0,alpha=0.5)
+
+# Stripplot with dodge for side-by-side points
+# sns.stripplot(data=df, x='Transition', y='Value', hue='Group',
+#               dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
+
+# Barplot with dodge for side-by-side bars
+sns.barplot(data=df, x='Transition', y='Value', hue='Group',
+            palette=palette, dodge=True, errorbar='se', fill=False, ax=ax)
+
+ax.set_ylabel('% Cell transition')
+plt.xticks(rotation=25)
+
+ax.legend_.remove()  # remove legend for now
+# --- Run paired t-tests and annotate ---
+# Step 1: Collect p-values for all transitions
+p_vals = []
+t_stats = []
+transitions = df['Transition'].unique()
+
+for trans in transitions:
+    real_vals = df[(df['Transition'] == trans) & (df['Condition'] == 'Real')].sort_values('Animal')['Value']
+    shuf_vals = df[(df['Transition'] == trans) & (df['Condition'] == 'Shuffle')].sort_values('Animal')['Value']
+    t_stat, p_val = scipy.stats.wilcoxon(real_vals, shuf_vals)
+    t_stats.append(t_stat)
+    p_vals.append(p_val)
+
+# Step 2: Apply multiple comparisons correction
+rejected, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+
+# Step 3: Function to get asterisks
+def pval_to_asterisks(p):
+    if p < 0.001:
+        return '***'
+    elif p < 0.01:
+        return '**'
+    elif p < 0.05:
+        return '*'
+    else:
+        return ''  # no label for ns
+
+# Step 4: Add asterisks to plot
+y_max = df['Value'].max()-10
+for i, (trans, p_corr) in enumerate(zip(transitions, p_vals_corrected)):
+    stars = pval_to_asterisks(p_corr)
+    ax.text(i, y_max + y_max*0.05, stars, ha='center', va='bottom', fontsize=46)
+    # ax.text(i, y_max + y_max*0.05-5, p_corr, ha='center', va='bottom', fontsize=8)
+
+ax.spines[['top','right']].set_visible(False)
+# ax.set_title('Real vs Shuffle Transitions')
+ax.legend()
+fig.tight_layout(rect=[0, 0, 0.85, 1])
+plt.savefig(os.path.join(savedst, 'untuned_to_other_transition.svg'), bbox_inches='tight')

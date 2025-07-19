@@ -23,8 +23,8 @@ mpl.rcParams["ytick.major.size"] = 8
 # plt.rc('font', size=16)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
-from placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian_position, \
+from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
+from projects.pyr_reward.rewardcell import get_days_from_cellreg_log_file, find_log_file, get_radian_position, \
     get_tracked_lut, get_tracking_vars, get_shuffled_goal_cell_indices, get_reward_cells_that_are_tracked
 from projects.opto.behavior.behavior import get_success_failure_trials
 # import condition df
@@ -73,9 +73,65 @@ for animal in animals:
             goal_window = 20*(2*np.pi/track_length) # cm converted to rad, consistent with quantified window sweep
             # find key
             k = [k for k,v in radian_alignment_saved.items() if f'{animal}_{day:03d}' in k][0]
-            tcs_correct, coms_correct, tcs_fail, coms_fail, \
-                com_goal, goal_cell_shuf_ps_per_comp_av,\
-                goal_cell_shuf_ps_av = radian_alignment_saved[k]            
+            _, __, ___, ____,tcs_correct, coms_correct, tcs_fail_dt, coms_fail_dt, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[k]         
+            perm = list(combinations(range(len(coms_correct)), 2))       
+            goal_window = 20*(2*np.pi/track_length) # cm converted to rad
+            coms_rewrel = np.array([com-np.pi for com in coms_correct])
+            print(perm)
+            # account for cells that move to the end/front
+            # Define a small window around pi (e.g., epsilon)
+            epsilon = .7 # 20 cm
+            # Find COMs near pi and shift to -pi
+            com_loop_w_in_window = []
+            for pi,p in enumerate(perm):
+                for cll in range(coms_rewrel.shape[1]):
+                    com1_rel = coms_rewrel[p[0],cll]
+                    com2_rel = coms_rewrel[p[1],cll]
+                    # print(com1_rel,com2_rel,com_diff)
+                    if ((abs(com1_rel - np.pi) < epsilon) and 
+                    (abs(com2_rel + np.pi) < epsilon)):
+                            com_loop_w_in_window.append(cll)
+            # get abs value instead
+            coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+            com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+            com_goal_all=np.unique(np.concatenate(com_goal))
+
+            ########### shuffle
+            shufs = [list(range(coms_correct[ii].shape[0])) for ii in range(1, len(coms_correct))]
+            [random.shuffle(shuf) for shuf in shufs]
+            # first com is as ep 1, others are shuffled cell identities
+            com_shufs = np.zeros_like(coms_correct); com_shufs[0,:] = coms_correct[0]
+            com_shufs[1:1+len(shufs),:] = [coms_correct[ii][np.array(shufs)[ii-1]] for ii in range(1, 1+len(shufs))]
+            # OR shuffle cell identities
+            # relative to reward
+            coms_rewrel = np.array([com-np.pi for ii, com in enumerate(com_shufs)])             
+            # account for cells that move to the end/front
+            # Find COMs near pi and shift to -pi
+            epsilon=.7
+            com_loop_w_in_window = []
+            for pi,p in enumerate(perm):
+                for cll in range(coms_rewrel.shape[1]):
+                    com1_rel = coms_rewrel[p[0],cll]
+                    com2_rel = coms_rewrel[p[1],cll]
+                    # print(com1_rel,com2_rel,com_diff)
+                    if ((abs(com1_rel - np.pi) < epsilon) and 
+                    (abs(com2_rel + np.pi) < epsilon)):
+                            com_loop_w_in_window.append(cll)
+            # get abs value instead
+            # cont.
+            coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
+            com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
+            # get goal cells across all epochs
+            com_goal_shuf = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
+            com_goal_shuf=[com for com in com_goal_shuf if len(com)>0]
+            goal_cells_shuf_p_per_comparison = [len(xx)/len(coms_correct[0]) for xx in com_goal_shuf]
+            # get goal cells across all epochs   
+            if len(com_goal_shuf)>0:
+                goal_cells_shuf = intersect_arrays(*com_goal_shuf); 
+            else:
+                goal_cells_shuf=[]
+            ########### shuffl   
             assert suite2pind_remain.shape[0]==tcs_correct.shape[1]
             # indices per epo
             iind_goal_cells_all=[suite2pind_remain[xx] for xx in com_goal]
@@ -163,7 +219,6 @@ for animal in animals:
             days_2day_ep3.append(ii)
         except Exception as e:
             print(e)
-
 
     # get number of cells in each comparison
     per_day_goal_cells_num = [[len(xx) for xx in yy] for yy in iind_goal_cells_all_per_day] # incl all epochs
