@@ -135,14 +135,13 @@ df_permsav2=df_permsav2.reset_index()
 # compare to shuffle
 # df_permsav2=df_permsav2.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
-df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189') & (df_plt2.animals!='e139') & (df_plt2.animals!='z16')]
+df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189') & (df_plt2.animals!='e139')]
 df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
-df_plt2 = df_plt2[df_plt2.animals!='e139']
-# number of epochs vs. reward cell prop incl combinations    
+s# number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(ncols=2,figsize=(7,5))
 ax=axes[0]
 # av across mice
@@ -195,7 +194,7 @@ for i in range(len(ans)):
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
 ax.set_title('Far post-reward cells',pad=30)
-ax.set_ylim([0,20])
+ax.set_ylim([0,25])
 ax=axes[1]
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
@@ -229,9 +228,10 @@ ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of epochs')
 ax.set_ylabel('Real-shuffle %')
 ax.set_title('Far post-reward cell %-shuffle',pad=30)
-ax.set_ylim([-1,10])
+ax.set_ylim([-2,20])
 plt.tight_layout()
 df_plt2['cell_type']=['Far post-reward']*len(df_plt2)
+df_plt2=df_plt2.drop(columns=['index'])
 df_plt2.to_csv(r'Z:\saved_datasets\far_post_counts.csv',index=None)
 
 plt.savefig(os.path.join(savedst, 'post_farreward_dark_time_cell_prop-shuffle_per_an.svg'), 

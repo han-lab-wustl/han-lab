@@ -35,7 +35,7 @@ goal_cm_window=20
 dfs = []; lick_dfs = []
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-ii=152
+ii=149
 day = conddf.days.values[ii]
 animal = conddf.animals.values[ii]
 if animal=='e145' or animal=='e139': pln=2 
@@ -137,13 +137,15 @@ else:
 
 # trial by trial raster
 # abs distance
-trialstates, licks_all, tcs, coms =make_tuning_curves_time_trial_by_trial(eps, rewlocs, lick, ybinned, time, Fc3[:,goal_cells], trialnum, rewards, forwardvel, rewsize, bin_size)
+trialstates, licks_all, tcs_all, coms_all, ypos_max_all_ep, vels_all =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells], trialnum, rewards, forwardvel, scalingf,bins=150)
+
+def moving_average(x, window_size=3):
+        return np.convolve(x, np.ones(window_size)/window_size, mode='same')
+
 # (eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
 #%%
 plt.rc('font', size=16)
 # plot the distance tuning
-def moving_average(x, window_size=3):
-        return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 # panel for fig 4
 fig, axes = plt.subplots(ncols=len(tcs_correct),nrows = 3,figsize=(7,4.5),sharex=True,sharey=True)
 axes=axes.flatten()
@@ -266,10 +268,12 @@ plt.savefig(os.path.join(savedst, f'{animal}_{day}_pre_reward_raster.svg'))
 
 #%%
 # trial by trial raster
-
+tcs_dist=tcs_all
+licks_all_dist=licks_all
+coms_dist=coms_all
+ypos_max = ypos_max_all_ep
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']        
-clls = [10]  # subset of goal_cells to plot
-
+clls = [0]  # subset of goal_cells to plot
 for cll in clls:
         fig, axes_all = plt.subplots(nrows=len(tcs_correct), ncols=4, figsize=(15, 10), sharex=True, width_ratios=[1.5, 1, 1, 1])
         vmin = 0
@@ -317,8 +321,9 @@ for cll in clls:
 
                 # --- Trial-average trace ---
                 avg_trace = moving_average(tcs_correct[ep, goal_cells[cll]].T, window_size=5)
-                axes[3].plot(avg_trace, color=colors[ep], label=f'{rewlocs[ep]:.1f} cm', linewidth=2)
+                axes[3].plot(avg_trace, color=colors[ep],linewidth=2)
                 axes[3].legend()
+                axes[3].set_title(f'Reward @ {int(rewlocs[ep])}')
                 axes[3].set_ylabel('$\Delta F/F$')
 
                 # --- Lick COM ---
@@ -335,7 +340,10 @@ for cll in clls:
 
                 norm_licks = (lick_data - np.nanmin(lick_data, axis=1, keepdims=True)) / \
                         (np.nanmax(lick_data, axis=1, keepdims=True) - np.nanmin(lick_data, axis=1, keepdims=True) + 1e-10)
-                axes[1].imshow(norm_licks, aspect='auto', cmap='Blues')
+                divider = make_axes_locatable(axes[1])
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                im=axes[1].imshow(norm_licks, aspect='auto', cmap='Blues')
+                fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. licks')
                 axes[1].scatter(com_trial_lick, np.arange(len(com_trial_lick)), color='k', marker='|')
                 axes[1].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
 
@@ -350,7 +358,10 @@ for cll in clls:
 
                 norm_vels = (vel_data - np.nanmin(vel_data, axis=1, keepdims=True)) / \
                         (np.nanmax(vel_data, axis=1, keepdims=True) - np.nanmin(vel_data, axis=1, keepdims=True) + 1e-10)
-                axes[2].imshow(norm_vels, aspect='auto', cmap='Purples')
+                divider = make_axes_locatable(axes[2])
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                im=axes[2].imshow(norm_vels, aspect='auto', cmap='Purples')
+                fig.colorbar(im, cax=cax, orientation='vertical', label='Norm. velocity')
                 axes[2].scatter(com_trial_vel, np.arange(len(com_trial_vel)), color='k', marker='|')
                 axes[2].imshow(trial_mask_2d, cmap=cmap, norm=norm, aspect='auto', alpha=a)
 
@@ -364,8 +375,6 @@ for cll in clls:
                 axes[3].set_xticks(ticks)
                 axes[3].set_xticklabels(["$-\\pi$", "0", "$\\pi$"])
                 axes[3].set_xlabel('Reward-centric distance ($\Theta$)')
-                axes[1].set_ylabel('Norm. Licks')
-                axes[2].set_ylabel('Velocity (cm/s)')
                 axes[0].set_ylabel('Trial #')
                 axes[3].spines[['top', 'right']].set_visible(False)
 
@@ -373,6 +382,4 @@ for cll in clls:
                 plt.savefig(os.path.join(savedst, f'{animal}_{day}_rewcell{cll}_trialbytrial.svg'))
 
                 #%% 
-                pdf.savefig(fig)
                 plt.close(fig)
-pdf.close()

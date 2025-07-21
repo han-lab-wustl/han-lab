@@ -48,7 +48,7 @@ palette = {
     'Real': 'mediumslateblue',
     'Shuffle': 'grey'
 }
-fig, ax = plt.subplots(figsize=(4,5))
+fig, ax = plt.subplots(figsize=(3,4))
 s = 10
 
 # Plot lines connecting real and shuffle for each animal and transition
@@ -61,17 +61,17 @@ for animal in df['Animal'].unique():
             x_shuffle = tr + 0.2
             y_real = d_an[d_an['Condition']=='Real']['% Overlap'].values[0]
             y_shuffle = d_an[d_an['Condition']=='Shuffle']['% Overlap'].values[0]
-            ax.plot([x_real, x_shuffle], [y_real, y_shuffle], color='lightgray', linewidth=1.5, zorder=0)
+            ax.plot([x_real, x_shuffle], [y_real, y_shuffle], color='grey', linewidth=1.5, zorder=0,alpha=.5)
 
 # Stripplot with dodge for side-by-side points
-sns.stripplot(data=df, x='Cell type', y='% Overlap', hue='Condition',
-              dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
+# sns.stripplot(data=df, x='Cell type', y='% Overlap', hue='Condition',
+#               dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
 
 # Barplot with dodge for side-by-side bars
 sns.barplot(data=df, x='Cell type', y='% Overlap', hue='Condition',
-            palette=palette, dodge=True, errorbar='se', fill=False, ax=ax,legend=False)
-
-ax.legend_.remove()  # remove legend for now
+            palette=palette, dodge=True, errorbar='se', fill=False, ax=ax)
+ 
+# ax.legend_.remove()  # remove legend for now
 # --- Run paired t-tests and annotate ---
 # Step 1: Collect p-values for all transitions
 p_vals = []
@@ -103,8 +103,11 @@ def pval_to_asterisks(p):
 y_max = df['% Overlap'].max()
 for i, (trans, p_corr) in enumerate(zip(transitions, p_vals_corrected)):
     stars = pval_to_asterisks(p_corr)
-    ax.text(i, y_max + y_max*0.05, stars, ha='center', va='bottom', fontsize=46)
-    ax.text(i, y_max + y_max*0.05, p_corr, ha='center', va='bottom', fontsize=8)
+    # ax.text(i, y_max + y_max*0.05, stars, ha='center', va='bottom', fontsize=46)
+    # ax.text(i, y_max + y_max*0.05, p_corr, ha='center', va='bottom', fontsize=8)
+    ax.text(i, y_max + y_max*0.05, 'ns', ha='center', va='bottom', fontsize=14)
+    ax.plot([i-.2,i-.2,i+.2,i+.2], [y_max, y_max + y_max*0.05,y_max + y_max*0.05,y_max],color='k')
+    
 
 ax.spines[['top','right']].set_visible(False)
 ax.set_title('Real vs. Shuffle Lick cells')

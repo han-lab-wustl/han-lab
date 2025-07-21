@@ -151,7 +151,7 @@ df_plt=df_plt.reset_index()
 df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2=df_plt2.reset_index()
-df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189') & (df_plt2.animals!='e139') & (df_plt2.animals!='z16')]
+df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189') & (df_plt2.animals!='e139')]
 df_plt2 = df_plt2[df_plt2.num_epochs<5]
 df_plt2['goal_cell_prop']=df_plt2['goal_cell_prop']*100
 df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
@@ -173,7 +173,7 @@ ax = sns.barplot(data=df_plt2, # correct shift
 ax.spines[['top','right']].set_visible(False)
 ax.legend()
 eps = [2,3,4]
-y = 12
+y = 20
 pshift=.15
 fs=36
 from statsmodels.stats.multitest import multipletests
@@ -206,7 +206,7 @@ for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop', 
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
-ax.set_ylim([0,15])
+ax.set_ylim([0,25])
 ax.set_xlabel('# of epochs')
 ax.set_ylabel('Near post-reward cell %')
 
@@ -227,7 +227,7 @@ for i in range(len(ans)):
     ax = sns.lineplot(x=df_plt2.num_epochs-2, y='goal_cell_prop_sub_shuffle', 
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
-y=9
+y=12
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
         # statistical annotation        
@@ -241,12 +241,14 @@ for ii,ep in enumerate(eps):
 
 ax.set_xlabel('# of epochs')
 ax.set_ylabel('Real-shuffle %')
-ax.set_ylim([-1,10])
+ax.set_ylim([-2,15])
 ax.set_title('Near post-reward cell %-shuffle',pad=30)
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'postreward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')
-
+df_plt2['cell_type']=['Near post-reward']*len(df_plt2)
+df_plt2=df_plt2.drop(columns=['level_0','index'])
+df_plt2.to_csv(r'Z:\saved_datasets\near_post_counts.csv')
 #%%
 # find tau/decay
 from scipy.optimize import curve_fit

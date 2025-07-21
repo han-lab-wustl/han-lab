@@ -138,6 +138,8 @@ df_plt2['goal_cell_prop_shuffle']=df_plt2['goal_cell_prop_shuffle']*100
 df_plt2=df_plt2.reset_index()
 df_plt2=df_plt2[df_plt2.num_epochs<5]
 #%%     
+df_plt2 = df_plt2[(df_plt2.animals!='e200') & (df_plt2.animals!='e189') & (df_plt2.animals!='e139')]
+
 fig,axes = plt.subplots(ncols=2,figsize=(7,5))
 ax=axes[0]
 # av across mice
@@ -173,7 +175,7 @@ for ii,ep in enumerate(eps):
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
 reject, pvals_corrected, _, _ = multipletests(pvalues, method='fdr_bh')
-y=12
+y=22
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
         # statistical annotation        
@@ -185,7 +187,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
         ax.text(ii, y+pshift, f'p={pval:.2g}',rotation=45,fontsize=12)
 ax.set_title('Near pre-reward cells',pad=30)
-ax.set_ylim([0, 22])
+ax.set_ylim([0, 25])
 # subtract from shuffle
 # df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop_sub_shuffle'] = df_plt2['goal_cell_prop']-df_plt2['goal_cell_prop_shuffle']
@@ -203,7 +205,7 @@ for i in range(len(ans)):
     data=df_plt2[df_plt2.animals==ans[i]],
     errorbar=None, color='dimgray', linewidth=lw, alpha=0.5,ax=ax)
 
-y=9
+y=12
 pshift=1
 for ii,ep in enumerate(eps):
         pval=pvals_corrected[ii]
@@ -218,13 +220,14 @@ for ii,ep in enumerate(eps):
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Real-shuffle %')
 ax.set_xlabel('# of epochs')
-ax.set_ylim([-1,15])
+ax.set_ylim([-2,15])
 ax.set_title('Near re-reward cell %-shuffle',pad=30)
 plt.tight_layout()
 df_plt2['cell_type']=['Near Pre-reward']*len(df_plt2)
 df_plt2.to_csv(r'Z:\saved_datasets\near_pre_counts.csv',index=None)
 plt.savefig(os.path.join(savedst, 'prereward_cell_prop_dark_time-shuffle_per_an.svg'), 
         bbox_inches='tight')
+len(df_plt2.animals.unique())
 
 #%%
 # find tau/decay

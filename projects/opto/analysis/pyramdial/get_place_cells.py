@@ -299,7 +299,7 @@ df=df[(df.animals!='e189')&(df.animals!='e190')]
 df=df[~((df.animals=='z15')&(df.days<8))]
 df=df[~((df.animals=='e217')&(df.days<9)&(df.days==26))]
 df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
-df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([64,67,68,81,84]))))]
 
 # df=df[~((df.animals=='e218')&(df.days>44))]
 
@@ -389,6 +389,8 @@ for (animal, condition), group in df_an.groupby(['animals', 'condition']):
                             stim.loc[(animal, condition), 'place_cell_prop_early'] - no_stim.loc[(animal, condition), 'place_cell_prop_early'], stim.loc[(animal, condition), 'other_sp_prop'] - no_stim.loc[(animal, condition), 'other_sp_prop']])
 
 df_delta = pd.DataFrame(delta_vals, columns=['animals', 'condition', 'delta_late', 'delta_early', 'delta_other_sp'])
+# Combine early and late deltas (mean)
+df_delta['delta_combined'] = df_delta[['delta_late', 'delta_early']].mean(axis=1)
 
 # Now we can plot side by side
 fig, axs = plt.subplots(1, 3, figsize=(11,6),sharey=True)
@@ -513,6 +515,84 @@ for i, (cond1, cond2) in enumerate(pairs):
     ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
 # Save the plot
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
+#%%
+# just place and other 
+fig,axes=plt.subplots(ncols=2,figsize=(6,5),sharey=True)
+ax=axes[0]
+sns.stripplot(data=df_delta, x='condition', y='delta_combined', ax=ax, 
+              palette=pl, size=s, alpha=a)
+sns.barplot(data=df_delta, x='condition', y='delta_combined', ax=ax, 
+            palette=pl, fill=False, errorbar='se')
+ax.set_ylabel('$\Delta$ Cell % (LEDon-off)')
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_title('All trials\nPlace')
+
+# --- Stats + annotation ---
+data = df_delta
+conds = data['condition'].unique()
+pairs = list(combinations(conds, 2))[:2]
+y_max = data['delta_combined'].quantile(.85)
+y_step = 0.4 * abs(y_max)
+
+for i, (cond1, cond2) in enumerate(pairs):
+    vals1 = data[data['condition'] == cond1]['delta_combined']
+    vals2 = data[data['condition'] == cond2]['delta_combined']
+    stat, pval = scipy.stats.ranksums(vals1, vals2)
+
+    if pval < 0.001:
+        text = '***'
+    elif pval < 0.01:
+        text = '**'
+    elif pval < 0.05:
+        text = '*'
+    else:
+        text = ''
+
+    x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+    y = y_max + y_step * (i + 1)
+    ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+    ax.text((x1 + x2)/2, y - y_step * .2, text, ha='center', va='bottom', fontsize=40)
+    ax.text((x1 + x2)/2, y - y_step * .3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+ax=axes[1]
+sns.stripplot(data=df_delta, x='condition', y='delta_other_sp', ax=ax, 
+              palette=pl, size=s, alpha=a)
+sns.barplot(data=df_delta, x='condition', y='delta_other_sp', ax=ax, 
+            palette=pl, fill=False,errorbar='se')
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_title('Other spatially tuned')
+# --- Stats + annotation ---
+data=df_delta
+conds = data['condition'].unique()
+pairs = list(combinations(conds, 2))[:2]
+y_max = data['delta_other_sp'].quantile(.99)
+y_step = 0.4 * abs(y_max)
+
+for i, (cond1, cond2) in enumerate(pairs):
+    vals1 = data[data['condition'] == cond1]['delta_other_sp']
+    vals2 = data[data['condition'] == cond2]['delta_other_sp']
+    stat, pval = scipy.stats.ranksums(vals1, vals2)
+    # Annotation text
+    if pval < 0.001:
+        text = '***'
+    elif pval < 0.01:
+        text = '**'
+    elif pval < 0.05:
+        text = '*'
+    else:
+        text = f""
+
+    # Get x-locations
+    x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
+    y = y_max + y_step * (i + 1)
+    ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
+    ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
+    ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_av.svg'), bbox_inches='tight')
 
 #%% 
 # correlate with rates diff
