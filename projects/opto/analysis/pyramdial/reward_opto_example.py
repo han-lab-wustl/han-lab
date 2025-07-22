@@ -30,7 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 # initialize var
 #%%
 ii=40
-iis=[126,166,49] # control v inhib x ex
+iis=[130,166,49] # control v inhib x ex
 # iis=[126,166,49] # control v inhib x ex
 
 datarasters=[]
@@ -136,12 +136,12 @@ for ii in iis:
    datarasters.append([tcs_correct_abs[:, pcs],tcs_correct_abs[:,goal_cells],coms_correct_abs[:, pcs],coms_correct_abs[:,goal_cells], rewlocs, eptest] )
 
 #%%
-plt.rc('font', size=18)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 from matplotlib import colors
 from matplotlib import patches
-vmax=2
+vmax=3
 # Create subplots
-fig, axes = plt.subplots(ncols=3,nrows=2, figsize=(11,9))
+fig, axes = plt.subplots(ncols=3,nrows=2, figsize=(12,11))
 # Normalize to range [0, 1]
 def normalize_rows(arr):
    arr_new = np.copy(arr)
@@ -167,14 +167,14 @@ for kk, lbl in enumerate(lbls):
    # 1 = ledon
    im = ax.imshow(tcs_normalized[np.argsort(coms_correct_pc[1])], aspect='auto',vmin=0,vmax=vmax)
    ax.set_title(f'{lbls[kk]} \n Place\nLED on')
-   ax.axvline(rewlocs[eptest-1] / 3, color='w', linestyle='--',linewidth=3)
+   ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
       # ax.set_xlabel('Track position (cm)')
    patch = patches.Rectangle((0, 0),  # (x, y)
    width=rewlocs[eptest-1] / 3,
    height=tcs_normalized.shape[0],
    color=colors[kk],
    alpha=0.2)
-   ax.add_patch(patch)
+   # ax.add_patch(patch)
    ax.set_yticks([0,len(tcs_normalized)-1])
    ax.set_xticks([0, bins // 2, bins]) 
    ax.set_xticklabels([0,135,270])
@@ -189,15 +189,15 @@ for kk, lbl in enumerate(lbls):
    ax = axes[1,kk]
    # 1 = ledon
    im = ax.imshow(tcs_normalized[np.argsort(coms_correct_gc[1])], aspect='auto',vmin=0,vmax=vmax)
-   ax.set_title(f'Reward')
-   ax.axvline(rewlocs[eptest-1] / 3, color='w', linestyle='--',linewidth=3)
+   ax.set_title(f'{lbls[kkn]}\nReward\nLED on')
+   ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
    patch = patches.Rectangle((0, 0),  # (x, y)
    width=rewlocs[eptest-1] / 3,
    height=tcs_normalized.shape[0],
    color=colors[kk],
    alpha=0.2)
    ax.set_yticks([0,len(tcs_normalized)-1])
-   ax.add_patch(patch)
+   # ax.add_patch(patch)
    ax.set_xticks([0, bins // 2, bins]) 
    ax.set_xticklabels([0,135,270])
    if kk == 0:

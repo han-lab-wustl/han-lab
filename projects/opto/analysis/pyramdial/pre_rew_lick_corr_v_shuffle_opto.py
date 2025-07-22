@@ -77,7 +77,7 @@ df_all=[]
 # 60,70,80] # cm
 # iterate through all animals
 #%%
-for ii in range(52,len(conddf)):
+for ii in range(len(conddf)):
     if not ii==52:
         day = conddf.days.values[ii]
         animal = conddf.animals.values[ii]
@@ -159,7 +159,7 @@ for ii in range(52,len(conddf)):
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
         skewthres=2
         lowcellcnt = ['z17','e200','e217','z14']
-        if animal in lowcellcnt: skewthres=1
+        if animal in lowcellcnt: skewthres=1.2
         Fc3 = Fc3[:, skew>skewthres] # only keep cells with skew greateer than 2
         tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
             rewsize,ybinned,time,lick,
@@ -201,7 +201,7 @@ for ii in range(52,len(conddf)):
         vel_fail_abs_shuf=[xx[1] for xx in vel_abs_shuf]
         vel_fail_abs_shuf=np.squeeze(np.nanmean(vel_fail_abs_shuf,axis=0))
         
-        goal_window = 40*(2*np.pi/track_length) # cm converted to rad
+        goal_window = 20*(2*np.pi/track_length) # cm converted to rad
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         perm = list(combinations(range(len(coms_correct)), 2)) 
@@ -315,22 +315,34 @@ from statsmodels.stats.multitest import multipletests
 plt.rc('font', size=20)
 # get all cells width cm 
 bigdf = pd.concat(df_all)
+
 s=10;a=0.7
 palette='Dark2'
-order=['pre','post','pre_place']
-df = bigdf.groupby(['animal','cell_type','trial_type']).mean(numeric_only=True)
+df = bigdf#.groupby(['animal','day','cell_type','trial_type']).mean(numeric_only=True)
 df=df.reset_index()
-typ='correct'
-df=df[df.trial_type==typ]
-typs=['correct','incorrect']
-# df=df[df.trial_type=='incorrect']
-df=df.dropna()
-df=df[(df.animal!='e189') & (df.animal!='e139')& (df.animal!='e145')]
-df=df[df.cell_type!='post_place']
-fig, axes = plt.subplots(ncols=2,figsize=(7,5))
+df['days']=df['day'].astype(int)
+df['animals']=df['animal']
+df=df.drop(columns=['day','animal','index'])
+df = pd.merge(df, conddf, on=['animals', 'days'], how='left')
+df['opto']=df.optoep>1
+df=df[(df.animals!='e189') & (df.animals!='e139')& (df.animals!='e145')]
+df.loc[df['condition'] == 'shuffle', 'trial_type'] = 'shuffle'
+df['cond']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
 
-ax=axes[0]
-sns.barplot(x='cell_type',y='cs_lick_v_tc',data=df,fill=False,palette=palette,order=order,ax=ax,errorbar='se')
+df=df[~((df.animals=='z15')&(df.days>13))]
+# df=df[~((df.animals=='e217')&(df.days<9)&(df.days.isin([13,16])))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([64,67,68,81,84]))))]
+df=df[~((df.animals=='z14')&((df.days<33)))]
+
+df = df.groupby(['animals','days','cond','opto','trial_type']).mean(numeric_only=True).reset_index()
+fig, axes = plt.subplots(ncols=3,figsize=(12,5),sharey=True)
+for iii,cd in enumerate(['ctrl','vip','vip_ex']):
+    ax=axes[iii]
+    sns.barplot(x='trial_type',y='cs_lick_v_tc',hue='opto',data=df[df.cond==cd],fill=False,ax=ax,errorbar='se')
+    sns.stripplot(x='trial_type',y='cs_lick_v_tc',hue='opto',data=df[df.cond==cd],ax=ax,dodge=True)
+
+#%%
 # sns.stripplot(x='cell_type',y='cs_lick_v_tc',data=df,s=s,palette=palette,order=order,alpha=a,ax=ax)
 # Draw lines per animal for Lick rho
 pivot_lick = df.pivot(index='animal', columns='cell_type', values='cs_lick_v_tc')
