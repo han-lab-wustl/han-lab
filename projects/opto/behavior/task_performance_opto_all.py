@@ -190,15 +190,15 @@ print(f"Required sample size per group: {sample_size:.2f}")
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 a=0.7
 fig,ax = plt.subplots(figsize=(4,6))
-sns.barplot(x="condition", y="velocity",hue='condition', data=bigdf_plot,
+sns.barplot(x="condition", y="velocity_diff",hue='condition', data=bigdf_plot,
     palette=pl,                
             errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="velocity",hue='condition', data=bigdf_plot,
+sns.stripplot(x="condition", y="velocity_diff",hue='condition', data=bigdf_plot,
             palette=pl,alpha=a,                
             s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
-ax.set_ylabel(f'Velocity (cm/s; LEDon)')
+ax.set_ylabel(f'Pre-reward velocity (LEDon-LEDoff)')
 ax.set_xlabel('')
 
 # Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
@@ -206,8 +206,8 @@ conds = ['ctrl', 'vip', 'vip_ex']
 comparisons = list(itertools.combinations(conds, 2))[:-1]
 p_vals = []
 for c1, c2 in comparisons:
-    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['velocity'].dropna()
-    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['velocity'].dropna()
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['velocity_diff'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['velocity_diff'].dropna()
     stat, p = stats.ranksums(x1, x2, alternative='two-sided')
     p_vals.append(p)
 # Correct for multiple comparisons
@@ -231,10 +231,10 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
     plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
 
 # Plot all pairwise comparisons
-y_start = bigdf_plot['velocity'].max()
+y_start = bigdf_plot['velocity_diff'].max()-1.5
 gap = 2
 for i, (c1, c2) in enumerate(comparisons):
-    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],height=1.5)
+    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],height=.4)
     y_start += gap
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'velocity_opto_all.svg'),  bbox_inches='tight')

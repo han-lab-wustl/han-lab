@@ -30,7 +30,9 @@ with open(saveddataset, "rb") as fp: #unpickle
 # initialize var
 #%%
 ii=40
-iis=[130,166,46] # control v inhib x ex
+iis=[126,166,49] # control v inhib x ex
+# iis=[126,166,49] # control v inhib x ex
+
 datarasters=[]
 cm_window=20
 for ii in iis:

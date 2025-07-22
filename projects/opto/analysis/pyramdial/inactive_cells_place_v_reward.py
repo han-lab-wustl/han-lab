@@ -24,7 +24,6 @@ from scipy.stats import spearmanr
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 #%% - re-run dct making
-# uses matlab tuning curves
 dcts = []
 maindct={}
 cm_window=20
@@ -86,7 +85,10 @@ for ii in range(len(conddf)):
     Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
     dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
     skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-    Fc3 = Fc3[:, skew>1.2] # only keep cells with skew greateer than 2
+    skewthres=2
+    lowcellcnt = ['z17','e200','e217','z14']
+    if animal in lowcellcnt: skewthres=1.2
+    Fc3 = Fc3[:, skew>skewthres] # only keep cells with skew greateer than 2
     tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
         rewsize,ybinned,time,lick,
         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
@@ -190,17 +192,17 @@ df=df.drop(columns=['in_type'])
 df=df[df.percent>0]
 df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='z16')&(df.animals!='e200')]
 # remove outlier days
-# df=df[~((df.animals=='e201')&((df.days>62)))]
-df=df[~((df.animals=='z14')&((df.days<20)|(df.days>40)))]
-df=df[~((df.animals=='z17')&((df.days.isin([16,17,24,18,20]))))]
-df=df[~((df.animals=='z15')&((df.days<13)))]
+# remove outlier days
+df=df[~((df.animals=='z14')&((df.days<33)))]
+df=df[~((df.animals=='z16')&((df.days>13)))]
+df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
+df=df[~((df.animals=='e217')&((df.days<9)))]
+df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([47,55,57]))))]
+df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
+df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 # 11,16,31, from other sp tuned
-# df=df[~((df.animals=='e217')&((df.days<9)))]
-# df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
-# df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
-# df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 s=12;a=0.7
-df=df.groupby(['animals','group','opto','condition']).mean(numeric_only=True)
+df=df.groupby(['animals','days','group','opto','condition']).mean(numeric_only=True)
 df=df.reset_index()
 # df=df[(df.group=='active_rew')|(df.group=='inactive_rew')]
 # for cond in df.condition.unique():

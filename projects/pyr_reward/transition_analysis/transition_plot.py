@@ -14,11 +14,11 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 
 #%%
 # get cell eg
 fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\TransitionResults\TransitionMatrix\NeuronType"
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
 # [RR_List, PP_List, NL_List] 
@@ -134,6 +134,7 @@ ax.set_xlabel('Track position (cm)')
 # rew
 for i,tc in enumerate(tcs_correct[:3,:]):
     ax=axes[1,i]
+    
     ax.plot(moving_average(tc[rr], window_size=5), color=colors[i],linewidth=lw)
     if i==0: ax.set_ylabel('$\Delta F/F$')
     ax.spines[['top','right']].set_visible(False)
