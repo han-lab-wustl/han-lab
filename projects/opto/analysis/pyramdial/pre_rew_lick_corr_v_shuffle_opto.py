@@ -78,7 +78,7 @@ df_all=[]
 # iterate through all animals
 #%%
 for ii in range(len(conddf)):
-    if not ii==52:
+    if ii!=52 and ii!=20:
         day = conddf.days.values[ii]
         animal = conddf.animals.values[ii]
         if animal=='e145' or animal=='e139': pln=2 

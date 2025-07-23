@@ -95,12 +95,10 @@ for kk,animal in enumerate(animals):
          tracked_shuf =np.zeros((shuffles, tracked_lut.shape[0]))
       # get vars
       params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+      print(params_pth)
       fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
          'putative_pcs', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
          'stat'])
-      _, suite2pind_remain, __, ____, _____, ______, ______, _______,\
-      ______, ______, ______, ______ = get_tracking_vars(params_pth)
-
       pcs = np.vstack(np.array(fall['putative_pcs'][0]))
       VR = fall['VR'][0][0][()]
       scalingf = VR['scalingFACTOR'][0][0]
@@ -135,11 +133,16 @@ for kk,animal in enumerate(animals):
       Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
       dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
       skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
+      suite2pind = np.arange(fall['iscell'][:,0].shape[0])
+      suite2pind_remain = suite2pind[((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
+      # we need to find cells to map back to suite2p indexes
+      suite2pind_remain = suite2pind_remain[skew>2]
+
       #if pc in all but 1
       # pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
       # # looser restrictions
       # pc_bool = np.sum(pcs,axis=0)>=1
-      Fc3 = Fc3[:,((skew>2))] # only keep cells with skew greateer than 2
+      Fc3 = Fc3[:,skew>2] # only keep cells with skew greateer than 2
       bin_size=3 # cm
       # get abs dist tuning 
       tcs_correct, coms_correct,_,__ = make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel, rewsize,bin_size)
@@ -174,8 +177,9 @@ for kk,animal in enumerate(animals):
       # also get coms
       df = pd.DataFrame()
       # average com across ep
-      coms_rewrel = [np.nanmean(coms_correct[:,xx],axis=0) for xx in com_goal]
-      df['coms_rewrel']=np.concatenate([xx-(rewlocs[ep]-5) for ep, xx in enumerate(coms_correct)])
+      coms_correct_rew=np.array([xx-rewlocs[ep]-5 for ep,xx in enumerate(coms_correct)])
+      coms_rewrel = [np.nanmean(coms_correct_rew[:,xx],axis=0) for xx in com_goal]
+      df['coms_rewrel']=np.concatenate(coms_rewrel)
       df['tracked_cell_id']= np.concatenate(iind_goal_cells_all)
       df['epoch'] = np.concatenate([[f'{perm[ii]}']*len(coms_rewrel[ii]) for ii in range(len(coms_rewrel))])
       df['animal']=[animal]*len(df)
@@ -644,10 +648,11 @@ ax.set_xlabel('# reward loc. switches')
 #%%
 # p 
 df=df[df.animal!='z16']
+color='indigo'
 fig, ax = plt.subplots(figsize=(5,5))
-sns.stripplot(x='epoch_number',y='reward_cell_p',data=df, dodge=True,
+sns.stripplot(x='epoch_number',y='reward_cell_p',data=df, dodge=True,color=color,
     alpha=0.7)
-sns.barplot(x='epoch_number',y='reward_cell_p',data=df,fill=False,color='cornflowerblue',errorbar='se')
+sns.barplot(x='epoch_number',y='reward_cell_p',data=df,fill=False,color='indigo',errorbar='se')
 sns.barplot(data=df, # correct shift
         x='epoch_number', y='reward_cell_p_shuf',color='grey',
         alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax,legend=False)
@@ -659,7 +664,7 @@ for i in range(len(ans)):
     data=df[df.animal==ans[i]],
     errorbar=None, color='gray', linewidth=1.5,alpha=0.5)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Tracked reward cell %')
+ax.set_ylabel('Tracked place cell %')
 ax.set_xlabel('# of epochs')
 pvals = []
 epochs = [2,3,4]
@@ -680,7 +685,7 @@ rej, pvals_corr, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
 # 3. Annotate plot
 for i, ep in enumerate(epochs):
     dsub = df[df.epoch_number == ep]
-    y_max = 42
+    y_max = 25
     xpos = ep - 2  # match x-axis shift in lineplot
     # Choose significance level
     if pvals_corr[i] < 0.001:
@@ -691,22 +696,20 @@ for i, ep in enumerate(epochs):
         star = '*'
     if pvals_corr[i] > 0.05: star=''
     # Plot text if significant
-    ax.text(xpos, y_max + 0.5, star, ha='center', va='bottom', fontsize=30)
+    ax.text(xpos, y_max + 0.5, star, ha='center', va='bottom', fontsize=40)
 ax.axvline(1.5, linestyle='--',color='k',linewidth=3)
-ax.text(0.5, y_max+7, 'Day 1', ha='center', va='bottom', fontsize=20)
-ax.text(2.5, y_max+7, 'Day 2', ha='center', va='bottom', fontsize=20)
-ax.set_title('Next day cell tracking')
+ax.text(0.5, y_max+5, 'Day 1', ha='center', va='bottom', fontsize=20)
+ax.text(2.5, y_max+5, 'Day 2', ha='center', va='bottom', fontsize=20)
+ax.set_title('Next day cell tracking\n')
 plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'reward_cell_p_2days.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'place_cell_p_2days.svg'), bbox_inches='tight')
 
 #%%
 # plot com
 dfplt=df
 # dfplt = df[df.animal != 'e218'].dropna(subset=['average_com', 'epoch_number'])
 fig, ax = plt.subplots(figsize=(4,5))
-# sns.stripplot(x='epoch_number',y='average_com',data=dfplt, dodge=True, color='k',
-#     s=s,alpha=0.7)
-sns.barplot(x='epoch_number',y='average_com',data=dfplt,fill=False,color='cornflowerblue',errorbar='se')
+sns.barplot(x='epoch_number',y='average_com',data=dfplt,fill=False,color=color,errorbar='se')
 # make lines
 ans = dfplt.animal.unique()
 for i in range(len(ans)):
@@ -714,7 +717,7 @@ for i in range(len(ans)):
     data=dfplt[dfplt.animal==ans[i]],
     errorbar=None, color='gray', linewidth=1.5,alpha=0.5)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('Mean center-of-mass ($\Theta$)')
+ax.set_ylabel('Mean center-of-mass - reward loc. (cm)')
 ax.set_xlabel('# of epochs')
 ax.axvline(1.5, color='k', linestyle='--', linewidth=3)
 # test significance; epoch 2 vs. 3, 4 vs. 5 etc
@@ -733,9 +736,9 @@ late_vals = late_avg.loc[common_animals].values
 # --- Mann-Whitney U test ---
 u_stat, p_val = scipy.stats.ranksums(early_vals[~np.isnan(early_vals)], late_vals[~np.isnan(late_vals)])
 # --- Add comparison bar across Day 1 and Day 2 ---
-y = 0.63  # adjust based on your data range
+y = 5  # adjust based on your data range
 x1, x2 = 0, 2  # bar from first to last bar (epoch 2 to 5 are at x=0 to 3 after subtracting 2)
-ax.plot([x1, x1, x2, x2], [y, y+0.015, y+0.015, y], lw=1.5, c='k')
+ax.plot([x1, x1, x2, x2], [y, y+5, y+5, y], lw=1.5, c='k')
 
 # Statistical annotation
 if p_val < 0.001:
@@ -749,13 +752,13 @@ else:
 
 ax.text((x1 + x2)/2, y+0.02, star, ha='center', va='bottom', fontsize=40)
 
-ax.text(0.5, .7, 'Day 1', ha='center', va='bottom', fontsize=20)
-ax.text(2.3, .7, 'Day 2', ha='center', va='bottom', fontsize=20)
+ax.text(0.5, 15, 'Day 1', ha='center', va='bottom', fontsize=20)
+ax.text(2.3, 15, 'Day 2', ha='center', va='bottom', fontsize=20)
 # ax.set_title('Next day cell tracking')
 ax.axhline(0,linewidth=2,color='slategrey')
 ax.text(2.2, -.05, 'Reward loc.', ha='center', va='bottom', fontsize=14,color='slategrey')
 # plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'reward_cell_com_2days.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'place_cell_com_2days.svg'), bbox_inches='tight')
 
 #%%
 # example
@@ -763,7 +766,7 @@ plt.savefig(os.path.join(savedst, 'reward_cell_com_2days.svg'), bbox_inches='tig
 from projects.pyr_reward.rewardcell import create_mask_from_coordinates
 import cv2
 bigcom[(bigcom.animal=='e201')]
-cellnm=0
+cellnm=23
 
 bigcom[(bigcom.animal=='e201') & (bigcom.tracked_cell_id==cellnm)]
 tracked_lut, days= get_tracked_lut(celltrackpth,'e201',pln)
@@ -806,7 +809,7 @@ for ii,day in enumerate(days):
     axes[0,ii].imshow(img_crop, cmap='gray')
     axes[0,ii].imshow(mask_crop,cmap=transparent_cmap,vmin=1)
     axes[0,ii].axis('off')
-    axes[1,ii].plot(dFF[:,celln],color='darkgoldenrod')
+    axes[1,ii].plot(dFF[:,celln],color=color)
     axes[1,ii].set_ylabel('$\Delta$ F/F')
     axes[1,ii].set_xlabel('Time (min)')
     ax=axes[1,ii]
@@ -820,5 +823,5 @@ for ii,day in enumerate(days):
     ax.set_xticklabels(xtick_labels)
     ax.spines[['top','right']].set_visible(False)
     axes[0,ii].set_title(f'Session {ii+1}')
-fig.suptitle(f'Tracked reward cell, animal {animal}')
-plt.savefig(os.path.join(savedst, f'tracked_rew_cell_eg_cell{cellnm}.svg'),bbox_inches='tight')
+fig.suptitle(f'Tracked place cell, animal {animal}')
+plt.savefig(os.path.join(savedst, f'tracked_place_cell_eg_cell{cellnm}.svg'),bbox_inches='tight')

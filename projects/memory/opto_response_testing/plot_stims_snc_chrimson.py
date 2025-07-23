@@ -19,8 +19,6 @@ plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones
 
-# plt.rc('font', size=12)          # controls default text sizes
-
 plt.close('all')
 # save to pdf
 # dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
@@ -28,8 +26,8 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'X:\chrimson_snc_grabda'
-animals = ['e291','e292','e293','e294']
-days_all = [[2],[2],[1],[1]]
+animals = ['e293']#,'e292','e293','e294']
+days_all = [[5]]#,[2],[1],[1]]
 
 range_val = 4; binsize=0.2 #s
 dur=2# s stim duration
