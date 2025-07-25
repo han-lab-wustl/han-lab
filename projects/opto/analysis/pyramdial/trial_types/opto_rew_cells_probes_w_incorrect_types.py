@@ -25,8 +25,8 @@ from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_prob
 from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew, get_rewzones, intersect_arrays
 from projects.opto.behavior.behavior import smooth_lick_rate
 # import condition df
-conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 #%%
 goal_cm_window=20 # to search for rew cells
 lasttr=8 #  last trials
@@ -85,7 +85,7 @@ for ii in range(len(conddf)):
       Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
       dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
       skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-      Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
+      Fc3 = Fc3[:, skew>1.5] # only keep cells with skew greateer than 2
       # dark time params
       track_length_dt = 550 # cm estimate based on 99.9% of ypos
       track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
