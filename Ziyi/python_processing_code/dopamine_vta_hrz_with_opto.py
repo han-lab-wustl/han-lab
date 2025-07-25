@@ -34,7 +34,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.b
 #days = np.arange(19,23)
 # opto days [19,20,22,23]
 # control days [21,24]
-days = [23]
+days = [28]
 range_val=10; binsize=0.2
 numtrialsstim=2 # every 10 trials stim w 1 trial off
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -44,10 +44,12 @@ old = False
 day_date_dff_opto ={}
 day_date_dff_nonopto ={}
 day_date_dff_nonopto_eps = {}
+day_date_dff_nonopto_after_opto = {}
 
 # opto centered lickrate in opto epoch
 day_lickrate_opto_centered_opto = {}
 day_lickrate_opto_centered_nonopto = {}
+#day_lickerate_opto_centered_
 
 
 
@@ -173,6 +175,10 @@ for day in days:
         success, fail, str_trials, ftr_trials, ttr, \
         total_trials = get_success_failure_trials(trialnum_opto_eps, rewards_opto_eps)
 
+        all_tr = sorted(str_trials + ftr_trials)
+        str_bool_opto_all = np.array([(xx in all_tr) and 
+                 (xx%numtrialsstim==1) for xx in trialnum_opto_eps])
+
         # opto trials in opto epoch
         str_bool_opto = np.array([(xx in str_trials) and 
                  (xx%numtrialsstim==1) for xx in trialnum_opto_eps])
@@ -243,7 +249,8 @@ for day in days:
 
 
         # Opto trials in Opto epoch!! This is aligned to when the opto happens 
-        stimzone = ((newrewloc*gainf-((rewsize*gainf)/2)+90)%180)/gainf
+        #stimzone = ((newrewloc*gainf-((rewsize*gainf)/2)+90)%180)/gainf
+        stimzone = 20/gainf
         opto_centered = np.zeros_like(ybinned_opto_eps)
         opto_centered[(ybinned_opto_eps >= stimzone-5) & (ybinned_opto_eps <= stimzone+5)]=1
         rews_iind = consecutive_stretch(np.where(opto_centered)[0])
@@ -285,6 +292,7 @@ for day in days:
         # plot pre-first reward dop activity  
         timedFF = np.hstack(params['timedFF'])
         # plot behavior
+
         if pln==0:
             fig, ax = plt.subplots(figsize=(15,6))            
             ax.plot(ybinned,zorder=1)
@@ -310,7 +318,7 @@ for day in days:
             pdf.savefig(fig)
 
             plt.figure(figsize=(6, 3))
-
+            
             # X-axis values
             x_vals = range(0, int(range_val / binsize) * 2)
 

@@ -9,9 +9,9 @@
 % this run script mostly makes plots but calls other functions
 % add han-lab and han-lab-archive repos to path! 
 clear all; 
-an = 'E301';% an = 'e190';%an='e189';
+%an = 'z16';% an = 'e190';%an='e189';
 % individual day analysis 
-dys = [4];
+dys = [1];
 src = 'E:\Ziyi\Data\Calb_mice_E301'; % folder where fall is 
 % src = 'Z:\sstcre_imaging';
 savedst = 'E:\Ziyi\results\E301_calbin'; % where to save ppt of figures
@@ -28,7 +28,7 @@ for dy=dys % for loop per day
     pth = dir(fullfile(src, string(dy), '**\*Fall.mat'));
     % pth = dir(fullfile(src, an, 'days', sprintf('%s_day%03d*plane0*', an, dy)));
     if length(pth)>1 % if multi plane imaging, grab the combined f file
-        pth = dir(fullfile(src, string(dy), '**', 'combined\Fall.mat'));
+        pth = dir(fullfile(src, an, string(dy), '**', 'combined\Fall.mat'));
     end    
     % load vars
     load(fullfile(pth.folder,pth.name), 'dFF', ...
@@ -36,9 +36,9 @@ for dy=dys % for loop per day
         'forwardvel', 'licks', 'trialnum', 'rewards', 'putative_pcs', 'VR')    
     if ~exist('VR', 'var')==1
         %% step 0 - align to behavior
-        daypth = dir(fullfile(src, string(dy),  "vr\*.mat"));
+        daypth = dir(fullfile(src, an, string(dy), "behavior", "vr\*.mat"));
     %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
-        fmatfl = dir(fullfile(src, string(dy), '**\Fall.mat')); 
+        fmatfl = dir(fullfile(src, an, string(dy), '**\Fall.mat')); 
         savepthfmat = VRalign(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
         disp(savepthfmat)
     end
