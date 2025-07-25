@@ -26,8 +26,9 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'X:\chrimson_snc_grabda'
-animals = ['e293']#,'e292','e293','e294']
-days_all = [[5]]#,[2],[1],[1]]
+# src = r'Y:\halo_grabda'
+animals = ['e294','e293']#,'e294']
+days_all = [[1,5],[1,5,6]]#,[1],[1]]
 
 range_val = 4; binsize=0.2 #s
 dur=2# s stim duration

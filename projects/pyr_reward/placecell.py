@@ -50,8 +50,7 @@ def get_tuning_curve(ybinned, f, bins=270):
     return np.array(f_tc)
 
 
-def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,trialnum,
-            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
+def make_tuning_curves_radians_trial_by_trial(eps,rewlocs,lick,ybinned,rad,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90):
     trialstates = []; licks = []; tcs = []; coms = []    
     # remake tuning curves relative to reward        
     for ep in range(len(eps)-1):
@@ -1212,8 +1211,7 @@ def get_dff_opto(conddf, dd, day):
     dff_opto = np.nanmean(dFF[eps[comp[1]]:eps[comp[1]+1],:])#[ybinned[eps[comp[1]]:eps[comp[1]+1]]<rewlocs[comp[1]],:])
     return dff_opto, dff_prev
 
-def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward, rewsize,rewlocs,
-                    trialnum):
+def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward, rewsize,rewlocs,rewloc_ep,trialnum):
     """
     Computes radian position aligned to the first lick after reward.
     Parameters:
@@ -1236,17 +1234,21 @@ def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward
     trialnum_trial = trialnum#[eps[i]:eps[i+1]]
     unique_trials = np.unique(trialnum)  # Get unique trial numbers [eps[i]:eps[i+1]]
     for tr,trial in enumerate(unique_trials):
-        # Extract data for the current trial
         trial_mask = trialnum_trial == trial  # Boolean mask for the current trial
         y = y_trial[trial_mask]
         licks_trial_ = licks_trial[trial_mask]
         reward_trial_ = reward_trial[trial_mask]
         # Find the reward location in this trial
+        #ONLY MATTERS FOR PROBES
+        if trial < 3 and i > 0:  # Probe trial, use previous epoch's reward location
+            rew_center = rewloc_ep[i-1]
+        else:  # Use reward location for this epoch and trial
+            rew_center = rewlocs[tr]
         reward_indices = np.where(reward_trial_ > 0)[0]  # Indices where reward occurs
         if len(reward_indices) == 0:
             try:
                 # 1.5 bc doesn't work otherwise?
-                y_rew = np.where((y<(rewlocs[tr][i]+(rewsize*.5)+5)) & (y>(rewlocs[i][tr]-(rewsize*.5))))[0][0]
+                y_rew = np.where((y<(rew_center +(rewsize*.5)+5)) & (y>(rew_center -(rewsize*.5))))[0][0]
                 reward_idx=y_rew
             except Exception as e: # if trial is empty??
                 print(e)
@@ -1368,9 +1370,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
         ybinned_dt.append(ypos_w_dt)
         # realign to reward????        
         rewloc_bool = np.concatenate(rewloc_bool)
-        relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
-                reward_ep, rewsize, rewloc_per_trial,
-                trial_ep)
+        relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, reward_ep, rewsize, rewloc_per_trial,rewlocs,trial_ep)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
         # in between failed trials only!!!!! 4/2025
@@ -1415,10 +1415,7 @@ def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,
     return tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,relpos_all_ep
 
 # w probes
-def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
-            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,
-            lasttr=8,bins=90,
-            velocity_filter=False):    
+def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks, Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,lasttr=8,bins=90,velocity_filter=False):    
     """
     fixed misalignment 5/12/25
     """
@@ -1426,8 +1423,14 @@ def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybin
     # initialize
     tcs_fail = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
     tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    tcs_precorr = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    tcs_bigmiss = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    tcs_no_lick = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
     coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
     coms_fail = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    coms_precorr = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    coms_bigmiss = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    coms_no_lick = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
     # for each probe
     tcs_probe = np.ones((len(eps)-1, 3, Fc3.shape[1], bins))*np.nan
     coms_probe = np.ones((len(eps)-1, 3, Fc3.shape[1]))*np.nan
@@ -1445,7 +1448,7 @@ def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybin
         # Get dark time frames and estimate distance
         ypos_dt = []
         rewloc_per_trial = []
-        rewloc_bool = []
+        rewloc_bool = []        
         # get the dark time and add it to the beginning of the trial
         for trial in np.unique(trial_ep):            
             trial_mask = trial_ep==trial
@@ -1506,17 +1509,32 @@ def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybin
         ybinned_dt.append(ypos_w_dt)
         # realign to reward????        
         rewloc_bool = np.concatenate(rewloc_bool)
-        relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
-                reward_ep, rewsize, rewloc_per_trial,
-                trial_ep)
+        relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep,reward_ep, rewsize, rewloc_per_trial,rewlocs,trial_ep)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)
         # in between failed trials only!!!!! 4/2025
         if len(strials)>0:
-            failed_inbtw = np.array([int(xx)-strials[0] for xx in ftrials])
-            failed_inbtw=np.array(ftrials)[failed_inbtw>0]
+            fail_diff = np.array([int(xx)-strials[0] for xx in ftrials])
+            failed_inbtw=np.array(ftrials)[fail_diff>0]
+            # pre-correct fails
+            failed_precorr=np.array(ftrials)[fail_diff<0]
         else: # for cases where an epoch was started but not enough trials
-            failed_inbtw=np.array(ftrials)
+            failed_inbtw=[]
+            failed_precorr=np.array(ftrials)
+        # also get lick / no lick trials? only sample from in between trials
+        no_lick_fail_trial_id = []; big_miss_fail_trial_id = []
+        for trial in failed_inbtw:            
+            trial_mask = trial_ep==trial
+            if sum(lick_ep[trial_mask])==0:
+                no_lick_fail_trial_id.append(trial)
+            # check if lick 20 cm before or after start of rew loc
+            ypos_tr = ypos_ep[trial_mask]
+            lick_around_rew = lick_ep[trial_mask][((ypos_tr<(rewlocs[ep]-rewsize/2)) & ((ypos_tr>(rewlocs[ep]-rewsize/2)-20))) | ((ypos_tr>(rewlocs[ep]+rewsize/2)) & ((ypos_tr<(rewlocs[ep]+rewsize/2)+20)))]
+            if sum(lick_around_rew)==0:
+                big_miss_fail_trial_id.append(trial)
+        no_lick_fail_trial_id=np.array(no_lick_fail_trial_id)
+        big_miss_fail_trial_id=[xx for xx in big_miss_fail_trial_id if xx not in no_lick_fail_trial_id]
+        big_miss_fail_trial_id=np.array(big_miss_fail_trial_id)              
         failed_trialnm.append(failed_inbtw)
         # trials going into tuning curve
         # print(f'Failed trials in failed tuning curve\n{failed_inbtw}\n')
@@ -1539,9 +1557,9 @@ def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybin
                 tcs_correct[ep, :,:] = tc
                 coms_correct[ep, :] = com
             # failed trials                  
-            # only take last 8 failed trials?
+            # take all fail?
             if len(failed_inbtw)>0:
-                mask = [True if xx in failed_inbtw[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+                mask = [True if xx in failed_inbtw else False for xx in trialnum[eprng][moving_middle]]
                 F = F_all[mask,:]
                 relpos = relpos_all[mask]                
                 tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
@@ -1561,10 +1579,33 @@ def make_tuning_curves_by_trialtype_w_probes_w_darktime(eps,rewlocs,rewsize,ybin
                         com = calc_COM_EH(tc,bin_size)
                         tcs_probe[ep-1, pr,:,:] = tc
                         coms_probe[ep-1, pr, :] = com
-
+            if len(failed_precorr)>0:
+                mask = [True if xx in failed_precorr else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_precorr[ep, :,:] = tc
+                coms_precorr[ep, :] = com
+            if len(no_lick_fail_trial_id)>0:
+                mask = [True if xx in no_lick_fail_trial_id else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_no_lick[ep, :,:] = tc
+                coms_no_lick[ep, :] = com
+            if len(big_miss_fail_trial_id)>0:
+                mask = [True if xx in big_miss_fail_trial_id else False for xx in trialnum[eprng][moving_middle]]
+                F = F_all[mask,:]
+                relpos = relpos_all[mask]                
+                tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+                com = calc_COM_EH(tc,bin_size)
+                tcs_bigmiss[ep, :,:] = tc
+                coms_bigmiss[ep, :] = com
 
         relpos_all_ep.append(relpos_all)
-    return tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_probe, coms_probe, ybinned_dt,relpos_all_ep
+    return tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_probe, coms_probe, tcs_bigmiss, coms_bigmiss, tcs_no_lick, coms_no_lick, tcs_precorr, coms_precorr, ybinned_dt,relpos_all_ep
 
 def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,licks,
             Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,

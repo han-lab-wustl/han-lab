@@ -73,7 +73,10 @@ def get_com_v_persistence(params_pth, animal, day, ii,goal_window_cm=20):
     tcs_correct_dt, coms_correct_dt, tcs_fail_dt, coms_fail_dt, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
         bins=bins_dt)
-    
+    bin_size=3
+    tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size)
+    coms_correct_abs_relrew = [com-rewlocs[ep] for ep,com in enumerate(coms_correct_abs)]
+    coms_correct_abs_relrew=np.array(coms_correct_abs_relrew)
     goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
     # in old track length coordinates, so its closer to ~40 cm
     goal_cells_dt, com_goal_postrew_dt, perm_dt, rz_perm_dt = get_goal_cells(rz, goal_window, coms_correct_dt, cell_type = 'all')
@@ -98,8 +101,10 @@ def get_com_v_persistence(params_pth, animal, day, ii,goal_window_cm=20):
             rew_eps = [np.unique(xx) for xx in rew_perm]
             # av across epochs
             coms = [np.nanmean(coms_correct_dt[rew_ep,cells_ep[cll]],axis=0) for cll, rew_ep in enumerate(rew_eps)]
+            coms_abs = [np.nanmean(coms_correct_abs_relrew[rew_ep,cells_ep[cll]],axis=0) for cll, rew_ep in enumerate(rew_eps)]
+            # also get absoulte/reward subtracted com
             coms = np.array(coms)-np.pi
-            ep_dict[ep]=coms
+            ep_dict[ep]=[coms_abs,coms]
     
     return ep_dict
 

@@ -33,6 +33,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 bins = 150
 goal_cm_window=20
 dfs = []; lick_dfs = []
+lowcountan=['e217','z17','z14','e200']
 # iis=[130,166,49] # control v inhib x ex
 for ii in range(len(conddf)):
         # ii=34 # z17
@@ -40,7 +41,7 @@ for ii in range(len(conddf)):
         animal = conddf.animals.values[ii]
         in_type = conddf.in_type.values[ii]
         optoep = conddf.optoep.values[ii]
-        if 'vip' in in_type and optoep>1 and ii!=202:
+        if 'vip' in in_type and ii!=202:
                 if animal=='e145' or animal=='e139': pln=2 
                 else: pln=0
                 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -93,17 +94,18 @@ for ii in range(len(conddf)):
                 dFF = fall_fc3['dFF']
                 Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
                 dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
-                skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-                
+                skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)                
+                if animal in lowcountan: skewthres=1.2
+                else: skewthres=2
                 Fc3 = Fc3[:, skew>skewthres] # only keep cells with skew greateer than 2
                 tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
                         rewsize,ybinned,time,lick,
                         Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
                         bins=bins_dt)  
                 bin_size=3
-                tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size)
-                lick_correct_abs, _,_,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([lick,lick]).T,trialnum,rewards,forwardvel,rewsize,bin_size)
-                vel_correct_abs, _,_,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([forwardvel,forwardvel]).T,trialnum,rewards,forwardvel,rewsize,bin_size)
+                tcs_correct_abs, coms_correct_abs,_,__ = make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=16,velocity_filter=True)
+                lick_correct_abs, _,_,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([lick,lick]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=16,velocity_filter=True)
+                vel_correct_abs, _,_,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([forwardvel,forwardvel]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=16,velocity_filter=True)
 
                 # trial by trial raster
                 # abs distance

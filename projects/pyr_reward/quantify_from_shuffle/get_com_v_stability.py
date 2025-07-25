@@ -45,68 +45,61 @@ pdf.close()
 ####################################### RUN CODE #######################################
 #%%
 # key = ep
-com_ep2_comb = [xx[1] for xx in ep_dicts if 1 in xx.keys()]
-com_ep3_comb = [xx[2] for xx in ep_dicts if 2 in xx.keys()]
-com_ep4_comb = [xx[3] for xx in ep_dicts if 3 in xx.keys()]
-com_ep5_comb = [xx[4] for xx in ep_dicts if 4 in xx.keys()]
-
 from scipy.stats import gaussian_kde
 
 # plot histograms
-fig, ax = plt.subplots()
-colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
-a = 0.2
-lw = 3
-labels = [2,3,4,5]
-# Plot histogram and confidence intervals for each epoch
-data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb,com_ep5_comb]
-for i, data in enumerate(data_sets):
-    all_data = np.concatenate(data)
+fig, axes = plt.subplots(nrows = 2,figsize=(6,7))
+for ii in range(2):
+    colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+    a = 0.2
+    lw = 3
+    ax=axes[ii]
+    labels = [2,3,4]
+    com_ep2_comb = [xx[1][ii] for xx in ep_dicts if 1 in xx.keys()]
+    com_ep3_comb = [xx[2][ii] for xx in ep_dicts if 2 in xx.keys()]
+    com_ep4_comb = [xx[3][ii] for xx in ep_dicts if 3 in xx.keys()]
+    com_ep5_comb = [xx[4][ii] for xx in ep_dicts if 4 in xx.keys()]
+    # Plot histogram and confidence intervals for each epoch
+    data_sets = [com_ep2_comb, com_ep3_comb, com_ep4_comb]
+    for i, data in enumerate(data_sets):
+        all_data = np.concatenate(data)
+        all_data = all_data[~np.isnan(all_data)]
+        # Smooth Gaussian KDE
+        kde = gaussian_kde(all_data)
+        # x_vals = np.linspace(-np.pi, np.pi, 270)
+        if ii==0:
+            x_vals = np.linspace(-220,200, 270)
+        else:
+            x_vals = np.linspace(-np.pi, np.pi, 270)
+        y_vals = kde(x_vals)
 
-    # Smooth Gaussian KDE
-    kde = gaussian_kde(all_data)
-    x_vals = np.linspace(-np.pi, np.pi, 270)
-    y_vals = kde(x_vals)*100
+        # Plot the KDE line
+        ax.plot(x_vals, y_vals, color=colors[i], linewidth=4,
+                label=f'{labels[i]}, {len(all_data)} cells')
+    # Style and labels
+    ax.set_ylabel('Probability density')
+    if ii==1:
+        ax.set_xticks([-np.pi, -np.pi/4,0, np.pi/4,np.pi])
+        ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
+        ax.set_xlabel('Reward-centric distance ($\Theta$)')
+    else:        
+        ax.set_xlabel('Reward-centric distance (cm)')        
+        # Legend
+        h_strip, l_strip = ax.get_legend_handles_labels()
+        if ax.legend_: ax.legend_.remove()
+        ax.legend(
+            h_strip, l_strip,
+            title='# of epochs',
+            loc='upper left',
+            bbox_to_anchor=(.8, 1),
+            borderaxespad=0.,
+            fontsize=14,
+            title_fontsize=14
+        )
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.axvline(0,linestyle='--',color='grey',linewidth=3)
 
-    # Plot the KDE line
-    ax.plot(x_vals, y_vals, color=colors[i], linewidth=4,
-            label=f'{labels[i]}, {len(all_data)} cells')
 
-    # 95% CI lines
-    ci_low = np.nanpercentile(all_data, 2.5)
-    ci_high = np.nanpercentile(all_data, 97.5)
-
-    # vline_low = ax.axvline(ci_low, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
-    # vline_low.set_dashes([10, 8])
-    # vline_high = ax.axvline(ci_high, color=colors[i], linewidth=lw, linestyle='--',alpha=0.4)
-    # vline_high.set_dashes([10, 8])
-
-
-# # Add label for one CI line only
-# ci_ref = np.concatenate(com_ep3_comb)
-# ci_high = np.nanpercentile(ci_ref, 97.5)
-# ax.axvline(ci_high, color=colors[1], linewidth=lw, linestyle='--', label='95% CI').set_dashes([10, 8])
-
-# Style and labels
-ax.set_ylabel('% Density\n(across all sessions)')
-ax.set_xticks([-np.pi, -np.pi/4,0, np.pi/4,np.pi])
-ax.set_xticklabels(["$-\\pi$", '$-\\pi/4$', "0",  '$\\pi/4$', "$\\pi$"])
-ax.set_xlabel('Reward-centric distance ($\Theta$)')
-ax.spines[['top', 'right']].set_visible(False)
-
-# Legend
-h_strip, l_strip = ax.get_legend_handles_labels()
-if ax.legend_: ax.legend_.remove()
-ax.legend(
-    h_strip, l_strip,
-    title='# of epochs',
-    loc='upper left',
-    bbox_to_anchor=(.6, 1),
-    borderaxespad=0.,
-    fontsize=14,
-    title_fontsize=14
-)
-ax.axvline(0,linestyle='--',color='grey',linewidth=3)
-
+plt.tight_layout()
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 plt.savefig(os.path.join(savedst, 'com_hist_across_ep.svg'),bbox_inches='tight')

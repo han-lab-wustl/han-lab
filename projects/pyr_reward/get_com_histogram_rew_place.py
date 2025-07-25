@@ -33,6 +33,7 @@ bins=90
 coms_mean_rewrel = []
 coms_mean_abs = []
 com_spatial_tuned_all=[]
+com_sp_not_place_rew=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
 for ii in range(len(conddf)):
@@ -97,9 +98,8 @@ for ii in range(len(conddf)):
         Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
         dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0].astype(bool)))]
         skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-        #if pc in atleast 1
-        # looser restrictions
-        pc_bool = np.sum(putative_pcs,axis=0)>0
+        #if pc in all but 1        
+        pc_bool = np.sum(putative_pcs,axis=0)>=putative_pcs.shape[0]-1
         Fc3 = Fc3[:,pc_bool] # only keep cells with skew than 2
         # get tuning curves trial by trial and get calculate radians
         # find correct trials within each epoch!!!!        
@@ -164,59 +164,62 @@ for ii in range(len(conddf)):
         coms_mean_abs.append(pc_com_mean)
 
         ######## OTHER SPATIAL TUNED CELLS
-        other_cells = [xx for xx in np.arange(Fc3.shape[1]) if xx not in pcs_all and xx not in goal_cells]
         # across all but one ep
         # does not matter if they are also place and rew
-        pc_bool = np.where(np.sum(putative_pcs,axis=0)>0)[0]
-        other_cells=np.where(np.sum(putative_pcs[:,pc_bool],axis=0)==putative_pcs.shape[0]-1)[0]
-        # other_cells = [xx for xx in sp if xx not in pcs_all and xx not in goal_cells]
+        other_cells = np.arange(len(coms_rewrel_abs[0]))
+        # across all but 1 ep
+        # other_cells=np.where(np.sum(putative_pcs[:,pc_bool],axis=0)==putative_pcs.shape[0]-1)[0]
+        other_not_place_or_rew = [xx for xx in other_cells if xx not in pcs_all and xx not in goal_cells]
 
         # add spatially tuned cells
         coms_spatial_tuned=np.nanmean(coms_rewrel_abs[:, other_cells],axis=0)
         com_spatial_tuned_all.append(coms_spatial_tuned)
+        com_sp_not_place_rew.append(np.nanmean(coms_rewrel_abs[:, other_not_place_or_rew],axis=0))
 
 
 #%%
 # plot com distributions
 plt.rc('font', size=24) 
-fig,axes = plt.subplots(ncols = 4,nrows = 1,figsize=(18,4),sharex=True,sharey=True)
+fig,axes = plt.subplots(ncols = 5,nrows = 1,figsize=(21,4),sharex=True)
 ax=axes[0]
-vmin=0
-vmax = .017
-binnum=30
-ax.hist(np.concatenate(com_spatial_tuned_all),density=True,color='slategray',bins=binnum)
-ax.set_ylabel('Density of cells')
-ax.set_title(f'All spatially tuned\n n={len(np.concatenate(com_spatial_tuned_all))} cells')
+binnum=10
+ax.hist(np.concatenate(com_spatial_tuned_all),color='slategray',bins=binnum)
+ax.set_ylabel('# of cells')
+ax.set_title(f'Across all epochs in a session\nAll spatially tuned \n n={len(np.concatenate(com_spatial_tuned_all))} cells')
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylim([vmin,vmax])
-ax.axvline(0,color='k',linestyle='--',linewidth=2)
+ax.axvline(0,color='k',linestyle='--',linewidth=3)
 ax=axes[1]
-ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue',bins=binnum)
+ax.hist(np.concatenate(com_sp_not_place_rew),color='slategray',bins=binnum)
+ax.set_ylabel('')
+ax.set_title(f'Other spatially tuned\n n={len(np.concatenate(com_sp_not_place_rew))} cells')
+ax.spines[['top','right']].set_visible(False)
+ax.axvline(0,color='k',linestyle='--',linewidth=3)
+ax=axes[3]
+ax.hist(np.concatenate(coms_mean_rewrel),color='cornflowerblue',bins=binnum)
 ax.set_title(f'Reward\n n={len(np.concatenate(coms_mean_rewrel))} cells')
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylim([vmin,vmax])
-ax.axvline(0,color='k',linestyle='--',linewidth=2)
+ax.axvline(0,color='k',linestyle='--',linewidth=3)
 ax=axes[2]
-ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo',bins=binnum)
+ax.hist(np.concatenate(coms_mean_abs),color='indigo',bins=binnum)
 ax.set_title(f'Place\n n={len(np.concatenate(coms_mean_abs))} cells')
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylim([vmin,vmax])
-ax.axvline(0,color='k',linestyle='--',linewidth=2)
-ax=axes[3]
+ax.axvline(0,color='k',linestyle='--',linewidth=3)
+ax=axes[4]
 alpha=0.4
-ax.hist(np.concatenate(com_spatial_tuned_all),density=True,
+ax.hist(np.concatenate(com_sp_not_place_rew),
         color='slategray',alpha=alpha,
-        label='Spatially tuned',bins=binnum)
-ax.hist(np.concatenate(coms_mean_rewrel),density=True,color='cornflowerblue',alpha=alpha,
-        label='Reward',bins=binnum)
-ax.hist(np.concatenate(coms_mean_abs),density=True,color='indigo',alpha=alpha,
+        label='Other spatially tuned',bins=binnum)
+ax.hist(np.concatenate(coms_mean_abs),color='indigo',alpha=alpha,
         label='Place',bins=binnum)
-ax.set_xlabel('Normalized center-of-mass')
-ax.set_ylim([vmin,vmax])
+ax.hist(np.concatenate(coms_mean_rewrel),color='cornflowerblue',alpha=alpha,
+        label='Reward',bins=binnum)
+ax.set_xlabel('Center-of-mass of firing field - reward location (cm)')
 ax.legend()
 ax.spines[['top','right']].set_visible(False)
-ax.axvline(0,color='k',linestyle='--',linewidth=2)
+ax.axvline(0,color='k',linestyle='--',linewidth=3)
+ax.set_xticks([-200,200])
 savedst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures"
+
 plt.savefig(os.path.join(savedst, 'com_hist_rew_place_ALL_ep.svg'),bbox_inches='tight')
 
 #%%
