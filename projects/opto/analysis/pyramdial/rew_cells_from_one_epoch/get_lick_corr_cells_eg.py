@@ -28,6 +28,12 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 savepth = os.path.join(savedst, 'lickcorr.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+def normalize_rows(mat):
+    mat = np.array(mat)
+    row_min = np.nanmin(mat, axis=1, keepdims=True)
+    row_max = np.nanmax(mat, axis=1, keepdims=True)
+    return (mat - row_min) / (row_max - row_min + 1e-9)
+
 #%%
 # initialize var
 # radian_alignment_saved = {} # overwrite
@@ -35,10 +41,10 @@ bins = 150
 cm_window=20
 datadct={}
 plot=False
-# cm_window = [10,20,30,40,50,
-# 60,70,80] # cm
-# iterate through all animals
-for ii in range(len(conddf)):
+iis = [166,49]
+plot=True
+plot2=False
+for ii in iis:
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    optoep=conddf.optoep.values[ii]
@@ -150,22 +156,25 @@ for ii in range(len(conddf)):
       #    axes[1,ep].axvline(75,color='w',linestyle='--',linewidth=2)
       ########## correct trials      
       lick_tc_cs = np.array([spearmanr(tcs_correct_abs[0,cll,:], lick_correct_abs[0][0])[0] for cll in ep1_rew_cells])
-      # get high correlated cells
+      # get high correlated cells in ep1, plot frames in ep 2
       lick_corr_cells = ep1_rew_cells[lick_tc_cs>np.nanmean(lick_tc_cs)]
       # plot
       if plot==True:
-         fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-         for ep in range(tcs_correct.shape[0]-1):
-            axes[0,ep].imshow(tcs_correct_abs[ep, lick_corr_cells][np.argsort(coms_correct_abs[0,lick_corr_cells])],aspect='auto')
-            axes[0,ep].axvline(rewlocs[ep]/1.8,color='w',linestyle='--',linewidth=2)  
+         fig,axes=plt.subplots(nrows=6,ncols=2,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
+         for ep in range(2):
+            tc_abs_norm = normalize_rows(tcs_correct_abs[ep, lick_corr_cells][np.argsort(coms_correct_abs[0,lick_corr_cells])])
+            tc_th_norm  = normalize_rows(tcs_correct[ep, lick_corr_cells][np.argsort(coms_correct[0,lick_corr_cells])])
+            # Plot normalized heatmaps
+            im0 = axes[0,ep].imshow(tc_abs_norm, aspect='auto', vmin=0, vmax=1)
+            axes[0,ep].axvline(rewlocs[ep]/1.8, color='w', linestyle='--', linewidth=2)
+            im1 = axes[3,ep].imshow(tc_th_norm, aspect='auto', vmin=0, vmax=1)
+            axes[3,ep].axvline(75, color='w', linestyle='--', linewidth=2)
             axes[1,ep].plot(lick_correct_abs[ep][0])
             axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
             axes[1,0].set_ylabel('Lick rate')
             axes[2,ep].plot(vel_correct_abs[ep][0])
             axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
             axes[2,0].set_ylabel('Velocity')
-            axes[3,ep].imshow(tcs_correct[ep, lick_corr_cells][np.argsort(coms_correct[0,lick_corr_cells])],aspect='auto')
-            axes[3,ep].axvline(75,color='w',linestyle='--',linewidth=2)
             axes[4,ep].plot(lick_correct[ep][0])
             axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
             axes[4,0].set_ylabel('Lick rate')
@@ -173,9 +182,13 @@ for ii in range(len(conddf)):
             axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
             axes[5,0].set_ylabel('Velocity')
             axes[0,ep].set_title(f'Epoch {ep+1}')
+            if ep == tcs_correct.shape[0] - 2:
+               fig.colorbar(im0, ax=axes[0,ep], fraction=0.05)
+               fig.colorbar(im1, ax=axes[3,ep], fraction=0.05)
          axes[0,0].set_ylabel('Track aligned')
          axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
          fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nlick correlated cells')
+         plt.show()
       # compare to rew cells
       goal_window = 20*(2*np.pi/track_length) # cm converted to rad
       # change to relative value 
@@ -244,7 +257,7 @@ for ii in range(len(conddf)):
             goal_cells = np.unique(np.concatenate(com_goal_farrew))
       else:
             goal_cells=[]    
-      if plot==True:
+      if plot2==True:
          fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
          for ep in range(tcs_correct.shape[0]-1):
             axes[0,ep].imshow(tcs_correct_abs[ep, goal_cells][np.argsort(coms_correct_abs[0,goal_cells])],aspect='auto')

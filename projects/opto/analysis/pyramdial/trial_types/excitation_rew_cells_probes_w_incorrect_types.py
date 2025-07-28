@@ -37,12 +37,12 @@ coms_allcelltypes=[]
 lick_all=[]
 vel_all=[]
 epoch_perm=[]
-#%%
+
 for ii in range(len(conddf)):
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
    in_type= conddf.in_type.values[ii]
-   if ii!=202:
+   if in_type=='vip_ex':
       if animal=='e145' or animal=='e139': pln=2 
       else: pln=0
       params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -84,14 +84,14 @@ for ii in range(len(conddf)):
       fall_fc3 = scipy.io.loadmat(params_pth, variable_names=['Fc3', 'dFF'])
       Fc3 = fall_fc3['Fc3']
       dFF = fall_fc3['dFF']
-      if in_type=='vip' or animal=='z17':
+      if in_type=='vip':
          Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
          dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & (~fall['bordercells'][0].astype(bool)))]
       else:
          Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
          dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
       skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-      Fc3 = Fc3[:, skew>1.5] # only keep cells with skew greateer than 2
+      Fc3 = Fc3[:, skew>1.2] # only keep cells with skew greateer than 2
       # dark time params
       track_length_dt = 550 # cm estimate based on 99.9% of ypos
       track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
@@ -177,7 +177,6 @@ for ii in range(len(conddf)):
       lick_all.append([lick_tcs_correct, lick_tcs_fail,lick_tcs_probe,  lick_tcs_bigmiss, lick_tcs_no_lick,lick_tcs_precorr])
       vel_all.append([vel_tcs_correct, vel_tcs_fail, vel_tcs_probe,  vel_tcs_bigmiss, vel_tcs_no_lick, vel_tcs_precorr])
 
-
 #%%
 # split trial types
 tcs_correct_all=[[yy[0] for yy in xx] for xx in tcs_allcelltypes]
@@ -193,7 +192,8 @@ lick_tcs_probes_all=[np.squeeze(xx[2]) for xx in lick_all]
 lick_tcs_bigmiss_all=[np.squeeze(xx[3]) for xx in lick_all]
 lick_tcs_no_lick_all=[np.squeeze(xx[4]) for xx in lick_all]
 lick_tcs_precorr_all=[np.squeeze(xx[5]) for xx in lick_all]
-#vel
+# 
+# vel
 vel_tcs_correct_all=[np.squeeze(xx[0]) for xx in vel_all]
 vel_tcs_fail_all=[np.squeeze(xx[1]) for xx in vel_all]
 vel_tcs_probes_all=[np.squeeze(xx[2]) for xx in vel_all]
@@ -214,11 +214,11 @@ def normalize_rows_0_to_1(arr):
    return normed
 
 plt.rc('font', size=16)
-
 # --- Settings ---
-animals = [xx for ii, xx in enumerate(conddf.animals.values)]
+animals = [xx for ii, xx in enumerate(conddf.animals.values) if conddf.in_type.values[ii]=='vip_ex']
+optoep = [xx for ii, xx in enumerate(conddf.optoep.values) if conddf.in_type.values[ii]=='vip_ex']
 animals_test = np.unique(animals)
-animals_test = [ 'e145', 'e186', 'e189', 'e190', 'e200', 'e201', 'e216','e218', 'z8', 'z9','z14','z15','z16','z17']
+animals_test = [ 'z14','z15','z17']
 # animals_test = ['z9']
 
 cell_types = ['pre', 'post', 'far_pre', 'far_post']
@@ -230,6 +230,7 @@ cs_per_type = []
 dff_probe_per_type=[]
 cs_probe_per_type=[]
 cs_probe_correct_per_type=[]
+# opto only 
 # --- Loop through cell types ---
 for cll, cell_type in enumerate(cell_types):
    dff_correct_per_an = []
@@ -251,37 +252,36 @@ for cll, cell_type in enumerate(cell_types):
          activity_window = 'post'
          win = slice(bins // 2, bins)
       # LICK
-      lick_corr = np.vstack([xx for ii, xx in enumerate(lick_tcs_correct_all) if animals[ii] == animal])
-      lick_fail = np.vstack([xx for ii, xx in enumerate(lick_tcs_fail_all) if animals[ii] == animal])
-      lick_prob1 = np.vstack([xx[:, 0] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal])
-      lick_prob2 = np.vstack([xx[:, 1] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal])
-      lick_prob3 = np.vstack([xx[:, 2] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal])
-      lick_bigmiss = np.vstack([xx for ii, xx in enumerate(lick_tcs_bigmiss_all) if animals[ii] == animal])
-      lick_nolick = np.vstack([xx for ii, xx in enumerate(lick_tcs_no_lick_all) if animals[ii] == animal])
-      lick_precorr = np.vstack([xx for ii, xx in enumerate(lick_tcs_precorr_all) if animals[ii] == animal])
+      lick_corr = np.vstack([xx for ii, xx in enumerate(lick_tcs_correct_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_fail = np.vstack([xx for ii, xx in enumerate(lick_tcs_fail_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_prob1 = np.vstack([xx[:, 0] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_prob2 = np.vstack([xx[:, 1] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_prob3 = np.vstack([xx[:, 2] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_bigmiss = np.vstack([xx for ii, xx in enumerate(lick_tcs_bigmiss_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_nolick = np.vstack([xx for ii, xx in enumerate(lick_tcs_no_lick_all) if animals[ii] == animal and optoep[ii]>1])
+      lick_precorr = np.vstack([xx for ii, xx in enumerate(lick_tcs_precorr_all) if animals[ii] == animal and optoep[ii]>1])
 
       # VELOCITY
-      vel_corr = np.vstack([xx for ii, xx in enumerate(vel_tcs_correct_all) if animals[ii] == animal])
-      vel_fail = np.vstack([xx for ii, xx in enumerate(vel_tcs_fail_all) if animals[ii] == animal])
-      vel_prob1 = np.vstack([xx[:, 0] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal])
-      vel_prob2 = np.vstack([xx[:, 1] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal])
-      vel_prob3 = np.vstack([xx[:, 2] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal])
-      vel_bigmiss = np.vstack([xx for ii, xx in enumerate(vel_tcs_bigmiss_all) if animals[ii] == animal])
-      vel_nolick = np.vstack([xx for ii, xx in enumerate(vel_tcs_no_lick_all) if animals[ii] == animal])
-      vel_precorr = np.vstack([xx for ii, xx in enumerate(vel_tcs_precorr_all) if animals[ii] == animal])
+      vel_corr = np.vstack([xx for ii, xx in enumerate(vel_tcs_correct_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_fail = np.vstack([xx for ii, xx in enumerate(vel_tcs_fail_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_prob1 = np.vstack([xx[:, 0] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_prob2 = np.vstack([xx[:, 1] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_prob3 = np.vstack([xx[:, 2] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_bigmiss = np.vstack([xx for ii, xx in enumerate(vel_tcs_bigmiss_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_nolick = np.vstack([xx for ii, xx in enumerate(vel_tcs_no_lick_all) if animals[ii] == animal and optoep[ii]>1])
+      vel_precorr = np.vstack([xx for ii, xx in enumerate(vel_tcs_precorr_all) if animals[ii] == animal and optoep[ii]>1])
 
       # --- Get correct trial data ---
       for ii, xx in enumerate(tcs_correct_all):
-         if animals[ii] == animal:
+         if animals[ii] == animal and optoep[ii]>1:
             tc = xx[cll]
             if tc.shape[1] > 0:
                tc_avg = np.nanmean(tc,axis=0) #do not average across epochs??!
                if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
                tcs_correct.append(tc_avg)
-
       # --- Get fail trial data ---
       for ii, xx in enumerate(tcs_fail_all):
-         if animals[ii] == animal:
+         if animals[ii] == animal and optoep[ii]>1:
             tc = xx[cll]
             if tc.shape[1] > 0:
                tc_avg = np.nanmean(tc,axis=0)
@@ -289,7 +289,7 @@ for cll, cell_type in enumerate(cell_types):
                tcs_fail.append(tc_avg)
       #probe
       for ii, xx in enumerate(tcs_probes_all):
-         if animals[ii] == animal:
+         if animals[ii] == animal and optoep[ii]>1:
             tc = xx[cll]
             if tc.shape[2] > 0:
                # average across ep
@@ -298,25 +298,311 @@ for cll, cell_type in enumerate(cell_types):
       tcs_bigmiss, tcs_nolick, tcs_precorr = [], [], []
       # Big miss
       for ii, xx in enumerate(tcs_bigmiss_all):
-         if animals[ii] == animal:
+         if animals[ii] == animal and optoep[ii]>1:
             tc = xx[cll]
             if tc.shape[1] > 0:
                tc_avg = np.nanmean(tc, axis=0)
                if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
                tcs_bigmiss.append(tc_avg)
-
       # No lick
       for ii, xx in enumerate(tcs_no_lick_all):
-         if animals[ii] == animal:
+         if animals[ii] == animal and optoep[ii]>1:
             tc = xx[cll]
             if tc.shape[1] > 0:
                tc_avg = np.nanmean(tc, axis=0)
                if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
                tcs_nolick.append(tc_avg)
-
       # Pre-correct
       for ii, xx in enumerate(tcs_precorr_all):
-         if animals[ii] == animal:
+         if animals[ii] == animal and optoep[ii]>1:
+            tc = xx[cll]
+            if tc.shape[1] > 0:
+               tc_avg = np.nanmean(tc, axis=0)
+               if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
+               tcs_precorr.append(tc_avg)
+
+      # --- Stack and sort ---
+      tc_corr = np.vstack(tcs_correct)
+      tc_fail = np.vstack(tcs_fail)
+      tc_prob1=np.vstack([xx[0] for xx in tcs_probe])
+      tc_prob2=np.vstack([xx[1] for xx in tcs_probe])
+      tc_prob3=np.vstack([xx[2] for xx in tcs_probe])
+      # Remove rows where all bins are NaN in correct trials (sets reference for sorting)
+      # valid_rows = ~np.all(np.isnan(tc_fail), axis=1)
+      # tc_fail = tc_fail[valid_rows]
+      # tc_prob1 = tc_prob1[valid_rows]
+      # tc_prob2 = tc_prob2[valid_rows]
+      # tc_prob3 = tc_prob3[valid_rows]
+      # Normalize
+      tc_corr_norm = normalize_rows_0_to_1(tc_corr)
+      valid_rows = ~np.all(np.isnan(tc_corr_norm), axis=1)
+      tc_corr_norm = tc_corr_norm[valid_rows]
+      sort_idx = np.argsort(np.nanargmax(tc_corr_norm, axis=1))
+      # Sort all trial types using the same cell order
+      tc_corr_sorted = tc_corr_norm[sort_idx]
+      valid_rows = ~np.all(np.isnan(tc_fail), axis=1)
+      tc_fail_sorted = normalize_rows_0_to_1(tc_fail)[sort_idx][valid_rows]
+      # correct for mean calc
+      tc_fail_sorted[np.isnan(tc_fail_sorted)]=0
+      tc_fail=tc_fail[valid_rows]
+      tc_fail[np.isnan(tc_fail)]=0
+      valid_rows = ~np.all(np.isnan(tc_prob1), axis=1)
+      tc_prob1_sorted = normalize_rows_0_to_1(tc_prob1)[sort_idx][valid_rows]
+      tc_prob1_sorted[np.isnan(tc_prob1_sorted)]=0
+      tc_prob1=tc_prob1[valid_rows]
+      tc_prob1[np.isnan(tc_prob1)]=0
+      valid_rows = ~np.all(np.isnan(tc_prob2), axis=1)      
+      tc_prob2_sorted = normalize_rows_0_to_1(tc_prob2)[sort_idx][valid_rows]
+      tc_prob2_sorted[np.isnan(tc_prob2_sorted)]=0
+      tc_prob2=tc_prob2[valid_rows]
+      tc_prob2[np.isnan(tc_prob2)]=0
+      valid_rows = ~np.all(np.isnan(tc_prob3), axis=1)
+      tc_prob3_sorted = normalize_rows_0_to_1(tc_prob3)[sort_idx][valid_rows]
+      tc_prob3_sorted[np.isnan(tc_prob3_sorted)]=0
+      tc_prob3=tc_prob3[valid_rows]
+      tc_prob3[np.isnan(tc_prob3)]=0
+      tc_bigmiss = np.vstack(tcs_bigmiss)
+      tc_nolick = np.vstack(tcs_nolick)
+      tc_precorr = np.vstack(tcs_precorr)
+      valid_rows = ~np.all(np.isnan(tc_bigmiss), axis=1)
+      tc_bigmiss_sorted = normalize_rows_0_to_1(tc_bigmiss)[sort_idx][valid_rows]
+      tc_bigmiss_sorted[np.isnan(tc_bigmiss_sorted)]=0
+      tc_bigmiss=tc_bigmiss[valid_rows]
+      tc_bigmiss[np.isnan(tc_bigmiss)]=0
+      valid_rows = ~np.all(np.isnan(tc_nolick), axis=1)
+      tc_nolick_sorted = normalize_rows_0_to_1(tc_nolick)[sort_idx][valid_rows]
+      tc_nolick_sorted[np.isnan(tc_nolick_sorted)]=0
+      tc_nolick=tc_nolick[valid_rows]
+      tc_nolick[np.isnan(tc_nolick)]=0
+      valid_rows = ~np.all(np.isnan(tc_precorr), axis=1)
+      tc_precorr_sorted = normalize_rows_0_to_1(tc_precorr)[sort_idx][valid_rows]
+      tc_precorr_sorted[np.isnan(tc_precorr_sorted)]=0
+      tc_precorr=tc_precorr[valid_rows]
+      tc_precorr[np.isnan(tc_precorr)]=0
+      # --- dF/F from activity window ---
+      dff_correct = np.nanmean(tc_corr[:, win], axis=1)
+      dff_fail = np.nanmean(tc_fail[:, win], axis=1)
+      dff_correct_per_an.append(dff_correct)
+      dff_fail_per_an.append(dff_fail)
+
+      # --- Cosine similarity (correct vs fail) ---
+      # cs = [cosine_sim_ignore_nan(tc_corr[i], tc_fail[i]) for i in range(tc_corr.shape[0])]
+      # cs_per_an.append(np.array(cs))
+      fig, axes_org = plt.subplots(nrows=4, ncols=8, figsize=(20,10),   sharex=True,constrained_layout=True,sharey='row',gridspec_kw={'height_ratios': [3, 1, 1, 1]})
+      axes = axes_org.flatten()
+      titles = ['Correct', 'Incorrect', 'Probe 1', 'Probe 2', 'Probe 3','Pre-Correct Fails','Big Miss', 'No Lick']
+
+      data_to_plot = [tc_corr_sorted, tc_fail_sorted,
+                     tc_prob1_sorted, tc_prob2_sorted, tc_prob3_sorted,tc_precorr_sorted,tc_bigmiss_sorted, tc_nolick_sorted]
+      for i, ax in enumerate(axes[:8]):
+         im = ax.imshow(data_to_plot[i], aspect='auto', vmin=0, vmax=1, cmap='viridis')
+         ax.axvline(bins // 2, color='w', linestyle='--',linewidth=3)
+         ax.set_title(titles[i])
+         ax.set_xticks([0, bins // 2, bins])
+         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+         if i % 3 == 0:
+            ax.set_ylabel('Cells (sorted)')
+         trace_data = [tc_corr, tc_fail,
+                     tc_prob1, tc_prob2, tc_prob3,tc_precorr,tc_bigmiss, tc_nolick]
+         colors = ['seagreen', 'firebrick', 'royalblue', 'goldenrod', 'purple', 'k', 'gray', 'dodgerblue']
+         a=0.1
+         for i in range(8):
+            ax = axes[8 + i]
+            if not i == 0:
+               ax.sharey(axes[8])
+            tc = trace_data[i]
+            if len(tc) == 0: continue            
+            sem = scipy.stats.sem(tc, axis=0, nan_policy='omit')
+            m = np.nanmean(tc,axis=0)
+            ax.plot(m, color=colors[i])
+            ax.fill_between(np.arange(len(m)), m - sem, m + sem, color=colors[i], alpha=a)
+            ax.axvline(bins // 2, color='k', linestyle='--',linewidth=2)
+            ax.set_xticks([0, bins // 2, bins])
+            ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+            ax.set_title(f'{titles[i]} Mean')
+         lick_data = [lick_corr, lick_fail, lick_prob1, lick_prob2, lick_prob3,lick_precorr,lick_bigmiss, lick_nolick]
+
+         for i in range(8):
+            ax = axes[16 + i]
+            trace = lick_data[i]
+            m = np.nanmean(trace, axis=0)
+            sem = scipy.stats.sem(trace, axis=0, nan_policy='omit')
+            ax.plot(m, color=colors[i])
+            ax.fill_between(np.arange(len(m)), m - sem, m + sem, color=colors[i], alpha=a)
+            ax.axvline(bins // 2, color='k', linestyle='--',linewidth=2)
+            ax.set_xticks([0, bins // 2, bins])
+            ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+            ax.set_title(f'{titles[i]} Lick')
+         vel_data = [vel_corr, vel_fail, vel_prob1, vel_prob2, vel_prob3,vel_precorr,vel_bigmiss, vel_nolick]
+         for i in range(8):
+            ax = axes[24 + i]
+            trace = vel_data[i]
+            m = np.nanmean(trace, axis=0)
+            sem = scipy.stats.sem(trace, axis=0, nan_policy='omit')
+            ax.plot(m, color=colors[i])
+            ax.fill_between(np.arange(len(m)), m - sem, m + sem, color=colors[i], alpha=a)
+            ax.axvline(bins // 2, color='k', linestyle='--')
+            ax.set_xticks([0, bins // 2, bins])
+            ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+            ax.set_title(f'{titles[i]} Velocity')
+      fig.suptitle(f'{animal}, {cell_type}')
+            # plt.close(fig)
+
+      #   # Store results
+      #   dff_correct_per_type.append(dff_correct_per_an)
+      #   dff_fail_per_type.append(dff_fail_per_an)
+      # #   dff_probe_per_type.append(dff_probe_per_an)
+      #   cs_per_type.append(cs_per_an)
+      # #   cs_probe_per_type.append(cs_probe_per_an)
+      # #   cs_probe_correct_per_type.append(cs_probe_correct_per_an)
+      import scipy.stats
+      # --- New Figure ---
+      fig_overlay, axes_overlay = plt.subplots(3, 3, figsize=(8, 8),sharex=True, sharey=True)
+      axes_overlay=axes_overlay.flatten()
+      for i in range(8):
+         ax = axes_overlay[i]
+         tc = trace_data[i]     # shape: (trials, bins)
+         lick = lick_data[i]
+         vel = vel_data[i]
+
+         # --- Mean and SEM ---
+         m_tc = np.nanmean(tc, axis=0)
+         sem_tc = scipy.stats.sem(tc, axis=0, nan_policy='omit')
+
+         m_lick = np.nanmean(lick, axis=0)
+         sem_lick = scipy.stats.sem(lick, axis=0, nan_policy='omit')
+
+         m_vel = np.nanmean(vel, axis=0)
+         sem_vel = scipy.stats.sem(vel, axis=0, nan_policy='omit')
+
+         # --- Z-score normalization (standardize each signal) ---
+         def zscore(x):
+            return (x - np.nanmean(x)) / np.nanstd(x)
+
+         m_tc_z = zscore(m_tc)
+         sem_tc_z = sem_tc / np.nanstd(m_tc)
+
+         m_lick_z = zscore(m_lick)
+         sem_lick_z = sem_lick / np.nanstd(m_lick)
+
+         m_vel_z = zscore(m_vel)
+         sem_vel_z = sem_vel / np.nanstd(m_vel)
+
+         # --- Plot ---
+         ax.plot(m_tc_z, color='cornflowerblue', label='Neural')
+         ax.fill_between(np.arange(len(m_tc_z)), m_tc_z - sem_tc_z, m_tc_z + sem_tc_z, color='cornflowerblue', alpha=0.15)
+         ax.plot(m_lick_z, color='k', label='Lick')
+         ax.fill_between(np.arange(len(m_lick_z)), m_lick_z - sem_lick_z, m_lick_z + sem_lick_z, color='k', alpha=0.2)
+         ax.plot(m_vel_z, color='gray', label='Velocity')
+         ax.fill_between(np.arange(len(m_vel_z)), m_vel_z - sem_vel_z, m_vel_z + sem_vel_z, color='gray', alpha=0.2)
+         ax.axvline(bins // 2, color='k', linestyle='--')
+         ax.set_xticks([0, bins // 2, bins])
+         ax.set_xticklabels(['-$\\pi$', 0, '$\\pi$'])
+         ax.set_title(f'{titles[i]}')
+
+         if i == 0:
+            ax.legend(loc='upper right', fontsize=10)
+      axes_overlay[8].axis('off')
+      fig_overlay.suptitle(f'{animal},{cell_type}', fontsize=22)
+      # fig_overlay.tight_layout(rect=[0, 0, 1, 0.93])
+      plt.show()
+#%% 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% control days
+
+cell_types = ['pre', 'post', 'far_pre', 'far_post']
+bins = 150
+# recalc tc
+dff_correct_per_type = []
+dff_fail_per_type = []
+cs_per_type = []
+dff_probe_per_type=[]
+cs_probe_per_type=[]
+cs_probe_correct_per_type=[]
+# opto only 
+# --- Loop through cell types ---
+for cll, cell_type in enumerate(cell_types):
+   dff_correct_per_an = []
+   dff_fail_per_an = []
+   dff_probe_per_an = []
+   cs_per_an = []
+   cs_probe_per_an = []
+   cs_probe_correct_per_an = []
+
+   for animal in animals_test:
+      # --- Initialize containers ---
+      tcs_correct, tcs_fail = [], []
+      tcs_probe =[]  # probe 0, 1, 2 traces
+
+      if 'pre' in cell_type:
+         activity_window = 'pre'
+         win = slice(bins // 3, bins // 2)
+      else:
+         activity_window = 'post'
+         win = slice(bins // 2, bins)
+      # LICK
+      lick_corr = np.vstack([xx for ii, xx in enumerate(lick_tcs_correct_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_fail = np.vstack([xx for ii, xx in enumerate(lick_tcs_fail_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_prob1 = np.vstack([xx[:, 0] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_prob2 = np.vstack([xx[:, 1] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_prob3 = np.vstack([xx[:, 2] for ii, xx in enumerate(lick_tcs_probes_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_bigmiss = np.vstack([xx for ii, xx in enumerate(lick_tcs_bigmiss_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_nolick = np.vstack([xx for ii, xx in enumerate(lick_tcs_no_lick_all) if animals[ii] == animal and optoep[ii]<2])
+      lick_precorr = np.vstack([xx for ii, xx in enumerate(lick_tcs_precorr_all) if animals[ii] == animal and optoep[ii]<2])
+
+      # VELOCITY
+      vel_corr = np.vstack([xx for ii, xx in enumerate(vel_tcs_correct_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_fail = np.vstack([xx for ii, xx in enumerate(vel_tcs_fail_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_prob1 = np.vstack([xx[:, 0] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_prob2 = np.vstack([xx[:, 1] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_prob3 = np.vstack([xx[:, 2] for ii, xx in enumerate(vel_tcs_probes_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_bigmiss = np.vstack([xx for ii, xx in enumerate(vel_tcs_bigmiss_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_nolick = np.vstack([xx for ii, xx in enumerate(vel_tcs_no_lick_all) if animals[ii] == animal and optoep[ii]<2])
+      vel_precorr = np.vstack([xx for ii, xx in enumerate(vel_tcs_precorr_all) if animals[ii] == animal and optoep[ii]<2])
+
+      # --- Get correct trial data ---
+      for ii, xx in enumerate(tcs_correct_all):
+         if animals[ii] == animal and optoep[ii]<2:
+            tc = xx[cll]
+            if tc.shape[1] > 0:
+               tc_avg = np.nanmean(tc,axis=0) #do not average across epochs??!
+               if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
+               tcs_correct.append(tc_avg)
+      # --- Get fail trial data ---
+      for ii, xx in enumerate(tcs_fail_all):
+         if animals[ii] == animal and optoep[ii]<2:
+            tc = xx[cll]
+            if tc.shape[1] > 0:
+               tc_avg = np.nanmean(tc,axis=0)
+               if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
+               tcs_fail.append(tc_avg)
+      #probe
+      for ii, xx in enumerate(tcs_probes_all):
+         if animals[ii] == animal and optoep[ii]<2:
+            tc = xx[cll]
+            if tc.shape[2] > 0:
+               # average across ep
+               tc_avg = [np.nanmean(tc[:,k,:,:],axis=0) for k in range(3)]
+               tcs_probe.append(tc_avg)
+      tcs_bigmiss, tcs_nolick, tcs_precorr = [], [], []
+      # Big miss
+      for ii, xx in enumerate(tcs_bigmiss_all):
+         if animals[ii] == animal and optoep[ii]<2:
+            tc = xx[cll]
+            if tc.shape[1] > 0:
+               tc_avg = np.nanmean(tc, axis=0)
+               if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
+               tcs_bigmiss.append(tc_avg)
+      # No lick
+      for ii, xx in enumerate(tcs_no_lick_all):
+         if animals[ii] == animal and optoep[ii]<2:
+            tc = xx[cll]
+            if tc.shape[1] > 0:
+               tc_avg = np.nanmean(tc, axis=0)
+               if tc_avg.ndim == 1: tc_avg = np.expand_dims(tc_avg, 0)
+               tcs_nolick.append(tc_avg)
+      # Pre-correct
+      for ii, xx in enumerate(tcs_precorr_all):
+         if animals[ii] == animal and optoep[ii]<2:
             tc = xx[cll]
             if tc.shape[1] > 0:
                tc_avg = np.nanmean(tc, axis=0)

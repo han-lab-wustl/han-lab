@@ -70,6 +70,13 @@ for ii in range(len(conddf)):
             lick=lick[:-1]
         # set vars
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+        # exclude low trial eps
+        if eps[-1]<30000:
+            frame_thres=2000
+        else: 
+            frame_thres=5000
+        if (eps[-1]-eps[-2])<frame_thres:
+            eps=eps[:-1]
         lasttr=8 # last trials
         bins=90
         rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs,trialnum, track_length) # get radian coordinates

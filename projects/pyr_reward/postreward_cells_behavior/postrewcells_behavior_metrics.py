@@ -24,17 +24,17 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=Non
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 #%%
 goal_window_cm=40 # to search for rew cells
-saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_{goal_window_cm}cm_window.p'
+saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_20cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
 #%%
 # test
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
-iind='e186_017_index015'
+iind='e186_017_index170'
 radian_alignment=radian_alignment_saved
 tcs_correct, coms_correct, tcs_fail, coms_fail,\
         com_goal, goal_cell_shuf_ps_per_comp_av,\
-                goal_cell_shuf_ps_av,pdist=radian_alignment[iind]
+                goal_cell_shuf_ps_av=radian_alignment[iind]
 track_length=270
 goal_window = goal_window_cm*(2*np.pi/track_length) 
 # change to relative value 
@@ -53,11 +53,11 @@ goal_cells=np.unique(np.concatenate(com_goal))
 #%%
 goal_cell_iind = goal_cells
 tc = tcs_correct
-for gc in goal_cell_iind:
-        plt.figure()
-        for ep in range(len(tc)):
-                plt.plot(tcs_correct[ep,gc,:])
-                plt.title(gc)
+# for gc in goal_cell_iind:
+#     plt.figure()
+#     for ep in range(len(tc)):
+#         plt.plot(tcs_correct[ep,gc,:])
+#         plt.title(gc)
 animal,day,pln = iind[:4], int(iind[5:8]),0
 params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"        
 fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'licks',
@@ -244,7 +244,7 @@ ax=axes[2]
 lickrew = np.array([moving_average(xx,3) for xx in lickrew.T]).T
 lickrew=lickrew/np.nanmax(lickrew,axis=0)
 meanlickrew=np.nanmean(lickrew,axis=1)
-ax.plot(moving_average(meanlickrew,3),alpha=0.5,color=excolor, label='rewarded stops')
+ax.plot(meanlickrew,alpha=0.5,color=excolor, label='rewarded stops')
 ax.fill_between(
 range(0, int(range_val / binsize) * 2),
 meanlickrew - scipy.stats.sem(lickrew, axis=1, nan_policy='omit'),
@@ -355,3 +355,39 @@ cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04
 cbar1.set_label('Norm. licks')
 
 plt.savefig(os.path.join(savedst, f'trail_postrew_traces_cell{gc}.svg'))
+#%% 
+# get lick bouts 
+import numpy as np
+
+def find_lick_bout_ends(lick_rate, rate_thresh=1.0, min_bout_duration=3):
+    """
+    Find timepoints where lick rate transitions from high (above threshold) to 0.
+    
+    Parameters:
+        lick_rate (1D np.array): Time series of lick rate.
+        rate_thresh (float): Minimum rate to consider as part of a bout.
+        min_bout_duration (int): Minimum number of timepoints above threshold to count as a bout.
+        
+    Returns:
+        bout_end_indices (list): Indices where a lick bout ends (just after rate drops to 0).
+    """
+    # Create a binary mask for lick bout
+    in_bout = lick_rate > rate_thresh
+
+    # Find bout start and end indices
+    bout_ends = []
+    i = 0
+    while i < len(in_bout):
+        if in_bout[i]:
+            # Start of a bout
+            start = i
+            while i < len(in_bout) and in_bout[i]:
+                i += 1
+            end = i  # First zero after high lick rate
+            if end - start >= min_bout_duration:
+                bout_ends.append(end)  # Index where it drops to 0
+        else:
+            i += 1
+    return bout_ends
+
+lick_rate = smooth_lick_rate(licks,1/31.25)
