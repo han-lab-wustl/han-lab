@@ -1275,9 +1275,7 @@ def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward
     else:
         return np.array([])  # Return empty array if no valid trials
 
-def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,
-            Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,
-            lasttr=8,bins=90,
+def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,lasttr=8,bins=90,
             velocity_filter=False):    
     """
     fixed misalignment 5/12/25

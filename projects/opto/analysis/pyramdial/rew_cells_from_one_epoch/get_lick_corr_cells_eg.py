@@ -41,7 +41,7 @@ bins = 150
 cm_window=20
 datadct={}
 plot=False
-iis = [130,166,49]
+iis = [49]
 plot=True
 plot2=False
 plt.rc('font', size=20)
@@ -108,7 +108,7 @@ for ii in iis:
          Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
          dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
       skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-      Fc3 = Fc3[:, skew>1.5] # only keep cells with skew greateer than 2
+      Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
       dt = np.nanmedian(np.diff(time))
       lick_rate=smooth_lick_rate(lick,dt)
       
@@ -119,7 +119,7 @@ for ii in iis:
       bin_size=3
       # abs position
       # all trials
-      tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs= make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=150)
+      tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs= make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,velocity_filter=True)
       # get cells that maintain their coms across at least 2 epochs
       # only get opto ad prev epoch
       coms_correct_abs = coms_correct_abs[[optoep-2,optoep-1]]
@@ -131,9 +131,9 @@ for ii in iis:
       # get cells across all epochs that meet crit
       pcs = np.unique(np.concatenate(compc))
       pcs_all = intersect_arrays(*compc)
-      lick_correct_abs, _,lick_fail_abs,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([lick_rate]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=150)
+      lick_correct_abs, _,lick_fail_abs,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([lick_rate]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,velocity_filter=True)
       lick_correct_abs = lick_correct_abs[[optoep-2,optoep-1]]
-      vel_correct_abs, _,vel_fail_abs,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([forwardvel]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=150)
+      vel_correct_abs, _,vel_fail_abs,__ = make_tuning_curves(eps,rewlocs,ybinned,np.array([forwardvel]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,velocity_filter=True)
       # beh rew aligned
       lick_correct, lick_coms_correct, lick_fail, lick_coms_fail, ybinned_dt, rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,
       rewsize,ybinned,time,lick,
@@ -148,159 +148,48 @@ for ii in iis:
       coms_ep1 = coms_rewrel[0]
       bound=np.pi/2
       ep1_rew_cells = np.where(((coms_ep1>-bound) & (coms_ep1<bound)))[0]
-      # test
-      # fig,axes=plt.subplots(nrows=2,ncols=len(tcs_correct)-1,sharey=True,sharex='row')
-      # for ep in range(tcs_correct.shape[0]-1):
-      #    axes[0,ep].imshow(tcs_correct_abs[ep, ep1_rew_cells][np.argsort(coms_correct_abs[0,ep1_rew_cells])],aspect='auto')
-      #    axes[0,ep].axvline(rewlocs[ep]/3,color='w',linestyle='--',linewidth=2)
-      #    axes[1,ep].imshow(tcs_correct[ep, ep1_rew_cells][np.argsort(coms_correct[0,ep1_rew_cells])],aspect='auto')
-      #    axes[1,ep].axvline(75,color='w',linestyle='--',linewidth=2)
       ########## correct trials      
       lick_tc_cs = np.array([spearmanr(tcs_correct_abs[0,cll,:], lick_correct_abs[0][0])[0] for cll in ep1_rew_cells])
       # get high correlated cells in ep1, plot frames in ep 2
       lick_corr_cells = ep1_rew_cells[lick_tc_cs>np.nanmean(lick_tc_cs)]
       # plot
       from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-      if plot==True:
-         fig,axes=plt.subplots(nrows=6,ncols=2,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-         for ep in range(2):
-            tc_abs_norm = normalize_rows(tcs_correct_abs[ep, lick_corr_cells][np.argsort(coms_correct_abs[0,lick_corr_cells])])
-            tc_th_norm  = normalize_rows(tcs_correct[ep, lick_corr_cells][np.argsort(coms_correct[0,lick_corr_cells])])
-            # Plot normalized heatmaps
-            im0 = axes[0,ep].imshow(tc_abs_norm, aspect='auto', vmin=0, vmax=1)
-            axes[0,ep].axvline(rewlocs[ep]/1.8, color='w', linestyle='--', linewidth=2)
-            im1 = axes[3,ep].imshow(tc_th_norm, aspect='auto', vmin=0, vmax=1)
-            axes[3,ep].axvline(75, color='w', linestyle='--', linewidth=2)
-            axes[1,ep].plot(lick_correct_abs[ep][0])
-            axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[1,0].set_ylabel('Lick rate')
-            axes[2,ep].plot(vel_correct_abs[ep][0])
-            axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[2,0].set_ylabel('Velocity')
-            axes[4,ep].plot(lick_correct[ep][0],color='k')
-            axes[4,ep].spines[['top','right']].set_visible(False)
-            axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[4,0].set_ylabel('Lick rate')
-            axes[5,ep].plot(vel_correct[ep][0],color='grey')
-            axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[5,0].set_ylabel('Velocity')
-            axes[0,ep].set_title(f'Epoch {ep+1}')
-            if ep == tcs_correct.shape[0] - 2:
-               # Inset colorbar for im0 (track aligned)
-               cax0 = inset_axes(axes[0, ep],width="5%", height="100%",loc='right',borderpad=1)
-               fig.colorbar(im0, cax=cax0)
-               # Inset colorbar for im1 (theta aligned)
-               cax1 = inset_axes(axes[3, ep],width="5%",height="100%",loc='right',borderpad=1)
-               fig.colorbar(im1, cax=cax1)
-         axes[0,0].set_ylabel('Track aligned')
-         axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-         fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nLick correlated cells')
-         plt.show()
-      # compare to rew cells
-      goal_window = 20*(2*np.pi/track_length) # cm converted to rad
-      # change to relative value 
-      coms_correct = coms_correct[[optoep-2,optoep-1]]
-      coms_rewrel = np.array([com-np.pi for com in coms_correct])
-      perm = list(combinations(range(len(coms_correct)), 2)) 
-      rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
-      # account for cells that move to the end/front
-      # Define a small window around pi (e.g., epsilon)
-      epsilon = .7 # 20 cm
-      # Find COMs near pi and shift to -pi
-      com_loop_w_in_window = []
-      for pi,p in enumerate(perm):
-         for cll in range(coms_rewrel.shape[1]):
-               com1_rel = coms_rewrel[p[0],cll]
-               com2_rel = coms_rewrel[p[1],cll]
-               # print(com1_rel,com2_rel,com_diff)
-               if ((abs(com1_rel - np.pi) < epsilon) and 
-               (abs(com2_rel + np.pi) < epsilon)):
-                     com_loop_w_in_window.append(cll)
-      # get abs value instead
-      coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-      com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-      com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-      lowerbound = -np.pi/4 # updated 4/21/25
-      com_goal_farrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-         xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
-         xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal]
-      com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
-      if len(com_goal_farrew)>0:
-            goal_cells = np.unique(np.concatenate(com_goal_farrew))
-            goal_cells = intersect_arrays(*com_goal_farrew)
-      else:
-            goal_cells=[]    
-      # fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-      # for ep in range(tcs_correct.shape[0]-1):
-      #    axes[0,ep].imshow(tcs_correct_abs[ep, goal_cells][np.argsort(coms_correct_abs[0,goal_cells])],aspect='auto')
-      #    axes[0,ep].axvline(rewlocs[ep]/1.8,color='w',linestyle='--',linewidth=2)  
-      #    axes[1,ep].plot(lick_correct_abs[ep][0])
-      #    axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-      #    axes[1,0].set_ylabel('Lick rate')
-      #    axes[2,ep].plot(vel_correct_abs[ep][0])
-      #    axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-      #    axes[2,0].set_ylabel('Velocity')
-      #    axes[3,ep].imshow(tcs_correct[ep, goal_cells][np.argsort(coms_correct[0,goal_cells])],aspect='auto')
-      #    axes[3,ep].axvline(75,color='w',linestyle='--',linewidth=2)
-      #    axes[4,ep].plot(lick_correct[ep][0])
-      #    axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-      #    axes[4,0].set_ylabel('Lick rate')
-      #    axes[5,ep].plot(vel_correct[ep][0])
-      #    axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-      #    axes[5,0].set_ylabel('Velocity')
-      #    axes[0,ep].set_title(f'Epoch {ep+1}')
-      # axes[0,0].set_ylabel('Track aligned')
-      # axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-      # fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\ndedicated pre-reward cells')
-      # overlap of lick corr and pre-reward cells
-      # overlap_cells = [xx for xx in goal_cells if xx in lick_corr_cells]
-      # overlap_pre_in_lick = len(overlap_cells)/len(goal_cells)
-      # overlap_cells = [xx for xx in lick_corr_cells if xx in goal_cells]
-      # overlap_lick_in_pre = len(overlap_cells)/len(lick_corr_cells)
-      # get all goal
-      com_goal_farrew = com_goal
-      com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
-      if len(com_goal_farrew)>0:
-            goal_cells = np.unique(np.concatenate(com_goal_farrew))
-      else:
-            goal_cells=[]    
-      if plot2==True:
-         fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-         for ep in range(tcs_correct.shape[0]-1):
-            axes[0,ep].imshow(tcs_correct_abs[ep, goal_cells][np.argsort(coms_correct_abs[0,goal_cells])],aspect='auto')
-            axes[0,ep].axvline(rewlocs[ep]/1.8,color='w',linestyle='--',linewidth=2)  
-            axes[1,ep].plot(lick_correct_abs[ep][0])
-            axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[1,0].set_ylabel('Lick rate')
-            axes[2,ep].plot(vel_correct_abs[ep][0])
-            axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[2,0].set_ylabel('Velocity')
-            axes[3,ep].imshow(tcs_correct[ep, goal_cells][np.argsort(coms_correct[0,goal_cells])],aspect='auto')
-            axes[3,ep].axvline(75,color='w',linestyle='--',linewidth=2)
-            axes[4,ep].plot(lick_correct[ep][0])
-            axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[4,0].set_ylabel('Lick rate')
-            axes[5,ep].plot(vel_correct[ep][0])
-            axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[5,0].set_ylabel('Velocity')
-            axes[0,ep].set_title(f'Epoch {ep+1}')
-         axes[0,0].set_ylabel('Track aligned')
-         axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-         fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nreward cells')
-      # overlap of lick corr and pre-reward cells
-      # overlap_cells = [xx for xx in goal_cells if xx in lick_corr_cells]
-      # overlap_pre_in_lick = len(overlap_cells)/len(goal_cells)
-      # overlap_cells = [xx for xx in lick_corr_cells if xx in goal_cells]
-      # overlap_lick_in_pre = len(overlap_cells)/len(lick_corr_cells)
-      # get lick correlated cells per epoch
-      coms_ep1 = coms_rewrel[0]
-      bound=np.pi/3
-      ep_nearrew_cells = [np.where(((coms_rewrel[ep]>-bound) & (coms_rewrel[ep]<bound)))[0] for ep in range(len(coms_rewrel))]      
-      # num of near rew cells
-      num_nearrew=[len(xx)/len(coms_correct[0]) for xx in ep_nearrew_cells]
-      lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in per_ep_cll] for ep,per_ep_cll in enumerate(ep_nearrew_cells)]
-      # get high correlated cells
-      lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
-      # num lick corr cells
-      num_lick_corr=[len(xx)/len(coms_correct[0]) for xx in lick_corr_cells]
-      datadct[f'{animal}_{day}']=[rewlocs,rz,num_lick_corr,num_nearrew]
+      fig,axes=plt.subplots(nrows=3,ncols=2,sharey='row',sharex=True, height_ratios=[3,1,1],figsize=(6,7))
+      lbls=['LED off', 'LED on']
+      for ep in range(2):
+         tc_abs_norm = normalize_rows(tcs_correct_abs[ep, lick_corr_cells][np.argsort(coms_correct_abs[0,lick_corr_cells])])
+         tc_th_norm  = normalize_rows(tcs_correct[ep, lick_corr_cells][np.argsort(coms_correct[0,lick_corr_cells])])
+         # Plot normalized heatmaps
+         im0 = axes[0,ep].imshow(tc_abs_norm, aspect='auto', vmin=0, vmax=1)
+         axes[0,ep].axvline(rewlocs[ep]/3, color='w', linestyle='--', linewidth=3)
+         axes[0,ep].set_yticks([0,tc_abs_norm.shape[0]-1])
+         axes[1,ep].plot(lick_correct_abs[ep][0],color='k')
+         axes[1,ep].axvline(rewlocs[ep]/3,color='k',linestyle='--',linewidth=3)
+         axes[1,0].set_ylabel('Lick rate (licks/s)')
+         axes[2,ep].plot(vel_correct_abs[ep][0],color='grey')
+         axes[2,ep].axvline(rewlocs[ep]/3,color='k',linestyle='--',linewidth=3)
+         axes[2,0].set_ylabel('Velocity (cm/s)')
+         axes[2,ep].spines[['top','right']].set_visible(False)
+         axes[1,ep].spines[['top','right']].set_visible(False)
+         if ep == 1:
+            # Inset colorbar for im0 (track aligned)
+            cax0 = inset_axes(axes[0, ep],width="5%", height="50%",loc='right',borderpad=-1)
+            fig.colorbar(im0, cax=cax0,label=f'Norm. $\Delta F/F$')
+         from matplotlib.patches import Rectangle
+         if ep == 1:
+            rew_x = rewlocs[ep] / 3  # convert reward location to bin units (same as axvline)
+            patch = Rectangle(
+               (0, -5),             # x=0 (start), y=0 (bottom of heatmap)
+               width=rew_x,        # up to reward
+               height=30,  # full height of heatmap
+               color='red',
+               alpha=0.2
+            )
+            axes[0, ep].add_patch(patch)
+         axes[2,ep].set_xticks([0,90])
+         axes[2,ep].set_xticklabels([0,270])
+         axes[2,0].set_xlabel('Track position (cm)')
+      axes[0,0].set_ylabel('Lick correlated cell # (sorted)')
+      fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}')
+      plt.savefig(os.path.join(savedst, f'fig5_{animal}_{day}_lickcorrcells.svg'),bbox_inches='tight')
+      

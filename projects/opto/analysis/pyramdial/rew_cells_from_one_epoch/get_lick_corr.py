@@ -101,7 +101,7 @@ for ii in range(len(conddf)):
          Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
          dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
       skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-      Fc3 = Fc3[:, skew>1.5] # only keep cells with skew greateer than 2
+      Fc3 = Fc3[:, skew>1.2] # only keep cells with skew greateer than 2
       dt = np.nanmedian(np.diff(time))
       lick_rate=smooth_lick_rate(lick,dt)
       
@@ -139,43 +139,12 @@ for ii in range(len(conddf)):
       coms_rewrel = np.array([com-np.pi for com in coms_correct])
       # get cells in epoch 1
       coms_ep1 = coms_rewrel[0]
-      bound=np.pi/2
+      bound=np.pi/4
       ep1_rew_cells = np.where(((coms_ep1>-bound) & (coms_ep1<bound)))[0]
-      # test
-      # fig,axes=plt.subplots(nrows=2,ncols=len(tcs_correct)-1,sharey=True,sharex='row')
-      # for ep in range(tcs_correct.shape[0]-1):
-      #    axes[0,ep].imshow(tcs_correct_abs[ep, ep1_rew_cells][np.argsort(coms_correct_abs[0,ep1_rew_cells])],aspect='auto')
-      #    axes[0,ep].axvline(rewlocs[ep]/3,color='w',linestyle='--',linewidth=2)
-      #    axes[1,ep].imshow(tcs_correct[ep, ep1_rew_cells][np.argsort(coms_correct[0,ep1_rew_cells])],aspect='auto')
-      #    axes[1,ep].axvline(75,color='w',linestyle='--',linewidth=2)
       ########## correct trials      
       lick_tc_cs = np.array([spearmanr(tcs_correct_abs[0,cll,:], lick_correct_abs[0][0])[0] for cll in ep1_rew_cells])
       # get high correlated cells
-      lick_corr_cells = ep1_rew_cells[lick_tc_cs>np.nanmean(lick_tc_cs)]
-      # plot
-      if plot==True:
-         fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-         for ep in range(tcs_correct.shape[0]-1):
-            axes[0,ep].imshow(tcs_correct_abs[ep, lick_corr_cells][np.argsort(coms_correct_abs[0,lick_corr_cells])],aspect='auto')
-            axes[0,ep].axvline(rewlocs[ep]/1.8,color='w',linestyle='--',linewidth=2)  
-            axes[1,ep].plot(lick_correct_abs[ep][0])
-            axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[1,0].set_ylabel('Lick rate')
-            axes[2,ep].plot(vel_correct_abs[ep][0])
-            axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[2,0].set_ylabel('Velocity')
-            axes[3,ep].imshow(tcs_correct[ep, lick_corr_cells][np.argsort(coms_correct[0,lick_corr_cells])],aspect='auto')
-            axes[3,ep].axvline(75,color='w',linestyle='--',linewidth=2)
-            axes[4,ep].plot(lick_correct[ep][0])
-            axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[4,0].set_ylabel('Lick rate')
-            axes[5,ep].plot(vel_correct[ep][0])
-            axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[5,0].set_ylabel('Velocity')
-            axes[0,ep].set_title(f'Epoch {ep+1}')
-         axes[0,0].set_ylabel('Track aligned')
-         axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-         fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nlick correlated cells')
+      lick_corr_cells_ep1 = ep1_rew_cells[lick_tc_cs>np.nanmean(lick_tc_cs)]
       # compare to rew cells
       goal_window = 20*(2*np.pi/track_length) # cm converted to rad
       # change to relative value 
@@ -201,42 +170,7 @@ for ii in range(len(conddf)):
       com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
       com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
       lowerbound = -np.pi/4 # updated 4/21/25
-      com_goal_farrew = [[xx for xx in com if ((np.nanmedian(coms_rewrel[:,
-         xx], axis=0)>=lowerbound) & (np.nanmedian(coms_rewrel[:,
-         xx], axis=0)<0))] if len(com)>0 else [] for com in com_goal]
-      com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
-      if len(com_goal_farrew)>0:
-            goal_cells = np.unique(np.concatenate(com_goal_farrew))
-            goal_cells = intersect_arrays(*com_goal_farrew)
-      else:
-            goal_cells=[]    
-      # fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-      # for ep in range(tcs_correct.shape[0]-1):
-      #    axes[0,ep].imshow(tcs_correct_abs[ep, goal_cells][np.argsort(coms_correct_abs[0,goal_cells])],aspect='auto')
-      #    axes[0,ep].axvline(rewlocs[ep]/1.8,color='w',linestyle='--',linewidth=2)  
-      #    axes[1,ep].plot(lick_correct_abs[ep][0])
-      #    axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-      #    axes[1,0].set_ylabel('Lick rate')
-      #    axes[2,ep].plot(vel_correct_abs[ep][0])
-      #    axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-      #    axes[2,0].set_ylabel('Velocity')
-      #    axes[3,ep].imshow(tcs_correct[ep, goal_cells][np.argsort(coms_correct[0,goal_cells])],aspect='auto')
-      #    axes[3,ep].axvline(75,color='w',linestyle='--',linewidth=2)
-      #    axes[4,ep].plot(lick_correct[ep][0])
-      #    axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-      #    axes[4,0].set_ylabel('Lick rate')
-      #    axes[5,ep].plot(vel_correct[ep][0])
-      #    axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-      #    axes[5,0].set_ylabel('Velocity')
-      #    axes[0,ep].set_title(f'Epoch {ep+1}')
-      # axes[0,0].set_ylabel('Track aligned')
-      # axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-      # fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\ndedicated pre-reward cells')
-      # overlap of lick corr and pre-reward cells
-      # overlap_cells = [xx for xx in goal_cells if xx in lick_corr_cells]
-      # overlap_pre_in_lick = len(overlap_cells)/len(goal_cells)
-      # overlap_cells = [xx for xx in lick_corr_cells if xx in goal_cells]
-      # overlap_lick_in_pre = len(overlap_cells)/len(lick_corr_cells)
+
       # get all goal
       com_goal_farrew = com_goal
       com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
@@ -244,55 +178,37 @@ for ii in range(len(conddf)):
             goal_cells = np.unique(np.concatenate(com_goal_farrew))
       else:
             goal_cells=[]    
-      if plot==True:
-         fig,axes=plt.subplots(nrows=6,ncols=len(tcs_correct)-1,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
-         for ep in range(tcs_correct.shape[0]-1):
-            axes[0,ep].imshow(tcs_correct_abs[ep, goal_cells][np.argsort(coms_correct_abs[0,goal_cells])],aspect='auto')
-            axes[0,ep].axvline(rewlocs[ep]/1.8,color='w',linestyle='--',linewidth=2)  
-            axes[1,ep].plot(lick_correct_abs[ep][0])
-            axes[1,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[1,0].set_ylabel('Lick rate')
-            axes[2,ep].plot(vel_correct_abs[ep][0])
-            axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
-            axes[2,0].set_ylabel('Velocity')
-            axes[3,ep].imshow(tcs_correct[ep, goal_cells][np.argsort(coms_correct[0,goal_cells])],aspect='auto')
-            axes[3,ep].axvline(75,color='w',linestyle='--',linewidth=2)
-            axes[4,ep].plot(lick_correct[ep][0])
-            axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[4,0].set_ylabel('Lick rate')
-            axes[5,ep].plot(vel_correct[ep][0])
-            axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
-            axes[5,0].set_ylabel('Velocity')
-            axes[0,ep].set_title(f'Epoch {ep+1}')
-         axes[0,0].set_ylabel('Track aligned')
-         axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-         fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nreward cells')
-      # overlap of lick corr and pre-reward cells
-      # overlap_cells = [xx for xx in goal_cells if xx in lick_corr_cells]
-      # overlap_pre_in_lick = len(overlap_cells)/len(goal_cells)
-      # overlap_cells = [xx for xx in lick_corr_cells if xx in goal_cells]
-      # overlap_lick_in_pre = len(overlap_cells)/len(lick_corr_cells)
       # get lick correlated cells per epoch
       coms_ep1 = coms_rewrel[0]
-      bound=np.pi/3
+      bound=np.pi/4 # no bound of near/far cells
       ep_nearrew_cells = [np.where(((coms_rewrel[ep]>-bound) & (coms_rewrel[ep]<bound)))[0] for ep in range(len(coms_rewrel))]      
       # num of near rew cells
       num_nearrew=[len(xx)/len(coms_correct[0]) for xx in ep_nearrew_cells]
       lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in per_ep_cll] for ep,per_ep_cll in enumerate(ep_nearrew_cells)]
       # get high correlated cells
       lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
+      tcs_correct=tcs_correct[[optoep-2,optoep-1]]
+      lick_corr_cells_ep1_act = np.nanmean(tcs_correct[:,lick_corr_cells_ep1],axis=2)
+      # com shift
+      com_shift_opto_prev = coms_correct[1,lick_corr_cells_ep1]-coms_correct[0,lick_corr_cells_ep1]
+      # convert to cm
+      com_shift_opto_prev=com_shift_opto_prev/(2*np.pi/track_length)
       # num lick corr cells
       num_lick_corr=[len(xx)/len(coms_correct[0]) for xx in lick_corr_cells]
-      datadct[f'{animal}_{day}']=[rewlocs,rz,num_lick_corr,num_nearrew]
+      datadct[f'{animal}_{day}']=[rewlocs,rz,lick_tc_cs,lick_corr_cells,lick_corr_cells_ep1_act,com_shift_opto_prev]
 #%%
+plt.rc('font', size=20)          # controls default text sizes
+
 df=pd.DataFrame()
 # df['rewzone'] = np.concatenate([v[1] for k,v in datadct.items()])
 df['epoch']=np.concatenate([['prev', 'opto'] for k,v in datadct.items()])
-df['num_lick_corr'] = np.concatenate([v[2] for k,v in datadct.items()])
-df['num_near_rew'] = np.concatenate([v[3] for k,v in datadct.items()])
+df['activity_lick_corr_ep1'] = np.concatenate([np.nanmean(v[4],axis=1) for k,v in datadct.items()])
+# not per epoch
+df['com_shift'] = np.concatenate([[v[5]]*2 for k,v in datadct.items()])
+df['av_lick_corr'] = np.concatenate([[np.nanmedian(xx) for xx in v[2]] for k,v in datadct.items()])
 df['animals']=np.concatenate([[kk.split('_')[0]]*2 for kk,v in datadct.items()])
 df['days']=np.concatenate([[kk.split('_')[1]]*2 for kk,v in datadct.items()]).astype(int)
-df=df[df.num_lick_corr>0]
+# df=df[df.num_lick_corr>0]
 df = pd.merge(df, conddf, on=['animals', 'days'], how='left')
 df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
 # get pre-opto days only for inhib
@@ -303,42 +219,93 @@ df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 df=df[~((df.animals=='z14')&((df.days<33)))]
 df=df[~((df.animals=='z16')&((df.days>13)))]
-df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
+# df=df[~((df.animals=='z17')&((df.days.isin([3,11]))))]
+df=df[~((df.animals=='z15')&((df.days.isin([7,12,16]))))]
 df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([21,29,30,26,29]))))]
 df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([47,55,57]))))]
 df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
 # df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 # df=df[df.epoch>1]
 
+df=df.groupby(['animals','days','condition','epoch']).mean(numeric_only=True).reset_index()
 df=df.groupby(['animals','condition','epoch']).mean(numeric_only=True).reset_index()
+hue_order=['prev','opto']
+fig, ax = plt.subplots(figsize=(5,4))
+pl = {'opto': 'grey', 'prev': 'k'}
+sns.barplot(x='condition',y='av_lick_corr', hue='epoch',data=df,fill=False,errorbar='se',palette=pl,legend=False,hue_order=hue_order)
+sns.stripplot(x='condition',y='av_lick_corr', hue='epoch',data=df,dodge=True,palette=pl,s=10,alpha=0.7,hue_order=hue_order)
 
-fig, ax = plt.subplots()
-pl = {'opto': 'red', 'prev': 'slategray'}
-sns.barplot(x='condition',y='num_lick_corr', hue='epoch',data=df,fill=False,errorbar='se',palette=pl)
-sns.stripplot(x='condition',y='num_lick_corr', hue='epoch',data=df,dodge=True,palette=pl)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.set_xlabel('')
+ax.set_xticklabels(['Control','VIP Inhibition', 'VIP Excitation'],rotation=20)
+ax.set_ylabel('Mean lick correlation ($\\rho$)')
 
 conds = df['condition'].unique()
+x_locs = dict(zip(sorted(conds), range(len(conds))))  # 'ctrl': 0, 'vip_inh': 1, etc.
+
+# Adjust these for the aesthetics of the comparison lines
+line_offset = 0.02
+line_height = 0.02
+asterisk_y_offset = 0.005
+
+# For saving the max y value (for proper line placement)
+y_max = df['av_lick_corr'].max()
+
 for cond in conds:
-   subdf = df[df['condition'] == cond]
-   pre = subdf[subdf['epoch'] == 'opto']['num_lick_corr']
-   post = subdf[subdf['epoch'] == 'prev']['num_lick_corr']
-   
-   tstat, pval = scipy.stats.ttest_rel(pre, post)
-   print(f"Condition: {cond} | t = {tstat:.2f} | p = {pval:.4f} | n_pre = {len(pre)}, n_post = {len(post)}")
-ax.set_ylabel('frac lick correlated cells')
+    subdf = df[df['condition'] == cond]
+    pre = subdf[subdf['epoch'] == 'prev']['av_lick_corr'].values
+    post = subdf[subdf['epoch'] == 'opto']['av_lick_corr'].values
+
+    if len(pre) != len(post):
+        continue  # skip if not matched pairs
+
+    # Compute t-test
+    tstat, pval = scipy.stats.ttest_rel(post, pre)  # post = opto, pre = prev
+    print(f"Condition: {cond} | t = {tstat:.2f} | p = {pval:.4f} | n = {len(pre)}")
+
+    x = x_locs[cond]
+    height = max(np.nanmax(pre), np.nanmax(post)) + line_offset
+    h = line_height
+
+    # Draw line
+    ax.plot([x - 0.2, x - 0.2, x + 0.2, x + 0.2], [height, height + h, height + h, height],
+            lw=1.5, color='k')
+
+    # Add significance asterisks
+    if pval < 0.001:
+        stars = '***'
+    elif pval < 0.01:
+        stars = '**'
+    elif pval < 0.05:
+        stars = '*'
+    else:
+        stars = 'n.s.'
+
+    ax.text(x, height + h + asterisk_y_offset, stars, ha='center', va='bottom', fontsize=16)
+
+    # Optional: draw connecting lines per animal
+    animals = subdf['animals'].unique()
+    for animal in animals:
+        a_pre = subdf[(subdf['animals'] == animal) & (subdf['epoch'] == 'prev')]['av_lick_corr'].values
+        a_post = subdf[(subdf['animals'] == animal) & (subdf['epoch'] == 'opto')]['av_lick_corr'].values
+        if len(a_pre) > 0 and len(a_post) > 0:
+            ax.plot([x - 0.2, x + 0.2], [a_pre[0], a_post[0]], color='gray', alpha=0.5, lw=1.5)
+plt.savefig(os.path.join(savedst, f'fig5_mean_lick_correlation.svg'), bbox_inches='tight')
 
 #%%
+
 fig, ax = plt.subplots()
 pl = {'opto': 'red', 'prev': 'slategray'}
-sns.barplot(x='condition',y='num_near_rew', hue='epoch',data=df,fill=False,errorbar='se',palette=pl)
-sns.stripplot(x='condition',y='num_near_rew', hue='epoch',data=df,dodge=True,palette=pl)
+sns.barplot(x='condition',y='activity_lick_corr_ep1', hue='epoch',data=df,fill=False,errorbar='se',palette=pl)
+sns.stripplot(x='condition',y='activity_lick_corr_ep1', hue='epoch',data=df,dodge=True,palette=pl)
 
 conds = df['condition'].unique()
 for cond in conds:
    subdf = df[df['condition'] == cond]
-   pre = subdf[subdf['epoch'] == 'opto']['num_near_rew']
-   post = subdf[subdf['epoch'] == 'prev']['num_near_rew']
+   pre = subdf[subdf['epoch'] == 'opto']['activity_lick_corr_ep1']
+   post = subdf[subdf['epoch'] == 'prev']['activity_lick_corr_ep1']
    
    tstat, pval = scipy.stats.ttest_rel(pre, post)
    print(f"Condition: {cond} | t = {tstat:.2f} | p = {pval:.4f} | n_pre = {len(pre)}, n_post = {len(post)}")
-ax.set_ylabel('frac cells near reward')
+ax.set_ylabel('$\Delta F/F$ lick correlated cells')
