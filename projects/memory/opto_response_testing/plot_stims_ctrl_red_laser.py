@@ -19,24 +19,22 @@ plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones
 
+# plt.rc('font', size=12)          # controls default text sizes
+
 plt.close('all')
 # save to pdf
 # dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 # pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,
 #     f"halo_opto.pdf"))
 
-src = r'X:\chrimson_snc_grabda'
-# src = r'Y:\halo_grabda'
-# animals = ['e291','e292','e293','e294']
-# days_all = [[6],[6,7],[6,7],[5]]
-animals = ['e292','e293']
-days_all = [[5,6,7],[5,6,7]]
+src = r'Y:\halo_grabda'
+animals = ['e246','e245','e244']
+days_all = [[2,3,5],[2,4],[1,2,4]]
 
-range_val = 4; binsize=0.2 #s
-dur=2# s stim duration
+range_val = 8; binsize=0.2 #s
+dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 3 # for which to normalize
-win=1# smoothing
+prewin = 2 # for which to normalize
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -76,7 +74,7 @@ for ii,animal in enumerate(animals):
             # plt.legend()
             
             dffdf = pd.DataFrame({'dff': dff})
-            dff = np.hstack(dffdf.rolling(win).mean().values)
+            dff = np.hstack(dffdf.rolling(3).mean().values)
             # get off plane stim
             # offpln=pln+1 if pln<3 else pln-1
             # startofstims = consecutive_stretch(np.where(stims[offpln::4])[0])
@@ -146,7 +144,7 @@ for ii,animal in enumerate(animals):
 #%%
 
 # plot all trials
-slm = np.hstack([v[0] for k,v in day_date_dff.items()])
+slm = np.hstack([v[0] for k,v in day_date_dff.items()][:-1])
 sr = np.hstack([v[1] for k,v in day_date_dff.items()])
 sp = np.hstack([v[2] for k,v in day_date_dff.items()])
 so = np.hstack([v[3] for k,v in day_date_dff.items()])
@@ -169,6 +167,6 @@ for nm,pl in enumerate(allplns):
     patches.Rectangle(
             xy=(range_val/binsize,ymin),  # point of origin.
             width=dur/binsize, height=ymax, linewidth=1, # width is s
-            color='mediumspringgreen', alpha=0.2))
+            color='lightgrey', alpha=0.5))
     ax.axhline(0, color='grey',linestyle='--')
-fig.suptitle('SNc Chrimson, ~40mA, n=4')
+fig.suptitle('SNc YFP, ~40mA, n=3')

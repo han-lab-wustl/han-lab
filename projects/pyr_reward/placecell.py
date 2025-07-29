@@ -1707,7 +1707,7 @@ def make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned
         # plt.plot(ypos_w_dt)
         # plt.plot(rewloc_bool*400)    
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
-                reward_ep, rewsize, rewloc_per_trial,
+                reward_ep, rewsize, rewloc_per_trial,rewlocs,
                 trial_ep)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         rates.append(success/total_trials)

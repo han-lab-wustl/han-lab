@@ -12,7 +12,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from projects.opto.analysis.pyramdial.placecell import get_rew_cells_opto
 from projects.pyr_reward.rewardcell import get_radian_position_first_lick_after_rew,intersect_arrays
 from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime,make_tuning_curves_by_trialtype_w_darktime_early,make_tuning_curves
-
+from projects.opto.behavior.behavior import smooth_lick_rate
 import warnings
 warnings.filterwarnings("ignore")
 # import condition df
@@ -25,7 +25,7 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-ii=65# for maps
+ii=65# for maps; and fig 2
 ii=60
 cm_window=20
 day = int(conddf.days.values[ii])
@@ -100,6 +100,12 @@ if True:
 
    tcs_correct, coms_correct, tcs_fail, coms_fail, ybinned_dt,rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
          bins=bins_dt,lasttr=8) 
+   lick_rate=smooth_lick_rate(lick, 1/31.25)
+   lick_tcs_correct, lick_coms_correct, lick_tcs_fail, lick_coms_fail, ybinned_dt,rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,np.array([lick_rate]).T,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+      bins=bins_dt,lasttr=8) 
+   vel_tcs_correct, vel_coms_correct, vel_tcs_fail, vel_coms_fail, ybinned_dt,rad = make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,lick,np.array([forwardvel]).T,trialnum, rewards,forwardvel,scalingf,bin_size_dt,
+      bins=bins_dt,lasttr=8) 
+
    # early tc
    tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early, ybinned_dt = make_tuning_curves_by_trialtype_w_darktime_early(eps,rewlocs,rewsize,ybinned,time,lick,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size_dt,bins=bins_dt,lasttr=8)  
    goal_window = cm_window*(2*np.pi/track_length) # cm converted to rad
@@ -297,11 +303,13 @@ def normalize_rows(x):
 # Moving average function
 def moving_average(x, window_size=5):
     return np.convolve(x, np.ones(window_size)/window_size, mode='same')
-plt.rc('font', size=16)
-fig, axes = plt.subplots(ncols=3, figsize=(10,5), sharex=True, sharey=True)
+plt.rc('font', size=18)
+fig, axes = plt.subplots(ncols=3,nrows=3, figsize=(9,8), sharex=True, sharey='row',height_ratios=[4,1,1])
 im_list = []  # to store imshow objects for colorbar
+colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
+
 for en,ep in enumerate([0,1,2]):
-   ax = axes[en]
+   ax = axes[0,en]
    # Apply moving average and stack
    pltt = [moving_average(tcs_correct[ep, cll, :]) for cll in goal_cells]
    pltt = np.array(pltt)
@@ -313,18 +321,31 @@ for en,ep in enumerate([0,1,2]):
    im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
    im_list.append(im)
    thres1=75-75/4; thres2=75+(75/4)
-   ax.axvline(thres1, color='y', linestyle='--',linewidth=1)
-   ax.axvline(thres2, color='y', linestyle='--',linewidth=1)
-   ax.axvline(bins_dt//2, color='w', linestyle='--',linewidth=2)
+   ax.axvline(thres1, color='y', linestyle='--',linewidth=2)
+   ax.axvline(thres2, color='y', linestyle='--',linewidth=2)
+   ax.axvline(bins_dt//2, color='w', linestyle='--',linewidth=3)
    if ep == 0:
       ax.set_ylabel('Reward cell #')
+   if ep == 2:
+      ax.set_xlabel('Reward-centric distance ($\Theta$)')
    ax.set_title(f'Epoch {en+1}\n Reward @ {int(rewlocs[ep])} cm')
+   ax=axes[1,en]
+   ax.plot(lick_tcs_correct[ep][0],color=colors[en])
+   ax.spines[['top', 'right']].set_visible(False)
+   ax.axvline(bins_dt//2, color='k', linestyle='--',linewidth=3)
+   if ep == 0:ax.set_ylabel('Lick rate (licks/s)')
+   ax=axes[2,en]
+   ax.plot(vel_tcs_correct[ep][0],color=colors[en])
+   ax.spines[['top', 'right']].set_visible(False)
+   ax.axvline(bins_dt//2, color='k', linestyle='--',linewidth=3)
+   if ep == 0:
+      ax.set_ylabel('Velocity (cm/s)')
+      ax.set_xlabel('Reward-centric distance ($\Theta$)')
 
-ax.set_xlabel('Reward-centric distance ($\Theta$)')
 ax.set_xticks([0, thres1, bins_dt/2, thres2, bins_dt])
 ax.set_xticklabels(['-$\\pi$','-$\\pi/4$',0,'$\\pi/4$','$\\pi$'])
 # Add colorbar
-cbar = fig.colorbar(im_list[1], ax=axes[2], orientation='vertical', fraction=0.08, pad=0)
-cbar.set_label('Normalized $\Delta F/F$')
+cbar = fig.colorbar(im_list[0], ax=axes[0,2], orientation='vertical', fraction=0.05, pad=0.05)
+cbar.set_label('Norm. $\Delta F/F$')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig2_rew_map.svg'), bbox_inches='tight')

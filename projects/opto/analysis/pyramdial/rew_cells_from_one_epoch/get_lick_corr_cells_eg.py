@@ -41,9 +41,10 @@ bins = 150
 cm_window=20
 datadct={}
 plot=False
-iis = [166,49]
+iis = [130,166,49]
 plot=True
 plot2=False
+plt.rc('font', size=20)
 for ii in iis:
    day = conddf.days.values[ii]
    animal = conddf.animals.values[ii]
@@ -159,6 +160,7 @@ for ii in iis:
       # get high correlated cells in ep1, plot frames in ep 2
       lick_corr_cells = ep1_rew_cells[lick_tc_cs>np.nanmean(lick_tc_cs)]
       # plot
+      from mpl_toolkits.axes_grid1.inset_locator import inset_axes
       if plot==True:
          fig,axes=plt.subplots(nrows=6,ncols=2,sharey='row',sharex=True, height_ratios=[3,1,1,3,1,1],figsize=(6,8))
          for ep in range(2):
@@ -175,19 +177,24 @@ for ii in iis:
             axes[2,ep].plot(vel_correct_abs[ep][0])
             axes[2,ep].axvline(rewlocs[ep]/1.8,color='k',linestyle='--',linewidth=2)
             axes[2,0].set_ylabel('Velocity')
-            axes[4,ep].plot(lick_correct[ep][0])
+            axes[4,ep].plot(lick_correct[ep][0],color='k')
+            axes[4,ep].spines[['top','right']].set_visible(False)
             axes[4,ep].axvline(75,color='k',linestyle='--',linewidth=2)
             axes[4,0].set_ylabel('Lick rate')
-            axes[5,ep].plot(vel_correct[ep][0])
+            axes[5,ep].plot(vel_correct[ep][0],color='grey')
             axes[5,ep].axvline(75,color='k',linestyle='--',linewidth=2)
             axes[5,0].set_ylabel('Velocity')
             axes[0,ep].set_title(f'Epoch {ep+1}')
             if ep == tcs_correct.shape[0] - 2:
-               fig.colorbar(im0, ax=axes[0,ep], fraction=0.05)
-               fig.colorbar(im1, ax=axes[3,ep], fraction=0.05)
+               # Inset colorbar for im0 (track aligned)
+               cax0 = inset_axes(axes[0, ep],width="5%", height="100%",loc='right',borderpad=1)
+               fig.colorbar(im0, cax=cax0)
+               # Inset colorbar for im1 (theta aligned)
+               cax1 = inset_axes(axes[3, ep],width="5%",height="100%",loc='right',borderpad=1)
+               fig.colorbar(im1, cax=cax1)
          axes[0,0].set_ylabel('Track aligned')
          axes[3,0].set_ylabel('Reward-aligned ($\Theta$)')
-         fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nlick correlated cells')
+         fig.suptitle(f'{animal}, {day}, {in_type}, optoep {optoep-1}\nLick correlated cells')
          plt.show()
       # compare to rew cells
       goal_window = 20*(2*np.pi/track_length) # cm converted to rad
@@ -293,65 +300,7 @@ for ii in iis:
       num_nearrew=[len(xx)/len(coms_correct[0]) for xx in ep_nearrew_cells]
       lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in per_ep_cll] for ep,per_ep_cll in enumerate(ep_nearrew_cells)]
       # get high correlated cells
-      lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanquantile(lick_tc_cs[epep],.75)] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
+      lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
       # num lick corr cells
       num_lick_corr=[len(xx)/len(coms_correct[0]) for xx in lick_corr_cells]
       datadct[f'{animal}_{day}']=[rewlocs,rz,num_lick_corr,num_nearrew]
-#%%
-df=pd.DataFrame()
-# df['rewzone'] = np.concatenate([v[1] for k,v in datadct.items()])
-df['epoch']=np.concatenate([['prev', 'opto'] for k,v in datadct.items()])
-df['num_lick_corr'] = np.concatenate([v[2] for k,v in datadct.items()])
-df['num_near_rew'] = np.concatenate([v[3] for k,v in datadct.items()])
-df['animals']=np.concatenate([[kk.split('_')[0]]*2 for kk,v in datadct.items()])
-df['days']=np.concatenate([[kk.split('_')[1]]*2 for kk,v in datadct.items()]).astype(int)
-df=df[df.num_lick_corr>0]
-df = pd.merge(df, conddf, on=['animals', 'days'], how='left')
-df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
-# get pre-opto days only for inhib
-# df=df[~((df.in_type=='vip') & ((df.optoep>=0) & (df.optoep<2)))]
-# df=df[df.epoch>1]
-
-df=df[(df.animals!='e189')&(df.animals!='e190')]
-# remove outlier days
-df=df[~((df.animals=='z14')&((df.days<33)))]
-df=df[~((df.animals=='z16')&((df.days>13)))]
-df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
-df=df[~((df.animals=='e217')&((df.days<9)|(df.days.isin([21,29,30,26,29]))))]
-df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([47,55,57]))))]
-df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
-# df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
-# df=df[df.epoch>1]
-
-df=df.groupby(['animals','condition','epoch']).mean(numeric_only=True).reset_index()
-
-fig, ax = plt.subplots()
-pl = {'opto': 'red', 'prev': 'slategray'}
-sns.barplot(x='condition',y='num_lick_corr', hue='epoch',data=df,fill=False,errorbar='se',palette=pl)
-sns.stripplot(x='condition',y='num_lick_corr', hue='epoch',data=df,dodge=True,palette=pl)
-
-conds = df['condition'].unique()
-for cond in conds:
-   subdf = df[df['condition'] == cond]
-   pre = subdf[subdf['epoch'] == 'opto']['num_lick_corr']
-   post = subdf[subdf['epoch'] == 'prev']['num_lick_corr']
-   
-   tstat, pval = scipy.stats.ttest_rel(pre, post)
-   print(f"Condition: {cond} | t = {tstat:.2f} | p = {pval:.4f} | n_pre = {len(pre)}, n_post = {len(post)}")
-ax.set_ylabel('frac lick correlated cells')
-
-#%%
-fig, ax = plt.subplots()
-pl = {'opto': 'red', 'prev': 'slategray'}
-sns.barplot(x='condition',y='num_near_rew', hue='epoch',data=df,fill=False,errorbar='se',palette=pl)
-sns.stripplot(x='condition',y='num_near_rew', hue='epoch',data=df,dodge=True,palette=pl)
-
-conds = df['condition'].unique()
-for cond in conds:
-   subdf = df[df['condition'] == cond]
-   pre = subdf[subdf['epoch'] == 'opto']['num_near_rew']
-   post = subdf[subdf['epoch'] == 'prev']['num_near_rew']
-   
-   tstat, pval = scipy.stats.ttest_rel(pre, post)
-   print(f"Condition: {cond} | t = {tstat:.2f} | p = {pval:.4f} | n_pre = {len(pre)}, n_post = {len(post)}")
-ax.set_ylabel('frac cells near reward')

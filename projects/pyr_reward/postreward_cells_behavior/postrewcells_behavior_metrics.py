@@ -17,7 +17,7 @@ mpl.rcParams["ytick.major.size"] = 8
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
-from projects.opto.behavior.behavior import get_success_failure_trials
+from projects.opto.behavior.behavior import get_success_failure_trials, smooth_lick_rate
 from projects.pyr_reward.rewardcell import get_radian_position,extract_data_nearrew,perireward_binned_activity
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
@@ -389,5 +389,137 @@ def find_lick_bout_ends(lick_rate, rate_thresh=1.0, min_bout_duration=3):
         else:
             i += 1
     return bout_ends
+lick=fall['licks'][0]
+lick_rate = smooth_lick_rate(lick,1/31.25)
+bout_ends = find_lick_bout_ends(lick_rate, rate_thresh=7.5, min_bout_duration=3)
+bout_ind = np.zeros_like(lick_rate)
+bout_ind[bout_ends]=1
+bout_ind=bout_ind.astype(bool)
+range_val,binsize=3, .3
+# TODO: make condensed
+_, meanrlick, __, rewrlick = perireward_binned_activity(Fc3[:,gc], bout_ind, 
+fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanvellick, __, vellick = perireward_binned_activity(velocity, bout_ind, 
+        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanlicklick, __, licklick = perireward_binned_activity(fall['licks'][0], bout_ind, 
+    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+#%%
+# incl lick stop
+fig, axes = plt.subplots(ncols=3,nrows=3,figsize=(8,7),height_ratios=[3,1,1])
+axes=axes.flatten()
 
-lick_rate = smooth_lick_rate(licks,1/31.25)
+range_val,binsize=10, .3
+rewall[np.isnan(rewall)]=0
+ax1 = axes[0]  # base axis for first cell
+im1=ax1.imshow(rewall.T, aspect='auto')
+ax1.set_ylabel('Trials')
+ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticklabels([])
+ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
+
+ax=axes[3]
+velall[np.isnan(velall)]=0
+im2=ax.imshow(velall.T, aspect='auto',cmap='Greys')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([])
+ax.set_ylabel('Trials')
+ax.legend().set_visible(False)
+
+ax=axes[6]
+lickall[np.isnan(lickall)]=0
+im2=ax.imshow(lickall.T, aspect='auto',cmap='Blues')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.set_ylabel('Trials')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.legend().set_visible(False)
+ax.set_xlabel('Time from reward (s)')
+
+range_val,binsize=3, .3
+rewrstops[np.isnan(rewrstops)]=0
+
+ax1 = axes[1]  # base axis for first cell
+im1=ax1.imshow(rewrstops.T, aspect='auto')
+ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
+velrew[np.isnan(velrew)]=0
+ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticklabels([])
+# ax1.set_yticklabels([])
+
+ax=axes[4]
+im2=ax.imshow(velrew.T, aspect='auto',cmap='Greys')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.legend().set_visible(False)
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([])
+# ax.set_yticklabels([])
+
+lickrew[np.isnan(lickrew)]=np.nanmean(lickrew)
+ax=axes[7]
+im2=ax.imshow(lickrew.T, aspect='auto',cmap='Blues')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+# ax.set_yticklabels([])
+
+ax.legend().set_visible(False)
+ax.set_xlabel('Time from movement start (s)')
+
+# lick bout end
+
+range_val,binsize=3, .3
+rewrlick[np.isnan(rewrlick)]=0
+
+ax1 = axes[2]  # base axis for first cell
+im1=ax1.imshow(rewrlick.T, aspect='auto')
+ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
+ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticklabels([])
+# ax1.set_yticklabels([])
+cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('$\Delta F/F$')
+vellick[np.isnan(vellick)]=0
+
+ax=axes[5]
+im2=ax.imshow(vellick.T, aspect='auto',cmap='Greys')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.legend().set_visible(False)
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([])
+# ax.set_yticklabels([])
+cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Velocity (cm/s)')
+
+licklick[np.isnan(licklick)]=np.nanmean(licklick)
+ax=axes[8]
+im2=ax.imshow(licklick.T, aspect='auto',cmap='Blues')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+# ax.set_yticklabels([])
+
+ax.legend().set_visible(False)
+ax.set_xlabel('Time from lick stop (s)')
+cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Norm. licks')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, f'trail_postrew_traces_cell{gc}.svg'))
+#%%
+# only for unrewarded stops
+unrewarded_stops = nonrew_stop_with_lick_per_plane+nonrew_stop_without_lick_per_plane
+
+unrewarded_stops=unrewarded_stops.astype(bool)
+range_val,binsize=12, .3
+# TODO: make condensed
+_, meanunrew, __, unrewall = perireward_binned_activity(Fc3[:,gc], unrewarded_stops, 
+fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanvelunrew, __, velunrew = perireward_binned_activity(velocity, unrewarded_stops, 
+        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanlickunrew, __, lickunrew = perireward_binned_activity(fall['licks'][0], unrewarded_stops, 
+    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)

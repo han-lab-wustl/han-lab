@@ -280,7 +280,7 @@ for ii in range(len(conddf)):
       num_nearrew=[len(xx)/len(coms_correct[0]) for xx in ep_nearrew_cells]
       lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in per_ep_cll] for ep,per_ep_cll in enumerate(ep_nearrew_cells)]
       # get high correlated cells
-      lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanquantile(lick_tc_cs[epep],.75)] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
+      lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
       # num lick corr cells
       num_lick_corr=[len(xx)/len(coms_correct[0]) for xx in lick_corr_cells]
       datadct[f'{animal}_{day}']=[rewlocs,rz,num_lick_corr,num_nearrew]

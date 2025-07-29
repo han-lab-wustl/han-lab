@@ -108,56 +108,46 @@ Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
 dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
 Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
-tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-rewards,forwardvel,rewsize,bin_size)          
-goal_window = goal_window_cm*(2*np.pi/track_length) # cm converted to rad
-# change to relative value 
-coms_rewrel = np.array([com-np.pi for com in coms_correct])
-perm = list(combinations(range(len(coms_correct)), 2)) 
-rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm]   
-# if 4 ep
-# account for cells that move to the end/front
-# Define a small window around pi (e.g., epsilon)
-epsilon = .7 # 20 cm
-# Find COMs near pi and shift to -pi
-com_loop_w_in_window = []
-for pi,p in enumerate(perm):
-    for cll in range(coms_rewrel.shape[1]):
-        com1_rel = coms_rewrel[p[0],cll]
-        com2_rel = coms_rewrel[p[1],cll]
-        # print(com1_rel,com2_rel,com_diff)
-        if ((abs(com1_rel - np.pi) < epsilon) and 
-        (abs(com2_rel + np.pi) < epsilon)):
-                com_loop_w_in_window.append(cll)
-# get abs value instead
-coms_rewrel[:,com_loop_w_in_window]=abs(coms_rewrel[:,com_loop_w_in_window])
-com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
-com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
-com_goal = np.unique(np.concatenate(com_goal))
+
+#%% 
+########### DO NOT JUST USE REWARD CELLS!!!!!!!!! ###########
 from hmmlearn import hmm
 # Assume `neural_data` is shape (n_timepoints, n_neurons)
 # And you have timestamps of licks and movements
 # Fit a Gaussian HMM with 2 hidden states (pre- and post-reward)
 # start with 1 trial
-eprng = np.arange(eps[0],eps[1])
-trials = trialnum[eprng]
-f = Fc3[eprng,:]
-# f = f[:,com_goal]
+# eprng = np.arange(eps[0],eps[1])
+f = Fc3[:,:] # entire session!!!
+unique_trialnums = []
+offset = 0
+for ep in range(len(eps)-1):  # e.g., all_epochs = [[start1, end1], [start2, end2], ...]
+   eprng = np.arange(eps[ep], eps[ep+1])  # frame indices for current epoch
+   trials = trialnum[eprng]           # original trialnum within this epoch
+   trials_unique = trials + offset    # make unique by offsetting
+   unique_trialnums.append(trials_unique)
+   offset = trials_unique.max() + 1   # update offset for next epoch
+# Combine across epochs
+unique_trialnums = np.concatenate(unique_trialnums)
+for i in range(1, len(unique_trialnums)):
+   diff = unique_trialnums[i] - unique_trialnums[i-1]
+   if diff != 0 and diff != 1:
+      unique_trialnums[i] = unique_trialnums[i-1]
+trials = unique_trialnums
 # make trial structure
 f__ = [f[trials==tr] for tr in np.unique(trials)]
 maxtime = np.nanmax(np.array([len(xx) for xx in f__]))
 dff = np.zeros((len(np.unique(trials)), f.shape[1], maxtime))*np.nan
 unqtrials = np.unique(trials)
 for tr_idx, tr in enumerate(unqtrials):
-    f_ = f[trials == tr].T  # shape: (n_cells, trial_length)
-    original_len = f_.shape[1]
-    orig_time = np.linspace(0, 1, original_len)
-    new_time = np.linspace(0, 1, maxtime)
-    for cell in range(f.shape[1]):
-        trace = f_[cell]
-        if np.sum(~np.isnan(trace)) > 1:  # must have >1 valid point to interpolate
-            interp_func = scipy.interpolate.interp1d(orig_time, trace, kind='linear', bounds_error=False, fill_value='extrapolate')
-            dff[tr_idx, cell] = interp_func(new_time)
+   f_ = f[trials == tr].T  # shape: (n_cells, trial_length)
+   original_len = f_.shape[1]
+   orig_time = np.linspace(0, 1, original_len)
+   new_time = np.linspace(0, 1, maxtime)
+   for cell in range(f.shape[1]):
+      trace = f_[cell]
+      if np.sum(~np.isnan(trace)) > 1:  # must have >1 valid point to interpolate
+         interp_func = scipy.interpolate.interp1d(orig_time, trace, kind='linear', bounds_error=False, fill_value='extrapolate')
+         dff[tr_idx, cell] = interp_func(new_time)
 
 # Reshape for HMM: (trials * time, features)
 n_trials, n_cells, n_timepoints = dff.shape
@@ -175,28 +165,84 @@ model = hmm.GaussianHMM(
     verbose=True
 )
 model.fit(X)
-
+#%%
 # Decode states for each trial
 decoded_states = np.zeros((n_trials, n_timepoints), dtype=int)
 for trial in range(n_trials):
-    trial_data = dff[trial].T  # shape (n_timepoints, n_cells)
-    trial_data = np.nan_to_num(trial_data)  # Ensure no NaNs
-    states = model.predict(trial_data)  # shape (n_timepoints,)
-    decoded_states[trial] = states
+   trial_data = dff[trial].T  # shape (n_timepoints, n_cells)
+   trial_data = np.nan_to_num(trial_data)  # Ensure no NaNs
+   states = model.predict(trial_data)  # shape (n_timepoints,)
+   decoded_states[trial] = states
 # align to lick/movement
-lick = licks[eprng]
-move = forwardvel[eprng]
-lick_trial = np.zeros((len(np.unique(trials)), maxtime))
-for tr in range(len(unqtrials)):
-    lick_ = lick[trials==unqtrials[tr]]
-    lick_trial[tr,:len(lick_)] = lick_
-move_trial = np.zeros((len(np.unique(trials)), maxtime))
-for tr in range(len(unqtrials)):
-    move_ = move[trials==unqtrials[tr]]
-    move_trial[tr,:len(move_)] = move_
+# interpolate!
+unqtrials = np.unique(trials)
+maxtime = np.nanmax(np.array([np.sum(trials == tr) for tr in unqtrials]))
+lick_trial = np.full((len(unqtrials), maxtime), np.nan)
+move_trial = np.full((len(unqtrials), maxtime), np.nan)
+cs_trial = np.full((len(unqtrials), maxtime), np.nan)
+for tr_idx, tr in enumerate(unqtrials):
+   lick_ = licks[trials == tr]
+   move_ = forwardvel[trials == tr]
+   cs = (rewards>0)[trials == tr]
+   original_len_lick = len(lick_)
+   original_len_move = len(move_)
+   original_len_cs = len(cs)
+   orig_time_lick = np.linspace(0, 1, original_len_lick)
+   orig_time_move = np.linspace(0, 1, original_len_move)
+   orig_time_cs = np.linspace(0, 1, original_len_cs)
+   new_time = np.linspace(0, 1, maxtime)
+   
+   # Interpolate lick
+   if original_len_lick > 1:
+      interp_lick = scipy.interpolate.interp1d(orig_time_lick, lick_, kind='linear', bounds_error=False, fill_value='extrapolate')
+      lick_trial[tr_idx] = interp_lick(new_time)
+   else:
+      # If only 1 or 0 points, fill with that value or nan
+      lick_trial[tr_idx, :original_len_lick] = lick_
+   
+   # Interpolate move
+   if original_len_move > 1:
+      interp_move = scipy.interpolate.interp1d(orig_time_move, move_, kind='linear', bounds_error=False, fill_value='extrapolate')
+      move_trial[tr_idx] = interp_move(new_time)
+   else:
+      move_trial[tr_idx, :original_len_move] = move_
+   # Interpolate cs
+   if original_len_cs > 1:
+      interp_cs = scipy.interpolate.interp1d(orig_time_cs, cs, kind='linear', bounds_error=False, fill_value='extrapolate')
+      cs_trial[tr_idx] = interp_cs(new_time)
+   else:
+      cs_trial[tr_idx, :original_len_move] = cs
+
+#%%
 # per trial plot
-for t in range(len(lick_trial)):
-    plt.figure()
-    plt.plot(decoded_states[t])
-    plt.plot(lick_trial[t])
-    plt.plot(move_trial[t]/max(move_trial[t]))
+fig, axes=plt.subplots(nrows=3,sharey=True,sharex=True)
+axes[0].imshow(decoded_states,aspect='auto')
+axes[1].imshow(lick_trial,aspect='auto')
+axes[2].imshow(move_trial,aspect='auto')
+axes[0].set_ylabel('Trials')
+#%%
+trial=np.random.randint(len(decoded_states))
+peak_per_cell = np.nanquantile(dff[trial], .95,axis=1)
+# Get sorting indices (descending order)
+
+sort_idx = np.argsort(peak_per_cell)
+# Sort dff_trial by peak amplitude
+dff_sorted = dff[trial][sort_idx]
+# Normalize each row from 0 to 1
+row_min = np.nanmin(dff_sorted, axis=1, keepdims=True)
+row_max = np.nanmax(dff_sorted, axis=1, keepdims=True)
+dff_norm = (dff_sorted - row_min) / (row_max - row_min + 1e-10)  # add small epsilon to avoid div by zero
+# eg. trials
+plt.close('all')
+fig, axs=plt.subplots(nrows=2,sharex=True)
+ax=axs[0]
+ax.imshow(dff_norm,aspect='auto')
+ax=axs[1]
+ax.plot(decoded_states[trial],label='latent state',zorder=2)
+ax.plot(lick_trial[trial],label='licks')
+ax.plot(move_trial[trial]/np.nanmax(move_trial[trial]),label='velocity')
+ax.plot(cs_trial[trial],label='CS')
+ax.legend()
+ax.set_xlabel('Time in trial (Hz)')
+plt.tight_layout()
+#%%

@@ -26,10 +26,11 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 # initialize var
 #%%
-iis=conddf[conddf.animals=='z9'].index
-iis=[14,166]
+iis=conddf[(conddf.animals=='z14') & (conddf.optoep>1)].index
+iis=[13,166]
 cm_window=20
-span=[[2000,18400],[15200,48600]]
+span=[[0,16920],[15200,48600]]
+# span=[[0,30000]]*len(iis)
 for kk,ii in enumerate(iis):
    day = int(conddf.days.values[ii])
    animal = conddf.animals.values[ii]
@@ -68,8 +69,8 @@ for kk,ii in enumerate(iis):
    # only test opto vs. ctrl
    eptest = conddf.optoep.values[ii]
    if conddf.optoep.values[ii]<2: 
-            eptest = random.randint(2,3)   
-            if len(eps)<4: eptest = 2 # if no 3 epochs 
+      eptest = random.randint(2,3)   
+      if len(eps)<4: eptest = 2 # if no 3 epochs 
    eptest=int(eptest)   
    lasttr=8 # last trials
    bins=90
