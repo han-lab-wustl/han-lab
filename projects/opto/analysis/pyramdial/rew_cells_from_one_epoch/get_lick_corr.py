@@ -188,11 +188,11 @@ for ii in range(len(conddf)):
       # get high correlated cells
       lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
       tcs_correct=tcs_correct[[optoep-2,optoep-1]]
-      lick_corr_cells_ep1_act = np.nanmean(tcs_correct[:,lick_corr_cells_ep1],axis=2)
+      lick_corr_cells_ep1_act = np.nanmean(tcs_correct_abs[:,lick_corr_cells_ep1],axis=2)
       # com shift
       com_shift_opto_prev = coms_correct[1,lick_corr_cells_ep1]-coms_correct[0,lick_corr_cells_ep1]
       # convert to cm
-      com_shift_opto_prev=com_shift_opto_prev/(2*np.pi/track_length)
+      com_shift_opto_prev=com_shift_opto_prev/(2*np.pi/track_length_dt)
       # num lick corr cells
       num_lick_corr=[len(xx)/len(coms_correct[0]) for xx in lick_corr_cells]
       datadct[f'{animal}_{day}']=[rewlocs,rz,lick_tc_cs,lick_corr_cells,lick_corr_cells_ep1_act,com_shift_opto_prev]
@@ -204,7 +204,7 @@ df=pd.DataFrame()
 df['epoch']=np.concatenate([['prev', 'opto'] for k,v in datadct.items()])
 df['activity_lick_corr_ep1'] = np.concatenate([np.nanmean(v[4],axis=1) for k,v in datadct.items()])
 # not per epoch
-df['com_shift'] = np.concatenate([[v[5]]*2 for k,v in datadct.items()])
+df['com_shift'] = np.concatenate([[np.nanmedian(v[5])]*2 for k,v in datadct.items()])
 df['av_lick_corr'] = np.concatenate([[np.nanmedian(xx) for xx in v[2]] for k,v in datadct.items()])
 df['animals']=np.concatenate([[kk.split('_')[0]]*2 for kk,v in datadct.items()])
 df['days']=np.concatenate([[kk.split('_')[1]]*2 for kk,v in datadct.items()]).astype(int)
@@ -226,7 +226,7 @@ df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([47,55,57]))))]
 df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
 # df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 # df=df[df.epoch>1]
-
+df_org=df
 df=df.groupby(['animals','days','condition','epoch']).mean(numeric_only=True).reset_index()
 df=df.groupby(['animals','condition','epoch']).mean(numeric_only=True).reset_index()
 hue_order=['prev','opto']
@@ -309,3 +309,12 @@ for cond in conds:
    tstat, pval = scipy.stats.ttest_rel(pre, post)
    print(f"Condition: {cond} | t = {tstat:.2f} | p = {pval:.4f} | n_pre = {len(pre)}, n_post = {len(post)}")
 ax.set_ylabel('$\Delta F/F$ lick correlated cells')
+#%%
+df=df_org
+df=df[df.epoch=='opto']
+fig, ax = plt.subplots()
+df=df.groupby(['animals','condition']).mean(numeric_only=True).reset_index()
+
+pl = {'opto': 'gray', 'prev': 'k'}
+sns.barplot(x='condition',y='com_shift',data=df,fill=False,errorbar='se')
+sns.stripplot(x='condition',y='com_shift', data=df,dodge=True)
