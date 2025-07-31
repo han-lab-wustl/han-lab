@@ -34,7 +34,7 @@ days_all = [[8,9,10,13]]
 range_val = 8; binsize=0.2 #s
 dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
-prewin = 2 # for which to normalize
+prewin = 3 # for which to normalize
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    

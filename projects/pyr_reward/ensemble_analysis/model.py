@@ -53,7 +53,7 @@ epoch_perm=[]
 assembly_cells_all_an=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-ii=140
+ii=0
 day = conddf.days.values[ii]
 animal = conddf.animals.values[ii]
 if animal=='e145' or animal=='e139': pln=2 
@@ -195,6 +195,7 @@ for tr in range(len(unqtrials)):
     move_ = move[trials==unqtrials[tr]]
     move_trial[tr,:len(move_)] = move_
 # per trial plot
+
 for t in range(len(lick_trial)):
     plt.figure()
     plt.plot(decoded_states[t])

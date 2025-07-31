@@ -29,14 +29,14 @@ src = r'X:\chrimson_snc_grabda'
 # src = r'Y:\halo_grabda'
 # animals = ['e291','e292','e293','e294']
 # days_all = [[6],[6,7],[6,7],[5]]
-animals = ['e292','e293']
-days_all = [[5,6,7],[5,6,7]]
+animals = ['e291','e293','e294','e292']
+days_all = [[8,9],[8,9],[6,7],[7,8,9]]
 
 range_val = 4; binsize=0.2 #s
 dur=2# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 3 # for which to normalize
-win=1# smoothing
+win=5# smoothing
 day_date_dff = {}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
@@ -51,6 +51,7 @@ for ii,animal in enumerate(animals):
         fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
 
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
+            print(path)
             params = scipy.io.loadmat(path)
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             
             timedFF = np.hstack(params['timedFF'])
@@ -139,12 +140,10 @@ for ii,animal in enumerate(animals):
             ax.set_title(f'Peri-stim')
             plndff.append(rewdFF)
             fig.tight_layout()
-            # plt.show()            
-    
+            # plt.show() 
         day_date_dff[str(day)] = plndff
 
 #%%
-
 # plot all trials
 slm = np.hstack([v[0] for k,v in day_date_dff.items()])
 sr = np.hstack([v[1] for k,v in day_date_dff.items()])
@@ -158,7 +157,7 @@ for nm,pl in enumerate(allplns):
     ax=axes[nm]
     m=np.nanmean(pl,axis=1)
     # pre window sub
-    m=m-np.nanmean(m[:15])
+    m=m-np.nanmean(m[:20])
     sem=scipy.stats.sem(pl,axis=1,nan_policy='omit')
     ax.plot(m)
     ax.fill_between(np.arange(len(m)),m-sem,m+sem,alpha=0.2)
@@ -167,7 +166,7 @@ for nm,pl in enumerate(allplns):
     ymax=.02
     ax.add_patch(
     patches.Rectangle(
-            xy=(range_val/binsize,ymin),  # point of origin.
+            xy=(range_val/binsize-3,ymin),  # point of origin.
             width=dur/binsize, height=ymax, linewidth=1, # width is s
             color='mediumspringgreen', alpha=0.2))
     ax.axhline(0, color='grey',linestyle='--')
