@@ -36,8 +36,9 @@ range_val = 4; binsize=0.2 #s
 dur=2# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 3 # for which to normalize
-win=5# smoothing
+win=2# smoothing
 day_date_dff = {}
+meanfl_per_day={}
 for ii,animal in enumerate(animals):
     days = days_all[ii]    
     for day in days: 
@@ -47,7 +48,7 @@ for ii,animal in enumerate(animals):
         # stimspth = list(Path(os.path.join(src, animal, str(day))).rglob('*000*.mat'))[0]
         # stims = scipy.io.loadmat(stimspth)
         # stims = np.hstack(stims['stims']) # nan out stims
-        plndff = []
+        plndff = []; meanfls = []
         fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
 
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
@@ -67,6 +68,7 @@ for ii,animal in enumerate(animals):
             # plot mean img
             ax=axes[0,pln]
             ax.imshow(params['params'][0][0][0],cmap='Greys_r')
+            meanfl = np.nanmean(params['params'][0][0][0])
             ax.axis('off')
             ax.set_title(f'{animal}, day {day}, {planelut[pln]}')
             # nan out stims
@@ -140,8 +142,10 @@ for ii,animal in enumerate(animals):
             ax.set_title(f'Peri-stim')
             plndff.append(rewdFF)
             fig.tight_layout()
+            meanfls.append(meanfl)
             # plt.show() 
-        day_date_dff[str(day)] = plndff
+        day_date_dff[f'{animal}_{day}'] = plndff
+        meanfl_per_day[f'{animal}_{day}'] = meanfls
 
 #%%
 # plot all trials
@@ -150,8 +154,15 @@ sr = np.hstack([v[1] for k,v in day_date_dff.items()])
 sp = np.hstack([v[2] for k,v in day_date_dff.items()])
 so = np.hstack([v[3] for k,v in day_date_dff.items()])
 
-fig, axes = plt.subplots(nrows=4,figsize=(3,7),sharex=True,sharey=True)
+slmfl = np.hstack([v[0] for k,v in meanfl_per_day.items()])
+srfl = np.hstack([v[1] for k,v in meanfl_per_day.items()])
+spfl = np.hstack([v[2] for k,v in meanfl_per_day.items()])
+sofl = np.hstack([v[3] for k,v in meanfl_per_day.items()])
+
+fig, axes = plt.subplots(nrows=4,figsize=(3,7),sharey='col')
 allplns = [so,sp,sr,slm]
+allplnfl = [sofl,spfl,srfl,slmfl]
+
 lbls=['SO', 'SP', 'SR', 'SLM']
 for nm,pl in enumerate(allplns):
     ax=axes[nm]
@@ -171,3 +182,8 @@ for nm,pl in enumerate(allplns):
             color='mediumspringgreen', alpha=0.2))
     ax.axhline(0, color='grey',linestyle='--')
 fig.suptitle('SNc Chrimson, ~40mA, n=4')
+#%%
+allplnfl = np.array([sofl,spfl,srfl,slmfl])
+ax = sns.barplot(allplnfl.T,fill=False)
+ax.set_xticklabels(['SO','SP','SR',sss'SLM'])
+ax.set_ylabel('$\Delta F/F$')

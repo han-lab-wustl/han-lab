@@ -99,6 +99,7 @@ iis=np.array(iis)
 # MAIN LOOP OVER ANIMALS
 # ============================== #
 #%%
+# iis=iis[iis>183]
 for ii in iis:
    # ---------- Load animal info ---------- #
    day = conddf.days.values[ii]
@@ -109,7 +110,7 @@ for ii in iis:
    print(params_pth)
 
    # ---------- Load required variables ---------- #
-   keys = ['coms', 'changeRewLoc', 'pyr_tc_s2p_cellind', 'ybinned', 'VR', 
+   keys = ['coms', 'changeRewLoc', 'ybinned', 'VR', 
          'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
          'timedFF', 'stat', 'licks']
    fall = scipy.io.loadmat(params_pth, variable_names=keys)
@@ -265,7 +266,20 @@ for ii in iis:
    dfs[f'{animal}_{day}'] = df_all
 
 #%%
+# analyze
 bigdf = pd.concat([v for k,v in dfs.items()])
+bigdf=bigdf[(bigdf.animals!='e189') & (bigdf.animals!='e190')]
+
+# remove outlier days
+bigdf=bigdf[~((bigdf.animals=='z14')&((bigdf.days<33)))]
+bigdf=bigdf[~((bigdf.animals=='z16')&((bigdf.days>13)))]
+# bigdf=bigdf[~((bigdf.animals=='z17')&((bigdf.days.isin([3,11]))))]
+bigdf=bigdf[~((bigdf.animals=='z15')&((bigdf.days.isin([7,12,16]))))]
+bigdf=bigdf[~((bigdf.animals=='e217')&((bigdf.days<9)|(bigdf.days.isin([21,29,30,26,29]))))]
+bigdf=bigdf[~((bigdf.animals=='e216')&((bigdf.days<32)))]
+bigdf=bigdf[~((bigdf.animals=='e200')&((bigdf.days.isin([67,68,81]))))]
+
+
 bigdf_merged = pd.merge(bigdf, conddf, on=['animals', 'days'], how='left')
 bigdf_merged=bigdf_merged[bigdf_merged.optoep>1]
 bigdf_merged=bigdf_merged.groupby(['animals','days','in_type', 'Condition', 'State']).mean(numeric_only=True).reset_index()
@@ -297,9 +311,15 @@ for _, row in pairs.iterrows():
 # Make sure the column is integer after assignment
 bigdf_reordered['State_reordered'] = bigdf_reordered['State_reordered'].astype('Int64')
 sns.barplot(y='Mean rel. pos.', x='State_reordered', data=bigdf_reordered)
+plt.figure()
+sns.barplot(y='Mean_lick_rate', x='State_reordered', data=bigdf_reordered)
+plt.figure()
+sns.barplot(y='Mean_velocity', x='State_reordered', data=bigdf_reordered)
+plt.figure()
+sns.barplot(y='Time_in_state', x='State_reordered', data=bigdf_reordered)
 #%%
 # vip in
-fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(10,5),sharex=True,sharey='row')
+fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(8,5),sharex=True,sharey='row')
 ax=axes[0,0]
 sns.barplot(x='State_reordered',y='Mean rel. pos.',data=bigdf_reordered[bigdf_reordered.in_type=='ctrl'],hue='Condition',ax=ax)
 ax=axes[0,1]
@@ -314,43 +334,60 @@ sns.barplot(x='State_reordered',y='Time_in_state',data=bigdf_reordered[bigdf_reo
 ax=axes[1,2]
 sns.barplot(x='State_reordered',y='Time_in_state',data=bigdf_reordered[bigdf_reordered.in_type=='vip_ex'],hue='Condition',ax=ax)
 #%%
-# Group by and compute means
-grouped = bigdf_reordered.groupby(['animals', 'days', 'in_type', 'State_reordered', 'Condition']).agg({
-   'Mean rel. pos.': 'mean',
-   'Time_in_state': 'mean'
+# Add Lick Rate and Velocity to aggregation
+grouped = bigdf_reordered.groupby(
+    ['animals', 'days', 'in_type', 'State_reordered', 'Condition']
+).agg({
+    'Mean rel. pos.': 'mean',
+    'Time_in_state': 'mean',
+    'Mean_lick_rate': 'mean',
+    'Mean_velocity': 'mean'
 }).reset_index()
 
-# Pivot to have Within and Opto side by side for each metric
+# Pivot to compare Within vs. Opto for each variable
 pivot = grouped.pivot_table(
-   index=['animals', 'days', 'in_type', 'State_reordered'],
-   columns='Condition',
-   values=['Mean rel. pos.', 'Time_in_state']
+    index=['animals', 'days', 'in_type', 'State_reordered'],
+    columns='Condition',
+    values=['Mean rel. pos.', 'Time_in_state', 'Mean_lick_rate', 'Mean_velocity']
 )
 
 # Compute Δ (Opto - Within)
 delta = pd.DataFrame({
-   'Δ Mean rel. pos.': pivot[('Mean rel. pos.', 'Opto')] - pivot[('Mean rel. pos.', 'Within')],
-   'Δ Time in state': pivot[('Time_in_state', 'Opto')] - pivot[('Time_in_state', 'Within')]
+    'Δ Mean rel. pos.': pivot[('Mean rel. pos.', 'Opto')] - pivot[('Mean rel. pos.', 'Within')],
+    'Δ Time in state': pivot[('Time_in_state', 'Opto')] - pivot[('Time_in_state', 'Within')],
+    'Δ Lick rate': pivot[('Mean_lick_rate', 'Opto')] - pivot[('Mean_lick_rate', 'Within')],
+    'Δ Velocity': pivot[('Mean_velocity', 'Opto')] - pivot[('Mean_velocity', 'Within')]
 }).reset_index()
 
-fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(8, 5), sharex=True, sharey='row')
+# Plotting
+fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(10, 8), sharex=True, sharey='row')
 types = ['ctrl', 'vip', 'vip_ex']
+metrics = ['Δ Mean rel. pos.', 'Δ Time in state', 'Δ Lick rate', 'Δ Velocity']
+ylabels = ['Δ Mean rel. pos.', 'Δ Time in state', 'Δ Lick rate', 'Δ Velocity']
 
 for i, t in enumerate(types):
-   sub = delta[delta['in_type'] == t]
-   
-   sns.barplot(x='State_reordered', y='Δ Mean rel. pos.', data=sub, ax=axes[0, i])
-   sns.barplot(x='State_reordered', y='Δ Time in state', data=sub, ax=axes[1, i])
-   sns.stripplot(x='State_reordered', y='Δ Mean rel. pos.', data=sub, ax=axes[0, i])
-   sns.stripplot(x='State_reordered', y='Δ Time in state', data=sub, ax=axes[1, i])
-
-   axes[0, i].set_title(t)
-   if i == 0:
-      axes[0, i].set_ylabel('Δ Mean rel. pos.')
-      axes[1, i].set_ylabel('Δ Time in state')
-   else:
-      axes[0, i].set_ylabel('')
-      axes[1, i].set_ylabel('')
+    sub = delta[delta['in_type'] == t]
+    for j, metric in enumerate(metrics):
+        sns.barplot(x='State_reordered', y=metric, data=sub, ax=axes[j, i], fill=False, errorbar='se')
+        if i == 0:
+            axes[j, i].set_ylabel(ylabels[j])
+        else:
+            axes[j, i].set_ylabel('')
+        if j == 0:
+            axes[j, i].set_title(t)
 
 plt.tight_layout()
 plt.show()
+
+from scipy.stats import ttest_1samp
+
+metrics_test = ['Δ Time in state', 'Δ Lick rate', 'Δ Velocity']
+for t in types:
+    sub = delta[delta['in_type'] == t]
+    print(f"\nGroup: {t}")
+    for s in sorted(sub['State_reordered'].unique()):
+        print(f"  State {s}:")
+        for metric in metrics_test:
+            dvals = sub[sub['State_reordered'] == s][metric].dropna()
+            stat, p = ttest_1samp(dvals, 0)
+            print(f"    {metric}: p = {p:.4f}")
