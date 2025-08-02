@@ -30,6 +30,21 @@ iis=np.array(iis)
 import torch.nn as nn
 import torch.nn.functional as F
 
+def get_rewzones(rewlocs, gainf):
+   # Initialize the reward zone numbers array with zeros
+   rewzonenum = np.zeros(len(rewlocs))
+   
+   # Iterate over each reward location to determine its reward zone
+   for kk, loc in enumerate(rewlocs):
+      if 50*gainf <= loc <= 86 * gainf:
+         rewzonenum[kk] = 1  # Reward zone 1
+      elif 86 * gainf <= loc <= 135 * gainf:
+         rewzonenum[kk] = 2  # Reward zone 2
+      elif loc >= 135 * gainf:
+         rewzonenum[kk] = 3  # Reward zone 3
+         
+   return rewzonenum
+
 class BNN_Conv1D(nn.Module):
    def __init__(self, input_channels, dropout_rate=0.2):
       super().__init__()
@@ -131,12 +146,17 @@ for ii in iis:
    lick_rel = []
    ybinned_rel = []
    trial_states = []
+   strind = []
    for ep in range(len(eps)-1):
       eprng = np.arange(eps[ep],eps[ep+1])
       unique_trials = np.unique(trialnum[eprng])
-      lick_position_rel = lick_position[eprng]-(rewlocs[ep]-(rewsize/2))
+      success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+      strials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in strials])
+      if ep>0: strials_ind=strials_ind+strind[-1][-1]+1
+      strind.append(strials_ind)
+      lick_position_rel = lick_position[eprng]-(rewlocs[ep])
       ypos = ybinned[eprng]
-      lick_position_rel[(ypos>(rewlocs[ep]-(rewsize/2))) & (ypos<(rewlocs[ep]+(rewsize/2)))]=np.nan
+      lick_position_rel = lick_position_rel.astype(float)
       lick_position_rel[lick_rate[eprng]>8]=np.nan
       lick_position_rel[licks[eprng]==0]=np.nan
       # trial_X = []
@@ -146,28 +166,33 @@ for ii in iis:
          fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
          # remove later activity
          ypos_tr = ypos[tr_mask]
-         fc_trial=fc_trial[(ypos_tr<(67/scalingf))]
+         fc_trial=fc_trial[(ypos_tr<(rewlocs[ep]-(rewsize/2)-40))]
          lick_trial = lick_position_rel[tr_mask]         # shape (t,)
          lick_rel.append(lick_trial)
          ybinned_rel.append(ypos_tr-(rewlocs[ep]-(rewsize/2)))
          avg_lick_pre_rew = np.nanmedian(lick_trial)
-         if fc_trial.shape[0] >= 10 and not np.isnan(avg_lick_pre_rew):# and tr>2:; dont exclude probes for now
+         if fc_trial.shape[0] >= 10 and not np.isnan(avg_lick_pre_rew)and tr>2:#; dont exclude probes for now
             trial_X.append(fc_trial)
             trial_y.append(avg_lick_pre_rew)
-      trial_X_ep.append(trial_X)
-      trial_y_ep.append(trial_y)
-      
+   # split into rz 1,2,3
+   # trial_y = get_rewzones(trial_y, 1/scalingf)
    max_time = np.nanmax([len(xx) for xx in trial_X])
+   strind=np.concatenate(strind)
    trial_fc = np.zeros((len(trial_X),max_time,trial_X[0].shape[1]))
    for trind,trx in enumerate(trial_X):
       trial_fc[trind,:len(trx)]=trx
+   # only corrects
    X = np.stack(trial_fc)   # shape (n_trials, time, n_cells)
    y = np.array(trial_y)  # shape (n_trials,)
    from sklearn.model_selection import train_test_split
    import torch
    from torch.utils.data import TensorDataset, DataLoader
-   # Split
-   X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+   all_indices=np.arange(X.shape[0])
+   # Split indices instead of the data directly
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.3, random_state=42)
+   # Now use the indices to subset your data
+   X_train, X_test = X[train_idx], X[test_idx]
+   y_train, y_test = y[train_idx], y[test_idx]
    
    # Convert to PyTorch tensors
    X_train = torch.tensor(X_train, dtype=torch.float32)
@@ -185,7 +210,7 @@ for ii in iis:
 
    model.train()
    train_losses=[]
-   for epoch in range(1000):
+   for epoch in range(1200):
       total_loss=0
       for xb, yb in train_loader:
          pred = model(xb)
@@ -196,7 +221,8 @@ for ii in iis:
          scheduler.step()
          total_loss += loss.item()
          if epoch%100==0: print(loss.item())
-   train_losses.append(total_loss)
+      train_losses.append(total_loss)
+
    def predict_mc(model, X, n_samples=100):
       model.train()  
       preds = []
@@ -208,34 +234,18 @@ for ii in iis:
 
    y_pred_mean, y_pred_std = predict_mc(model, X_test, n_samples=100)
    from sklearn.metrics import r2_score
-   plt.scatter(y_test.numpy().squeeze(), y_pred_mean, alpha=0.5)
+   test_st_id = np.array([ii for ii,xx in enumerate(test_idx) if xx in strind])
+   test_flind = np.array([ii for ii,xx in enumerate(test_idx) if xx not in strind])
+   plt.scatter(y_test.numpy().squeeze()[test_st_id], y_pred_mean[test_st_id], alpha=0.5,color='seagreen',label='correct')
+   if len(test_flind)>0:
+      plt.scatter(y_test.numpy().squeeze()[test_flind], y_pred_mean[test_flind], alpha=0.5,color='firebrick',label='incorrect')
    plt.plot([y_test.min(), y.max()], [y.min(), y.max()], 'k--')
    plt.xlabel("True Lick Position")
    plt.ylabel("Predicted (Mean)")
-   plt.title("BNN: Cell × Time Input")
+   plt.title(f'{animal}, {day}, r2: {r2}')
+   plt.legend()
    plt.show()
    r2 = r2_score(y_test, y_pred_mean)
-   print("R² score:", r2)
-   errors.append([y_test.numpy().squeeze()-y_pred_mean])
-   # 1. Make sure input requires gradients
-   # X_test = X_test.clone().detach().requires_grad_(True)  # shape: (n_trials, time, n_cells)
 
-   # # 2. Permute to (batch, channels=n_cells, time)
-   # X_input = X_test  # shape: (n_trials, n_cells, time)
-
-   # # 3. Forward pass
-   # model.eval()
-   # output = model(X_input)  # shape: (n_trials, 1)
-
-   # # 4. Backward pass
-   # loss = output.sum()  # or output.mean() if you prefer
-   # loss.backward()
-
-   # # 5. Gradient of output w.r.t. input
-   # saliency = X_input.grad.abs()  # shape: (n_trials, n_cells, time)
-
-   # # 6. Aggregate: mean across time and trials to get per-cell importance
-   # saliency_per_cell = saliency.mean(dim=(0, 2))  # shape: (n_cells,)
-   # top_cells = torch.argsort(saliency_per_cell, descending=True)[:10]
-
-   # print("Top contributing cell indices:", top_cells.tolist())
+   errors.append([y_test.numpy().squeeze(),y_pred_mean,r2,test_st_id,test_flind])
+#%%

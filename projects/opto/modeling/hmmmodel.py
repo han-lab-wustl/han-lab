@@ -165,6 +165,7 @@ for ii in iis:
    licks = smooth_lick_rate(licks,dt)
 
    # ---------- Prepare training data ---------- #
+   # 8/1/25 - without dark time
    epr_train = np.arange(eps[ep_train], eps[ep_train + 1])
    f_train = Fc3[epr_train, :]
    trials_train = trialnum[epr_train]
@@ -359,22 +360,58 @@ delta = pd.DataFrame({
     'Δ Velocity': pivot[('Mean_velocity', 'Opto')] - pivot[('Mean_velocity', 'Within')]
 }).reset_index()
 
+delta=delta[delta['Δ Time in state']<100]
 # Plotting
-fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(10, 8), sharex=True, sharey='row')
+fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(10, 10), sharex=True, sharey='row')
 types = ['ctrl', 'vip', 'vip_ex']
 metrics = ['Δ Mean rel. pos.', 'Δ Time in state', 'Δ Lick rate', 'Δ Velocity']
 ylabels = ['Δ Mean rel. pos.', 'Δ Time in state', 'Δ Lick rate', 'Δ Velocity']
+pval_dict={}
+from scipy.stats import ttest_1samp
+
+# Step 1: Perform t-tests and collect p-values
+pval_dict = {}  # (in_type, State_reordered, metric) → p-value
+
+metrics_test = ['Δ Time in state', 'Δ Lick rate', 'Δ Velocity', 'Δ Mean rel. pos.']
+for t in types:
+   sub = delta[delta['in_type'] == t]
+   for s in sorted(sub['State_reordered'].unique()):
+      for metric in metrics_test:
+         dvals = sub[sub['State_reordered'] == s][metric].dropna()
+         if len(dvals) > 1:
+               stat, p = ttest_1samp(dvals, 0)
+               pval_dict[(t, s, metric)] = p
 
 for i, t in enumerate(types):
-    sub = delta[delta['in_type'] == t]
-    for j, metric in enumerate(metrics):
-        sns.barplot(x='State_reordered', y=metric, data=sub, ax=axes[j, i], fill=False, errorbar='se')
-        if i == 0:
-            axes[j, i].set_ylabel(ylabels[j])
-        else:
-            axes[j, i].set_ylabel('')
-        if j == 0:
-            axes[j, i].set_title(t)
+   sub = delta[delta['in_type'] == t]
+   for j, metric in enumerate(metrics):
+      sns.barplot(x='State_reordered', y=metric, data=sub, ax=axes[j, i], fill=False, errorbar='se')
+   #   sns.stripplot(x='State_reordered', y=metric, data=sub, ax=axes[j, i])
+      if i == 0:
+         axes[j, i].set_ylabel(ylabels[j])
+      else:
+         axes[j, i].set_ylabel('')
+      if j == 0:
+         axes[j, i].set_title(t)
+
+      # Add significance asterisks
+      states = sorted(sub['State_reordered'].unique())
+      for k, state in enumerate(states):
+         key = (t, state, metric)
+         if key in pval_dict:
+            p = pval_dict[key]
+            if p < 0.001:
+               stars = '***'
+            elif p < 0.01:
+               stars = '**'
+            elif p < 0.05:
+               stars = '*'
+            else:
+               continue
+            # Estimate y-position for the asterisk
+            bar_vals = sub[sub['State_reordered'] == state][metric].dropna()
+            y = bar_vals.mean()
+            axes[j, i].text(k, y, stars, ha='center', va='bottom', fontsize=30)
 
 plt.tight_layout()
 plt.show()
@@ -390,4 +427,4 @@ for t in types:
         for metric in metrics_test:
             dvals = sub[sub['State_reordered'] == s][metric].dropna()
             stat, p = ttest_1samp(dvals, 0)
-            print(f"    {metric}: p = {p:.4f}")
+            print(f"{metric}: p = {p:.4f}")
