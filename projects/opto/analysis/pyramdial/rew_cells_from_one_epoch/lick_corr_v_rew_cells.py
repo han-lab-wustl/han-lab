@@ -192,9 +192,9 @@ for ii in range(len(conddf)):
       com_goal_farrew = com_goal
       com_goal_farrew=[com for com in com_goal_farrew if len(com)>0]
       if len(com_goal_farrew)>0:
-            goal_cells = np.unique(np.concatenate(com_goal_farrew))
+         goal_cells = np.unique(np.concatenate(com_goal_farrew))
       else:
-            goal_cells=[]    
+         goal_cells=[]    
       # get lick correlated cells per epoch
       coms_ep1 = coms_rewrel[0]
       bound=np.pi/4 # no bound of near/far cells
@@ -204,12 +204,7 @@ for ii in range(len(conddf)):
       lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in per_ep_cll] for ep,per_ep_cll in enumerate(ep_nearrew_cells)]
       # get high correlated cells
       lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
-      # overlap of lick corr and pre-reward cells
-      # overlap_cells = [xx for xx in goal_cells if xx in lick_corr_cells[0]]
-      # overlap_pre_in_lick = len(overlap_cells)/len(goal_cells)
-      # overlap_cells = [xx for xx in lick_corr_cells[0] if xx in goal_cells]
-      # overlap_lick_in_pre = len(overlap_cells)/len(lick_corr_cells[0])
-      # activty of lick corr cells
+      # overlap of lick corr and pre-reward cells      
       tcs_correct=tcs_correct[[optoep-2,optoep-1]]
       lick_corr_cells_ep1_act = np.nanmean(tcs_correct[:,lick_corr_cells_ep1],axis=2)
       # num lick corr cells

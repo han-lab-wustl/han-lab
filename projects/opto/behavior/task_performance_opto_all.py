@@ -161,7 +161,7 @@ for i, (c1, c2) in enumerate(comparisons):
     y_start += gap
 # ax.set_ylim([-35,10])
 plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'),  bbox_inches='tight')
+plt.savefig(os.path.join(savedst, 'p_correct_trials_opto_all.svg'), bbox_inches='tight')
 # df.to_csv(r'Z:\condition_df\vip_opto_behavior.csv')
 #%%
 # Step 1: Calculate the means and standard deviations
@@ -189,7 +189,7 @@ print(f"Required sample size per group: {sample_size:.2f}")
 # plot lick selectivity and lick com
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 a=0.7
-fig,ax = plt.subplots(figsize=(4,6))
+fig,ax = plt.subplots(figsize=(4,5))
 sns.barplot(x="condition", y="velocity_diff",hue='condition', data=bigdf_plot,
     palette=pl,                
             errorbar='se', fill=False,ax=ax)
@@ -226,9 +226,12 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
     elif pval < 0.05:
         sig = '*'
     else:
-        sig = ''
-    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
-    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+        sig = 'ns'
+    if sig!='ns':
+        plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+    else:
+        plt.text(x_center, y_pos+.5, sig, ha='center', va='bottom', fontsize=16)
+    # plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
 
 # Plot all pairwise comparisons
 y_start = bigdf_plot['velocity_diff'].max()-1.5
@@ -243,7 +246,7 @@ plt.savefig(os.path.join(savedst, 'velocity_opto_all.svg'),  bbox_inches='tight'
 # plot lick selectivity and lick com
 # bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
 a=0.7
-fig,ax = plt.subplots(figsize=(4,6))
+fig,ax = plt.subplots(figsize=(4,5))
 sns.barplot(x="condition", y="lick_selectivity",hue='condition', data=bigdf_plot,
     palette=pl,                
             errorbar='se', fill=False,ax=ax)
@@ -282,8 +285,11 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
     elif pval < 0.05:
         sig = '*'
     else:
-        sig = ''
-    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+        sig = 'ns'
+    if sig!='ns':
+        plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
+    else:
+        plt.text(x_center, y_pos+.01, sig, ha='center', va='bottom', fontsize=16)
     plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
 
 # Plot all pairwise comparisons
@@ -304,21 +310,21 @@ bigdf_plot = bigdf_plot.reset_index()
 df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(3.0, 1.0)')|(bigdf_plot.rewzone_transition=='(2.0, 1.0)')|(bigdf_plot.rewzone_transition=='(3.0, 2.0)')]
 df2plt = bigdf_plot[(bigdf_plot.rewzone_transition=='(3.0, 1.0)')|(bigdf_plot.rewzone_transition=='(2.0, 1.0)')|(bigdf_plot.rewzone_transition=='(3.0, 2.0)')]
 
-df2plt = df2plt.groupby(['animals', 'days','condition', 'opto']).mean(numeric_only=True).reset_index()
-df2plt = df2plt[(df2plt.animals!='e189')&(df2plt.animals!='e190')]
+
+df2plt = df2plt.groupby(['animals', 'condition', 'opto']).mean(numeric_only=True).reset_index()
+# df2plt = df2plt[(df2plt.animals!='e189')&(df2plt.animals!='e190')]
 
 fig,ax = plt.subplots(figsize=(4,6))
 sns.barplot(x="condition", y="com",hue='condition', data=df2plt, 
             palette=pl,                     
             errorbar='se', fill=False,ax=ax)
 sns.stripplot(x="condition", y="com",hue='condition', data=df2plt, palette=pl, alpha=a,
-            s=9,ax=ax)
+            s=s,ax=ax)
 ax.spines[['top','right']].set_visible(False)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Normalized center-of-mass licks')
+ax.set_ylabel(f'Reward-centric COM licks (cm)')
 # ax.axhline(0, color='k')
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
-ax.set_title('Reward zone 3 $\\rightarrow$ 1')
+ax.set_title('Last 8 trials\nReward zone 3 $\\rightarrow$ 1')
 ax.set_xlabel('')
 # Get N per condition
 n_per_condition = (
@@ -328,7 +334,6 @@ n_per_condition = (
     .reset_index()
 )
 n_per_condition['n'] = n_per_condition[['animals', 'days']].max(axis=1)
-
 # Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
 conds = ['ctrl', 'vip', 'vip_ex']
 comparisons = list(itertools.combinations(conds, 2))[:2]
@@ -355,7 +360,7 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
     else:
         sig = ''
     plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
-    plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+    plt.text(x_center, y_pos+2, f'p={pval:.2g}', ha='center', fontsize=14)
 
 # Plot all pairwise comparisons
 y_start = bigdf_plot['lick_selectivity'].max() + 20
@@ -363,7 +368,7 @@ gap = 5
 for i, (c1, c2) in enumerate(comparisons):
     add_sig(ax, c1, c2, y_start, p_vals[i],xoffset=5,height=1)
     y_start += gap
-    
+ax.axhline(0,linestyle='--',color='k')
 fig.tight_layout()
 plt.savefig(os.path.join(savedst, 'far2near_com_opto.svg'),  bbox_inches='tight')
 

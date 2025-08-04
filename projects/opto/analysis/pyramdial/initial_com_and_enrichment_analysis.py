@@ -5,6 +5,8 @@ updated aug 2024
 """
 #%%
 import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
+import itertools
+
 import pickle, seaborn as sns, random, math,  matplotlib as mpl, matplotlib.backends.backend_pdf
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.analysis.pyramdial.placecell import get_pyr_metrics_opto, get_dff_opto
@@ -38,7 +40,7 @@ with open(r'Z:\dcts_com_opto_inference_wcomp.p', "wb") as fp:   #Pickling
 # pcs only
 dffs = []
 for dd,day in enumerate(conddf.days.values):
-    dff_opto, dff_prev = get_dff_opto(conddf, dd, day,pc=True)
+    dff_opto, dff_prev = get_dff_opto(conddf, dd,pc=True)
     if dd%10==0: print(dd)
     dffs.append([dff_opto, dff_prev])
     
@@ -47,50 +49,66 @@ s =12 # pointsize
 # plot relative fc3 transients
 plt.rc('font', size=20)          # controls default text sizes
 df = conddf.copy()[:len(dffs)]
-df['dff_target'] = np.array(dffs)[:,0]
-df['dff_prev'] = np.array(dffs)[:,1]
+df['dff_target'] = np.array([np.nanmean(xx[0]) for xx in dffs])
+df['dff_prev'] = np.array([np.nanmean(xx[1]) for xx in dffs])
 df['dff_target-prev'] = df['dff_target']-df['dff_prev']
-df['condition'] = ['VIP' if xx=='vip' else 'Control' for xx in df.in_type.values]
+#%%
+df['condition'] = [xx if 'vip' in xx else 'Control' for xx in df.in_type.values]
 df['opto'] = df.optoep.values>1
 # only initial days as controls
 # df['opto'] = [True if xx>1 else False if xx==-1 else np.nan for xx in conddf.optoep.values]
 df = df.loc[~((df.animals=='e217')&(df.days.isin([12,26,29])))] # exclude noisy days
 df = df.loc[~((df.animals=='e190')|(df.animals=='e189'))] # exclude noisy days
 df=df[df.optoep.values>1]
-df=df.groupby(['animals', 'condition']).mean(numeric_only=True)
-
-fig,ax = plt.subplots(figsize=(2,5))
-sns.barplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
-                palette={'Control': "slategray", 'VIP': "red"},
-                errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,
-                palette={'Control': "slategray", 'VIP': "red"},
-                s=s,ax=ax,dodge=True)
+df=df.groupby(['animals', 'condition']).mean(numeric_only=True).reset_index()
+#%%
+pl = {'Control':'slategrey','vip':'red','vip_ex':'darkgoldenrod'}
+fig,ax = plt.subplots(figsize=(3,5))
+sns.barplot(x="condition", y="dff_target", hue = 'condition', data=df,errorbar='se', fill=False,ax=ax,palette=pl)
+sns.stripplot(x="condition", y="dff_target", hue = 'condition', data=df,s=s,ax=ax,palette=pl,alpha=0.7)
 
 ax.spines[['top','right']].set_visible(False)
 # ax.get_legend().set_visible(False)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Norm. place cell activity')
-ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
+ax.set_xticklabels(ax.get_xticklabels(), rotation=20)
+ax.set_ylabel(f'Spatially tuned cells mean $\Delta F/F$')
+ax.set_xticks([0,1,2], labels=['Control', 'VIP\nInhibition','VIP\nExcitation'])
 ax.set_xlabel('')
-# pvalues needed
-t,pval = scipy.stats.ranksums(df.loc[((df.index.get_level_values('condition')=='VIP')),
-            'dff_target-prev'].values, \
-            df.loc[((df.index.get_level_values('condition')=='Control')),
-            'dff_target-prev'].values)
 
-# statistical annotation    
-fs=46
-ii=1; y=.003; pshift=.0002
-if pval < 0.001:
-        ax.text(ii, y, "***", ha='center', fontsize=fs)
-elif pval < 0.01:
-        ax.text(ii, y, "**", ha='center', fontsize=fs)
-elif pval < 0.05:
-        ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=12)
+# ---- Pairwise comparison and annotation ---- #
+conditions = ['Control', 'vip', 'vip_ex']
+pairs = list(itertools.combinations(conditions, 2))[:2]
 
-# plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
+# Get y-position for annotations
+y_max = df['dff_target'].max()
+y_start = y_max + 0.05 * y_max
+h = 0.1 * y_max  # height between annotation bars
+
+for i, (cond1, cond2) in enumerate(pairs):
+    data1 = df[df['condition'] == cond1]['dff_target']
+    data2 = df[df['condition'] == cond2]['dff_target']
+    stat, p = scipy.stats.ranksums(data1, data2)
+    # Determine asterisk level
+    if p < 0.001:
+        stars = '***'
+    elif p < 0.01:
+        stars = '**'
+    elif p < 0.05:
+        stars = '*'
+    else:
+        stars = 'ns'
+
+    # x-locations of bars
+    x1 = conditions.index(cond1)
+    x2 = conditions.index(cond2)
+    x_center = (x1 + x2) / 2
+    y = y_start + i * h
+
+    # Draw bar and asterisk
+    ax.plot([x1, x1, x2, x2], [y, y + h / 2, y + h / 2, y], lw=1.2, c='k')
+    ax.text(x_center, y + h / 2 + 0.01 * y_max, stars, ha='center', va='bottom', fontsize=16)
+    # ax.text(x_center, y -.01+ h / 2 + 0.01 * y_max, f'p={p:.5g}', ha='center', va='bottom', fontsize=12)
+
+plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
 #%%
 s=12 # pointsize
 # plot fraction of cells near reward

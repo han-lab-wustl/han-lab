@@ -25,7 +25,7 @@ fl = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\D
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
-
+#%%
 # The file contained a list of eight dictionaries, [PRV, APRV, POV, APOV, PRF, APRF, POF, APOF], (Pre validation error (prv) pred - truth, Absolute pre validation error (aprv), |pred - truth|, Post validation error (pov), Absolute post validation error (apov), Pre testing error (prf), Absolute pre testing error (aprf), Post testing error (pof),Absolute post testing error (apof)). V stands for validation, which are unseen successful trials, F stands for failure, which are unseen failed trials. 
 # Each dictionary's keys are mouse id, and values are lists fo decoding error of this mouse in different epochs. Therefore, the mean of the list represents the mean decoding error of this animal. A paired t-test between PRV and POV over animals will show the difference between the pre and post position decoding, which reflects the animal in the pre-reward area mostly encodes the future position, while encoding the previous position (or fluctuation around exact location).
 
@@ -219,23 +219,54 @@ plt.tight_layout()
 plt.savefig(os.path.join(os.path.join(savedst, 'pre_trialtype_decoding.svg')))
 #%%
 # plot eg
-fl = r'c:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\Truth_Pred_Rewloc2'
+fl = r'c:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\Failure_Prediction_corrected'
 with open(fl, "rb") as fp: #unpickle
     dct = pickle.load(fp)
+fl = r'c:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\from_bo\Truth_Pred_Rewloc2'
+with open(fl, "rb") as fp: #unpickle
+    corrdct = pickle.load(fp)
 
 # real v. predicted
-fig,ax = plt.subplots()
-ax.plot(dct[0]*270,color='k', label='Real position')
-ax.plot(dct[1]*270,color='goldenrod',label='Predicted')
-ax.axhline(dct[2]*270, color='gray',linestyle='--')
-ax.text(3,dct[2]*270+5, 'Reward zone start',color='gray', fontsize=14)
+fig,axes = plt.subplots(ncols=2,figsize=(8,5))
+ax=axes[0]
+traceplt = np.squeeze(corrdct[0]*270)
+traceplt2 = np.insert(traceplt,0,0)
+traceplt[np.diff(traceplt2)<-20]=np.nan
+ax.plot(traceplt,color='seagreen', label='Real position',linewidth=3)
+traceplt = np.squeeze(corrdct[1]*270)
+traceplt2 = np.insert(traceplt,0,0)
+traceplt[np.diff(traceplt2)<-100]=np.nan
+ax.plot(traceplt,color='gray',label='Predicted')
+ax.axhline(corrdct[2]*270, color='k',linestyle='--')
+ax.text(3,corrdct[2]*270+5, 'Reward zone start',color='k', fontsize=14)
 ax.set_ylabel('Track position (cm)')
-ax.set_xticks([0, len(dct[0])])
-ax.set_xticklabels([0, round(len(dct[0])/31.25,1)])
+ax.set_xticks([0, len(corrdct[1])])
+ax.set_xticklabels([0, round(len(corrdct[1])/31.25,1)])
 ax.set_xlabel('Time (s)')
 import matplotlib.patches as patches
 ax.spines[['top', 'right']].set_visible(False)
 plt.tight_layout()
 ax.legend()
-ax.set_title('Bayesian position decoding\nCorrect trials (validation)')
+ax.set_title('Bayesian position decoding\nHeld out correct trials')
+
+ax=axes[1]
+traceplt = np.squeeze(dct[1]*270)
+traceplt2 = np.insert(traceplt,0,0)
+traceplt[np.diff(traceplt2)<-20]=np.nan
+ax.plot(traceplt,color='firebrick', label='Real position',linewidth=3)
+traceplt = np.squeeze(dct[2]*270)
+traceplt2 = np.insert(traceplt,0,0)
+traceplt[np.diff(traceplt2)<-100]=np.nan
+ax.plot(traceplt,color='gray',label='Predicted')
+ax.axhline(dct[0]*270, color='k',linestyle='--')
+ax.text(3,dct[0]*270+5, 'Reward zone start',color='k', fontsize=14)
+ax.set_ylabel('Track position (cm)')
+ax.set_xticks([0, len(dct[1])])
+ax.set_xticklabels([0, round(len(dct[1])/31.25,1)])
+ax.set_xlabel('Time (s)')
+import matplotlib.patches as patches
+ax.spines[['top', 'right']].set_visible(False)
+plt.tight_layout()
+ax.legend()
+ax.set_title('Held out incorrect trials')
 plt.savefig(os.path.join(os.path.join(savedst, 'correct_trialdecoding.svg')))

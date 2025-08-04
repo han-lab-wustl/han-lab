@@ -29,11 +29,11 @@ src = r'X:\chrimson_snc_grabda'
 # src = r'Y:\halo_grabda'
 # animals = ['e291','e292','e293','e294']
 # days_all = [[6],[6,7],[6,7],[5]]
-animals = ['e291','e293','e294','e292']
-days_all = [[8,9],[8,9],[6,7],[7,8,9]]
+animals = ['e291']
+days_all = [[10]]
 
-range_val = 4; binsize=0.2 #s
-dur=2# s stim duration
+range_val = 6; binsize=0.2 #s
+dur=3# s stim duration
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 prewin = 3 # for which to normalize
 win=2# smoothing

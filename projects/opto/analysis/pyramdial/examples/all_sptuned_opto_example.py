@@ -31,7 +31,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 # initialize var
 #%%
 ii=40
-iis=[130,166,49] # control v inhib x ex
+iis=[130,192,49] # control v inhib x ex
 # iis=[126,166,49] # control v inhib x ex
 
 datarasters=[]
@@ -44,9 +44,9 @@ for ii in iis:
    params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
    print(params_pth)
 
-   fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+   fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 'putative_pcs',
    'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
-   'stat', 'licks'])
+   'stat', 'licks'])   
    VR = fall['VR'][0][0][()]
    scalingf = VR['scalingFACTOR'][0][0]
    try:
@@ -74,9 +74,10 @@ for ii in iis:
    # only test opto vs. ctrl
    eptest = conddf.optoep.values[ii]
    if conddf.optoep.values[ii]<2: 
-            eptest = random.randint(2,3)   
-            if len(eps)<4: eptest = 2 # if no 3 epochs 
+      eptest = random.randint(2,3)   
+      if len(eps)<4: eptest = 2 # if no 3 epochs 
    eptest=int(eptest)   
+   print(rewlocs[eptest-1])
    lasttr=8 # last trials
    bins=90
    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
@@ -90,8 +91,10 @@ for ii in iis:
    Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0]).astype(bool))]
    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0]).astype(bool))]
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-   # if animal!='z14' and animal!='e200' and animal!='e189':                
-   Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+   # if animal!='z14' and animal!='e200' and animal!='e189':      
+   putative_pcs = np.array([xx[0] for xx in fall['putative_pcs'][0]])
+   pcs = np.sum(putative_pcs,axis=0)>0          
+   Fc3 = Fc3[:, ((skew>2))] # only keep cells with skew greater than 2
    # tc w/ dark time
    print('making tuning curves...\n')
    track_length_dt = 550 # cm estimate based on 99.9% of ypos
@@ -140,15 +143,15 @@ for ii in iis:
    vel_tcs_correct_abs, vel_coms_correct_abs,vel_tcs_fail_abs, vel_coms_fail_abs = make_tuning_curves(eps,rewlocs,ybinned,np.array([forwardvel]).T,trialnum,rewards,forwardvel,rewsize,bin_size,velocity_filter=True) # last 5 trials
 
    pcs = [xx for xx in pcs if xx not in goal_cells]  
-   datarasters.append([tcs_correct_abs[:, pcs],tcs_correct_abs[:,goal_cells],coms_correct_abs[:, pcs],coms_correct_abs[:,goal_cells], rewlocs, eptest,lick_tcs_correct_abs, vel_tcs_correct_abs] )
+   datarasters.append([tcs_correct_abs,coms_correct_abs,rewlocs, eptest,lick_tcs_correct_abs, vel_tcs_correct_abs] )
 
 #%%
 plt.rc('font', size=20)          # controls default text sizes
 from matplotlib import colors
 from matplotlib import patches
-vmax=1
+vmax=2
 # Create subplots
-fig, axes = plt.subplots(ncols=3,nrows=4, figsize=(12,11),height_ratios=[3,3,1,1],sharex=True)
+fig, axes = plt.subplots(ncols=3,nrows=3, figsize=(12,8),height_ratios=[3,1,1],sharex=True)
 # Normalize to range [0, 1]
 def normalize_rows(arr):
    arr_new = np.copy(arr)
@@ -167,62 +170,51 @@ lbls=['Control', 'VIP Inhibition', 'VIP Excitation']
 colors=['grey','mediumspringgreen','lightcoral']
 # Apply normalization before plotting
 for kk, lbl in enumerate(lbls):
-   tcs_correct_pc,tcs_correct_gc,coms_correct_pc,coms_correct_gc, rewlocs, eptest, lick_tcs_correct_abs, vel_tcs_correct_abs=datarasters[kk]
+   tcs_correct,coms_correct, rewlocs, eptest, lick_tcs_correct_abs, vel_tcs_correct_abs=datarasters[kk]
    # place
-   tcs_normalized = normalize_rows(tcs_correct_pc[eptest-1])
+   tcs_normalized = tcs_correct[eptest-1]
    ax = axes[0,kk]
    # 1 = ledon
-   im = ax.imshow(tcs_normalized[np.argsort(coms_correct_pc[1])], aspect='auto',vmin=0,vmax=vmax)
-   ax.set_title(f'{lbls[kk]} \n Place')
+   im = ax.imshow(tcs_normalized[np.argsort(coms_correct[1])], aspect='auto',vmin=0,vmax=vmax)
+   ax.set_title(f'{lbls[kk]} \n All spatially tuned cells')
    ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
    # Add red patch above raster
    pre_rew_x = 0
    pre_rew_width = (rewlocs[eptest-1]) / 3  # convert to bins
    pre_rew_y = -2  # just above the top row (adjust as needed)
-   patch_height = 8  # height of the patch (adjust as needed)
+   patch_height = 10  # height of the patch (adjust as needed)
    red_patch = patches.Rectangle(
-       (pre_rew_x, pre_rew_y),      # (x, y)
-       width=pre_rew_width,
-       height=patch_height,
-       color='red',
-       alpha=0.5
+      (pre_rew_x, pre_rew_y),      # (x, y)
+      width=pre_rew_width,
+      height=patch_height,
+      color='red',
+      alpha=0.5
    )
    ax.add_patch(red_patch)
    ax.set_yticks([0,len(tcs_normalized)-1])
+   ax.set_yticks([1,len(tcs_normalized)])
    ax.set_xticks([0, bins // 2, bins]) 
    ax.set_xticklabels([0,135,270])
    if kk == 0:
-      ax.set_ylabel('Place cell # (sorted)')
+      ax.set_ylabel('Cell # (sorted)')
       cbar_ax = fig.add_axes([.91, .65, 0.015, 0.2])  # [left, bottom, width, height]
       cbar = fig.colorbar(im, cax=cbar_ax)
-      cbar.set_label(f'Norm. $\Delta$ F/F')
+      cbar.set_label(f'$\Delta$ F/F')
    # reward
-   tcs_normalized = normalize_rows(tcs_correct_gc[eptest-1])
    ax = axes[1,kk]
-   # 1 = ledon
-   im = ax.imshow(tcs_normalized[np.argsort(coms_correct_gc[1])], aspect='auto',vmin=0,vmax=vmax)
-   ax.set_title(f'Reward')
-   ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
-   if kk == 0:
-      ax.set_ylabel('Reward cell # (sorted)')
-   ax.set_yticks([0,len(tcs_normalized)-1])
-   ax.set_xticks([0, bins // 2, bins]) 
-   ax.set_xticklabels([0,135,270])
-   ax = axes[2,kk]
    # 1 = ledon
    ax.plot(lick_tcs_correct_abs[eptest-1][0],color='k')
    ax.axvline(rewlocs[eptest-1]/3,color='k', linestyle='--',linewidth=3)
    ax.spines['top'].set_visible(False)
    ax.spines['right'].set_visible(False)
    if kk==0: ax.set_ylabel('Lick rate (licks/s)')
-   ax = axes[3,kk]
+   ax = axes[2,kk]
    # 1 = ledon
    ax.plot(vel_tcs_correct_abs[eptest-1][0],color='grey')
    ax.axvline(rewlocs[eptest-1]/3,color='k', linestyle='--',linewidth=3)
    ax.set_xlabel('Track position (cm)')
    ax.spines[['top','right']].set_visible(False)
-   
    if kk==0: ax.set_ylabel('Velocity (cm/s)')
 
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
-plt.savefig(os.path.join(savedst, f'fig4_eg_tuning_curves.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, f'supp_fig5_eg_tuning_curves.svg'), bbox_inches='tight')

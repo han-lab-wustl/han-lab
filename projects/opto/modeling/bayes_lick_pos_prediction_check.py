@@ -15,12 +15,6 @@ from projects.opto.behavior.behavior import smooth_lick_rate
 from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime, intersect_arrays,make_tuning_curves
 from projects.opto.behavior.behavior import get_success_failure_trials, smooth_lick_rate
 import matplotlib.backends.backend_pdf, matplotlib as mpl
-from sklearn.preprocessing import StandardScaler
-mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 10
-mpl.rcParams["ytick.major.size"] = 10
-# plt.rc('font', size=16)          # controls default text sizes
-plt.rcParams["font.family"] = "Arial"
 
 from itertools import combinations
 
@@ -28,25 +22,6 @@ def bin_activity(data, bin_size):
    n_bins = data.shape[0] // bin_size
    binned = data[:n_bins * bin_size].reshape(n_bins, bin_size, data.shape[1]).mean(axis=1)
    return binned
-
-def normalize_rows(arr):
-   # Normalize each row to [0,1]
-   min_vals = arr.min(axis=1, keepdims=True)
-   max_vals = arr.max(axis=1, keepdims=True)
-   # Avoid division by zero for rows with constant values
-   denom = max_vals - min_vals
-   denom[denom == 0] = 1
-   return (arr - min_vals) / denom
-
-def normalize_1d(arr):
-   # Normalize each row to [0,1]
-   min_vals = arr.min()
-   max_vals = arr.max()
-   # Avoid division by zero for rows with constant values
-   denom = max_vals - min_vals
-   if denom==0:
-      denom=1
-   return (arr - min_vals) / denom
 
 #%%
 # ============================== #
@@ -195,7 +170,6 @@ for ii in iis:
    trial_states = []
    strind = []
    flind = []
-   ep_trials = []
    bin_size = int(0.1 * 1/np.nanmedian(np.diff(time)))  # number of frames in 100ms
    for ep in range(len(eps)-1):
       eprng = np.arange(eps[ep],eps[ep+1])
@@ -228,7 +202,6 @@ for ii in iis:
             fc_trial_binned = bin_activity(fc_trial, bin_size)
             trial_X.append(fc_trial_binned)
             trial_y.append(avg_lick_pre_rew)
-            ep_trials.append(ep+1)
       # test
       # lick_r = lick_rate[eprng]
       # lick_r[lick_r>5]=0
@@ -244,14 +217,6 @@ for ii in iis:
       trial_fc[trind,:len(trx)]=trx
    # only corrects
    X = np.stack(trial_fc)   # shape (n_trials, time, n_cells)
-   # Reshape to (n_trials*time, n_cells) for cell-wise standardization
-   n_trials, t, n_cells = X.shape
-   X_reshaped = X.reshape(-1, n_cells)
-   # Fit and transform using StandardScaler
-   scaler = StandardScaler()
-   X_scaled = scaler.fit_transform(X_reshaped)
-   # Reshape back to original shape
-   X = X_scaled.reshape(n_trials, t, n_cells)
    y = np.array(trial_y)  # shape (n_trials,)
    from sklearn.model_selection import train_test_split
    import torch
@@ -331,18 +296,6 @@ for ii in iis:
    ax.legend()
    pdf.savefig(fig)
    plt.show()   
-
-   # Compute distances from the diagonal y = x
-   dist_diag = np.abs(y_pred_mean - y_test.numpy().squeeze()) / np.sqrt(2)
-   # Optionally: separate correct and incorrect points
-   dist_correct = dist_diag[test_st_id]
-   dist_incorrect = dist_diag[test_flind] if len(test_flind) > 0 else []
-   # Print stats
-   print(f"Mean distance from diagonal (correct): {np.mean(dist_correct):.2f} cm")
-   if len(dist_incorrect) > 0:
-      print(f"Mean distance from diagonal (incorrect): {np.mean(dist_incorrect):.2f} cm")
-   print(f"Overall mean distance from diagonal: {np.mean(dist_diag):.2f} cm")
-
    # tc w/ dark time
    print('making tuning curves...\n')
    track_length_dt = 550 # cm estimate based on 99.9% of ypos
@@ -371,10 +324,8 @@ for ii in iis:
    com_remap = np.array([(coms_rewrel[perm[jj][0]]-coms_rewrel[perm[jj][1]]) for jj in range(len(perm))])        
    com_goal = [np.where((comr<goal_window) & (comr>-goal_window))[0] for comr in com_remap]
    com_goal=np.unique(np.concatenate(com_goal))
-   tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs= make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8)
-   lick_tcs_correct_abs, lick_coms_correct_abs, lick_tcs_fail_abs, lick_coms_fail_abs= make_tuning_curves(eps,rewlocs,ybinned,np.array([lick_rate]).T,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8)
+   tcs_correct_abs, coms_correct_abs,tcs_fail_abs, coms_fail_abs= make_tuning_curves(eps,rewlocs,ybinned,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=150)
 
-   figmul=1.5
    # After training:
    with torch.no_grad():
       weights = model.conv1.weight.cpu().numpy()  # shape: (32 filters, input_channels, kernel_size)
@@ -382,14 +333,17 @@ for ii in iis:
       cell_importance = np.abs(weights).mean(axis=(0, 2))  # shape: (input_channels,)
       top_cells = np.argsort(cell_importance)[::-1]  # descending
       print("Top contributing cells (by average absolute weight):", top_cells[:10])
-   if len(top_cells)>200:
-      top_p = int(0.2*len(top_cells))
-      topp=20
-   else:
-      top_p = int(0.4*len(top_cells))
-      topp=40
+   top_p = int(0.1*len(top_cells))
    top_cells_that_are_rew_cells = [xx for xx in top_cells[:top_p] if xx in com_goal]
    top_cells_that_are_not_rew_cells = [xx for xx in top_cells[:top_p] if xx not in com_goal]
+   def normalize_rows(arr):
+      # Normalize each row to [0,1]
+      min_vals = arr.min(axis=1, keepdims=True)
+      max_vals = arr.max(axis=1, keepdims=True)
+      # Avoid division by zero for rows with constant values
+      denom = max_vals - min_vals
+      denom[denom == 0] = 1
+      return (arr - min_vals) / denom
    # needs to last more than 4 min 
    fr = np.nanmedian(np.diff(time))
    thres = (1/fr)*60*4
@@ -400,56 +354,10 @@ for ii in iis:
       norm_tcs_rew = normalize_rows(tcs_correct_abs[r, top_cells_that_are_rew_cells])[np.argsort(coms_correct_abs[0, top_cells_that_are_rew_cells])]
       axes[r,0].imshow(norm_tcs_nonrew, aspect='auto')
       axes[r,1].imshow(norm_tcs_rew, aspect='auto')
-      axes[0,0].set_title(f'top {topp}% contributing not rew cells')
-      axes[r,0].axvline(rewlocs[r]/3,color='w')
-      axes[r,1].axvline(rewlocs[r]/3,color='w')
-      axes[0,1].set_title(f'top {topp}% contributing rew cells')
-      lick_rate_map = normalize_1d(lick_tcs_correct_abs[r][0])
-      axes[r,0].plot(
-         np.arange(lick_rate_map.shape[-1]),  # x-axis (time)
-         norm_tcs_nonrew.shape[0]-1 - lick_rate_map.T * norm_tcs_nonrew.shape[0]/figmul,  # inverted y
-         color='w'
-      )
-      axes[r,1].plot(
-         np.arange(lick_rate_map.shape[-1]),  # x-axis (time)
-         norm_tcs_rew.shape[0]-1 - lick_rate_map.T * norm_tcs_rew.shape[0]/figmul,  # inverted y
-         color='w'
-      )
-      axes[0,0].text(45, 0.5, 'lick rate', color='white',
-      fontsize=12, ha='center', va='bottom', clip_on=True)
-
-   fig.suptitle(f'Correct, last 8 trials, {animal}, {day}')
-   # incorrects?
-   plt.show()
-   pdf.savefig(fig)
-
-   fig, axes = plt.subplots(ncols=2,nrows = epochs,sharex=True, sharey='col')
-   for r in range(epochs):
-      norm_tcs_nonrew = normalize_rows(tcs_fail_abs[r, top_cells_that_are_not_rew_cells])[np.argsort(coms_fail_abs[0, top_cells_that_are_not_rew_cells])]
-      norm_tcs_rew = normalize_rows(tcs_fail_abs[r, top_cells_that_are_rew_cells])[np.argsort(coms_fail_abs[0, top_cells_that_are_rew_cells])]
-      axes[r,0].imshow(norm_tcs_nonrew, aspect='auto')
-      axes[r,1].imshow(norm_tcs_rew, aspect='auto')
-      axes[0,0].set_title(f'top {topp}% contributing not rew cells')
-      axes[r,0].axvline(rewlocs[r]/3,color='w')
-      axes[r,1].axvline(rewlocs[r]/3,color='w')
-      axes[0,1].set_title(f'top {topp}% contributing rew cells')
-      lick_rate_map = normalize_1d(lick_tcs_fail_abs[r][0])
-      axes[r,0].plot(
-         np.arange(lick_rate_map.shape[-1]),  # x-axis (time)
-         norm_tcs_nonrew.shape[0]-1 - lick_rate_map.T * norm_tcs_nonrew.shape[0]/figmul,  # inverted y
-         color='w'
-      )
-      axes[r,1].plot(
-         np.arange(lick_rate_map.shape[-1]),  # x-axis (time)
-         norm_tcs_rew.shape[0]-1 - lick_rate_map.T * norm_tcs_rew.shape[0]/figmul,  # inverted y
-         color='w'
-      )
-      axes[0,0].text(45, 0.5, 'lick rate', color='white',
-            fontsize=12, ha='center', va='bottom', clip_on=True)
-
-
-   fig.suptitle(f'Incorrects, {animal}, {day}')
-   # incorrects?
+      axes[0,0].set_title('top 10% contributing not rew cells')
+      axes[r,0].axvline(rewlocs[r]/1.8,color='w')
+      axes[r,1].axvline(rewlocs[r]/1.8,color='w')
+      axes[0,1].set_title('top 10% contributing rew cells')
    plt.show()
    pdf.savefig(fig)
    fig,ax=plt.subplots()
@@ -459,13 +367,8 @@ for ii in iis:
    ax.set_ylabel('# top contributing cells')
    ax.set_xlabel('reward-centric distance')
    plt.show()
-   fig.suptitle(f'{animal}, {day}')
    pdf.savefig(fig)
-   errors.append([y_test.numpy().squeeze(),y_pred_mean,r2,test_st_id,test_flind,mae,coms_rewrel,top_cells_that_are_not_rew_cells,top_cells_that_are_rew_cells,test_idx,ep_trials])
+      
+   errors.append([y_test.numpy().squeeze(),y_pred_mean,r2,test_st_id,test_flind])
 pdf.close()
 #%%
-df=pd.DataFrame()
-df['real_lick_dist']=np.concatenate([xx[0] for xx in errors])
-df['pred_lick_dist']=np.concatenate([xx[1] for xx in errors])
-df['mae']=np.concatenate([[xx[5]]*len(xx[0]) for xx in errors])
-df['epoch_trials']=np.concatenate([xx[9] for xx in errors])
