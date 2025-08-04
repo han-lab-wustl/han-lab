@@ -204,7 +204,8 @@ for ii in range(len(conddf)):
       lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in per_ep_cll] for ep,per_ep_cll in enumerate(ep_nearrew_cells)]
       # get high correlated cells
       lick_corr_cells = [ep_nearrew_cell[lick_tc_cs[epep]>np.nanmean(lick_tc_cs[epep])] for epep, ep_nearrew_cell in enumerate(ep_nearrew_cells)]
-      # overlap of lick corr and pre-reward cells      
+      # overlap of lick corr and pre-reward cells
+            
       tcs_correct=tcs_correct[[optoep-2,optoep-1]]
       lick_corr_cells_ep1_act = np.nanmean(tcs_correct[:,lick_corr_cells_ep1],axis=2)
       # num lick corr cells

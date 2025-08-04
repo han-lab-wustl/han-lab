@@ -80,44 +80,13 @@ def get_rewzones(rewlocs, gainf):
          rewzonenum[kk] = 3  # Reward zone 3
          
    return rewzonenum
-
-class BNN_Conv1D(nn.Module):
-   def __init__(self, input_channels, dropout_rate=0.2):
-      super().__init__()
-      self.conv1 = nn.Conv1d(in_channels=input_channels, out_channels=32, kernel_size=3, padding=1)
-      self.drop1 = nn.Dropout(dropout_rate)
-      self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1)
-      self.drop2 = nn.Dropout(dropout_rate)
-      self.pool = nn.AdaptiveAvgPool1d(1)
-
-      self.fc1 = nn.Linear(64, 32)
-      self.drop3 = nn.Dropout(dropout_rate)
-      self.fc2 = nn.Linear(32, 1)
-
-   def forward(self, x):
-      # x: (batch_size, n_cells, time)
-      x = self.conv1(x)       # (batch, 32, time)
-      x = F.relu(x)
-      x = self.drop1(x)
-
-      x = self.conv2(x)       # (batch, 64, time)
-      x = F.relu(x)
-      x = self.drop2(x)
-
-      x = torch.mean(x, dim=2)  # global average pooling over time -> (batch, 64)
-
-      x = F.relu(self.fc1(x))   # -> (batch, 32)
-      x = self.drop3(x)
-
-      return self.fc2(x)    
-
+ 
 # ============================== #
 # MAIN LOOP OVER ANIMALS
 # ============================== #
 #%%
 # iis=iis[iis>183]
 errors=[]
-#%%
 # iis=iis[iis>79]
 
 for ii in iis:
@@ -494,4 +463,32 @@ df=pd.DataFrame()
 df['real_lick_dist']=np.concatenate([xx[0] for xx in errors])
 df['pred_lick_dist']=np.concatenate([xx[1] for xx in errors])
 df['mae']=np.concatenate([[xx[5]]*len(xx[0]) for xx in errors])
-df['epoch_trials']=np.concatenate([xx[9] for xx in errors])
+trial_type_all = []
+for e,error in enumerate(errors):
+   trial_type = np.zeros_like(error[0])
+   # assert len(error[3])+len(error[4])==len(error[0])
+   trial_type[error[3].astype(int)]=1
+   trial_type_all.append(trial_type)
+df['trial_type'] = np.concatenate(trial_type_all)
+cdf = conddf.copy()
+cdf = cdf.drop([53,202,80])
+df['animals']=np.concatenate([[cdf.animals.values[ii]]*len(xx[0]) for ii,xx in enumerate(errors)])
+df['days']=np.concatenate([[cdf.days.values[ii]]*len(xx[0]) for ii,xx in enumerate(errors)])
+df = pd.merge(df, cdf, on=['animals', 'days'], how='inner')
+df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
+df=df[df.optoep>1]
+#%%
+df=df[df.mae<30]
+g = sns.lmplot(
+    data=df, x='real_lick_dist', y='pred_lick_dist',
+    hue='trial_type', col='condition',
+    scatter_kws={'alpha': 0.3}, 
+    height=5, aspect=1
+)
+g.set_titles("{col_name}")
+g.set_axis_labels("True Lick Position (cm)", "Predicted Lick Position (cm)")
+ax.axhline(0)
+for cond in df['condition'].unique():
+   subdf = df[df['condition'] == cond]
+   slope, intercept, r, p, _ = scipy.stats.linregress(subdf['real_lick_dist'], subdf['pred_lick_dist'])
+   print(f"{cond}: slope={slope:.3f}, R²={r**2:.3f}, p={p:.3g}")
