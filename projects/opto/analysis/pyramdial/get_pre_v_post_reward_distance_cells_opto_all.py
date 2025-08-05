@@ -248,7 +248,7 @@ realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
-# realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
+realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
 realdf=realdf[~((realdf.animal=='z14')&((realdf.day<33)))]
 realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
 realdf=realdf[~((realdf.animal=='z15')&((realdf.day<8)|(realdf.day.isin([15]))))]
@@ -256,10 +256,10 @@ realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,29,
 realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([47,55,57]))))]
 realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
 realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
-# realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
+realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
-
-#%%
+dfagg=realdf.groupby(['animal', 'cell_type', 'condition','opto']).mean(numeric_only=True)
+s=12
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
 pivoted = dfagg.pivot_table(
@@ -334,7 +334,6 @@ for cl, cll in enumerate(cellty):
 
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_cell_type_reward_cellp_opto.svg'), bbox_inches='tight')
-#%%
 # Map old cell types to new ones
 cell_type_map = {
     'pre_late': 'late',
@@ -410,7 +409,6 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_reward_cellp_opto.svg'), bbox_inches='tight')
-#%%
 # average all trials
 
 # Map old cell types to new ones
@@ -440,8 +438,8 @@ pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 a = 0.7
 s = 12
 # pivoted_avg=pivoted_avg[pivoted_avg.animal!='e201']
-lbls = ['All trials']
-fig, ax = plt.subplots(figsize=(4,6), sharey=True)
+lbls = ['All trials\nReward']
+fig, ax = plt.subplots(figsize=(4.5,6), sharey=True)
 for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
     sns.barplot(
         x='condition', y='difference',hue='condition', data=pivoted_avg[pivoted_avg['cell_type'] == cll],
@@ -452,9 +450,9 @@ for cl, cll in enumerate(pivoted_avg['cell_type'].unique()):
         ax=ax, palette=pl, alpha=a, s=s
     )
     ax.set_title(lbls[cl])
-    ax.set_ylabel('$\\Delta$ Reward cell %\n(LEDon-LEDoff)')
+    ax.set_ylabel('$\\Delta$ Reward cell % (LEDon-LEDoff)')
     ax.spines[['top', 'right']].set_visible(False)
-    ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
+    ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
     ax.set_xlabel('')
     # --- Stats + annotation ---
     data = pivoted_avg[pivoted_avg['cell_type'] == cll]

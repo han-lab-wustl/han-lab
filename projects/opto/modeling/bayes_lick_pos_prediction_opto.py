@@ -476,19 +476,54 @@ df['animals']=np.concatenate([[cdf.animals.values[ii]]*len(xx[0]) for ii,xx in e
 df['days']=np.concatenate([[cdf.days.values[ii]]*len(xx[0]) for ii,xx in enumerate(errors)])
 df = pd.merge(df, cdf, on=['animals', 'days'], how='inner')
 df['condition']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
-df=df[df.optoep>1]
+# df=df[df.optoep>1]
+# df=df.groupby(['animals','condition','trial_type']).mean(numeric_only=True).reset_index()
+def compute_distances(sub_df):
+   x = sub_df['real_lick_dist'].values
+   y = sub_df['pred_lick_dist'].values
+   a, b = np.polyfit(x, y, 1)
+   return np.abs(a * x - y + b) / np.sqrt(a**2 + 1)
+
+# Example: group-wise
+df['dist_to_line'] = df.groupby(['condition', 'trial_type']).apply(
+   lambda g: pd.Series(compute_distances(g), index=g.index)
+).reset_index(drop=True)
+
 #%%
-df=df[df.mae<30]
-g = sns.lmplot(
-    data=df, x='real_lick_dist', y='pred_lick_dist',
-    hue='trial_type', col='condition',
-    scatter_kws={'alpha': 0.3}, 
-    height=5, aspect=1
-)
-g.set_titles("{col_name}")
-g.set_axis_labels("True Lick Position (cm)", "Predicted Lick Position (cm)")
-ax.axhline(0)
-for cond in df['condition'].unique():
-   subdf = df[df['condition'] == cond]
-   slope, intercept, r, p, _ = scipy.stats.linregress(subdf['real_lick_dist'], subdf['pred_lick_dist'])
-   print(f"{cond}: slope={slope:.3f}, R²={r**2:.3f}, p={p:.3g}")
+df=df[df.mae<50]
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.metrics import r2_score, mean_absolute_error
+
+# Suppose df contains columns: 'true_lick', 'predicted_lick', 'condition', 'trial_type'
+# Replace with your actual variable names
+# df=df[df.trial_type==1]
+df=df[df.optoep>1]
+g = sns.FacetGrid(df, col='condition', hue='trial_type', height=4, aspect=1)
+g.map_dataframe(sns.scatterplot, x='real_lick_dist', y='pred_lick_dist', alpha=0.6)
+
+# Add identity line y=x to each subplot
+for ax in g.axes.flat:
+   limits = [min(ax.get_xlim()[0], ax.get_ylim()[0]), max(ax.get_xlim()[1], ax.get_ylim()[1])]
+   ax.plot(limits, limits, 'k--', alpha=0.7)
+   ax.set_xlim(limits)
+   ax.set_ylim(limits)
+
+# Add regression lines
+g.map_dataframe(sns.regplot, x='real_lick_dist', y='pred_lick_dist',scatter=False)
+
+# Calculate and display R2 and MAE on each subplot
+for condition, ax in zip(df['condition'].unique(), g.axes.flat):
+   for trial_type in df['trial_type'].unique():
+      sub = df[(df['condition'] == condition) & (df['trial_type'] == trial_type)]
+      r2 = r2_score(sub['real_lick_dist'], sub['pred_lick_dist'])
+      mae = mean_absolute_error(sub['real_lick_dist'], sub['pred_lick_dist'])
+      ax.text(0.05, 0.9 if trial_type==0 else 0.8, 
+               f'Trial {trial_type} R²={r2:.2f}\nMAE={mae:.1f}', 
+               transform=ax.transAxes, fontsize=9)
+
+plt.show()
+#%%
+sns.barplot(x='condition',y='dist_to_line',hue='trial_type',data=df,errorbar='se',fill=False)
+# sns.stripplot(x='condition',y='dist_error',data=df,hue='trial_type',dodge=True)

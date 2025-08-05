@@ -517,7 +517,7 @@ for i, (cond1, cond2) in enumerate(pairs):
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
 #%%
 # just place and other 
-fig,axes=plt.subplots(ncols=2,figsize=(6,5),sharey=True)
+fig,axes=plt.subplots(ncols=2,figsize=(7,4),sharey=True)
 ax=axes[0]
 sns.stripplot(data=df_delta, x='condition', y='delta_combined', ax=ax, 
               palette=pl, size=s, alpha=a)
@@ -548,12 +548,12 @@ for i, (cond1, cond2) in enumerate(pairs):
     elif pval < 0.05:
         text = '*'
     else:
-        text = ''
+        text = 'ns'
 
     x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
     y = y_max + y_step * (i + 1)
     ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
-    ax.text((x1 + x2)/2, y - y_step * .2, text, ha='center', va='bottom', fontsize=40)
+    ax.text((x1 + x2)/2, y + y_step * .5, text, ha='center', va='bottom', fontsize=20)
     ax.text((x1 + x2)/2, y - y_step * .3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
 ax=axes[1]
 sns.stripplot(data=df_delta, x='condition', y='delta_other_sp', ax=ax, 
@@ -584,14 +584,14 @@ for i, (cond1, cond2) in enumerate(pairs):
     elif pval < 0.05:
         text = '*'
     else:
-        text = f""
+        text = f"ns"
 
     # Get x-locations
     x1, x2 = conds.tolist().index(cond1), conds.tolist().index(cond2)
     y = y_max + y_step * (i + 1)
     ax.plot([x1, x1, x2, x2], [y, y + y_step/3, y + y_step/3, y], lw=1.5, c='k')
-    ax.text((x1 + x2)/2, y-y_step*.2, text, ha='center', va='bottom', fontsize=40)
-    ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.3g}', ha='center', va='bottom', fontsize=12)
+    ax.text((x1 + x2)/2, y+y_step*.5, text, ha='center', va='bottom', fontsize=20)
+    ax.text((x1 + x2)/2, y-y_step*.3, f'{pval:.2g}', ha='center', va='bottom', fontsize=12)
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_av.svg'), bbox_inches='tight')
 
 #%% 
