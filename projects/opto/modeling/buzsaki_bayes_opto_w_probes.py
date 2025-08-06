@@ -6,6 +6,10 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.stats import poisson
 from scipy.special import logsumexp
 from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+import torch
+from torch.utils.data import TensorDataset, DataLoader
 
 import numpy as np, sys
 import scipy.io, scipy.interpolate, scipy.stats
@@ -17,7 +21,7 @@ import random
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import smooth_lick_rate
 from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime, intersect_arrays,make_tuning_curves
-from projects.opto.behavior.behavior import get_success_failure_trials, smooth_lick_rate
+from projects.opto.behavior.behavior import smooth_lick_rate
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 from sklearn.preprocessing import StandardScaler
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -33,7 +37,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'lick_prediction.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
-conddf = conddf[(conddf.in_type!='vip') & (conddf.in_type!='vip_ex')]
+# conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
 iis = [ii for ii in iis if ii!=202]
 dct = {}
@@ -54,7 +58,50 @@ def get_rewzones(rewlocs, gainf):
          
    return rewzonenum
 
-iis=iis[iis>17]
+
+def get_success_failure_trials(trialnum, reward):
+   """
+   Counts the number of success and failure trials.
+
+   Parameters:
+   trialnum : array-like, list of trial numbers
+   reward : array-like, list indicating whether a reward was found (1) or not (0) for each trial
+
+   Returns:
+   success : int, number of successful trials
+   fail : int, number of failed trials
+   str : list, successful trial numbers
+   ftr : list, failed trial numbers
+   ttr : list, trial numbers excluding probes
+   total_trials : int, total number of trials excluding probes
+   """
+   trialnum = np.array(trialnum)
+   reward = np.array(reward)
+   unique_trials = np.unique(trialnum)
+   
+   success = 0
+   fail = 0
+   str_trials = []  # success trials
+   ftr_trials = []  # failure trials
+   probe_trials = []
+
+   for trial in unique_trials:
+      if trial >= 3:  # Exclude probe trials
+         trial_indices = trialnum == trial
+         if np.any(reward[trial_indices] == 1):
+               success += 1
+               str_trials.append(trial)
+         else:
+               fail += 1
+               ftr_trials.append(trial)
+      else:
+         probe_trials.append(trial)
+   
+   total_trials = np.sum(unique_trials)
+   ttr = unique_trials  # trials excluding probes
+
+   return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
+# iis=iis[iis>2]
 #%%
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -115,10 +162,6 @@ for ii in iis:
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
    skewthres=1.2
    Fc3 = Fc3[:, skew>skewthres] # only keep cells with skew greateer than 2
-   from sklearn.model_selection import train_test_split
-   from sklearn.decomposition import PCA
-   import torch
-   from torch.utils.data import TensorDataset, DataLoader
    lick_position=np.zeros_like(licks)
    lick_position[licks>0] = ybinned[licks>0]
    ybinned_rel = []
@@ -133,46 +176,55 @@ for ii in iis:
    trial_states = []
    strind = []
    flind = []
+   probeind = []
    lick_rate_trial = []
    ep_trials = []
    all_trial_num=[]
    # 50 msec time bin
+   # no binning for now
    bin_size = int(0.05 * 1/np.nanmedian(np.diff(time)))  # number of frames in 100ms
    rzs= get_rewzones(rewlocs,1/scalingf)
    for ep in range(len(eps)-1):
       eprng = np.arange(eps[ep],eps[ep+1])
       unique_trials = np.unique(trialnum[eprng])
-      success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-      strials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in strials])
-      if ep>0: strials_ind=strials_ind+all_trial_num[-1][-1]+1
-      ftrials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in ftrials])
-      if ep>0: ftrials_ind=ftrials_ind+all_trial_num[-1][-1]+1
-      ttr_ind = np.arange(len(ttr))
-      if ep>0: ttr_ind = np.arange(len(ttr))+all_trial_num[-1][-1]+1
+      success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+      strials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in str_trials])
+      ttrind=np.arange(len(ttr))
+      if ep>0: 
+         strials_ind=strials_ind+all_trial_num[-1][-1]+1
+         ftrials_ind=ftrials_ind+all_trial_num[-1][-1]+1
+         ttrind=ttrind+all_trial_num[-1][-1]+1
+      probe_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in probe_trials])      
+
+      ftrials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in ftr_trials])      
       strind.append(strials_ind)
-      flind.append(ftrials_ind)
-      all_trial_num.append(ttr_ind)
+      flind.append(ftrials_ind)      
+      all_trial_num.append(ttrind)
       lick_position_rel = lick_position[eprng]-(rewlocs[ep]+rewsize/2)
       ypos = ybinned[eprng]
       lick_position_rel = lick_position_rel.astype(float)
       lick_position_rel[lick_rate[eprng]>9]=np.nan
       lick_position_rel[licks[eprng]==0]=np.nan
-      # trial_X = []
-      # trial_y = []
-      for tr in unique_trials:
+      for tt,tr in enumerate(unique_trials):
          tr_mask = trialnum[eprng] == tr
          fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
          # remove later activity
          ypos_tr = ypos[tr_mask]
          fc_trial=fc_trial#[(ypos_tr<((rewlocs[ep]-rewsize/2)))]
          lick_trial = lick_rate[eprng][tr_mask]         # shape (t,)
-         
-         # avg_lick_pre_rew = np.nanmedian(lick_trial)
          avg_lick_pre_rew = np.nanmedian(lick_trial) # early licks
-         if fc_trial.shape[0] >= 10 and tr>2:#; dont exclude probes for now
+         if fc_trial.shape[0] >= 10:#; dont exclude probes for now
             fc_trial_binned = fc_trial
             trial_X.append(fc_trial_binned)
-            trial_y.append(rzs[ep])
+            if tr<3 and ep>0:
+               trial_y.append(rzs[ep-1])
+               probeind.append(tt+all_trial_num[-2][-1]+1)
+               print(ep,tr,tt+all_trial_num[-2][-1]+1)
+            else:
+               trial_y.append(rzs[ep])
+            if tr<3 and ep==0: 
+               print(ep,tr,tt)
+               probeind.append(tt)
             # trial_pos.append(ypos_tr[(ypos_tr<((rewlocs[ep]-rewsize/2)))])
             trial_pos.append(ypos_tr)
             lick_rate_trial.append(lick_trial)
@@ -182,6 +234,7 @@ for ii in iis:
    max_time = np.nanmax([len(xx) for xx in trial_X])
    strind=np.concatenate(strind)
    flind = np.concatenate(flind)
+   probeind=np.array(probeind)
    trial_fc_org = np.zeros((len(trial_X),max_time,trial_X[0].shape[1]))
    for trind,trx in enumerate(trial_X):
       trial_fc_org[trind,:len(trx)]=trx
@@ -229,7 +282,7 @@ for ii in iis:
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.6, random_state=42)
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.7, random_state=42)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
@@ -269,6 +322,7 @@ for ii in iis:
    # trial = np.random.choice(test_idx)
    correct = []
    time_before_change=[]
+   time_to_rew = []
    predicted=[]
    for trial in test_idx:
       # Run decoder on a trial
@@ -297,6 +351,7 @@ for ii in iis:
       else:
          pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
       predicted.append([pred_goal_zone_cp,real_goal_zone])
+      time_to_rew.append(rewloc_ind*np.nanmedian(np.diff(time)))
       if pred_goal_zone_cp==real_goal_zone:
          correct.append(trial)
          if len(changepoint)>0:
@@ -319,10 +374,59 @@ for ii in iis:
    plt.plot(goal_trace)
    plt.plot(ybinned[trial]/10)
    plt.plot(trial_lick[trial])
+   # opto ind 
+   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]
+   if len(opto_idx)==0:
+      continue   
+   opto_s = [xx for xx in opto_idx if xx in strind]
+   opto_f = [xx for xx in opto_idx if xx in flind]
+   opto_p = [xx for xx in opto_idx if xx in probeind]
+   opto_correct_s = [xx for xx in correct if xx in opto_s]
+   opto_correct_f = [xx for xx in correct if xx in opto_f]
+   opto_correct_p = [xx for xx in correct if xx in opto_p]
+   if len(opto_s)>0:
+      opto_s_rate = len(opto_correct_s)/len(opto_s)
+   else: opto_s_rate=np.nan
+   if len(opto_f)>0:
+      opto_f_rate = len(opto_correct_f)/len(opto_f)
+   else: opto_f_rate=np.nan
+   if len(opto_p)>0:
+      opto_p_rate = len(opto_correct_p)/len(opto_p)
+   else: opto_p_rate=np.nan
+   
+   opto_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_s])
+   opto_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_f])
+   opto_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_p])
+   
+   opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]   
+   opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
+   # prev ind
+   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_s = [xx for xx in prev_idx if xx in strind]
+   prev_f = [xx for xx in prev_idx if xx in flind]
+   prev_p = [xx for xx in prev_idx if xx in probeind]
+   prev_correct_s = [xx for xx in correct if xx in prev_s]
+   prev_correct_f = [xx for xx in correct if xx in prev_f]
+   prev_correct_p = [xx for xx in correct if xx in prev_p]
+   if len(prev_s)>0:
+      prev_s_rate = len(prev_correct_s)/len(prev_s)
+   else: prev_s_rate=np.nan
+   if len(prev_f)>0:
+      prev_f_rate = len(prev_correct_f)/len(prev_f)
+   else: prev_f_rate=np.nan
+   if len(prev_p)>0:
+      prev_p_rate = len(prev_correct_p)/len(prev_p)
+   else: prev_p_rate=np.nan
+   
+   
+   prev_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_s])
+   prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
+   prev_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_p])
 
+   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])   
    # rate correct
    total_rate = len(correct)/len(test_idx)
-
    test_s = [xx for xx in test_idx if xx in strind]
    test_f = [xx for xx in test_idx if xx in flind]
    correct_s = [xx for xx in correct if xx in test_s]
@@ -338,10 +442,26 @@ for ii in iis:
    time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_s])
    time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_f])
    
-   print(f'total prediction rate: {total_rate*100:.2g}%')
-   print(f'correct prediction rate: {s_rate*100:.2g}%')
-   print(f'incorrect prediction rate: {f_rate*100:.2g}%')
-   print(f'prediction latency (correct trials): {time_before_predict_s:.2g}s')
-   print(f'prediction latency (incorrect trials): {time_before_predict_f:.2g}s')
-   dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,predicted,rzs,eps]
+   print('####################################')
+   print(f'opto correct prediction rate: {opto_s_rate*100:.2g}%')
+   print(f'opto incorrect prediction rate: {opto_f_rate*100:.2g}%')
+   print(f'opto probe prediction rate: {opto_p_rate*100:.2g}%')
+   print(f'opto prediction latency (correct trials): {opto_time_before_predict_s:.2g}s')
+   print(f'opto prediction latency (incorrect trials): {opto_time_before_predict_f:.2g}s')
+   print(f'opto prediction latency (probe trials): {opto_time_before_predict_p:.2g}s')
+   print(f'opto average time to rew: {opto_time_to_rew:.2g}s')
+   print('####################################')
+   print(f'prev correct prediction rate: {prev_s_rate*100:.2g}%')
+   print(f'prev incorrect prediction rate: {prev_f_rate*100:.2g}%')
+   print(f'prev probe prediction rate: {prev_p_rate*100:.2g}%')
+   print(f'prev prediction latency (correct trials): {prev_time_before_predict_s:.2g}s')
+   print(f'prev prediction latency (incorrect trials): {prev_time_before_predict_f:.2g}s')
+   print(f'prev prediction latency (probe trials): {prev_time_before_predict_p:.2g}s')
+   print(f'prev average time to rew: {prev_time_to_rew:.2g}s')
+   print('####################################')
+   
+   dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
+      prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
+      opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
+      predicted,rzs,eps]
 # %%

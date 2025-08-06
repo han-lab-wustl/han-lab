@@ -6,6 +6,11 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.stats import poisson
 from scipy.special import logsumexp
 from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+import torch
+from torch.utils.data import TensorDataset, DataLoader
+from joblib import Parallel, delayed
 
 import numpy as np, sys
 import scipy.io, scipy.interpolate, scipy.stats
@@ -17,7 +22,7 @@ import random
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.opto.behavior.behavior import smooth_lick_rate
 from projects.pyr_reward.placecell import make_tuning_curves_by_trialtype_w_darktime, intersect_arrays,make_tuning_curves
-from projects.opto.behavior.behavior import get_success_failure_trials, smooth_lick_rate
+from projects.opto.behavior.behavior import smooth_lick_rate
 import matplotlib.backends.backend_pdf, matplotlib as mpl
 from sklearn.preprocessing import StandardScaler
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -33,11 +38,81 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'lick_prediction.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
-conddf = conddf[(conddf.optoep>1)]
+# conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
 iis = [ii for ii in iis if ii!=202]
 dct = {}
 iis=np.array(iis)
+
+# Decoder
+def decode_trial(trial_fc, trial_ybin, goal, tuning):
+   T = trial_fc.shape[0]
+   log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
+   log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
+
+   for t in range(T):
+      obs = trial_fc[t]
+      log_likelihood = np.zeros((n_pos_bins, n_goals))
+      for x in range(n_pos_bins):
+         for g in range(n_goals):
+            lam = tuning[:, x, g]
+            lam = np.clip(lam, 1e-3, None)
+            log_likelihood[x, g] = np.sum(obs * np.log(lam) - lam)
+
+      if t == 0:
+         log_post[t] = log_prior + log_likelihood
+      else:
+         prev_log_post = log_post[t - 1]
+         trans_pos = gaussian_filter1d(np.exp(prev_log_post), sigma=np.sqrt(var_pos), axis=0)
+         trans_goal = (1 - p_stay_goal) / (n_goals - 1)
+         for g in range(n_goals):
+            sticky = p_stay_goal * trans_pos[:, g] + trans_goal * np.sum(trans_pos, axis=1)
+            log_post[t, :, g] = np.log(sticky + 1e-10) + log_likelihood[:, g]
+
+      log_post[t] -= logsumexp(log_post[t])
+
+   return np.exp(log_post)
+
+def process_trial(trial):
+   post = decode_trial(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
+   post_goal = post.sum(axis=1)  # marginalize over position
+   post_pos = post.sum(axis=2)   # marginalize over goal
+
+   ep = ep_trials[trial]
+   rewloc_start = rewlocs[ep - 1] - rewsize / 2
+   ypos_temp = ybinned[trial].copy()
+   ypos_temp[ypos_temp == 0] = 1e6
+   rewloc_ind = np.where(ypos_temp < rewloc_start)[0]
+   if len(rewloc_ind) == 0:
+      return None  # Skip trial if no valid rew index
+
+   rewloc_ind = rewloc_ind[-1]
+   real_ypos = ybinned[trial][rewloc_ind]
+
+   # MAP goal trace
+   goal_trace = np.argmax(post_goal, axis=1) + 1
+   model = rpt.Pelt(model="l2").fit(goal_trace)
+   bkps = np.array(model.predict(pen=10))
+   changepoint = bkps[bkps < rewloc_ind]
+
+   if len(changepoint) > 0:
+      pred_goal_zone_cp = np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind])
+      time_before_change = (rewloc_ind - changepoint[-1]) * np.nanmedian(np.diff(time))
+   else:
+      pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
+      time_before_change = rewloc_ind * np.nanmedian(np.diff(time))
+
+   real_goal_zone = goal_zone[trial] + 1
+   correct = pred_goal_zone_cp == real_goal_zone
+   time_to_rew = rewloc_ind * np.nanmedian(np.diff(time))
+
+   return {
+      "trial": trial,
+      "correct": correct,
+      "time_before_change": time_before_change if correct else None,
+      "time_to_rew": time_to_rew,
+      "predicted": [pred_goal_zone_cp, real_goal_zone]
+   }
 
 def get_rewzones(rewlocs, gainf):
    # Initialize the reward zone numbers array with zeros
@@ -53,6 +128,50 @@ def get_rewzones(rewlocs, gainf):
          rewzonenum[kk] = 3  # Reward zone 3
          
    return rewzonenum
+
+
+def get_success_failure_trials(trialnum, reward):
+   """
+   Counts the number of success and failure trials.
+
+   Parameters:
+   trialnum : array-like, list of trial numbers
+   reward : array-like, list indicating whether a reward was found (1) or not (0) for each trial
+
+   Returns:
+   success : int, number of successful trials
+   fail : int, number of failed trials
+   str : list, successful trial numbers
+   ftr : list, failed trial numbers
+   ttr : list, trial numbers excluding probes
+   total_trials : int, total number of trials excluding probes
+   """
+   trialnum = np.array(trialnum)
+   reward = np.array(reward)
+   unique_trials = np.unique(trialnum)
+   
+   success = 0
+   fail = 0
+   str_trials = []  # success trials
+   ftr_trials = []  # failure trials
+   probe_trials = []
+
+   for trial in unique_trials:
+      if trial >= 3:  # Exclude probe trials
+         trial_indices = trialnum == trial
+         if np.any(reward[trial_indices] == 1):
+               success += 1
+               str_trials.append(trial)
+         else:
+               fail += 1
+               ftr_trials.append(trial)
+      else:
+         probe_trials.append(trial)
+   
+   total_trials = np.sum(unique_trials)
+   ttr = unique_trials  # trials excluding probes
+
+   return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
 for ii in iis:
@@ -114,10 +233,6 @@ for ii in iis:
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
    skewthres=1.2
    Fc3 = Fc3[:, skew>skewthres] # only keep cells with skew greateer than 2
-   from sklearn.model_selection import train_test_split
-   from sklearn.decomposition import PCA
-   import torch
-   from torch.utils.data import TensorDataset, DataLoader
    lick_position=np.zeros_like(licks)
    lick_position[licks>0] = ybinned[licks>0]
    ybinned_rel = []
@@ -132,6 +247,7 @@ for ii in iis:
    trial_states = []
    strind = []
    flind = []
+   probeind = []
    lick_rate_trial = []
    ep_trials = []
    all_trial_num=[]
@@ -142,37 +258,44 @@ for ii in iis:
    for ep in range(len(eps)-1):
       eprng = np.arange(eps[ep],eps[ep+1])
       unique_trials = np.unique(trialnum[eprng])
-      success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
-      strials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in strials])
-      if ep>0: strials_ind=strials_ind+all_trial_num[-1][-1]+1
-      ftrials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in ftrials])
-      if ep>0: ftrials_ind=ftrials_ind+all_trial_num[-1][-1]+1
-      ttr_ind = np.arange(len(ttr))
-      if ep>0: ttr_ind = np.arange(len(ttr))+all_trial_num[-1][-1]+1
+      success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+      strials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in str_trials])
+      ttrind=np.arange(len(ttr))
+      if ep>0: 
+         strials_ind=strials_ind+all_trial_num[-1][-1]+1
+         ftrials_ind=ftrials_ind+all_trial_num[-1][-1]+1
+         ttrind=ttrind+all_trial_num[-1][-1]+1
+      probe_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in probe_trials])      
+
+      ftrials_ind = np.array([si for si,st in enumerate(ttr) if ttr[si] in ftr_trials])      
       strind.append(strials_ind)
-      flind.append(ftrials_ind)
-      all_trial_num.append(ttr_ind)
+      flind.append(ftrials_ind)      
+      all_trial_num.append(ttrind)
       lick_position_rel = lick_position[eprng]-(rewlocs[ep]+rewsize/2)
       ypos = ybinned[eprng]
       lick_position_rel = lick_position_rel.astype(float)
       lick_position_rel[lick_rate[eprng]>9]=np.nan
       lick_position_rel[licks[eprng]==0]=np.nan
-      # trial_X = []
-      # trial_y = []
-      for tr in unique_trials:
+      for tt,tr in enumerate(unique_trials):
          tr_mask = trialnum[eprng] == tr
          fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
          # remove later activity
          ypos_tr = ypos[tr_mask]
          fc_trial=fc_trial#[(ypos_tr<((rewlocs[ep]-rewsize/2)))]
          lick_trial = lick_rate[eprng][tr_mask]         # shape (t,)
-         
-         # avg_lick_pre_rew = np.nanmedian(lick_trial)
          avg_lick_pre_rew = np.nanmedian(lick_trial) # early licks
-         if fc_trial.shape[0] >= 10 and tr>2:#; dont exclude probes for now
+         if fc_trial.shape[0] >= 10:#; dont exclude probes for now
             fc_trial_binned = fc_trial
             trial_X.append(fc_trial_binned)
-            trial_y.append(rzs[ep])
+            if tr<3 and ep>0:
+               trial_y.append(rzs[ep-1])
+               probeind.append(tt+all_trial_num[-2][-1]+1)
+               print(ep,tr,tt+all_trial_num[-2][-1]+1)
+            else:
+               trial_y.append(rzs[ep])
+            if tr<3 and ep==0: 
+               print(ep,tr,tt)
+               probeind.append(tt)
             # trial_pos.append(ypos_tr[(ypos_tr<((rewlocs[ep]-rewsize/2)))])
             trial_pos.append(ypos_tr)
             lick_rate_trial.append(lick_trial)
@@ -182,6 +305,7 @@ for ii in iis:
    max_time = np.nanmax([len(xx) for xx in trial_X])
    strind=np.concatenate(strind)
    flind = np.concatenate(flind)
+   probeind=np.array(probeind)
    trial_fc_org = np.zeros((len(trial_X),max_time,trial_X[0].shape[1]))
    for trind,trx in enumerate(trial_X):
       trial_fc_org[trind,:len(trx)]=trx
@@ -238,74 +362,17 @@ for ii in iis:
    # training ; use held out trials?
    tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
 
-   # Decoder
-   def decode_trial(trial_fc, trial_ybin, goal, tuning):
-      T = trial_fc.shape[0]
-      log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
-      log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
+   # Parallel execution
+   results = Parallel(n_jobs=-1)(delayed(process_trial)(trial) for trial in test_idx)
 
-      for t in range(T):
-         obs = trial_fc[t]
-         log_likelihood = np.zeros((n_pos_bins, n_goals))
-         for x in range(n_pos_bins):
-            for g in range(n_goals):
-               lam = tuning[:, x, g]
-               lam = np.clip(lam, 1e-3, None)
-               log_likelihood[x, g] = np.sum(obs * np.log(lam) - lam)
+   # Filter out None results (failed trials)
+   results = [r for r in results if r is not None]
 
-         if t == 0:
-            log_post[t] = log_prior + log_likelihood
-         else:
-            prev_log_post = log_post[t - 1]
-            trans_pos = gaussian_filter1d(np.exp(prev_log_post), sigma=np.sqrt(var_pos), axis=0)
-            trans_goal = (1 - p_stay_goal) / (n_goals - 1)
-            for g in range(n_goals):
-               sticky = p_stay_goal * trans_pos[:, g] + trans_goal * np.sum(trans_pos, axis=1)
-               log_post[t, :, g] = np.log(sticky + 1e-10) + log_likelihood[:, g]
-
-         log_post[t] -= logsumexp(log_post[t])
-
-      return np.exp(log_post)
-   # trial = np.random.choice(test_idx)
-   correct = []
-   time_before_change=[]
-   time_to_rew = []
-   predicted=[]
-   for trial in test_idx:
-      # Run decoder on a trial
-      post = decode_trial(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
-      post_goal = post.sum(axis=1)  # marginalize over position
-      post_pos = post.sum(axis=2)  # marginalize over goal
-      # get real rewloc start
-      ep = ep_trials[trial]
-      rewloc_start = rewlocs[ep-1]-rewsize/2
-      ypos_temp = ybinned[trial].copy()
-      ypos_temp[ypos_temp==0]=1000000
-      rewloc_ind = np.where(ypos_temp<rewloc_start)[0]
-      rewloc_ind = rewloc_ind[-1]
-      real_ypos = ybinned[trial][rewloc_ind]
-      # Plot marginal posterior
-      # Change point detection
-      # change to rz 1/2/3
-      goal_trace = np.argmax(post_goal, axis=1)+1  # MAP goal trace
-      model = rpt.Pelt(model="l2").fit(goal_trace)
-      bkps = np.array(model.predict(pen=10))
-      pred_goal_zone = goal_trace[:rewloc_ind]
-      real_goal_zone = goal_zone[trial]+1
-      changepoint = bkps[bkps<rewloc_ind]
-      if len(changepoint)>0:
-         pred_goal_zone_cp = np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind])
-      else:
-         pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
-      predicted.append([pred_goal_zone_cp,real_goal_zone])
-      time_to_rew.append(rewloc_ind*np.nanmedian(np.diff(time)))
-      if pred_goal_zone_cp==real_goal_zone:
-         correct.append(trial)
-         if len(changepoint)>0:
-            time_before_change.append((rewloc_ind-changepoint[-1])*np.nanmedian(np.diff(time)))
-         else:
-            time_before_change.append((rewloc_ind)*np.nanmedian(np.diff(time)))
-      # # Plot goal change points
+   # Unpack results
+   correct = [r["trial"] for r in results if r["correct"]]
+   time_before_change = [r["time_before_change"] for r in results if r["correct"]]
+   time_to_rew = [r["time_to_rew"] for r in results]
+   predicted = [r["predicted"] for r in results]      # # Plot goal change points
       # plt.figure(figsize=(8, 3))
       # plt.plot(goal_trace, label="Goal (MAP)")
       # for cp in bkps[:-1]:
@@ -317,42 +384,61 @@ for ii in iis:
       # plt.tight_layout()
       # plt.show()
 
-   plt.figure()
-   plt.plot(goal_trace)
-   plt.plot(ybinned[trial]/10)
-   plt.plot(trial_lick[trial])
+   # plt.figure()
+   # plt.plot(goal_trace)
+   # plt.plot(ybinned[trial]/10)
+   # plt.plot(trial_lick[trial])
    # opto ind 
    opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]
    if len(opto_idx)==0:
       continue   
    opto_s = [xx for xx in opto_idx if xx in strind]
    opto_f = [xx for xx in opto_idx if xx in flind]
+   opto_p = [xx for xx in opto_idx if xx in probeind]
    opto_correct_s = [xx for xx in correct if xx in opto_s]
    opto_correct_f = [xx for xx in correct if xx in opto_f]
+   opto_correct_p = [xx for xx in correct if xx in opto_p]
    if len(opto_s)>0:
       opto_s_rate = len(opto_correct_s)/len(opto_s)
    else: opto_s_rate=np.nan
    if len(opto_f)>0:
       opto_f_rate = len(opto_correct_f)/len(opto_f)
    else: opto_f_rate=np.nan
+   if len(opto_p)>0:
+      opto_p_rate = len(opto_correct_p)/len(opto_p)
+   else: opto_p_rate=np.nan
+   
    opto_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_s])
    opto_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_f])
+   opto_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_p])
+   
    opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]   
    opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
    # prev ind
-   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
-   prev_s = [xx for xx in opto_idx if xx in strind]
-   prev_f = [xx for xx in opto_idx if xx in flind]
+   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_s = [xx for xx in prev_idx if xx in strind]
+   prev_f = [xx for xx in prev_idx if xx in flind]
+   prev_p = [xx for xx in prev_idx if xx in probeind]
    prev_correct_s = [xx for xx in correct if xx in prev_s]
    prev_correct_f = [xx for xx in correct if xx in prev_f]
-   prev_s_rate = len(prev_correct_s)/len(prev_s)
-   prev_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_s])
-   prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
-   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
-   prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])
+   prev_correct_p = [xx for xx in correct if xx in prev_p]
+   if len(prev_s)>0:
+      prev_s_rate = len(prev_correct_s)/len(prev_s)
+   else: prev_s_rate=np.nan
    if len(prev_f)>0:
       prev_f_rate = len(prev_correct_f)/len(prev_f)
    else: prev_f_rate=np.nan
+   if len(prev_p)>0:
+      prev_p_rate = len(prev_correct_p)/len(prev_p)
+   else: prev_p_rate=np.nan
+   
+   
+   prev_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_s])
+   prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
+   prev_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_p])
+
+   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])   
    # rate correct
    total_rate = len(correct)/len(test_idx)
    test_s = [xx for xx in test_idx if xx in strind]
@@ -373,19 +459,23 @@ for ii in iis:
    print('####################################')
    print(f'opto correct prediction rate: {opto_s_rate*100:.2g}%')
    print(f'opto incorrect prediction rate: {opto_f_rate*100:.2g}%')
+   print(f'opto probe prediction rate: {opto_p_rate*100:.2g}%')
    print(f'opto prediction latency (correct trials): {opto_time_before_predict_s:.2g}s')
    print(f'opto prediction latency (incorrect trials): {opto_time_before_predict_f:.2g}s')
+   print(f'opto prediction latency (probe trials): {opto_time_before_predict_p:.2g}s')
    print(f'opto average time to rew: {opto_time_to_rew:.2g}s')
    print('####################################')
    print(f'prev correct prediction rate: {prev_s_rate*100:.2g}%')
    print(f'prev incorrect prediction rate: {prev_f_rate*100:.2g}%')
+   print(f'prev probe prediction rate: {prev_p_rate*100:.2g}%')
    print(f'prev prediction latency (correct trials): {prev_time_before_predict_s:.2g}s')
    print(f'prev prediction latency (incorrect trials): {prev_time_before_predict_f:.2g}s')
+   print(f'prev prediction latency (probe trials): {prev_time_before_predict_p:.2g}s')
    print(f'prev average time to rew: {prev_time_to_rew:.2g}s')
    print('####################################')
    
    dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
-      prev_s_rate, prev_f_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_to_rew,
-      opto_s_rate, opto_f_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_to_rew,
+      prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
+      opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
       predicted,rzs,eps]
 # %%

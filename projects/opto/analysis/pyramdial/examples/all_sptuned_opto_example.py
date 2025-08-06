@@ -30,7 +30,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # test rewzone
 ii=40
-iis=conddf[(conddf.animals=='e218') & (conddf.optoep>0)].index # control v inhib x ex
+iis=conddf[(conddf.animals=='z15') & (conddf.optoep>0)].index # control v inhib x ex
 # iis=[126,166,49] # control v inhib x ex
 
 datarasters=[]
@@ -65,7 +65,7 @@ for ii in iis:
 # initialize var
 #%%
 ii=40
-iis=[60,172,49] # control v inhib x ex
+iis=[60,177,49] # control v inhib x ex
 # iis=[126,166,49] # control v inhib x ex
 
 datarasters=[]
