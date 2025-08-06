@@ -1238,7 +1238,7 @@ def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward
         y = y_trial[trial_mask]
         licks_trial_ = licks_trial[trial_mask]
         reward_trial_ = reward_trial[trial_mask]
-        # Find the reward location in this trial
+        # Find the reward locatiofirst_lick_idx_per_epn in this trial
         #ONLY MATTERS FOR PROBES
         if trial < 3 and i > 0:  # Probe trial, use previous epoch's reward location
             rew_center = rewloc_ep[i-1]
@@ -1274,6 +1274,69 @@ def get_radian_position_first_lick_after_rew_w_dt(i, eps, ybinned, licks, reward
         return rad
     else:
         return np.array([])  # Return empty array if no valid trials
+
+def get_position_first_lick_after_rew(i, eps, ybinned, licks, reward, rewsize,rewlocs,rewloc_ep,trialnum):
+    """
+    PER EPOCH
+    Computes radian position aligned to the first lick after reward.
+    Parameters:
+    - i = epoch
+    - eps: List of trial start indices.
+    - ybinned: 1D array of position values.
+    - licks: 1D binary array (same length as ybinned) indicating lick events.
+    - reward: 1D binary array (same length as ybinned) indicating reward delivery.
+    - rewsize
+    - rewlocs= all rewloc ep
+    - rewloc_ep= just for specific epoch
+    - trialnum = trials per epoch
+    """
+    # Extract data for the current trial
+    y_trial = ybinned#[eps[i]:eps[i+1]]
+    licks_trial = licks#[eps[i]:eps[i+1]]
+    reward_trial = reward#[eps[i]:eps[i+1]]
+    trialnum_trial = trialnum#[eps[i]:eps[i+1]]
+    unique_trials = np.unique(trialnum)  # Get unique trial numbers [eps[i]:eps[i+1]]
+    first_lick_idx_per_trial = []
+    for tr,trial in enumerate(unique_trials):
+        trial_mask = trialnum_trial == trial  # Boolean mask for the current trial
+        y = y_trial[trial_mask]
+        licks_trial_ = licks_trial[trial_mask]
+        reward_trial_ = reward_trial[trial_mask]
+        # Find the reward location in this trial
+        #ONLY MATTERS FOR PROBES
+        if trial < 3 and i > 0:  # Probe trial, use previous epoch's reward location
+            rew_center = rewlocs[i-1]
+        else:  # Use reward location for this epoch and trial
+            rew_center = rewloc_ep
+        reward_indices = np.where(reward_trial_ > 0)[0]  # Indices where reward occurs
+        if len(reward_indices) == 0:
+            try:
+                # 1.5 bc doesn't work otherwise?
+                y_rew = np.where((y<(rew_center +(rewsize*.5)+5)) & (y>(rew_center -(rewsize*.5))))[0][0]
+                reward_idx=y_rew
+            except Exception as e: # if trial is empty??
+                print(e)
+                reward_idx=int(len(y)/2) # put in random middle place of trials
+            first_lick_pos = y[reward_idx]
+            first_lick_idx = reward_idx
+        else:
+            reward_idx = reward_indices[0]  # cs
+            # Find the first lick after the reward ONLY IF THERE IS REWARD
+            # UPDATED 6/11/25
+            lick_indices_after_reward = np.where((licks_trial_ > 0) & (np.arange(len(licks_trial_)) > reward_idx))[0]
+            if len(lick_indices_after_reward) > 0:
+                first_lick_idx = lick_indices_after_reward[0]  # First lick after reward
+            else:
+                # if animal did not lick after reward/no reward was given
+                first_lick_idx=reward_idx
+            # Convert positions to radians relative to the first lick
+            first_lick_pos = y[first_lick_idx]
+        first_lick_idx_bool = np.zeros_like(licks_trial_)
+        first_lick_idx_bool[first_lick_idx]=1
+        first_lick_idx_per_trial.append(first_lick_idx_bool)
+    first_lick_idx_per_ep = np.concatenate(first_lick_idx_per_trial)
+
+    return first_lick_idx_per_ep
 
 def make_tuning_curves_by_trialtype_w_darktime(eps,rewlocs,rewsize,ybinned,time,licks,Fc3,trialnum, rewards,forwardvel,scalingf,bin_size=3.5,lasttr=8,bins=90,
             velocity_filter=False):    

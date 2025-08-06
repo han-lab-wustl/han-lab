@@ -33,7 +33,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 savepth = os.path.join(savedst, 'lick_prediction.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 
-conddf = conddf[(conddf.in_type!='vip') & (conddf.in_type!='vip_ex')]
+conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
 iis = [ii for ii in iis if ii!=202]
 dct = {}
@@ -227,7 +227,7 @@ for ii in iis:
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.6, random_state=42)
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.7, random_state=42)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
@@ -267,6 +267,7 @@ for ii in iis:
    # trial = np.random.choice(test_idx)
    correct = []
    time_before_change=[]
+   time_to_rew = []
    predicted=[]
    for trial in test_idx:
       # Run decoder on a trial
@@ -295,6 +296,7 @@ for ii in iis:
       else:
          pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
       predicted.append([pred_goal_zone_cp,real_goal_zone])
+      time_to_rew.append(rewloc_ind*np.nanmedian(np.diff(time)))
       if pred_goal_zone_cp==real_goal_zone:
          correct.append(trial)
          if len(changepoint)>0:
@@ -317,10 +319,36 @@ for ii in iis:
    plt.plot(goal_trace)
    plt.plot(ybinned[trial]/10)
    plt.plot(trial_lick[trial])
-
+   # opto ind 
+   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]   
+   opto_s = [xx for xx in opto_idx if xx in strind]
+   opto_f = [xx for xx in opto_idx if xx in flind]
+   opto_correct_s = [xx for xx in correct if xx in opto_s]
+   opto_correct_f = [xx for xx in correct if xx in opto_f]
+   opto_s_rate = len(opto_correct_s)/len(opto_s)
+   if len(opto_f)>0:
+      opto_f_rate = len(opto_correct_f)/len(opto_f)
+   else: opto_f_rate=np.nan
+   opto_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_s])
+   opto_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_f])
+   opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]   
+   opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
+   # prev ind
+   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_s = [xx for xx in opto_idx if xx in strind]
+   prev_f = [xx for xx in opto_idx if xx in flind]
+   prev_correct_s = [xx for xx in correct if xx in prev_s]
+   prev_correct_f = [xx for xx in correct if xx in prev_f]
+   prev_s_rate = len(prev_correct_s)/len(prev_s)
+   prev_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_s])
+   prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
+   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])
+   if len(prev_f)>0:
+      prev_f_rate = len(prev_correct_f)/len(prev_f)
+   else: prev_f_rate=np.nan
    # rate correct
    total_rate = len(correct)/len(test_idx)
-
    test_s = [xx for xx in test_idx if xx in strind]
    test_f = [xx for xx in test_idx if xx in flind]
    correct_s = [xx for xx in correct if xx in test_s]
@@ -333,10 +361,22 @@ for ii in iis:
    time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_s])
    time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_f])
    
-   print(f'total prediction rate: {total_rate*100:.2g}%')
-   print(f'correct prediction rate: {s_rate*100:.2g}%')
-   print(f'incorrect prediction rate: {f_rate*100:.2g}%')
-   print(f'prediction latency (correct trials): {time_before_predict_s:.2g}s')
-   print(f'prediction latency (incorrect trials): {time_before_predict_f:.2g}s')
-   dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,predicted,rzs,eps]
+   print('####################################')
+   print(f'opto correct prediction rate: {opto_s_rate*100:.2g}%')
+   print(f'opto incorrect prediction rate: {opto_f_rate*100:.2g}%')
+   print(f'opto prediction latency (correct trials): {opto_time_before_predict_s:.2g}s')
+   print(f'opto prediction latency (incorrect trials): {opto_time_before_predict_f:.2g}s')
+   print(f'opto average time to rew: {opto_time_to_rew:.2g}s')
+   print('####################################')
+   print(f'prev correct prediction rate: {prev_s_rate*100:.2g}%')
+   print(f'prev incorrect prediction rate: {prev_f_rate*100:.2g}%')
+   print(f'prev prediction latency (correct trials): {prev_time_before_predict_s:.2g}s')
+   print(f'prev prediction latency (incorrect trials): {prev_time_before_predict_f:.2g}s')
+   print(f'prev average time to rew: {prev_time_to_rew:.2g}s')
+   print('####################################')
+   
+   dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
+      prev_s_rate, prev_f_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_to_rew,
+      opto_s_rate, opto_f_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_to_rew,
+      predicted,rzs,eps]
 # %%

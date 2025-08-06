@@ -56,7 +56,8 @@ def get_rewzones(rewlocs, gainf):
          
    return rewzonenum
 
-ii=60
+ii=46
+
 # ---------- Load animal info ---------- #
 day = conddf.days.values[ii]
 animal = conddf.animals.values[ii]
@@ -133,8 +134,10 @@ trial_pos = []
 trial_states = []
 strind = []
 flind = []
+lick_rate_trial = []
 ep_trials = []
-bin_size = int(0.05 * 1/np.nanmedian(np.diff(time)))  # number of frames in 100ms
+# 100 msec time bin
+bin_size = int(0.1 * 1/np.nanmedian(np.diff(time)))  # number of frames in 100ms
 rzs= get_rewzones(rewlocs,1/scalingf)
 for ep in range(len(eps)-1):
    eprng = np.arange(eps[ep],eps[ep+1])
@@ -157,17 +160,19 @@ for ep in range(len(eps)-1):
       fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
       # remove later activity
       ypos_tr = ypos[tr_mask]
-      fc_trial=fc_trial#[(ypos_tr<((rewlocs[ep]-rewsize/2)-50))]
-      lick_trial = lick_position_rel[tr_mask]         # shape (t,)
-      lick_rel.append(lick_trial)
+      fc_trial=fc_trial#[(ypos_tr<((rewlocs[ep]-rewsize/2)))]
+      lick_trial = lick_rate[eprng][tr_mask]         # shape (t,)
+      
       # avg_lick_pre_rew = np.nanmedian(lick_trial)
       avg_lick_pre_rew = np.nanmedian(lick_trial) # early licks
       if fc_trial.shape[0] >= 10 and not np.isnan(avg_lick_pre_rew) and tr>2:#; dont exclude probes for now
          fc_trial_binned = fc_trial
          trial_X.append(fc_trial_binned)
          trial_y.append(rzs[ep])
+         # trial_pos.append(ypos_tr[(ypos_tr<((rewlocs[ep]-rewsize/2)))])
          trial_pos.append(ypos_tr)
-         ep_trials.append(ep+1)
+         lick_rate_trial.append(lick_trial)
+         ep_trials.append(ep)
          
 # trial_y = get_rewzones(trial_y, 1/scalingf)
 max_time = np.nanmax([len(xx) for xx in trial_X])
@@ -177,109 +182,164 @@ trial_fc_org = np.zeros((len(trial_X),max_time,trial_X[0].shape[1]))
 for trind,trx in enumerate(trial_X):
    trial_fc_org[trind,:len(trx)]=trx
    
-# prev epoch training
-trial_fc = trial_fc_org[np.array(ep_trials) == eptest-1]
-X = np.stack(trial_fc)   # shape (n_trials, time, n_cells)
+X = np.stack(trial_fc_org)   # shape (n_trials, time, n_cells)
 # Reshape to (n_trials*time, n_cells) for cell-wise standardization
 n_trials, t, n_cells = X.shape
 trial_pos_ = np.zeros((len(trial_pos),max_time))
 for trind,trx in enumerate(trial_pos):
    trial_pos_[trind,:len(trx)]=trx
 
-#%%
+trial_lick = np.zeros((len(lick_rate_trial),max_time))
+for trind,trx in enumerate(lick_rate_trial):
+   trial_lick[trind,:len(trx)]=trx
+   
 # Sample data: (trials x time x cells)
+# only correct trials?
 n_trials, T, N = trial_fc_org.shape
 fc3 = trial_fc_org
 ybinned = trial_pos_
-goal_zone = np.array(trial_y)
+goal_zone = np.array(trial_y)-1
 
-n_pos_bins = 270
+n_pos_bins = 90
 n_goals = 3
 dt = np.nanmedian(np.diff(time))  # 10 ms per bin
 var_pos = 25  # cm^2
 p_stay_goal = 0.9 ** dt
 
-# Estimate tuning curves
-def estimate_tuning(fc3, ybinned, goal_zone, n_pos_bins, n_goals):
+def estimate_tuning(fc3, ybinned, goal_zone, cm_per_bin=1, bin_size_cm=3, n_goals=3):
+   trials, time, N = fc3.shape
+   # Re-bin positions to 3 cm bins
+   pos3cm = (ybinned // (bin_size_cm // cm_per_bin)).astype(int)
+   n_pos_bins = pos3cm.max() + 1  # auto-detect number of 3 cm bins
    tuning = np.zeros((N, n_pos_bins, n_goals))
-   for i in range(N):
-      for g in range(n_goals):
-         mask = np.ravel(goal_zone[:, None] == g)
-         pos = ybinned[mask]
-         spikes = fc3[mask, :, i].flatten()
-         positions = pos.flatten()
+   for i in range(N):  # loop over cells
+      for g in range(n_goals):  # loop over goals
+         mask = np.ravel(goal_zone[:, None] == g)  # trial x time
+         spikes = fc3[mask, :,i]
+         positions = pos3cm[mask]
          for x in range(n_pos_bins):
                inds = positions == x
                if inds.sum() > 0:
-                  tuning[i, x, g] = np.mean(spikes[inds])
-   return gaussian_filter1d(tuning, sigma=1, axis=1)
+                  tuning[i, x, g] = np.nanmean(spikes[inds])
+   return tuning
 
-tuning = estimate_tuning(fc3, ybinned, goal_zone, n_pos_bins, n_goals)
+all_indices=np.arange(fc3.shape[0])
+# Split indices instead of the data directly
+train_idx, test_idx = train_test_split(all_indices, test_size=0.6, random_state=42)
+# Now use the indices to subset your data
+fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
+ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
+goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone[test_idx]
+
+# training ; use held out trials?
+tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
 
 # Decoder
 def decode_trial(trial_fc, trial_ybin, goal, tuning):
-    T = trial_fc.shape[0]
-    log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
-    log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
+   T = trial_fc.shape[0]
+   log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
+   log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
 
-    for t in range(T):
-        obs = trial_fc[t]
-        log_likelihood = np.zeros((n_pos_bins, n_goals))
-        for x in range(n_pos_bins):
-            for g in range(n_goals):
-                lam = tuning[:, x, g]
-                lam = np.clip(lam, 1e-3, None)
-                log_likelihood[x, g] = np.sum(obs * np.log(lam) - lam)
+   for t in range(T):
+      obs = trial_fc[t]
+      log_likelihood = np.zeros((n_pos_bins, n_goals))
+      for x in range(n_pos_bins):
+         for g in range(n_goals):
+            lam = tuning[:, x, g]
+            lam = np.clip(lam, 1e-3, None)
+            log_likelihood[x, g] = np.sum(obs * np.log(lam) - lam)
 
-        if t == 0:
-            log_post[t] = log_prior + log_likelihood
-        else:
-            prev_log_post = log_post[t - 1]
-            trans_pos = gaussian_filter1d(np.exp(prev_log_post), sigma=np.sqrt(var_pos), axis=0)
-            trans_goal = (1 - p_stay_goal) / (n_goals - 1)
-            for g in range(n_goals):
-                sticky = p_stay_goal * trans_pos[:, g] + trans_goal * np.sum(trans_pos, axis=1)
-                log_post[t, :, g] = np.log(sticky + 1e-10) + log_likelihood[:, g]
+      if t == 0:
+         log_post[t] = log_prior + log_likelihood
+      else:
+         prev_log_post = log_post[t - 1]
+         trans_pos = gaussian_filter1d(np.exp(prev_log_post), sigma=np.sqrt(var_pos), axis=0)
+         trans_goal = (1 - p_stay_goal) / (n_goals - 1)
+         for g in range(n_goals):
+            sticky = p_stay_goal * trans_pos[:, g] + trans_goal * np.sum(trans_pos, axis=1)
+            log_post[t, :, g] = np.log(sticky + 1e-10) + log_likelihood[:, g]
 
-        log_post[t] -= logsumexp(log_post[t])
+      log_post[t] -= logsumexp(log_post[t])
 
-    return np.exp(log_post)
+   return np.exp(log_post)
 #%%
-trial = np.random.randint(fc3.shape[0])
-# Run decoder on a trial
-post = decode_trial(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
-post_goal = post.sum(axis=1)  # marginalize over position
-post_pos = post.sum(axis=2)  # marginalize over goal
+# trial = np.random.choice(test_idx)
+correct = []
+time_before_change=[]
+predicted=[]
+for trial in test_idx:
+   # Run decoder on a trial
+   post = decode_trial(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
+   post_goal = post.sum(axis=1)  # marginalize over position
+   post_pos = post.sum(axis=2)  # marginalize over goal
+   # get real rewloc start
+   ep = ep_trials[trial]
+   rewloc_start = rewlocs[ep-1]-rewsize/2
+   ypos_temp = ybinned[trial].copy()
+   ypos_temp[ypos_temp==0]=1000000
+   rewloc_ind = np.where(ypos_temp<rewloc_start)[0]
+   rewloc_ind = rewloc_ind[-1]
+   real_ypos = ybinned[trial][rewloc_ind]
+   # Plot marginal posterior
+   plt.figure(figsize=(12, 4))
+   plt.subplot(1, 2, 1)
+   plt.imshow(post_pos.T, aspect='auto', cmap='viridis')
+   plt.title("Marginal Posterior over Position")
+   plt.ylabel("Position Bin")
+   plt.xlabel("Time")
 
-# Plot marginal posterior
-plt.figure(figsize=(12, 4))
-plt.subplot(1, 2, 1)
-plt.imshow(post_pos.T, aspect='auto', cmap='viridis')
-plt.title("Marginal Posterior over Position")
-plt.ylabel("Position Bin")
-plt.xlabel("Time")
+   plt.subplot(1, 2, 2)
+   plt.imshow(post_goal.T, aspect='auto', cmap='plasma')
+   plt.title("Marginal Posterior over Goal")
+   plt.ylabel("Goal")
+   plt.xlabel("Time")
+   plt.tight_layout()
+   plt.show()
 
-plt.subplot(1, 2, 2)
-plt.imshow(post_goal.T, aspect='auto', cmap='plasma')
-plt.title("Marginal Posterior over Goal")
-plt.ylabel("Goal")
-plt.xlabel("Time")
-plt.tight_layout()
-plt.show()
+   # Change point detection
+   # change to rz 1/2/3
+   goal_trace = np.argmax(post_goal, axis=1)+1  # MAP goal trace
+   model = rpt.Pelt(model="l2").fit(goal_trace)
+   bkps = np.array(model.predict(pen=10))
+   pred_goal_zone = goal_trace[:rewloc_ind]
+   real_goal_zone = goal_zone[trial]+1
+   changepoint = bkps[bkps<rewloc_ind]
+   if len(changepoint)>0:
+      pred_goal_zone_cp = np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind])
+   else:
+      pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
+   predicted.append([pred_goal_zone_cp,real_goal_zone])
+   if pred_goal_zone_cp==real_goal_zone:
+      correct.append(trial)
+      if len(changepoint)>0:
+         time_before_change.append((rewloc_ind-changepoint[-1])*np.nanmedian(np.diff(time)))
+      else:
+         time_before_change.append((rewloc_ind)*np.nanmedian(np.diff(time)))
+   # Plot goal change points
+   plt.figure(figsize=(8, 3))
+   plt.plot(goal_trace, label="Goal (MAP)")
+   for cp in bkps[:-1]:
+      plt.axvline(cp, color='red', linestyle='--')
+   plt.title("Goal Change Point Detection")
+   plt.xlabel("Time Bin")
+   plt.ylabel("Goal")
+   plt.legend()
+   plt.tight_layout()
+   plt.show()
 
-# Change point detection
-goal_trace = np.argmax(post_goal, axis=1)  # MAP goal trace
-model = rpt.Pelt(model="l2").fit(goal_trace)
-bkps = model.predict(pen=10)
+   plt.figure()
+   plt.plot(goal_trace)
+   plt.plot(ybinned[trial]/10)
+   plt.plot(trial_lick[trial])
 
-# Plot goal change points
-plt.figure(figsize=(8, 3))
-plt.plot(goal_trace, label="Goal (MAP)")
-for cp in bkps[:-1]:
-   plt.axvline(cp, color='red', linestyle='--')
-plt.title("Goal Change Point Detection")
-plt.xlabel("Time Bin")
-plt.ylabel("Goal")
-plt.legend()
-plt.tight_layout()
-plt.show()
+#%%
+# rate correct
+total_rate = len(correct)/len(test_idx)
+
+test_s = [xx for xx in test_idx if xx in strind]
+test_f = [xx for xx in test_idx if xx in flind]
+correct_s = [xx for xx in correct if xx in test_s]
+correct_f = [xx for xx in correct if xx in test_f]
+# for correct/incorrect trials
+s_rate = len(correct_s)/len(test_s)
+f_rate = len(correct_f)/len(test_f)
