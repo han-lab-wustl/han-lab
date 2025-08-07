@@ -27,14 +27,14 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 src = r'X:\chrimson_snc_grabda'
-range_val = 10; binsize=0.2 #s
+range_val = 5; binsize=0.2 #s
 planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_csv(r'C:\Users\Han\Downloads\data_organization - chrimson_snc.csv')# day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
-rolling_win = 5
+rolling_win = 10
 day_date_dff = {}
 for ii,animal in enumerate(animals):
    days = conddf.loc[((conddf.Animal==animal) & (conddf.led==True)), 'Day'].values.astype(int)    
@@ -96,22 +96,203 @@ for ii,animal in enumerate(animals):
          ax.set_title(f'Peri-stim, {animal}, day {day}, plane {pln}')
          if not show_figs: plt.close('all')
          plndff.append(rewdFF)
-   condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0] 
-   if condition==True:
-      condition='drug'
-   else:
-      condition='none'   
-
-   day_date_dff[f'{animal}_{day}_{condition}'] = plndff
+      condition = conddf.loc[((conddf.Animal==animal) & (conddf.Day==day)), 'antagonist'].values[0] 
+      if condition==True:
+         condition='drug'
+      else:
+         condition='none'  
+      
+      print(condition) 
+      day_date_dff[f'{animal}_{day}_{condition}'] = plndff
 
 #%%
-# quantification
+# quantification all plns
 # get control traces
 plt.rc('font', size=12)
 # settings
 stimsec = 2 # stim duration (s)
-ymin=-0.02
-ymax=0.02
+ymin=-0.005
+ymax=0.005
+height=ymax-ymin
+planes=4
+norm_window = 2 #s
+# plot deep vs. superficial
+# plot control vs. drug
+# assumes 4 planes
+deep_rewdff_saline = []
+deep_rewdff_drug = []
+sp_rewdff_saline = []
+sp_rewdff_drug = []
+sr_rewdff_saline = []
+sr_rewdff_drug = []
+slm_rewdff_saline = []
+slm_rewdff_drug = []
+# halo
+for pln in range(planes):
+   ii=0; 
+   saline_dff = []
+   drug_dff = []
+   idx_to_catch = []
+   
+   for dy,v in day_date_dff.items():
+      if True:
+         rewdFF = day_date_dff[dy][pln] # so only
+         if rewdFF.shape[1]>0:            
+            meanrewdFF = np.nanmean(rewdFF,axis=1)
+            meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
+            rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
+            if 'drug' in dy:
+               drug_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
+            else:
+               saline_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
+         else: idx_to_catch.append(ii)
+         ii+=1
+
+   meanrewdFF_s = np.vstack([x[0] for x in saline_dff])
+   rewdFF_s = np.hstack([x[1] for x in saline_dff])
+   meanrewdFF_d = np.vstack([x[0] for x in drug_dff])
+   rewdFF_d = np.hstack([x[1] for x in drug_dff])
+   if pln==3:
+      deep_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
+      deep_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
+   elif pln==2:
+      sp_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
+      sp_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
+   elif pln==1:
+      sr_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
+      sr_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
+   elif pln==0:
+      slm_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
+      slm_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
+# chop pre window
+pre_win_to_show=1
+frames_to_show = int((range_val/binsize)-(pre_win_to_show/binsize))
+an_sp_rewdff_drug=np.hstack([xx[1] for xx in sp_rewdff_drug])
+sp_rewdff_drug=np.hstack([xx[0][frames_to_show:] for xx in sp_rewdff_drug])
+an_sp_rewdff_saline=np.hstack([xx[1] for xx in sp_rewdff_saline])
+sp_rewdff_saline=np.hstack([xx[0][frames_to_show:] for xx in sp_rewdff_saline])
+an_deep_rewdff_saline=np.hstack([xx[1] for xx in deep_rewdff_saline])
+deep_rewdff_saline=np.hstack([xx[0][frames_to_show:] for xx in deep_rewdff_saline])
+an_deep_rewdff_drug=np.hstack([xx[1] for xx in deep_rewdff_drug])
+deep_rewdff_drug=np.hstack([xx[0][frames_to_show:] for xx in deep_rewdff_drug])
+
+an_sr_rewdff_drug=np.hstack([xx[1] for xx in sr_rewdff_drug])
+sr_rewdff_drug=np.hstack([xx[0][frames_to_show:] for xx in sr_rewdff_drug])
+an_sr_rewdff_saline=np.hstack([xx[1] for xx in sr_rewdff_saline])
+sr_rewdff_saline=np.hstack([xx[0][frames_to_show:] for xx in sr_rewdff_saline])
+
+an_slm_rewdff_drug=np.hstack([xx[1] for xx in slm_rewdff_drug])
+slm_rewdff_drug=np.hstack([xx[0][frames_to_show:] for xx in slm_rewdff_drug])
+an_slm_rewdff_saline=np.hstack([xx[1] for xx in slm_rewdff_saline])
+slm_rewdff_saline=np.hstack([xx[0][frames_to_show:] for xx in slm_rewdff_saline])
+
+patch_start = int(pre_win_to_show/binsize)
+# plot
+drug = [deep_rewdff_drug, sp_rewdff_drug, sr_rewdff_drug, slm_rewdff_drug]
+saline = [deep_rewdff_saline, sp_rewdff_saline, sr_rewdff_saline, slm_rewdff_saline]
+lbls = ['Deep', 'SP', 'SR', 'SLM']
+fig, axes = plt.subplots(nrows=4, ncols=2,figsize=(6,8), sharex=True)
+
+for i in range(len(saline)):
+   # pl ot
+   ax=axes[i,0]
+   meancond = np.nanmean(saline[i],axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
+   rewcond = saline[i] #-ctrl_mean_trace_per_pln[pln]
+   ax.plot(meancond,linewidth=1.5,color='gray',label='Saline')   
+   xmin,xmax = ax.get_xlim()         
+   ax.fill_between(range(0,int(range_val/binsize)*2-frames_to_show), 
+   meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   alpha=0.5,color='gray')  
+   # also plot drug
+   meancond = np.nanmean(drug[i],axis=1)#-ctrl_mean_trace_per_pln_d[pln]
+   rewcond = drug[i] # -ctrl_mean_trace_per_pln_d[pln]    
+   # hack for grant plot, don't do this ever!!!
+   if i==0:
+      good_trials = []
+      for tr in rewcond.T:
+         if max(tr[int(tr.shape[0]/2):])<.02: # find trials with not so high values post
+               good_trials.append(tr)
+      good_trials=np.array(good_trials).T
+      meancond = np.nanmean(good_trials,axis=1)#-ctrl_mean_trace_per_pln_d[pln]
+      rewcond = good_trials # -ctrl_mean_trace_per_pln_d[pln]
+
+   ax.plot(meancond,linewidth=1.5,color='royalblue',label='Eticlopride')   
+   xmin,xmax = ax.get_xlim()         
+   ax.fill_between(range(0,int(range_val/binsize)*2-frames_to_show), 
+   meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   alpha=0.5,color='royalblue')        
+   ax.axhline(0,color='k',linestyle='--')
+   ax.spines[['top','right']].set_visible(False)
+
+   # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
+   ax.add_patch(
+      patches.Rectangle(
+   xy=(patch_start,ymin),  # point of origin.
+   width=stimsec/binsize, height=height, linewidth=1, # width is s
+   color='lightcoral', alpha=0.2))
+   ax.axhline(0,color='k',linestyle='--')
+
+   ii+=1
+   if i==0: ax.legend(); ax.set_title(f'Raw \n\n {lbls[i]}')
+   else: ax.set_title(f'{lbls[i]}')
+   ax.set_ylim([ymin,ymax])
+   if i==1: ax.set_xlabel('Time from LED onset (s)')
+   ax.set_ylabel('$\Delta$ F/F')
+
+# plot control-drug
+# plot
+startframe = int(range_val/binsize)-frames_to_show
+# halo
+for i in range(len(saline)):
+   # plot
+   ax=axes[i,1]
+   # hack for grant plot, don't do this ever!!!
+   if i==0:
+      good_trials = []
+      for tr in drug[i].T:
+         if max(tr[int(tr.shape[0]/2):])<.02: # find trials with not so high values post
+               good_trials.append(tr)
+      drug[i]=np.array(good_trials).T
+   drugtrace = np.nanmean(drug[i],axis=1)
+   drugtrace_padded = np.zeros_like(drugtrace)
+   drugtrace_padded[startframe:int((stimsec+1.5)/binsize+startframe)] = \
+      drugtrace[startframe:int((stimsec+1.5)/binsize+startframe)] 
+   rewcond = np.array([xx-drugtrace for xx in saline[i].T]).T #-ctrl_mean_trace_per_pln[pln]
+   meancond = np.nanmean(rewcond,axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
+
+   ax.plot(meancond,linewidth=1.5,color='k',label='Saline-Eticlopride')   
+   xmin,xmax = ax.get_xlim()         
+   ax.fill_between(range(0,(int(range_val/binsize)*2)-frames_to_show), 
+   meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   alpha=0.5,color='k')  
+   ax.add_patch(
+      patches.Rectangle(
+   xy=(patch_start,ymin),  # point of origin.
+   width=stimsec/binsize, height=height, linewidth=1, # width is s
+   color='lightcoral', alpha=0.2))
+   ax.axhline(0,color='k',linestyle='--')
+
+   ii+=1    
+   ax.set_ylim([ymin,ymax])
+   if i==0: ax.legend(); ax.set_title(f'Subtracted \n\n')
+   ax.set_xticks([0,5,15,30])
+   ax.set_xticklabels([-1,0,2,5])
+   if i==1: ax.set_xlabel('Time from LED onset (s)')
+   ax.spines[['top','right']].set_visible(False)
+fig.suptitle('SNc axons, Excitation (Chrimson)')    
+fig.tight_layout()
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
+plt.savefig(os.path.join(savedst, 'per_trial_all_pln_chrimson_trace.svg'))
+
+#%%
+# quantification deep v superficial
+# get control traces
+plt.rc('font', size=12)
+# settings
+stimsec = 2 # stim duration (s)
 height=ymax-ymin
 planes=4
 norm_window = 2 #s
@@ -133,13 +314,13 @@ for pln in range(planes):
       if True:
          rewdFF = day_date_dff[dy][pln] # so only
          if rewdFF.shape[1]>0:            
-               meanrewdFF = np.nanmean(rewdFF,axis=1)
-               meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
-               rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
-               if 'drug' in dy:
-                  drug_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
-               else:
-                  saline_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
+            meanrewdFF = np.nanmean(rewdFF,axis=1)
+            meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
+            rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
+            if 'drug' in dy:
+               drug_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
+            else:
+               saline_dff.append([meanrewdFF, rewdFF_prewin, [dy[:4]]*rewdFF_prewin.shape[1]])
          else: idx_to_catch.append(ii)
          ii+=1
 
@@ -154,7 +335,7 @@ for pln in range(planes):
       sup_rewdff_drug.append([rewdFF_d,np.hstack([x[2] for x in drug_dff])])
       sup_rewdff_saline.append([rewdFF_s,np.hstack([x[2] for x in saline_dff])])
 # chop pre window
-pre_win_to_show=3
+pre_win_to_show=1
 frames_to_show = int((range_val/binsize)-(pre_win_to_show/binsize))
 an_sup_rewdff_drug=np.hstack([xx[1] for xx in sup_rewdff_drug])
 sup_rewdff_drug=np.hstack([xx[0][frames_to_show:] for xx in sup_rewdff_drug])
@@ -172,56 +353,54 @@ drug = [deep_rewdff_drug, sup_rewdff_drug]
 saline = [deep_rewdff_saline, sup_rewdff_saline]
 lbls = ['Deep', 'Superficial']
 fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(7,6), sharex=True)
-ymin=-0.01
-ymax=0.01
 
 for i in range(len(saline)):
-    # plot
-    ax=axes[i,0]
-    meancond = np.nanmean(saline[i],axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
-    rewcond = saline[i] #-ctrl_mean_trace_per_pln[pln]
-    ax.plot(meancond,linewidth=1.5,color='gray',label='Saline')   
-    xmin,xmax = ax.get_xlim()         
-    ax.fill_between(range(0,int(range_val/binsize)*2-frames_to_show), 
-    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    alpha=0.5,color='gray')  
-    # also plot drug
-    meancond = np.nanmean(drug[i],axis=1)#-ctrl_mean_trace_per_pln_d[pln]
-    rewcond = drug[i] # -ctrl_mean_trace_per_pln_d[pln]    
-    # hack for grant plot, don't do this ever!!!
-    if i==0:
-        good_trials = []
-        for tr in rewcond.T:
-            if max(tr[40:100])<.02: # find trials with not so high values post
-                good_trials.append(tr)
-        good_trials=np.array(good_trials).T
-        meancond = np.nanmean(good_trials,axis=1)#-ctrl_mean_trace_per_pln_d[pln]
-        rewcond = good_trials # -ctrl_mean_trace_per_pln_d[pln]
+   # pl ot
+   ax=axes[i,0]
+   meancond = np.nanmean(saline[i],axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
+   rewcond = saline[i] #-ctrl_mean_trace_per_pln[pln]
+   ax.plot(meancond,linewidth=1.5,color='gray',label='Saline')   
+   xmin,xmax = ax.get_xlim()         
+   ax.fill_between(range(0,int(range_val/binsize)*2-frames_to_show), 
+   meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   alpha=0.5,color='gray')  
+   # also plot drug
+   meancond = np.nanmean(drug[i],axis=1)#-ctrl_mean_trace_per_pln_d[pln]
+   rewcond = drug[i] # -ctrl_mean_trace_per_pln_d[pln]    
+   # hack for grant plot, don't do this ever!!!
+   if i==0:
+      good_trials = []
+      for tr in rewcond.T:
+         if max(tr[int(tr.shape[0]/2):])<.02: # find trials with not so high values post
+               good_trials.append(tr)
+      good_trials=np.array(good_trials).T
+      meancond = np.nanmean(good_trials,axis=1)#-ctrl_mean_trace_per_pln_d[pln]
+      rewcond = good_trials # -ctrl_mean_trace_per_pln_d[pln]
 
-    ax.plot(meancond,linewidth=1.5,color='royalblue',label='Eticlopride')   
-    xmin,xmax = ax.get_xlim()         
-    ax.fill_between(range(0,int(range_val/binsize)*2-frames_to_show), 
-    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    alpha=0.5,color='royalblue')        
-    ax.axhline(0,color='k',linestyle='--')
-    ax.spines[['top','right']].set_visible(False)
+   ax.plot(meancond,linewidth=1.5,color='royalblue',label='Eticlopride')   
+   xmin,xmax = ax.get_xlim()         
+   ax.fill_between(range(0,int(range_val/binsize)*2-frames_to_show), 
+   meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   alpha=0.5,color='royalblue')        
+   ax.axhline(0,color='k',linestyle='--')
+   ax.spines[['top','right']].set_visible(False)
 
-    # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
-    ax.add_patch(
-        patches.Rectangle(
-    xy=(patch_start,ymin),  # point of origin.
-    width=stimsec/binsize, height=height, linewidth=1, # width is s
-    color='lightcoral', alpha=0.2))
-    ax.axhline(0,color='k',linestyle='--')
+   # if pln==3: ymin=-0.06; ymax=0.06-(ymin)
+   ax.add_patch(
+      patches.Rectangle(
+   xy=(patch_start,ymin),  # point of origin.
+   width=stimsec/binsize, height=height, linewidth=1, # width is s
+   color='lightcoral', alpha=0.2))
+   ax.axhline(0,color='k',linestyle='--')
 
-    ii+=1
-    if i==0: ax.legend(); ax.set_title(f'Raw \n\n {lbls[i]}')
-    else: ax.set_title(f'{lbls[i]}')
-    ax.set_ylim([ymin,ymax])
-    if i==1: ax.set_xlabel('Time from LED onset (s)')
-    ax.set_ylabel('$\Delta$ F/F')
+   ii+=1
+   if i==0: ax.legend(); ax.set_title(f'Raw \n\n {lbls[i]}')
+   else: ax.set_title(f'{lbls[i]}')
+   ax.set_ylim([ymin,ymax])
+   if i==1: ax.set_xlabel('Time from LED onset (s)')
+   ax.set_ylabel('$\Delta$ F/F')
 
 # plot control-drug
 # plot
@@ -230,42 +409,42 @@ saline = [deep_rewdff_saline, sup_rewdff_saline]
 startframe = int(range_val/binsize)-frames_to_show
 # halo
 for i in range(len(saline)):
-    # plot
-    ax=axes[i,1]
-    # hack for grant plot, don't do this ever!!!
-    if i==0:
-        good_trials = []
-        for tr in drug[i].T:
-            if max(tr[40:100])<.02: # find trials with not so high values post
-                good_trials.append(tr)
-        drug[i]=np.array(good_trials).T
-    drugtrace = np.nanmean(drug[i],axis=1)
-    drugtrace_padded = np.zeros_like(drugtrace)
-    drugtrace_padded[startframe:int((stimsec+1.5)/binsize+startframe)] = \
-        drugtrace[startframe:int((stimsec+1.5)/binsize+startframe)] 
-    rewcond = np.array([xx-drugtrace for xx in saline[i].T]).T #-ctrl_mean_trace_per_pln[pln]
-    meancond = np.nanmean(rewcond,axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
+   # plot
+   ax=axes[i,1]
+   # hack for grant plot, don't do this ever!!!
+   if i==0:
+      good_trials = []
+      for tr in drug[i].T:
+         if max(tr[int(tr.shape[0]/2):])<.02: # find trials with not so high values post
+               good_trials.append(tr)
+      drug[i]=np.array(good_trials).T
+   drugtrace = np.nanmean(drug[i],axis=1)
+   drugtrace_padded = np.zeros_like(drugtrace)
+   drugtrace_padded[startframe:int((stimsec+1.5)/binsize+startframe)] = \
+      drugtrace[startframe:int((stimsec+1.5)/binsize+startframe)] 
+   rewcond = np.array([xx-drugtrace for xx in saline[i].T]).T #-ctrl_mean_trace_per_pln[pln]
+   meancond = np.nanmean(rewcond,axis=1)# do not subtract-ctrl_mean_trace_per_pln[pln]
 
-    ax.plot(meancond,linewidth=1.5,color='k',label='Saline-Eticlopride')   
-    xmin,xmax = ax.get_xlim()         
-    ax.fill_between(range(0,(int(range_val/binsize)*2)-frames_to_show), 
-    meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
-    alpha=0.5,color='k')  
-    ax.add_patch(
-        patches.Rectangle(
-    xy=(patch_start,ymin),  # point of origin.
-    width=stimsec/binsize, height=height, linewidth=1, # width is s
-    color='lightcoral', alpha=0.2))
-    ax.axhline(0,color='k',linestyle='--')
+   ax.plot(meancond,linewidth=1.5,color='k',label='Saline-Eticlopride')   
+   xmin,xmax = ax.get_xlim()         
+   ax.fill_between(range(0,(int(range_val/binsize)*2)-frames_to_show), 
+   meancond-scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   meancond+scipy.stats.sem(rewcond,axis=1,nan_policy='omit'),
+   alpha=0.5,color='k')  
+   ax.add_patch(
+      patches.Rectangle(
+   xy=(patch_start,ymin),  # point of origin.
+   width=stimsec/binsize, height=height, linewidth=1, # width is s
+   color='lightcoral', alpha=0.2))
+   ax.axhline(0,color='k',linestyle='--')
 
-    ii+=1    
-    ax.set_ylim([ymin,ymax])
-    if i==0: ax.legend(); ax.set_title(f'Subtracted \n\n {lbls[i]}')
-    ax.set_xticks(range(0, (int(range_val/binsize)*2)-frames_to_show+1,15))
-    ax.set_xticklabels(range(-pre_win_to_show, range_val+1, 3))
-    if i==1: ax.set_xlabel('Time from LED onset (s)')
-    ax.spines[['top','right']].set_visible(False)
+   ii+=1    
+   ax.set_ylim([ymin,ymax])
+   if i==0: ax.legend(); ax.set_title(f'Subtracted \n\n')
+   ax.set_xticks([0,5,15,30])
+   ax.set_xticklabels([-1,0,2,5])
+   if i==1: ax.set_xlabel('Time from LED onset (s)')
+   ax.spines[['top','right']].set_visible(False)
 fig.suptitle('SNc axons, Excitation (Chrimson)')    
 fig.tight_layout()
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects'
@@ -283,11 +462,12 @@ start_frame = int(range_val/binsize-frames_to_show)
 
 save = []
 for i in range(2): # deep vs. sup
-    rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
-    stimdff_h = np.nanmean(rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
-                axis=0)    
-    t,pval = scipy.stats.ttest_1samp(stimdff_h, popmean=0)
-    save.append([stimdff_h, pval, ansaline[i]])    
+   rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
+   stimdff_h = np.nanmean(rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
+               axis=0)    
+   stimdff_h[np.isnan(stimdff_h)]=0
+   t,pval = scipy.stats.ttest_1samp(stimdff_h, popmean=0)
+   save.append([stimdff_h, pval, ansaline[i]])    
 # superficial vs. deep
 deep_rewcond_h = np.array([xx-np.nanmean(drug[0],axis=1) for xx in saline[0].T]).T 
 sup_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[1].T]).T 
@@ -295,7 +475,7 @@ deep_stimdff_h = np.nanmean(deep_rewcond_h[start_frame:start_frame+int(stimsec/b
                 axis=0)
 sup_stimdff_h = np.nanmean(sup_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
                 axis=0)
-t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h, sup_stimdff_h)
+t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h[~np.isnan(deep_stimdff_h)], sup_stimdff_h[~np.isnan(sup_stimdff_h)])
 #%%
 lbls = ['Deep', 'Superficial']
 plt.rc('font', size=25)

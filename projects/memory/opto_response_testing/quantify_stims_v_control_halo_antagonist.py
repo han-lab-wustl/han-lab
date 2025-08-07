@@ -149,6 +149,10 @@ for pln in range(planes):
 #%%
 # plot control vs. drug
 plt.rc('font', size=11)
+ymin=-0.005
+ymax=0.005
+height=ymax-ymin
+
 # assumes 4 planes
 fig, axes = plt.subplots(nrows=4, ncols=2,figsize=(6,9), sharex=True)
 for pln in range(planes):

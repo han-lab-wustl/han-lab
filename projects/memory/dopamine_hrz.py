@@ -14,13 +14,14 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
-from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
+from projects.pyr_reward.rewardcell import pe
+rireward_binned_activity_early_late, perireward_binned_activity
 plt.rcParams["font.family"] = "Arial"
 
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e294'
+animal = 'e293'
 src = r"X:\chrimson_snc_grabda"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)

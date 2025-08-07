@@ -127,7 +127,9 @@ def process_trial(trial):
       "correct": correct,
       "time_before_change": time_before_change if correct else None,
       "time_to_rew": time_to_rew,
-      "predicted": [pred_goal_zone_cp, real_goal_zone]
+      "predicted": [pred_goal_zone_cp, real_goal_zone],
+      'goal_trace': goal_trace,
+      'change_point': changepoint
    }
 
 def get_rewzones(rewlocs, gainf):
@@ -362,41 +364,25 @@ for ii in iis:
 
    # training ; use held out trials?
    tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
-
+   test_idx = np.sort(test_idx)
    # Parallel execution
    results = Parallel(n_jobs=-1)(delayed(process_trial)(trial) for trial in test_idx)
-   # test
-   plt.plot(ybinned[trial]/135,label='position')
-   plt.plot(goal_trace,label='predicted rew zone')
-   plt.axhline((rewlocs[eptest-1]-rewsize/2)/135,color='k',label='rew loc center')
-   for cp in changepoint:
-      plt.axvline(cp,linestyle='--',color='r', label='change points')
-   plt.legend()
-   plt.title(f'VIP inhibition mouse\nPrevious reward loc. = {rewlocs[eptest-2]}\nCurrent rew loc. = {rewlocs[eptest-1]}')
    # Filter out None results (failed trials)
    results = [r for r in results if r is not None]
-
    # Unpack results
    correct = [r["trial"] for r in results if r["correct"]]
    time_before_change = [r["time_before_change"] for r in results if r["correct"]]
    time_to_rew = [r["time_to_rew"] for r in results]
    predicted = [r["predicted"] for r in results]      # # Plot goal change points
-      # plt.figure(figsize=(8, 3))
-      # plt.plot(goal_trace, label="Goal (MAP)")
-      # for cp in bkps[:-1]:
-      #    plt.axvline(cp, color='red', linestyle='--')
-      # plt.title("Goal Change Point Detection")
-      # plt.xlabel("Time Bin")
-      # plt.ylabel("Goal")
-      # plt.legend()
-      # plt.tight_layout()
-      # plt.show()
-
-   # plt.figure()
-   # plt.plot(goal_trace)
-   # plt.plot(ybinned[trial]/10)
-   # plt.plot(trial_lick[trial])
-   # opto ind 
+   goal_trace = [r["goal_trace"] for r in results]      # # Plot goal change points
+   cp =[r["change_point"] for r in results]      # # Plot goal change points
+   # test
+   rng = np.arange(0000,10000)   # opto ind 
+   mask = np.concatenate(ybinned[test_idx])>0
+   plt.figure(figsize=(20,4))
+   plt.plot(np.concatenate(goal_trace)[mask][rng]*70)
+   plt.plot(np.concatenate(ybinned[test_idx])[mask][rng])   
+   
    opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]
    if len(opto_idx)==0:
       continue   
