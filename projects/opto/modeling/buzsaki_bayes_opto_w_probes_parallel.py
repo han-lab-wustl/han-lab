@@ -479,3 +479,143 @@ for ii in iis:
       opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
       predicted,rzs,eps]
 # %%
+df=pd.DataFrame()
+# 8-12 = pred
+# 13-17 = opto
+# Add all the variables
+df['prev_s_rate'] = [v[7] for k, v in dct.items()]
+df['prev_f_rate'] = [v[8] for k, v in dct.items()]
+df['prev_p_rate'] = [v[9] for k, v in dct.items()]
+df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
+df['prev_time_before_predict_s'] = [v[10] for k, v in dct.items()]
+df['prev_time_before_predict_f'] = [v[11] for k, v in dct.items()]
+df['prev_time_before_predict_p'] = [v[12] for k, v in dct.items()]
+
+df['opto_s_rate'] = [v[14] for k, v in dct.items()]
+df['opto_f_rate'] = [v[15] for k, v in dct.items()]
+df['opto_p_rate'] = [v[16] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+df['opto_time_to_rew'] = [v[20] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+
+df['animals'] = [k.split('_')[0] for k, v in dct.items()]
+df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
+df_long = pd.DataFrame({
+    's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
+    'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
+    'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
+    'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
+    'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
+    'condition': ['prev'] * len(df) + ['opto'] * len(df),
+   'animals': df['animals'].tolist() * 2,
+    'days': df['days'].tolist() * 2
+})
+
+cdf = conddf.copy()
+df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
+# df=df[df.in_type=='vip_ex']
+# df=df[df.s_rate>.3]
+# df=df[df.f_rate<1]
+# df=df[df.time_before_predict_f<10]
+df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
+df=df[df.optoep>1]
+df=df[(df.animals!='e189')&(df.animals!='e190')]
+# remove outlier days
+# df=df[~((df.animals=='e201')&((df.days>62)))]
+# df=df[~((df.animals=='z14')&((df.days<33)))]
+df=df[~((df.animals=='z16')&((df.days>15)))]
+df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
+df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
+df=df[~((df.animals=='e216')&((df.days<32)))]
+df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+df=df[~((df.animals=='e200')&((df.days.isin([65,82,88,87]))))]
+df=df[~((df.animals=='Z8')&((df.days.isin([29,25,30,34]))))]
+# df=df[~((df.animals=='e186')&((df.days.isin([31,33,34,37]))))]
+
+
+order=['prev','opto']
+df=df.groupby(['animals','condition','type']).mean(numeric_only=True)
+sns.barplot(x='type',y='s_rate',data=df,hue='condition',fill=False,hue_order=order)
+sns.stripplot(x='type',y='s_rate',data=df,hue='condition',dodge=True,hue_order=order)
+# sns.barplot(x='condition',y='f_rate',data=df)
+# Group by animal, type, and condition to get per-animal means
+df_grouped = df.reset_index()
+
+# Pivot to wide format for paired test
+df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
+var='time_before_predict_f'
+order2=['ctrl','vip','vip_ex']
+# Prepare plot
+plt.figure(figsize=(6, 5))
+sns.barplot(
+   data=df_grouped,
+   x='type',
+   y=var,
+   hue='condition',
+   hue_order=order,
+   fill=False,
+   errorbar='se',order=order2
+)
+sns.stripplot(
+   data=df_grouped,
+   x='type',
+   y=var,
+   hue='condition',
+   hue_order=order,
+   dodge=True,order=order2
+)
+
+df_pivot=df_pivot[['type',var]].reset_index()
+# Compute opto - prev delta per animal
+df_pivot['delta'] = df_pivot[var]['opto']
+
+# Get deltas per group
+group_deltas = {
+    t: df_pivot[df_pivot['type'] == t]['delta'].dropna()
+    for t in df_pivot['type'].unique()
+}
+
+# Compare ctrl vs vip
+if 'ctrl' in group_deltas and 'vip' in group_deltas:
+   stat1, pval1 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip'])
+   x1, x2 = 0, 1  # assuming ctrl is index 0, vip is 1
+   y = max(df_pivot['delta'].max(), 0.01)-3
+   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
+   if pval1 < 0.001:
+      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
+   elif pval1 < 0.01:
+      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
+   elif pval1 < 0.05:
+      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
+   else:
+      plt.text((x1 + x2)/2, y + 0.005, f'{pval1:.2g}', ha='center')
+
+# Compare ctrl vs vipex
+if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
+   stat2, pval2 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip_ex'])
+   x1, x2 = 0, 2  # assuming vipex is index 2
+   y=max(df_pivot['delta'].max(), 0.01)-2
+   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
+   if pval2 < 0.001:
+      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
+   elif pval2 < 0.01:
+      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
+   elif pval2 < 0.05:
+      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
+   else:
+      plt.text((x1 + x2)/2, y + 0.005, f'{pval2:.2g}', ha='center')
+
+# Final tweaks
+plt.ylabel('Time before predict')
+plt.xlabel('Type')
+plt.legend(title='Condition')
+sns.despine()
+plt.tight_layout()
+plt.show()
+
+# %%

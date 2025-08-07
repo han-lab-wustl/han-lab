@@ -4,7 +4,7 @@
 % directories
 
 clear all; close all;
-days=[8]; 
+days=[9]; 
 % src = "X:\lc_chr2_grabda\e278";
 src = "X:\chrimson_snc_grabda\e294";
 lenVid=3000;

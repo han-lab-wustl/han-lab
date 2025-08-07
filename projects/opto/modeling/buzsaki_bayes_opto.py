@@ -389,3 +389,38 @@ for ii in iis:
       opto_s_rate, opto_f_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_to_rew,
       predicted,rzs,eps]
 # %%
+df=pd.DataFrame()
+# 8-12 = pred
+# 13-17 = opto
+# Add all the variables
+df['prev_s_rate'] = [v[7] for k, v in dct.items()]
+df['prev_f_rate'] = [v[8] for k, v in dct.items()]
+df['prev_time_before_predict_s'] = [v[9] for k, v in dct.items()]
+df['prev_time_before_predict_f'] = [v[10] for k, v in dct.items()]
+df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
+
+df['opto_s_rate'] = [v[12] for k, v in dct.items()]
+df['opto_f_rate'] = [v[13] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[14] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[15] for k, v in dct.items()]
+df['opto_time_to_rew'] = [v[16] for k, v in dct.items()]
+
+df['animals'] = [k.split('_')[0] for k, v in dct.items()]
+df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
+df_long = pd.DataFrame({
+    's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
+    'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
+    'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
+    'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
+    'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
+    'condition': ['prev'] * len(df) + ['opto'] * len(df),
+   'animals': df['animals'].tolist() * 2,
+    'days': df['days'].tolist() * 2
+
+})
+cdf = conddf.copy()
+df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
+df=df[df.in_type=='vip_ex']
+
+sns.barplot(x='condition',y='s_rate',data=df)
+# sns.barplot(x='condition',y='f_rate',data=df)

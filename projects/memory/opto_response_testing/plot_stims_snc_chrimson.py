@@ -29,8 +29,8 @@ src = r'X:\chrimson_snc_grabda'
 # src = r'Y:\halo_grabda'
 # animals = ['e291','e292','e293','e294']
 # days_all = [[6],[6,7],[6,7],[5]]
-animals = ['e291']
-days_all = [[10]]
+animals = ['e291','e292']
+days_all = [[11],[11]]
 
 range_val = 6; binsize=0.2 #s
 dur=3# s stim duration
@@ -185,5 +185,5 @@ fig.suptitle('SNc Chrimson, ~40mA, n=4')
 #%%
 allplnfl = np.array([sofl,spfl,srfl,slmfl])
 ax = sns.barplot(allplnfl.T,fill=False)
-ax.set_xticklabels(['SO','SP','SR',sss'SLM'])
+ax.set_xticklabels(['SO','SP','SR','SLM'])
 ax.set_ylabel('$\Delta F/F$')
