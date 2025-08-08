@@ -61,6 +61,7 @@ def estimate_tuning(fc3, ybinned, goal_zone, cm_per_bin=1, bin_size_cm=3, n_goal
 # Decoder
 def decode_trial(trial_fc, trial_ybin, goal, tuning):
    T = trial_fc.shape[0]
+   n_pos_bins = trial_fc.shape[1]
    log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
    log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
 
@@ -100,7 +101,7 @@ def process_trial(
    lick_trial,
    decode_trial_fn,
    pdf,
-   min_frac=0.15,
+   min_frac=0.1,
    make_plot=False
 ):
    """
@@ -143,11 +144,12 @@ def process_trial(
    # post_pos = post.sum(axis=2)   # not used below
 
    ep = ep_trials[trial]
-   rewloc_start = rewlocs[ep] - rewsize / 2
+   # 10 cm before rewzone start
+   rewloc_start = rewlocs[ep]-( rewsize / 2)-5
 
    # Find index before reward location
    ypos_temp = ybinned[trial].copy()
-   ypos_temp[ypos_temp == 0] = 1e6
+   # ypos_temp[ypos_temp == 0] = 1e6
    rewloc_ind_candidates = np.where(ypos_temp < rewloc_start)[0]
    if len(rewloc_ind_candidates) == 0:
       return {
@@ -472,9 +474,10 @@ for ii in iis:
          fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
          # remove later activity
          ypos_tr = ypos[tr_mask]
-         fc_trial=fc_trial#[(ypos_tr<((rewlocs[ep]-rewsize/2)))]
+         fc_trial[(ypos_tr>((rewlocs[ep]-rewsize/2)))]=0
          lick_trial = lick_rate[eprng][tr_mask]         # shape (t,)
-         avg_lick_pre_rew = np.nanmedian(lick_trial) # early licks
+         lick_trial[(ypos_tr>((rewlocs[ep]-rewsize/2)))]=0
+         ypos_tr[(ypos_tr>((rewlocs[ep]-rewsize/2)))]=0
          if fc_trial.shape[0] >= 10:#; dont exclude probes for now
             fc_trial_binned = fc_trial
             trial_X.append(fc_trial_binned)
