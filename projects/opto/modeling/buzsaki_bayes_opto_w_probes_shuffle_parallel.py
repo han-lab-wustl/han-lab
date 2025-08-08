@@ -360,10 +360,20 @@ for ii in iis:
    goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone[test_idx]
 
    # training ; use held out trials?
-   tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
+   tuning_shuf = []
+   for shuf in range(100):
+      goal_zone_shuf=goal_zone[np.random.permutation(len(goal_zone))]
+      # Now use the indices to subset your data
+      fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
+      ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
+      goal_zone_train, goal_zone_test = goal_zone_shuf[train_idx], goal_zone_shuf[test_idx]
+      # training ; use held out trials?
+      tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
+      tuning_shuf.append(tuning)
+   tuning = np.nanmean(np.array(tuning_shuf),axis=0)
 
    # Parallel execution
-   results = Parallel(n_jobs=-1)(delayed(process_trial)(trial) for trial in test_idx)
+   results = Parallel(n_jobs=3)(delayed(process_trial)(trial) for trial in test_idx)
 
    # Filter out None results (failed trials)
    results = [r for r in results if r is not None]

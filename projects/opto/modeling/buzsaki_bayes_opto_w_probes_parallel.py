@@ -34,9 +34,7 @@ plt.rcParams["font.family"] = "Arial"
 bins = 90
 goal_window_cm = 20
 conddf=pd.read_csv(r'Z:\condition_df\conddf_performance_chrimson.csv')
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'lick_prediction.pdf')
-pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\goal_decoding'
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
@@ -89,28 +87,106 @@ def decode_trial(trial_fc, trial_ybin, goal, tuning):
 
    return np.exp(log_post)
 
-def process_trial(trial):
-   post = decode_trial(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
+def process_trial(
+   trial,
+   fc3,
+   ybinned,
+   goal_zone,
+   tuning,
+   ep_trials,
+   rewlocs,
+   rewsize,
+   time,
+   lick_trial,
+   decode_trial_fn,
+   pdf,
+   min_frac=0.15,
+   make_plot=False
+):
+   """
+   Process a single trial with PELT changepoint detection, automatically
+   picking penalty so smallest segment >= min_frac * trial length.
+   
+   Parameters
+   ----------
+   trial : int
+      Trial index to process.
+   fc3 : ndarray
+      Calcium data, shape (trials, time, cells).
+   ybinned : ndarray
+      Position data, shape (trials, time).
+   goal_zone : ndarray
+      Goal zone labels for each trial.
+   tuning : ndarray
+      Tuning curves or model input for decoder.
+   ep_trials : ndarray
+      Epoch index for each trial.
+   rewlocs : ndarray
+      Reward location per epoch.
+   rewsize : float
+      Size of reward zone in same units as ybinned.
+   time : ndarray
+      Time vector for a trial.
+   lick_trial : ndarray
+      Lick rate data, shape (trials, time).
+   decode_trial_fn : callable
+      Function that takes (fc3_trial, ybinned_trial, goal_zone_trial, tuning)
+      and returns posterior probabilities [time × position × goal].
+   min_frac : float
+      Minimum segment length as fraction of trial length.
+   """
+
+   # Decode trial
+   if ybinned[trial][0]>200: ybinned[trial][0]=1.5
+   post = decode_trial_fn(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
    post_goal = post.sum(axis=1)  # marginalize over position
-   post_pos = post.sum(axis=2)   # marginalize over goal
+   # post_pos = post.sum(axis=2)   # not used below
 
    ep = ep_trials[trial]
-   rewloc_start = rewlocs[ep - 1] - rewsize / 2
+   rewloc_start = rewlocs[ep] - rewsize / 2
+
+   # Find index before reward location
    ypos_temp = ybinned[trial].copy()
    ypos_temp[ypos_temp == 0] = 1e6
-   rewloc_ind = np.where(ypos_temp < rewloc_start)[0]
-   if len(rewloc_ind) == 0:
-      return None  # Skip trial if no valid rew index
-
-   rewloc_ind = rewloc_ind[-1]
-   real_ypos = ybinned[trial][rewloc_ind]
+   rewloc_ind_candidates = np.where(ypos_temp < rewloc_start)[0]
+   if len(rewloc_ind_candidates) == 0:
+      return {
+         "trial": trial,
+         "correct": None,
+         "time_before_change": None,
+         "time_to_rew": None,
+         "predicted": None,
+         "penalty_used": None,
+         "fig": None
+      }
+   rewloc_ind = rewloc_ind_candidates[-1]
 
    # MAP goal trace
    goal_trace = np.argmax(post_goal, axis=1) + 1
-   model = rpt.Pelt(model="l2").fit(goal_trace)
-   bkps = np.array(model.predict(pen=10))
-   changepoint = bkps[bkps < rewloc_ind]
+   trial_len = len(goal_trace[:rewloc_ind])
+   min_seg_len = int(min_frac * trial_len)
 
+   # Automatically find penalty
+   low_pen, high_pen = 1, 1000
+   chosen_pen = None
+   for _ in range(15):  # binary search steps
+      pen = (low_pen + high_pen) / 2
+      bkps = np.array(rpt.Pelt(model="l2").fit(goal_trace).predict(pen=pen))
+      seg_lens = np.diff([0] + bkps.tolist())
+      if len(seg_lens) == 0:
+         break
+      if min(seg_lens) < min_seg_len:
+         low_pen = pen  # too many short segments
+      else:
+         chosen_pen = pen
+         high_pen = pen  # try smaller penalty
+   if chosen_pen is None:
+      chosen_pen = high_pen  # fallback
+
+   # Final changepoint detection
+   bkps = np.array(rpt.Pelt(model="l2").fit(goal_trace).predict(pen=chosen_pen))
+   changepoint = bkps[bkps < rewloc_ind]
+   # Predict goal zone from last changepoint before reward
    if len(changepoint) > 0:
       pred_goal_zone_cp = np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind])
       time_before_change = (rewloc_ind - changepoint[-1]) * np.nanmedian(np.diff(time))
@@ -121,14 +197,111 @@ def process_trial(trial):
    real_goal_zone = goal_zone[trial] + 1
    correct = pred_goal_zone_cp == real_goal_zone
    time_to_rew = rewloc_ind * np.nanmedian(np.diff(time))
+   fig = None
+   if make_plot:
+      fig, ax1 = plt.subplots()
+      ax1.plot(goal_trace[:rewloc_ind], label="Goal Trace")
+      for cp in changepoint:
+         ax1.axvline(cp, color='r', linestyle='--', alpha=0.7)
+      ax1.plot(
+         (lick_trial[trial][:rewloc_ind] / np.nanmax(lick_trial[trial][:rewloc_ind])) * 3,
+         label='Lick rate'
+      )
+      # Instead, add small colored rectangles outside right edge:
+      ylim = ax1.get_ylim()
+      # Coordinates just beyond right edge
+      x_rect = len(goal_trace[:rewloc_ind]) + 1
+      width = 2  # small horizontal bar width
+      # Add real reward zone patch
+      ax1.add_patch(
+         plt.Rectangle(
+            (x_rect, goal_zone[trial] + 1 - 0.25),  # x, y bottom left
+            width,
+            0.5,  # height
+            color='k',
+            alpha=0.6,
+            label='Real reward zone'
+         )
+      )
+      # Add predicted reward zone patch
+      ax1.add_patch(
+         plt.Rectangle(
+            (x_rect-(x_rect/3) + width + 0.1, pred_goal_zone_cp - 0.25),
+            width,
+            0.5,
+            color='cyan',
+            alpha=0.8,
+            label='Predicted reward zone'
+         )
+      )
+      # Add text labels next to rectangles
+      ax1.text(x_rect + width/2, goal_zone[trial] + 1,
+               "Real", va='center', ha='center', fontsize=9, color='k')
+      ax1.text(x_rect-(x_rect/3) + width + 0.1 + width/2, pred_goal_zone_cp,
+               "Pred", va='center', ha='center', fontsize=9, color='k')
+      ax1.set_xlabel("Time in trial (Hz)")
+      ax1.set_ylabel("Goal Trace")
+      ax1.legend(loc="upper left")
+      ax2 = ax1.twinx()
+      ax2.plot(ybinned[trial][:rewloc_ind], label="Y binned", color='g', alpha=0.6)
+      ax2.set_ylabel("Y Position (binned)")
+      ax2.legend(loc="upper right")
+
+      plt.title(f"Trial {trial}")
+      plt.tight_layout()
 
    return {
       "trial": trial,
       "correct": correct,
       "time_before_change": time_before_change if correct else None,
       "time_to_rew": time_to_rew,
-      "predicted": [pred_goal_zone_cp, real_goal_zone]
+      "predicted": [pred_goal_zone_cp, real_goal_zone],
+      "penalty_used": chosen_pen,
+      "fig": fig
    }
+from matplotlib.backends.backend_pdf import PdfPages
+
+def run_trials_and_save_pdf(
+   trial_list,
+   fc3,
+   ybinned,
+   goal_zone,
+   tuning,
+   ep_trials,
+   rewlocs,
+   rewsize,
+   time,
+   lick_trial,
+   decode_trial_fn,
+   min_frac=0.05,
+   pdf_filename="trial_plots.pdf"
+):
+   """Run process_trial in parallel and save selected trial plots to PDF."""
+   results = Parallel(n_jobs=-1)(
+      delayed(process_trial)(
+         trial,
+         fc3,
+         ybinned,
+         goal_zone,
+         tuning,
+         ep_trials,
+         rewlocs,
+         rewsize,
+         time,
+         lick_trial,
+         decode_trial_fn,
+         min_frac,
+         make_plot=True  # only these trials make plots
+      )
+      for trial in trial_list
+   )
+
+   with PdfPages(pdf_filename) as pdf:
+      for res in results:
+         if res is not None and res["fig"] is not None:
+            pdf.savefig(res["fig"])
+            plt.close(res["fig"])  # free memory
+   return results
 
 def get_rewzones(rewlocs, gainf):
    # Initialize the reward zone numbers array with zeros
@@ -190,7 +363,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-iis=[130,166,49] # control v inhib x ex
+# iis=[130,166,49] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -344,6 +517,7 @@ for ii in iis:
    n_trials, T, N = trial_fc_org.shape
    fc3 = trial_fc_org
    ybinned = trial_pos_
+   lick_trial = trial_lick
    goal_zone = np.array(trial_y)-1
 
    n_pos_bins = 90
@@ -354,25 +528,40 @@ for ii in iis:
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.7, random_state=42)
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.5, random_state=42)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
    goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone[test_idx]
-
+   lick_trial_train, lick_trial_test = lick_trial[train_idx], lick_trial[test_idx]
    # training ; use held out trials?
    tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
 
    # Parallel execution
-   results = Parallel(n_jobs=-1)(delayed(process_trial)(trial) for trial in test_idx)
+   subset_trials = test_idx  # choose trials you want figures for
+   results = run_trials_and_save_pdf(
+      subset_trials,
+      fc3,
+      ybinned,
+      goal_zone,
+      tuning,
+      ep_trials,
+      rewlocs,
+      rewsize,
+      time,
+      lick_trial,
+      decode_trial,
+      min_frac=0.05,
+      pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
+   )
    # test
-   plt.plot(ybinned[trial]/135,label='position')
-   plt.plot(goal_trace,label='predicted rew zone')
-   plt.axhline((rewlocs[eptest-1]-rewsize/2)/135,color='k',label='rew loc center')
-   for cp in changepoint:
-      plt.axvline(cp,linestyle='--',color='r', label='change points')
-   plt.legend()
-   plt.title(f'VIP inhibition mouse\nPrevious reward loc. = {rewlocs[eptest-2]}\nCurrent rew loc. = {rewlocs[eptest-1]}')
+   # plt.plot(ybinned[trial]/135,label='position')
+   # plt.plot(goal_trace,label='predicted rew zone')
+   # plt.axhline((rewlocs[eptest-1]-rewsize/2)/135,color='k',label='rew loc center')
+   # for cp in changepoint:
+   #    plt.axvline(cp,linestyle='--',color='r', label='change points')
+   # plt.legend()
+   # plt.title(f'VIP inhibition mouse\nPrevious reward loc. = {rewlocs[eptest-2]}\nCurrent rew loc. = {rewlocs[eptest-1]}')
    # Filter out None results (failed trials)
    results = [r for r in results if r is not None]
 
@@ -397,7 +586,7 @@ for ii in iis:
    # plt.plot(ybinned[trial]/10)
    # plt.plot(trial_lick[trial])
    # opto ind 
-   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]
+   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
    if len(opto_idx)==0:
       continue   
    opto_s = [xx for xx in opto_idx if xx in strind]
@@ -420,10 +609,10 @@ for ii in iis:
    opto_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_f])
    opto_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_p])
    
-   opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]   
+   opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]   
    opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
    # prev ind
-   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
    prev_s = [xx for xx in prev_idx if xx in strind]
    prev_f = [xx for xx in prev_idx if xx in flind]
    prev_p = [xx for xx in prev_idx if xx in probeind]
@@ -445,7 +634,7 @@ for ii in iis:
    prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
    prev_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_p])
 
-   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
    prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])   
    # rate correct
    total_rate = len(correct)/len(test_idx)
@@ -485,12 +674,14 @@ for ii in iis:
    dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
       prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
       opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
-      predicted,rzs,eps]
+      predicted,rzs,eps,prev_idx,opto_idx,test_idx,strind,flind,probeind]
+# last few to find patterns in prediction accuracy
 # %%
 df=pd.DataFrame()
 # 8-12 = pred
 # 13-17 = opto
 # Add all the variables
+df['total_rate'] = [v[0] for k, v in dct.items()]
 df['prev_s_rate'] = [v[7] for k, v in dct.items()]
 df['prev_f_rate'] = [v[8] for k, v in dct.items()]
 df['prev_p_rate'] = [v[9] for k, v in dct.items()]
@@ -537,7 +728,7 @@ df=df[(df.animals!='e189')&(df.animals!='e190')]
 # df=df[~((df.animals=='z14')&((df.days<33)))]
 df=df[~((df.animals=='z16')&((df.days>15)))]
 df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
+df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
 df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
 df=df[~((df.animals=='e216')&((df.days<32)))]
 df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
@@ -556,7 +747,7 @@ df_grouped = df.reset_index()
 
 # Pivot to wide format for paired test
 df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
-var='time_before_predict_f'
+var='time_before_predict_s'
 order2=['ctrl','vip','vip_ex']
 # Prepare plot
 plt.figure(figsize=(6, 5))

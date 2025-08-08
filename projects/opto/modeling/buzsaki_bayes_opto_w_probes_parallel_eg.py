@@ -192,7 +192,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-iis=[130,166,49] # control v inhib x ex
+iis=[130,166,48] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -377,7 +377,7 @@ for ii in iis:
    goal_trace = [r["goal_trace"] for r in results]      # # Plot goal change points
    cp =[r["change_point"] for r in results]      # # Plot goal change points
    # test
-   rng = np.arange(0000,10000)   # opto ind 
+   rng = np.arange(10000,18000)   # opto ind 
    mask = np.concatenate(ybinned[test_idx])>0
    plt.figure(figsize=(20,4))
    plt.plot(np.concatenate(goal_trace)[mask][rng]*70)
