@@ -34,7 +34,7 @@ plt.rcParams["font.family"] = "Arial"
 bins = 90
 goal_window_cm = 20
 conddf=pd.read_csv(r'Z:\condition_df\conddf_performance_chrimson.csv')
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\goal_decoding'
+savedst = r"C:\Users\Han\Desktop\goal_decoding"
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
@@ -61,7 +61,7 @@ def estimate_tuning(fc3, ybinned, goal_zone, cm_per_bin=1, bin_size_cm=3, n_goal
 # Decoder
 def decode_trial(trial_fc, trial_ybin, goal, tuning):
    T = trial_fc.shape[0]
-   n_pos_bins = trial_fc.shape[1]
+   n_pos_bins = tuning.shape[1]
    log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
    log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
 
@@ -138,8 +138,9 @@ def process_trial(
    """
 
    # Decode trial
-   if ybinned[trial][0]>200: ybinned[trial][0]=1.5
-   post = decode_trial_fn(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
+   ybin_trial = ybinned[trial].copy()
+   if ybin_trial[0]>200: ybin_trial[0]=1.5
+   post = decode_trial_fn(fc3[trial], ybin_trial, goal_zone[trial], tuning)
    post_goal = post.sum(axis=1)  # marginalize over position
    # post_pos = post.sum(axis=2)   # not used below
 
@@ -148,8 +149,8 @@ def process_trial(
    rewloc_start = rewlocs[ep]-( rewsize / 2)-5
 
    # Find index before reward location
-   ypos_temp = ybinned[trial].copy()
-   # ypos_temp[ypos_temp == 0] = 1e6
+   ypos_temp = ybin_trial.copy()
+   ypos_temp[ypos_temp == 0] = 1e6
    rewloc_ind_candidates = np.where(ypos_temp < rewloc_start)[0]
    if len(rewloc_ind_candidates) == 0:
       return {
@@ -164,6 +165,7 @@ def process_trial(
    rewloc_ind = rewloc_ind_candidates[-1]
 
    # MAP goal trace
+   # rewloc_ind = np.where(ybinned[trial]==0)[0][0]
    goal_trace = np.argmax(post_goal, axis=1) + 1
    trial_len = len(goal_trace[:rewloc_ind])
    min_seg_len = int(min_frac * trial_len)
@@ -190,25 +192,28 @@ def process_trial(
    changepoint = bkps[bkps < rewloc_ind]
    # Predict goal zone from last changepoint before reward
    if len(changepoint) > 0:
-      pred_goal_zone_cp = np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind])
+      pred_goal_zone_cp = np.ceil(np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind]))
       time_before_change = (rewloc_ind - changepoint[-1]) * np.nanmedian(np.diff(time))
    else:
-      pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
+      pred_goal_zone_cp = np.ceil(np.nanmedian(goal_trace[:rewloc_ind]))
       time_before_change = rewloc_ind * np.nanmedian(np.diff(time))
 
    real_goal_zone = goal_zone[trial] + 1
    correct = pred_goal_zone_cp == real_goal_zone
    time_to_rew = rewloc_ind * np.nanmedian(np.diff(time))
+   # get fraction of time
+   time_before_change=time_before_change/time_to_rew
    fig = None
    if make_plot:
       fig, ax1 = plt.subplots()
       ax1.plot(goal_trace[:rewloc_ind], label="Goal Trace")
       for cp in changepoint:
          ax1.axvline(cp, color='r', linestyle='--', alpha=0.7)
-      ax1.plot(
-         (lick_trial[trial][:rewloc_ind] / np.nanmax(lick_trial[trial][:rewloc_ind])) * 3,
-         label='Lick rate'
-      )
+      if len(lick_trial[trial][:rewloc_ind])>0:
+         ax1.plot(
+            (lick_trial[trial][:rewloc_ind] / np.nanmax(lick_trial[trial][:rewloc_ind])) * 3,
+            label='Lick rate'
+         )
       # Instead, add small colored rectangles outside right edge:
       ylim = ax1.get_ylim()
       # Coordinates just beyond right edge
@@ -245,7 +250,7 @@ def process_trial(
       ax1.set_ylabel("Goal Trace")
       ax1.legend(loc="upper left")
       ax2 = ax1.twinx()
-      ax2.plot(ybinned[trial][:rewloc_ind], label="Y binned", color='g', alpha=0.6)
+      ax2.plot(ybin_trial[:rewloc_ind], label="Y binned", color='g', alpha=0.6)
       ax2.set_ylabel("Y Position (binned)")
       ax2.legend(loc="upper right")
 
@@ -279,7 +284,7 @@ def run_trials_and_save_pdf(
    pdf_filename="trial_plots.pdf"
 ):
    """Run process_trial in parallel and save selected trial plots to PDF."""
-   results = Parallel(n_jobs=-1)(
+   results = Parallel(n_jobs=6)(
       delayed(process_trial)(
          trial,
          fc3,
@@ -306,18 +311,24 @@ def run_trials_and_save_pdf(
    return results
 
 def get_rewzones(rewlocs, gainf):
+   """
+   spliy into 6!
+   """
    # Initialize the reward zone numbers array with zeros
    rewzonenum = np.zeros(len(rewlocs))
-   
+   bounds = np.array([[40,86],[86,120],[120,160]])*gainf
+   # early v. late prediction
+   # half_bound = [bound[1]/2 for bound in bounds]
+   # new_bounds = [[bounds[ii][0],half_bound[ii]] for ii,nb in enumerate(half_bound)]
+   # new_bounds2 = [[half_bound[ii],bounds[ii][1]] for ii,nb in enumerate(half_bound)]
+   # all_new_bounds = np.array(new_bounds + new_bounds2)
+   all_new_bounds=np.sort(bounds,axis=0)
    # Iterate over each reward location to determine its reward zone
    for kk, loc in enumerate(rewlocs):
-      if 50*gainf <= loc <= 86 * gainf:
-         rewzonenum[kk] = 1  # Reward zone 1
-      elif 86 * gainf <= loc <= 135 * gainf:
-         rewzonenum[kk] = 2  # Reward zone 2
-      elif loc >= 135 * gainf:
-         rewzonenum[kk] = 3  # Reward zone 3
-         
+      for rz,rewzones in enumerate(all_new_bounds):
+         if rewzones[0] <= loc <= rewzones[1]:
+            rewzonenum[kk] = rz+1  # Reward zone 1
+            
    return rewzonenum
 
 
@@ -365,7 +376,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-# iis=[130,166,49] # control v inhib x ex
+# iis=iis[iis>141 bn] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -474,10 +485,10 @@ for ii in iis:
          fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
          # remove later activity
          ypos_tr = ypos[tr_mask]
-         fc_trial[(ypos_tr>((rewlocs[ep]-rewsize/2)))]=0
+         fc_trial[(ypos_tr<3)]=0
          lick_trial = lick_rate[eprng][tr_mask]         # shape (t,)
-         lick_trial[(ypos_tr>((rewlocs[ep]-rewsize/2)))]=0
-         ypos_tr[(ypos_tr>((rewlocs[ep]-rewsize/2)))]=0
+         lick_trial[(ypos_tr<3)]=0
+         ypos_tr[(ypos_tr<3)]=0
          if fc_trial.shape[0] >= 10:#; dont exclude probes for now
             fc_trial_binned = fc_trial
             trial_X.append(fc_trial_binned)
@@ -526,8 +537,8 @@ for ii in iis:
    n_pos_bins = 90
    n_goals = 3
    dt = np.nanmedian(np.diff(time))  # 10 ms per bin
-   var_pos = 25  # cm^2
-   p_stay_goal = 0.9 ** dt
+   var_pos = 20  # cm^2
+   p_stay_goal = .9 ** dt
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
@@ -573,21 +584,6 @@ for ii in iis:
    time_before_change = [r["time_before_change"] for r in results if r["correct"]]
    time_to_rew = [r["time_to_rew"] for r in results]
    predicted = [r["predicted"] for r in results]      # # Plot goal change points
-      # plt.figure(figsize=(8, 3))
-      # plt.plot(goal_trace, label="Goal (MAP)")
-      # for cp in bkps[:-1]:
-      #    plt.axvline(cp, color='red', linestyle='--')
-      # plt.title("Goal Change Point Detection")
-      # plt.xlabel("Time Bin")
-      # plt.ylabel("Goal")
-      # plt.legend()
-      # plt.tight_layout()
-      # plt.show()
-
-   # plt.figure()
-   # plt.plot(goal_trace)
-   # plt.plot(ybinned[trial]/10)
-   # plt.plot(trial_lick[trial])
    # opto ind 
    opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
    if len(opto_idx)==0:
@@ -707,21 +703,21 @@ df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
 df['animals'] = [k.split('_')[0] for k, v in dct.items()]
 df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
 df_long = pd.DataFrame({
-    's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
-    'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
-    'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
-    'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
-    'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
-    'condition': ['prev'] * len(df) + ['opto'] * len(df),
-   'animals': df['animals'].tolist() * 2,
-    'days': df['days'].tolist() * 2
+   's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
+   'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
+   'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
+   'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
+   'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
+   'condition': ['prev'] * len(df) + ['opto'] * len(df),
+'animals': df['animals'].tolist() * 2,
+   'days': df['days'].tolist() * 2
 })
 
 cdf = conddf.copy()
 df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
 # df=df[df.in_type=='vip_ex']
-# df=df[df.s_rate>.3]
-# df=df[df.f_rate<1]
+# df=df[df.s_rate>.1]
+# df=df[df.f_rate>.1]
 # df=df[df.time_before_predict_f<10]
 df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
 df=df[df.optoep>1]
@@ -729,11 +725,11 @@ df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 # df=df[~((df.animals=='e201')&((df.days>62)))]
 # df=df[~((df.animals=='z14')&((df.days<33)))]
-df=df[~((df.animals=='z16')&((df.days>15)))]
-df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
+# df=df[~((df.animals=='z16')&((df.days>15)))]
+# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
 df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
-df=df[~((df.animals=='e216')&((df.days<32)))]
+df=df[~((df.animals=='e216')&(df.days.isin([41,37])))]
 df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
 df=df[~((df.animals=='e200')&((df.days.isin([65,82,88,87]))))]
 df=df[~((df.animals=='Z8')&((df.days.isin([29,25,30,34]))))]
@@ -753,28 +749,25 @@ df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition
 var='time_before_predict_s'
 order2=['ctrl','vip','vip_ex']
 # Prepare plot
+
+df_pivot=df_pivot[['type','animals',var]].reset_index()
+# Compute opto - prev delta per animal
+df_pivot['delta'] = df_pivot[var]['opto']- df_pivot[var]['prev']
+
 plt.figure(figsize=(6, 5))
 sns.barplot(
-   data=df_grouped,
+   data=df_pivot,
    x='type',
-   y=var,
-   hue='condition',
-   hue_order=order,
+   y='delta',
    fill=False,
    errorbar='se',order=order2
 )
 sns.stripplot(
-   data=df_grouped,
+   data=df_pivot,
    x='type',
-   y=var,
-   hue='condition',
-   hue_order=order,
+   y='delta',
    dodge=True,order=order2
 )
-
-df_pivot=df_pivot[['type',var]].reset_index()
-# Compute opto - prev delta per animal
-df_pivot['delta'] = df_pivot[var]['opto']
 
 # Get deltas per group
 group_deltas = {
@@ -786,7 +779,7 @@ group_deltas = {
 if 'ctrl' in group_deltas and 'vip' in group_deltas:
    stat1, pval1 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip'])
    x1, x2 = 0, 1  # assuming ctrl is index 0, vip is 1
-   y = max(df_pivot['delta'].max(), 0.01)-3
+   y = max(df_pivot['delta'].max(), 0.01)
    plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
    if pval1 < 0.001:
       plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
@@ -801,7 +794,7 @@ if 'ctrl' in group_deltas and 'vip' in group_deltas:
 if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
    stat2, pval2 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip_ex'])
    x1, x2 = 0, 2  # assuming vipex is index 2
-   y=max(df_pivot['delta'].max(), 0.01)-2
+   y=max(df_pivot['delta'].max(), 0.01)-.05
    plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
    if pval2 < 0.001:
       plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
@@ -819,5 +812,7 @@ plt.legend(title='Condition')
 sns.despine()
 plt.tight_layout()
 plt.show()
+
+# %%
 
 # %%

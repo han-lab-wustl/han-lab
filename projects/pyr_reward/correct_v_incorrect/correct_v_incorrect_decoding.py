@@ -235,10 +235,9 @@ traceplt[np.diff(traceplt2)<-20]=np.nan
 ax.plot(traceplt,color='seagreen', label='Real position',linewidth=3)
 traceplt = np.squeeze(corrdct[1]*270)
 traceplt2 = np.insert(traceplt,0,0)
-traceplt[np.diff(traceplt2)<-100]=np.nan
+traceplt[np.diff(traceplt2)<-200]=np.nan
 ax.plot(traceplt,color='gray',label='Predicted')
 ax.axhline(corrdct[2]*270, color='k',linestyle='--')
-ax.text(3,corrdct[2]*270+5, 'Reward zone start',color='k', fontsize=14)
 ax.set_ylabel('Track position (cm)')
 ax.set_xticks([0, len(corrdct[1])])
 ax.set_xticklabels([0, round(len(corrdct[1])/31.25,1)])
@@ -259,7 +258,6 @@ traceplt2 = np.insert(traceplt,0,0)
 traceplt[np.diff(traceplt2)<-100]=np.nan
 ax.plot(traceplt,color='gray',label='Predicted')
 ax.axhline(dct[0]*270, color='k',linestyle='--')
-ax.text(3,dct[0]*270+5, 'Reward zone start',color='k', fontsize=14)
 ax.set_ylabel('Track position (cm)')
 ax.set_xticks([0, len(dct[1])])
 ax.set_xticklabels([0, round(len(dct[1])/31.25,1)])

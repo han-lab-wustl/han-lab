@@ -94,12 +94,12 @@ veldf = pd.DataFrame({'velocity': velocity})
 
 from projects.dopamine_receptor.drd import get_moving_time_v3, get_stops_licks
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
-velocity = np.hstack(veldf.rolling(5).mean().values)
+velocity = np.hstack(veldf.rolling(3).mean().values)
 # velocity - ndarray: velocity of the animal
 # thres - float: Threshold speed in cm/s
 # Fs - int: Number of frames minimum to be considered stopped
 # ftol - int: Frame tolerance for merging stop periods
-moving_middle,stop = get_moving_time_v3(velocity,2,40,20)
+moving_middle,stop = get_moving_time_v3(velocity,2,20,20)
 pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
 nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick,\
         mov_success_tmpts=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
@@ -116,8 +116,19 @@ rew_per_plane[rew_stop_with_lick.astype(int)] = 1
 movement_starts=mov_success_tmpts.astype(int)
 rew_per_plane = np.zeros_like(fall['changeRewLoc'][0])
 rew_per_plane[rew_stop_with_lick.astype(int)] = 1
+frame_lim=100
+move_start_unrew_idx=[[xx for xx in movement_starts if yy>xx-frame_lim and yy<xx+frame_lim] for yy in nonrew_stop_with_lick]
+move_start_unrew_idx2=[[xx for xx in movement_starts if yy>xx-frame_lim and yy<xx+frame_lim] for yy in nonrew_stop_without_lick]
+move_start_unrew_idx=np.concatenate([xx if len(xx)==1 else [xx[1]] for xx in move_start_unrew_idx])
+move_start_unrew_idx2=np.concatenate([xx if len(xx)==1 else [xx[1]] for xx in move_start_unrew_idx2])
+# unrewarded movement starts
+move_start_unrew_idx=np.append(move_start_unrew_idx,move_start_unrew_idx2)
+move_start_unrew = np.zeros_like(fall['changeRewLoc'][0])
+move_start_unrew[move_start_unrew_idx.astype(int)] = 1
 move_start = np.zeros_like(fall['changeRewLoc'][0])
-move_start[movement_starts.astype(int)] = 1
+movement_starts=[xx for xx in movement_starts if xx not in move_start_unrew_idx]
+move_start[movement_starts] = 1
+
 #%%
 # pre and post side by side
 plt.rc('font', size=16)
@@ -267,6 +278,7 @@ plt.savefig(os.path.join(savedst, f'postrew_traces_cell{gc}.svg'))
 gc=goal_cell_iind[0]
 range_val,binsize=3, .3
 # TODO: make condensed
+# REWARDED ONLY
 _, meanrstops, __, rewrstops = perireward_binned_activity(Fc3[:,gc], move_start, 
 fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start, 
@@ -274,39 +286,56 @@ _, meanvelrew, __, velrew = perireward_binned_activity(velocity, move_start,
 _, meanlickrew, __, lickrew = perireward_binned_activity(fall['licks'][0], move_start, 
     fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 _, meanrewrewstops, __, rewrewstops = perireward_binned_activity(fall['rewards'][0], move_start, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
-# reward
+# reward/CS
 range_val,binsize=10, .3
-rew=(fall['rewards'][0]==1)
+rew=(fall['rewards'][0]==.5)
 rew=rew.astype(int)
 rew[:5000]=0
 _, meanrew, __, rewall = perireward_binned_activity(Fc3[:,gc], rew, 
 fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 _, meanvel, __, velall = perireward_binned_activity(velocity, rew, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 _, meanlick, __, lickall = perireward_binned_activity(fall['licks'][0], rew, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+# unrew
+_, meanunrstops, __, unrewrstops = perireward_binned_activity(Fc3[:,gc], move_start_unrew, 
+fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanvelunrew, __, velunrew = perireward_binned_activity(velocity, move_start_unrew, 
+        fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanlickunrew, __, lickunrew = perireward_binned_activity(fall['licks'][0], move_start_unrew, 
+    fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
+_, meanrewunrewstops, __, rewunrewstops = perireward_binned_activity(fall['rewards'][0], move_start_unrew, fall['timedFF'][0], fall['trialnum'][0], range_val,binsize)
 
+
+# collect data per day
+# datarasters.append([unrewstops,velunrew,lickunrew])
 #%%
-fig, axes = plt.subplots(ncols=2,nrows=3,figsize=(5,7),height_ratios=[3,1,1])
-axes=axes.flatten()
+fig, axes = plt.subplots(ncols=3,nrows=3,figsize=(7,7),height_ratios=[3,1,1])
+# axes=axes.flatten()
 
+vmax=5
 range_val,binsize=10, .3
 rewall[np.isnan(rewall)]=0
-ax1 = axes[0]  # base axis for first cell
-im1=ax1.imshow(rewall.T, aspect='auto')
+ax1 = axes[0,0]  # base axis for first cell
+im1=ax1.imshow(rewall.T, aspect='auto',vmax=vmax)
 ax1.set_ylabel('Trials')
 ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
 ax1.set_xticklabels([])
+ax1.set_yticks([0,len(rewall.T)-1])
+ax1.set_yticklabels([1,len(rewall.T)])
+
 ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
 
-ax=axes[2]
+ax=axes[1,0]
 velall[np.isnan(velall)]=0
 im2=ax.imshow(velall.T, aspect='auto',cmap='Greys')
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
 ax.set_xticklabels([])
 ax.set_ylabel('Trials')
+ax.set_yticks([0,len(rewall.T)-1])
+ax.set_yticklabels([1,len(rewall.T)])
 ax.legend().set_visible(False)
 
-ax=axes[4]
+ax=axes[2,0]
 lickall[np.isnan(lickall)]=0
 im2=ax.imshow(lickall.T, aspect='auto',cmap='Blues')
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
@@ -314,34 +343,34 @@ ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 ax.set_ylabel('Trials')
 ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
 ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.set_yticks([0,len(rewall.T)-1])
+ax.set_yticklabels([1,len(rewall.T)])
 ax.legend().set_visible(False)
-ax.set_xlabel('Time from reward (s)')
+ax.set_xlabel('Time from CS (s)')
 
 range_val,binsize=3, .3
 rewrstops[np.isnan(rewrstops)]=0
-ax1 = axes[1]  # base axis for first cell
-im1=ax1.imshow(rewrstops.T, aspect='auto')
+ax1 = axes[0,1]  # base axis for first cell
+im1=ax1.imshow(rewrstops.T, aspect='auto',vmax=vmax)
 ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
 velrew[np.isnan(velrew)]=0
-ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
 ax1.set_xticklabels([])
-ax1.set_yticklabels([])
-cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', fraction=0.05, pad=0.04)
-cbar1.set_label('$\Delta F/F$')
+ax1.set_yticks([0,len(rewrstops.T)-1])
+ax1.set_yticklabels([1,len(rewrstops.T)])
 
-ax=axes[3]
+
+ax=axes[1,1]
 im2=ax.imshow(velrew.T, aspect='auto',cmap='Greys')
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 # ax.set_ylabel('Velocity (cm/s)')
 ax.legend().set_visible(False)
-ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
+ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
 ax.set_xticklabels([])
 ax.set_yticklabels([])
-cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
-cbar1.set_label('Velocity (cm/s)')
 
 lickrew[np.isnan(lickrew)]=np.nanmean(lickrew)
-ax=axes[5]
+ax=axes[2,1]
 im2=ax.imshow(lickrew.T, aspect='auto',cmap='Blues')
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 # ax.set_ylabel('Velocity (cm/s)')
@@ -350,10 +379,45 @@ ax.set_xticklabels([-(range_val),0,(range_val)])
 ax.set_yticklabels([])
 
 ax.legend().set_visible(False)
-ax.set_xlabel('Time from movement start (s)')
-cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
-cbar1.set_label('Norm. licks')
+ax.set_xlabel('Time from movement start (s)\nRewarded')
 
+ax1 = axes[0,2]  # base axis for first cell
+im1=ax1.imshow(unrewrstops.T, aspect='auto',vmax=vmax)
+ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
+velrew[np.isnan(velrew)]=0
+ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)])
+ax1.set_xticklabels([])
+ax1.set_yticks([0,len(unrewrstops.T)-1])
+ax1.set_yticklabels([1,len(unrewrstops.T)])
+ax1.set_xlabel('Time from movement start (s)\nUnrewarded')
+cax1 = fig.add_axes([0.92, 0.5, 0.02, 0.3])  # [left, bottom, width, height] in figure coords
+cbar1 = fig.colorbar(im1, cax=cax1, orientation='vertical')
+cbar1.set_label(r'$\Delta F/F$')
+
+ax=axes[1,2]
+im2=ax.imshow(velunrew.T, aspect='auto',cmap='Greys')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.legend().set_visible(False)
+ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)])
+ax.set_xticklabels([])
+ax.set_yticklabels([])
+cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Velocity (cm/s)')
+
+ax=axes[2,2]
+im2=ax.imshow(lickunrew.T, aspect='auto',cmap='Blues')
+ax.axvline(int(range_val / binsize), color='k', linestyle='--')
+# ax.set_ylabel('Velocity (cm/s)')
+ax.legend().set_visible(False)
+ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)])
+ax.set_xticklabels([])
+ax.set_yticklabels([])
+cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Velocity (cm/s)')
+# ax(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+cbar1.set_label('Norm. licks')
+# plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'trail_postrew_traces_cell{gc}.svg'))
 #%% 
 # get lick bouts 
