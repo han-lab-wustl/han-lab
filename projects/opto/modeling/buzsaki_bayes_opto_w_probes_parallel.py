@@ -140,13 +140,16 @@ def process_trial(
    # Decode trial
    ybin_trial = ybinned[trial].copy()
    if ybin_trial[0]>200: ybin_trial[0]=1.5
-   post = decode_trial_fn(fc3[trial], ybin_trial, goal_zone[trial], tuning)
+   fc3_trial = fc3[trial].copy()
+   fc3_trial=fc3_trial[ybin_trial>3]
+   ybin_trial=ybin_trial[ybin_trial>3]
+   post = decode_trial_fn(fc3_trial, ybin_trial, goal_zone[trial], tuning)
    post_goal = post.sum(axis=1)  # marginalize over position
    # post_pos = post.sum(axis=2)   # not used below
 
    ep = ep_trials[trial]
    # 10 cm before rewzone start
-   rewloc_start = rewlocs[ep]-( rewsize / 2)-5
+   rewloc_start = rewlocs[ep]-( rewsize/2)
 
    # Find index before reward location
    ypos_temp = ybin_trial.copy()
@@ -160,7 +163,9 @@ def process_trial(
          "time_to_rew": None,
          "predicted": None,
          "penalty_used": None,
-         "fig": None
+         "fig": None,
+         'changepoint_ind': None,
+         'frames': None
       }
    rewloc_ind = rewloc_ind_candidates[-1]
 
@@ -264,7 +269,9 @@ def process_trial(
       "time_to_rew": time_to_rew,
       "predicted": [pred_goal_zone_cp, real_goal_zone],
       "penalty_used": chosen_pen,
-      "fig": fig
+      "fig": fig,      
+      'changepoint_ind': changepoint,
+      'frames': rewloc_ind
    }
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -542,7 +549,7 @@ for ii in iis:
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.5, random_state=42)
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.6, random_state=42)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
@@ -552,7 +559,7 @@ for ii in iis:
    tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
 
    # Parallel execution
-   subset_trials = test_idx  # choose trials you want figures for
+   subset_trials = np.sort(test_idx)  # choose trials you want figures for
    results = run_trials_and_save_pdf(
       subset_trials,
       fc3,
@@ -568,14 +575,7 @@ for ii in iis:
       min_frac=0.05,
       pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
    )
-   # test
-   # plt.plot(ybinned[trial]/135,label='position')
-   # plt.plot(goal_trace,label='predicted rew zone')
-   # plt.axhline((rewlocs[eptest-1]-rewsize/2)/135,color='k',label='rew loc center')
-   # for cp in changepoint:
-   #    plt.axvline(cp,linestyle='--',color='r', label='change points')
-   # plt.legend()
-   # plt.title(f'VIP inhibition mouse\nPrevious reward loc. = {rewlocs[eptest-2]}\nCurrent rew loc. = {rewlocs[eptest-1]}')
+   
    # Filter out None results (failed trials)
    results = [r for r in results if r is not None]
 
@@ -583,9 +583,14 @@ for ii in iis:
    correct = [r["trial"] for r in results if r["correct"]]
    time_before_change = [r["time_before_change"] for r in results if r["correct"]]
    time_to_rew = [r["time_to_rew"] for r in results]
-   predicted = [r["predicted"] for r in results]      # # Plot goal change points
+   predicted = [r["predicted"] for r in results]      # # Plot goal change 
+   cps = [r['changepoint_ind'] for r in results]
+   num_frames = [r['frames'] for r in results]
+   
    # opto ind 
+   test_idx = np.sort(test_idx)
    opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
+   prev_rew_zone = rzs[eptest-2]
    if len(opto_idx)==0:
       continue   
    opto_s = [xx for xx in opto_idx if xx in strind]
@@ -673,7 +678,7 @@ for ii in iis:
    dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
       prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
       opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
-      predicted,rzs,eps,prev_idx,opto_idx,test_idx,strind,flind,probeind]
+      predicted,rzs,eps,prev_idx,opto_idx,test_idx,strind,flind,probeind,cps,num_frames]
 # last few to find patterns in prediction accuracy
 # %%
 df=pd.DataFrame()
@@ -715,46 +720,43 @@ df_long = pd.DataFrame({
 
 cdf = conddf.copy()
 df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
-# df=df[df.in_type=='vip_ex']
-# df=df[df.s_rate>.1]
-# df=df[df.f_rate>.1]
+# df=df[df.s_rate>0]
+# df=df[df.f_rate>0]
+
 # df=df[df.time_before_predict_f<10]
 df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
 df=df[df.optoep>1]
-df=df[(df.animals!='e189')&(df.animals!='e190')]
+df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='e200')]
 # remove outlier days
 # df=df[~((df.animals=='e201')&((df.days>62)))]
-# df=df[~((df.animals=='z14')&((df.days<33)))]
+df=df[~((df.animals=='z14')&((df.days<33)))]
 # df=df[~((df.animals=='z16')&((df.days>15)))]
-# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-# df=df[~((df.animals=='z15')&((df.days<8)|(df.days.isin([15]))))]
+df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
 df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
-df=df[~((df.animals=='e216')&(df.days.isin([41,37])))]
+df=df[~((df.animals=='e216')&(df.days.isin([57])))]
 df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
-df=df[~((df.animals=='e200')&((df.days.isin([65,82,88,87]))))]
-df=df[~((df.animals=='Z8')&((df.days.isin([29,25,30,34]))))]
-# df=df[~((df.animals=='e186')&((df.days.isin([31,33,34,37]))))]
 
-
+var='s_rate'
 order=['prev','opto']
-df=df.groupby(['animals','condition','type']).mean(numeric_only=True)
-sns.barplot(x='type',y='s_rate',data=df,hue='condition',fill=False,hue_order=order)
-sns.stripplot(x='type',y='s_rate',data=df,hue='condition',dodge=True,hue_order=order)
+df=df.groupby(['animals','days', 'condition','type']).mean(numeric_only=True)
+sns.barplot(x='type',y=var,data=df,hue='condition',fill=False,hue_order=order)
+sns.stripplot(x='type',y=var,data=df,hue='condition',dodge=True,hue_order=order)
 # sns.barplot(x='condition',y='f_rate',data=df)
 # Group by animal, type, and condition to get per-animal means
 df_grouped = df.reset_index()
 
 # Pivot to wide format for paired test
 df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
-var='time_before_predict_s'
+var='time_before_predict_f'
 order2=['ctrl','vip','vip_ex']
 # Prepare plot
 
 df_pivot=df_pivot[['type','animals',var]].reset_index()
 # Compute opto - prev delta per animal
-df_pivot['delta'] = df_pivot[var]['opto']- df_pivot[var]['prev']
+df_pivot['delta'] = df_pivot[var]['opto']#-df_pivot[var]['prev']
 
-plt.figure(figsize=(6, 5))
+plt.figure(figsize=(3, 5))
 sns.barplot(
    data=df_pivot,
    x='type',
@@ -806,7 +808,7 @@ if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
       plt.text((x1 + x2)/2, y + 0.005, f'{pval2:.2g}', ha='center')
 
 # Final tweaks
-plt.ylabel('Time before predict')
+plt.ylabel('frac time before prediction')
 plt.xlabel('Type')
 plt.legend(title='Condition')
 sns.despine()

@@ -453,34 +453,35 @@ plt.savefig(os.path.join(savedst, 'per_trial_chrimson_trace.svg'))
 #%%
 # collect values for ttest
 # get subtraction
-drug = [deep_rewdff_drug, sup_rewdff_drug]
-saline = [deep_rewdff_saline, sup_rewdff_saline]
+drug = [deep_rewdff_drug, sp_rewdff_drug,sr_rewdff_drug,slm_rewdff_drug]
+saline = [deep_rewdff_saline, sp_rewdff_saline,sr_rewdff_saline,slm_rewdff_saline]
 
-andrug = [an_deep_rewdff_drug, an_sup_rewdff_drug]
-ansaline = [an_deep_rewdff_saline, an_sup_rewdff_saline]
+andrug = [an_deep_rewdff_drug, an_sp_rewdff_drug,an_sr_rewdff_drug,an_slm_rewdff_drug]
+ansaline = [an_deep_rewdff_saline, an_sp_rewdff_saline,an_sr_rewdff_saline,an_slm_rewdff_saline]
 start_frame = int(range_val/binsize-frames_to_show)
 
 save = []
-for i in range(2): # deep vs. sup
+for i in range(4): # deep vs. sup
+   # subtract entire trace
    rewcond_h = np.array([xx-np.nanmean(drug[i],axis=1) for xx in saline[i].T]).T 
-   stimdff_h = np.nanmean(rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
-               axis=0)    
+   stimdff_h = np.nanmean(rewcond_h[start_frame:start_frame+int(stimsec/binsize)],axis=0)    
    stimdff_h[np.isnan(stimdff_h)]=0
    t,pval = scipy.stats.ttest_1samp(stimdff_h, popmean=0)
    save.append([stimdff_h, pval, ansaline[i]])    
 # superficial vs. deep
 deep_rewcond_h = np.array([xx-np.nanmean(drug[0],axis=1) for xx in saline[0].T]).T 
-sup_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[1].T]).T 
-deep_stimdff_h = np.nanmean(deep_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
-                axis=0)
-sup_stimdff_h = np.nanmean(sup_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],
-                axis=0)
+sp_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[1].T]).T 
+sr_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[2].T]).T 
+slm_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[3].T]).T 
+deep_stimdff_h = np.nanmean(deep_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],axis=0)
+sp_stimdff_h = np.nanmean(sp_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],axis=0)
+
 t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h[~np.isnan(deep_stimdff_h)], sup_stimdff_h[~np.isnan(sup_stimdff_h)])
 #%%
-lbls = ['Deep', 'Superficial']
-plt.rc('font', size=25)
+lbls = ['SO','SP','SR','SLM']
+plt.rc('font', size=16)
 dfs = []
-for pln in range(2):
+for pln in range(4):
     df = pd.DataFrame()
     df['mean_dff_during_stim'] = save[pln][0]
     pval=save[pln][1]
@@ -493,11 +494,10 @@ bigdf = pd.concat(dfs)
 bigdf = bigdf.reset_index()
 import seaborn as sns
 
-fig,ax = plt.subplots(figsize=(2,5))
+fig,ax = plt.subplots(figsize=(3,4))
 # pink and grey
 cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
-g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
-        data=bigdf,fill=False,palette=cmap,
+g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdf,fill=False,order=lbls,
             linewidth=3)
 # sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
 #         data=bigdf,s=11,palette=cmap,
@@ -513,18 +513,17 @@ i=0
 for i in range(len(lbls)):
     pval = bigdf.loc[bigdf.plane_subgroup==lbls[i], 'pval'].values[0]
     trials = bigdf[bigdf.plane_subgroup==lbls[i]]
-    ax.text(i, y, f'p={pval:.7f}, \n{len(trials)} trials', ha='center', fontsize=fs, rotation=45)
+    ax.text(i, y, f'p={pval:.2g}, \n{len(trials)} trials', ha='center', fontsize=fs, rotation=45)
     i+=1
-
-ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
-        fontsize=fs, rotation=45)
-ax.set_title('n=trials, 3 animals',pad=40,fontsize=14)
+ax.set_title('n=trials',pad=40,fontsize=14)
 plt.savefig(os.path.join(savedst, 'per_trial_snc_chrims_quant.svg'))
 
 #%%
 # per animal 
-
-bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
+# only take trials >0?
+bigdf=bigdf[bigdf.mean_dff_during_stim>0]
+bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True).reset_index()
+bigdfan['mean_dff_during_stim']=bigdfan['mean_dff_during_stim']*100
 # # # Specify the desired order
 # desired_order = ['SLM', 'SR', 'SP', 'SO']
 
@@ -534,55 +533,44 @@ bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True)
 # # Sort the DataFrame by the 'City' column
 # bigdfan.sort_values('plane')
 # pink and grey
-fig,ax = plt.subplots(figsize=(2,5))
-g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,
-        errorbar='se',ax=ax,linewidth=4,err_kws={'linewidth': 4},
-        palette=cmap)
-sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,
-        s=17,alpha=0.8,ax=ax,palette=cmap,dodge=True)
-ax.spines[['top','right']].set_visible(False)
-# ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=12)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
-ax.set_ylabel('Mean $\Delta F/F$ during stim.')
+fig,ax = plt.subplots(figsize=(3,4))
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,order=lbls,palette='Dark2',
+        errorbar='se',ax=ax)
 
-y=0.002
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,order=lbls,palette='Dark2',
+        s=10,alpha=0.8,ax=ax)
+ax.spines[['top','right']].set_visible(False)
+# Connect lines per animal
+for animal, subdf in bigdfan.groupby('animal'):
+    # Sort by x-position to connect in the right order
+    subdf = subdf.set_index('plane_subgroup').loc[lbls].reset_index()
+    ax.plot(
+        range(len(subdf)),  # x positions
+        subdf['mean_dff_during_stim'],
+        color='gray', alpha=0.5, linewidth=1.5
+    )
+
+# ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=12)
+ax.set_ylabel('Mean % $\Delta F/F$ during stim.')
+ax.set_xlabel('')
+
+y=0.8
 fs=14
 i=0
-for i in range(len(lbls)):
-    halo = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[i])), 'mean_dff_during_stim'].values
-    t,pval = scipy.stats.ttest_1samp(halo, popmean=0)
-    ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs, rotation=45)
-    i+=1
+from statsmodels.stats.multitest import multipletests
 
-halo_d = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[0])), 'mean_dff_during_stim'].values
-halo_s = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[1])), 'mean_dff_during_stim'].values
-t,pval = scipy.stats.ttest_rel(halo_d, halo_s)
-ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
-    fontsize=fs, rotation=45)
+# Collect all p-values first
+pvals = []
+for lbl in lbls:
+    halo = bigdfan.loc[bigdfan.plane_subgroup == lbl, 'mean_dff_during_stim'].values
+    _, pval = scipy.stats.ttest_1samp(halo, popmean=0)
+    pvals.append(pval)
 
-ax.set_title('n=3 animals',pad=80,fontsize=14)
+# Apply correction (Bonferroni example)
+reject, pvals_corrected, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+
+# Annotate corrected p-values
+for i, pval_corr in enumerate(pvals_corrected):
+    ax.text(i, y, f'p={pval_corr:.2g}', ha='center', fontsize=12, rotation=45)
+    
 plt.savefig(os.path.join(savedst, 'per_an_snc_chrimson_quant.svg'))
-
-# Step 1: Calculate the means and standard deviations
-mean1 = np.mean(halo_d)
-mean2 = np.mean(halo_s)
-std1 = np.std(halo_d, ddof=1)
-std2 = np.std(halo_s, ddof=1)
-
-# Step 2: Calculate pooled standard deviation
-n1, n2 = len(halo_d), len(halo_s)
-pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
-
-# Step 3: Calculate Cohen's d
-cohens_d = (mean1 - mean2) / pooled_std
-
-# Step 4: Perform Power Analysis using the calculated Cohen's d
-alpha = 0.05  # Significance level
-power = 0.8   # Desired power
-
-import statsmodels.stats.power as smp
-analysis = smp.TTestIndPower()
-sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=power, alternative='two-sided')
-
-print(f"Cohen's d: {cohens_d:.4f}")
-print(f"Required sample size per group: {sample_size:.2f}")

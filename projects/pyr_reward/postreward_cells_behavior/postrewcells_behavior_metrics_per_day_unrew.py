@@ -13,7 +13,7 @@ import matplotlib.backends.backend_pdf, matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 8
 mpl.rcParams["ytick.major.size"] = 8
-# plt.rc('font', size=16)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.pyr_reward.placecell import make_tuning_curves_radians_by_trialtype, intersect_arrays
@@ -23,7 +23,7 @@ from projects.pyr_reward.rewardcell import get_radian_position,extract_data_near
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 #%%
-goal_window_cm=40 # to search for rew cells
+goal_window_cm=20 # to search for rew cells
 saveddataset = rf'Z:\saved_datasets\radian_tuning_curves_nearreward_cell_bytrialtype_nopto_20cm_window.p'
 with open(saveddataset, "rb") as fp: #unpickle
     radian_alignment_saved = pickle.load(fp)
@@ -31,8 +31,10 @@ with open(saveddataset, "rb") as fp: #unpickle
 #%%
 # test
 iinds = radian_alignment_saved.keys()
-iinds=[xx for xx in iinds if 'z9' in xx]
-iinds = ['e186_002_index155','e186_006_index159','e186_010_index163','e186_014_index167','e186_017_index170','e186_021_index174','e186_026_index179','e186_030_index183','e186_035_index188','e201_051_index131', 'e201_053_index133', 'e201_054_index134']
+iinds=[xx for xx in iinds if 'e190' in xx]
+iinds = ['e186_002_index155','e186_006_index159','e186_010_index163','e186_014_index167','e186_017_index170','e186_021_index174','e186_026_index179','e186_030_index183','e186_035_index188','e201_051_index131', 'e201_053_index133', 'e201_054_index134','e190_027_index193',
+ 'e190_029_index195',
+ 'e190_034_index197']
 # from projects.pyr_reward.rewardcell import perireward_binned_activity
 datarasters=[]
 for iind in iinds:
@@ -106,7 +108,7 @@ for iind in iinds:
    # thres - float: Threshold speed in cm/s
    # Fs - int: Number of frames minimum to be considered stopped
    # ftol - int: Frame tolerance for merging stop periods
-   moving_middle,stop = get_moving_time_v3(velocity,2,20,20)
+   moving_middle,stop = get_moving_time_v3(velocity,5,20,20)
    pre_win_framesALL, post_win_framesALL=31.25*5,31.25*5
    nonrew_stop_without_lick, nonrew_stop_with_lick, rew_stop_without_lick, rew_stop_with_lick,\
          mov_success_tmpts=get_stops_licks(moving_middle, stop, pre_win_framesALL, post_win_framesALL,\
@@ -136,7 +138,7 @@ for iind in iinds:
       move_start_unrew_idx2=[]
    # unrewarded movement starts
    # do not combione without lick for now
-   # move_start_unrew_idx=np.append(move_start_unrew_idx,move_start_unrew_idx2)
+   move_start_unrew_idx=np.append(move_start_unrew_idx,move_start_unrew_idx2)
    move_start_unrew = np.zeros_like(fall['changeRewLoc'][0])
    move_start_unrew[move_start_unrew_idx.astype(int)] = 1
    move_start = np.zeros_like(fall['changeRewLoc'][0])
@@ -179,13 +181,14 @@ for iind in iinds:
    # collect data per day
    datarasters.append([rewall,velall,lickall,rewrstops,velrew,lickrew,unrewrstops,velunrew,lickunrew,rewunrewstops])
 #%%
+plt.rc('font', size=16) 
 fig, axes = plt.subplots(ncols=3,nrows=3,figsize=(7,7),height_ratios=[3,1,1])
 # axes=axes.flatten()
 # rewall,velall,lickall,rewrstops,velrew,lickrew,unrewrstops,velunrew,lickunrew
-rewall=np.hstack([xx[0] for xx in datarasters])
+rewall=np.hstack([xx[0]/np.nanmax(xx[0]) for xx in datarasters])
 velall=np.hstack([xx[1] for xx in datarasters])
 lickall=np.hstack([xx[2] for xx in datarasters])
-rewrstops=np.hstack([xx[3] for xx in datarasters])
+rewrstops=np.hstack([xx[3]/np.nanmax(xx[3]) for xx in datarasters])
 velrew=np.hstack([xx[4] for xx in datarasters])
 lickrew=np.hstack([xx[5] for xx in datarasters])
 lickunrew=np.hstack([xx[8] for xx in datarasters])
@@ -208,10 +211,15 @@ velunrew=np.hstack([xx[7] for xx in datarasters])[:, sort_idx]
 
 rewunrewstops=np.hstack([xx[9] for xx in datarasters])[:, sort_idx]
 mask=np.sum(rewunrewstops,axis=0)>0
+mask = np.ones_like(mask).astype(bool)
+mask2 = np.nanmax(velunrew[10:],axis=0)>40
+mask=mask&mask2
 velunrew=velunrew[:,mask]
 lickunrew=lickunrew[:,mask]
 unrewrstops=unrewrstops[:,mask]
-vmax=5
+unrewrstops[np.isnan(unrewrstops)]=0
+unrewrstops=np.array([xx/np.nanmax(xx) if np.nanmax(xx)>0 else np.zeros_like(xx) for xx in unrewrstops.T]).T
+vmax=1
 vmax_vel=70
 vmin_vel=0
 vmax_lick=25
@@ -270,9 +278,11 @@ im2=ax.imshow(velrew.T, aspect='auto',cmap='Greys',vmax=vmax_vel,vmin=vmin_vel)
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 # ax.set_ylabel('Velocity (cm/s)')
 ax.legend().set_visible(False)
-ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
+ax.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
 ax.set_xticklabels([])
+ax.set_yticks([0,len(rewrstops.T)-1])
 ax.set_yticklabels([])
+# ax1.set_yticklabels([1,len(rewrstops.T)])
 
 lickrew[np.isnan(lickrew)]=np.nanmean(lickrew)
 ax=axes[2,1]
@@ -281,6 +291,7 @@ ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 # ax.set_ylabel('Velocity (cm/s)')
 ax.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
 ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.set_yticks([0,len(rewrstops.T)-1])
 ax.set_yticklabels([])
 ax.legend().set_visible(False)
 ax.set_xlabel('Time from movement start (s)\nRewarded')
@@ -289,22 +300,23 @@ ax1 = axes[0,2]  # base axis for first cell
 im1=ax1.imshow(unrewrstops.T, aspect='auto',vmax=vmax)
 ax1.axvline(int(range_val / binsize), color='w', linestyle='--')
 velrew[np.isnan(velrew)]=0
-ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)])
+ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
 ax1.set_xticklabels([])
 ax1.set_yticks([0,len(unrewrstops.T)-1])
 ax1.set_yticklabels([1,len(unrewrstops.T)])
-cax1 = fig.add_axes([0.92, 0.5, 0.02, 0.3])  # [left, bottom, width, height] in figure coords
+cax1 = fig.add_axes([0.92, 0.6, 0.02, 0.2])  # [left, bottom, width, height] in figure coords
 cbar1 = fig.colorbar(im1, cax=cax1, orientation='vertical')
-cbar1.set_label(r'$\Delta F/F$')
+cbar1.set_label(r'Norm. $\Delta F/F$')
 
 ax=axes[1,2]
 im2=ax.imshow(velunrew.T, aspect='auto',cmap='Greys',vmax=vmax_vel,vmin=vmin_vel)
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 # ax.set_ylabel('Velocity (cm/s)')
 ax.legend().set_visible(False)
-ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)])
-ax.set_xticklabels([])
+ax.set_yticks([0,len(velunrew.T)-1])
 ax.set_yticklabels([])
+ax.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
+ax.set_xticklabels([])
 cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
 cbar1.set_label('Velocity (cm/s)')
 
@@ -313,8 +325,9 @@ im2=ax.imshow(lickunrew.T, aspect='auto',cmap='Blues',vmax=vmax_lick,vmin=vmin_l
 ax.axvline(int(range_val / binsize), color='k', linestyle='--')
 # ax.set_ylabel('Velocity (cm/s)')
 ax.legend().set_visible(False)
-ax1.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)])
-ax.set_xticklabels([])
+ax.set_xticks([0,(range_val/binsize),((range_val/binsize)*2)-1])
+ax.set_xticklabels([-(range_val),0,(range_val)])
+ax.set_yticks([0,len(velunrew.T)-1])
 ax.set_yticklabels([])
 ax.set_xlabel('Time from movement start (s)\nUnrewarded')
 cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
@@ -322,9 +335,11 @@ cbar1 = fig.colorbar(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04
 
 cbar1.set_label('Velocity (cm/s)')
 # ax(im2, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
-cbar1.set_label('Norm. licks')
+cbar1.set_label('Lick rate')
 # plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'trail_postrew_traces_cell{gc}.svg'))
+# %%
+
 #%% 
 # get lick bouts 
 import numpy as np
@@ -451,7 +466,7 @@ ax1.set_xticks([0,(range_val/binsize),(range_val/binsize)*2])
 ax1.set_xticklabels([])
 # ax1.set_yticklabels([])
 cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', fraction=0.05, pad=0.04)
-cbar1.set_label('$\Delta F/F$')
+cbar1.set_label('Norm. $\Delta F/F$')
 vellick[np.isnan(vellick)]=0
 
 ax=axes[5]

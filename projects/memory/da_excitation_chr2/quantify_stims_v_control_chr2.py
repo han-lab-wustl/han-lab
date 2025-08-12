@@ -50,6 +50,7 @@ for ii,animal in enumerate(animals):
         stims = np.hstack(stims['stims']) # nan out stims
         plndff = []
         condition = conddf.loc[((conddf.animal==animal)&(conddf.day==day)), 'gerardos_groups'].values[0]
+        fig,axes=plt.subplots(nrows=3, ncols=4, figsize=(12,6))
         for path in Path(os.path.join(src, animal, str(day))).rglob('params.mat'):
             params = scipy.io.loadmat(path)
             VR = params['VR'][0][0]; gainf = VR[14][0][0]             
@@ -97,16 +98,23 @@ for ii,animal in enumerate(animals):
             startofstims = np.zeros_like(dff)
             startofstims[min_iind]=1
 
-            fig,ax=plt.subplots()
-            ax.plot(dff,label=f'plane: {pln}')
-            ax.plot(startofstims)
-            ax.set_ylim([.9,1.1])
-            ax.legend()
+            # plot mean img
+            ax=axes[0,pln]
+            ax.imshow(params['params'][0][0][0],cmap='Greys_r')
+            ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
+            ax.axis('off')
+            ax.set_title(f'{animal}, day {day}, {planelut[pln]}')
+            ax=axes[1,pln]
+            ax.plot(dff-1,label=f'plane: {pln}')
+            ax.plot(startofstims-1)
+            ax.set_ylim([-.1,.1])
+            ax.set_title(f'Stim events')
+
             # peri stim binned activity
             normmeanrewdFF, meanrewdFF, normrewdFF, \
                 rewdFF= eye.perireward_binned_activity(dff, startofstims, 
                     timedFF, range_val, binsize)
-            fig, ax = plt.subplots()
+            ax=axes[2,pln]
             ax.plot(meanrewdFF, color = 'k')   
             xmin,xmax = ax.get_xlim()     
             ax.fill_between(range(0,int(range_val/binsize)*2), 
@@ -122,14 +130,15 @@ for ii,animal in enumerate(animals):
             color='mediumspringgreen', alpha=0.2))
 
             ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-            ax.set_xticklabels(range(-range_val, range_val+1, 1))
-            ax.set_title(f'Peri-stim, {animal}, day {day}, plane {pln}')
+            ax.set_xticklabels(range(-range_val, range_val+1, 1))            
+            # if not show_figs: plt.close('all')
             plndff.append(rewdFF)
-            if show_figs==True:
-                plt.show()
-            else:
-                plt.close('all')
-    
+        fig.suptitle(f'{animal}, day {day}, {condition}')
+        if show_figs==True:
+            plt.show()
+        else:
+            plt.close('all')
+        
         day_date_dff[f'{animal}_{day}_{condition}'] = plndff
 
 #%%
