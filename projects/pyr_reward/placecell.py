@@ -2181,7 +2181,7 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
         ybinned_dt.append(ypos_w_dt)
         rewloc_bool = np.concatenate(rewloc_bool)
         relpos = get_radian_position_first_lick_after_rew_w_dt(ep, eps, ypos_w_dt, lick_ep, 
-                reward_ep, rewsize, rewloc_per_trial,
+                reward_ep, rewsize, rewloc_per_trial,rewlocs,
                 trial_ep)
         success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
         if len(strials)>0:
@@ -2196,14 +2196,14 @@ def make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lic
         relpos_all = np.array(relpos)[moving_middle]
 
         if len(trials) > lasttr:
-            n_trials = len(ttr)
+            n_trials = len(trials)
             n_cells = Fc3.shape[1]
             tcs_per_trial = np.ones((n_cells, n_trials, bins)) * np.nan
             coms_per_trial = np.ones((n_cells, n_trials)) * np.nan
             licks_per_trial = np.ones((n_trials, bins)) * np.nan
             vels_per_trial = np.ones((n_trials, bins)) * np.nan
 
-            for i, tr in enumerate(ttr):
+            for i, tr in enumerate(trials):
                 pos = relpos[trial_ep == trials[i]]
                 F_trial = F_all[trial_ep == trials[i]]
                 vel_trial = vel_ep[trial_ep == trials[i]]

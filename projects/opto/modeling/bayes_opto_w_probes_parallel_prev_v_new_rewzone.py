@@ -143,6 +143,28 @@ def process_trial(
    fc3_trial = fc3[trial].copy()
    fc3_trial=fc3_trial[ybin_trial>3]
    ybin_trial=ybin_trial[ybin_trial>3]
+   ep = ep_trials[trial]
+   # 10 cm before rewzone start
+   rewloc_start = rewlocs[ep]-( rewsize/2)
+
+   # Find index before reward location
+   ypos_temp = ybin_trial.copy()
+   ypos_temp[ypos_temp == 0] = 1e6
+   rewloc_ind_candidates = np.where(ypos_temp < rewloc_start)[0]
+   if len(rewloc_ind_candidates) == 0:
+      return {
+         "trial": trial,
+         "correct": None,
+         "time_before_change": None,
+         "time_to_rew": None,
+         "predicted": None,
+         "penalty_used": None,
+         "fig": None,
+         'changepoint_ind': None,
+         'frames': None
+      }
+   rewloc_ind = rewloc_ind_candidates[-1]
+   # only until rew zone
    post = decode_trial_fn(fc3_trial, ybin_trial, goal_zone[trial], tuning)
    post_goal = post.sum(axis=1)  # marginalize over position
    # post_pos = post.sum(axis=2)   # not used below
@@ -384,7 +406,9 @@ def get_success_failure_trials(trialnum, reward):
 # iis=iis[iis>2]
 #%%
 # iis=iis[iis>141 bn] # control v inhib x ex
-iis=[49,166,80]
+# iis=[49,166,130]
+# iis=[129]
+dfs=[]
 for ii in iis:
    # ---------- Load animal info ---------- #
    day = conddf.days.values[ii]
@@ -441,8 +465,11 @@ for ii in iis:
    else:
       Fc3 = Fc3[:, ((fall['iscell'][:,0]).astype(bool))]
       dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool))]
+   if Fc3.shape[1]>200:
+      skewthres=2
+   else:
+      skewthres=1.2
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
-   skewthres=1.2
    Fc3 = Fc3[:, skew>skewthres] # only keep cells with skew greateer than 2
    lick_position=np.zeros_like(licks)
    lick_position[licks>0] = ybinned[licks>0]
@@ -555,19 +582,21 @@ for ii in iis:
    test_idx = []
    for ep in np.unique(ep_trials):
       ep_idx = all_indices[ep_trials==ep]
-      late_ep_idx = ep_idx[-lasttr:]
+      cidx = [xx for xx in ep_idx if xx in strind]
+      late_ep_idx = cidx[-lasttr:] # last x correct trials instead
       late_idx.append(late_ep_idx)
-      test_idx.append(ep_idx[:lasttr])
-   train_idx=np.concatenate(late_idx)
-   test_idx=np.concatenate(test_idx)
+      test_idx.append([xx for xx in ep_idx if xx not in late_ep_idx])
+   train_idx=np.concatenate(late_idx).astype(int)
+   test_idx=np.concatenate(test_idx).astype(int)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
-   goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone_test
+   goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone[test_idx]
    lick_trial_train, lick_trial_test = lick_trial[train_idx], lick_trial[test_idx]
    # training ; use held out trials?
    tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
-
+   # for now, exclude probes
+   test_idx = [xx for xx in test_idx if xx not in probeind]
    # Parallel execution
    subset_trials = np.sort(test_idx)  # choose trials you want figures for
    results = run_trials_and_save_pdf(
@@ -601,159 +630,106 @@ for ii in iis:
    # histogram of predicted vs. real
    ep_bound = np.where(np.diff(ep_trials[test_idx]))[0]+1
    # probes
-   probe_bound = np.where(np.diff(goal_zone_test))[0]
-   ep_bound = np.append(probe_bound,ep_bound)
-   fig,ax = plt.subplots()
+   # probe_bound = np.where(np.diff(goal_zone_test))[0]
+   # ep_bound = np.append(probe_bound,ep_bound)
    trials = np.arange(len(predicted))
-   # Plot
-   ax.plot(trials, predicted[:, 0], marker='o', label='Predicted zone', color='tab:blue')
-   ax.plot(trials, predicted[:, 1], marker='o', label='Real zone', color='tab:orange')
-   for nm,b in enumerate(ep_bound):
-      if nm==0: ax.axvline(b,color='k',label='Probes')
-      else: ax.axvline(b,color='k')
+   df = pd.DataFrame()
+   df['trial'] = np.concatenate([trials]*2)
+   df['goal_zone'] = np.concatenate([predicted[:, 0],predicted[:, 1]])
+   df['prediction'] = np.concatenate([['predicted']*len(trials), ['real']*len(trials)])
+   correct_mask = np.array([True if xx in strind else False for xx in test_idx])
+   df['correct'] = np.concatenate([correct_mask]*2)
+   df['opto'] = np.concatenate([ep_trials[test_idx]==eptest-1]*2)
+   df['animal'] = [animal]*len(df)
+   df['day'] = [day]*len(df)
+   df['num_changepoints'] = [len(xx) for xx in cps]*2
+   df['num_frames_pre_reward'] = np.concatenate([num_frames]*2)
+   fig,axes = plt.subplots(nrows=3,figsize=(6,7))
+   ax=axes[0]
+   sns.lineplot(x='trial',y='goal_zone',hue='prediction',data=df,ax=ax)
+   for nm,bound in enumerate(ep_bound):
+      if nm==0: ax.axvline(bound,color='k',label='epoch switch')
+      else: ax.axvline(bound,color='k')
+   ax.set_title(f'{animal}, {day}, optoep {optoep}')
    ax.legend()
-   ax.set_ylabel('Reward zone')
-   ax.set_xlabel('Trials')
-   ax.set_yticks(np.unique(rzs))
-   ax.set_yticklabels(np.unique(rzs).astype(int))
-   ax.set_title(f'{animal}, {day}, {optoep}')
+   ax=axes[1]
+   df2 = df[df.correct==True]
+   df2=df2.reset_index()
+   df2['trial'] = np.concatenate([np.arange(len(trials[correct_mask]))]*2)
+   sns.lineplot(x='trial',y='goal_zone',hue='prediction',data=df2,ax=ax)
+   ax.set_title('Correct')
+   ax=axes[2]
+   df2 = df[df.correct==False]
+   df2=df2.reset_index()
+   df2['trial'] = np.concatenate([np.arange(len(trials[~correct_mask]))]*2)
+   sns.lineplot(x='trial',y='goal_zone',hue='prediction',data=df2,ax=ax)
+   ax.set_title('Incorrect')
+   # for nm,bound in enumerate(ep_bound):
+   #    if nm==0: ax.axvline(bound,color='k',label='epoch switch')
+   #    else: ax.axvline(bound,color='k')
+   # ax.set_title(f'{animal}, {day}, optoep {optoep}')
+   ax.legend()
+   plt.tight_layout()
    plt.show()
+   dfs.append(df)
+
+   
 # last few to find patterns in prediction accuracy
 # %%
-df=pd.DataFrame()
-# 8-12 = pred
-# 13-17 = opto
-# Add all the variables
-df['total_rate'] = [v[0] for k, v in dct.items()]
-df['prev_s_rate'] = [v[7] for k, v in dct.items()]
-df['prev_f_rate'] = [v[8] for k, v in dct.items()]
-df['prev_p_rate'] = [v[9] for k, v in dct.items()]
-df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_s'] = [v[10] for k, v in dct.items()]
-df['prev_time_before_predict_f'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_p'] = [v[12] for k, v in dct.items()]
+df=pd.concat(dfs)
+df['animals']=df['animal']
+df['days']=df['day']
 
-df['opto_s_rate'] = [v[14] for k, v in dct.items()]
-df['opto_f_rate'] = [v[15] for k, v in dct.items()]
-df['opto_p_rate'] = [v[16] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
-df['opto_time_to_rew'] = [v[20] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+df = pd.merge(df,conddf,on=['animals','days'])
+# df=df[df.correct==True]
+# df=df[df.optoep>1]
+pred_rates = [dfdf[(dfdf.prediction=='predicted')  & (dfdf.opto==True) & (dfdf.correct==True)]['goal_zone'].values==dfdf[(dfdf.prediction=='real') & (dfdf.opto==True) & (dfdf.correct==True)]['goal_zone'].values for dfdf in dfs]
+opto_pred_rates=[sum(pred_rate)/len(pred_rate) if len(pred_rate)>0 else 0  for pred_rate in pred_rates]
 
-df['animals'] = [k.split('_')[0] for k, v in dct.items()]
-df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
-df_long = pd.DataFrame({
-   's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
-   'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
-   'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
-   'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
-   'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
-   'condition': ['prev'] * len(df) + ['opto'] * len(df),
-'animals': df['animals'].tolist() * 2,
-   'days': df['days'].tolist() * 2
-})
+pred_rates = [dfdf[(dfdf.prediction=='predicted')  & (dfdf.opto==False) & (dfdf.correct==True)]['goal_zone'].values==dfdf[(dfdf.prediction=='real') & (dfdf.opto==False) & (dfdf.correct==True)]['goal_zone'].values for dfdf in dfs]
+prev_ep_pred_rates = [dfdf[(dfdf.prediction=='predicted')  & (dfdf.opto==True) & (dfdf.correct==True)]['goal_zone'].values==dfdf[(dfdf.prediction=='real') & (dfdf.opto==False) & (dfdf.correct==True)]['goal_zone'].values[0] for dfdf in dfs]
+prev_ep_opto_pred_rates=[sum(pred_rate)/len(pred_rate) if len(pred_rate)>0 else 0  for pred_rate in prev_ep_pred_rates]
 
-cdf = conddf.copy()
-df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
-# df=df[df.s_rate>0]
-# df=df[df.f_rate>0]
+prev_pred_rates=[sum(pred_rate)/len(pred_rate) if len(pred_rate)>0 else 0  for pred_rate in pred_rates]
 
-# df=df[df.time_before_predict_f<10]
-df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
-df=df[df.optoep>1]
-df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='e200')]
+dfpred = pd.DataFrame()
+pred_an = [dfdf[(dfdf.prediction=='predicted')]['animal'].values[0] for dfdf in dfs]
+pred_day = [dfdf[dfdf.prediction=='predicted']['day'].values[0] for dfdf in dfs]
+dfpred['pred_rates'] = np.array(opto_pred_rates)#-np.array(prev_pred_rates)
+dfpred['opto_rates_prev_ep'] = prev_ep_opto_pred_rates
+dfpred['animals'] = pred_an
+dfpred['days'] = pred_day
+df = pd.merge(df,dfpred,on=['animals','days'])
+df['optoep']=df.optoep>1
+
+df['condition'] = [xx if 'vip' in xx else 'ctrl' for xx in df.in_type.values]
+df=df.groupby(['animals','days','optoep','condition']).mean(numeric_only=True).reset_index()
+df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 # df=df[~((df.animals=='e201')&((df.days>62)))]
 df=df[~((df.animals=='z14')&((df.days<33)))]
 # df=df[~((df.animals=='z16')&((df.days>15)))]
 df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
 df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
-df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
-df=df[~((df.animals=='e216')&(df.days.isin([57])))]
-df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+df=df[~((df.animals=='e217')&((df.days.isin([7,29,30]))))]
+# df=df[~((df.animals=='e216')&(df.days.isin([57])))]
+# df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+df=df[df.pred_rates>0]
+# df=df[df.optoep>0]
+sns.barplot(x='condition',y='pred_rates',hue='optoep',data=df,fill=False)
+sns.stripplot(x='condition',y='pred_rates',hue='optoep',data=df,dodge=True)
+# 8-12 = pred
 
-var='s_rate'
-order=['prev','opto']
-df=df.groupby(['animals','days', 'condition','type']).mean(numeric_only=True)
-sns.barplot(x='type',y=var,data=df,hue='condition',fill=False,hue_order=order)
-sns.stripplot(x='type',y=var,data=df,hue='condition',dodge=True,hue_order=order)
-# sns.barplot(x='condition',y='f_rate',data=df)
-# Group by animal, type, and condition to get per-animal means
-df_grouped = df.reset_index()
+#%%
+# correct vs. incorrect
+df=dfs[1]
+fig,ax = plt.subplots()
+sns.lineplot(x='trial',y='goal_zone',hue='prediction',data=df,ax=ax)
+for nm,bound in enumerate(ep_bound):
+   if nm==0: ax.axvline(bound,color='k',label='epoch switch')
+   else: ax.axvline(bound,color='k')
+ax.set_title(f'{animal}, {day}, optoep {optoep}')
+ax.legend()
 
-# Pivot to wide format for paired test
-df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
-var='time_before_predict_f'
-order2=['ctrl','vip','vip_ex']
-# Prepare plot
-
-df_pivot=df_pivot[['type','animals',var]].reset_index()
-# Compute opto - prev delta per animal
-df_pivot['delta'] = df_pivot[var]['opto']#-df_pivot[var]['prev']
-
-plt.figure(figsize=(3, 5))
-sns.barplot(
-   data=df_pivot,
-   x='type',
-   y='delta',
-   fill=False,
-   errorbar='se',order=order2
-)
-sns.stripplot(
-   data=df_pivot,
-   x='type',
-   y='delta',
-   dodge=True,order=order2
-)
-
-# Get deltas per group
-group_deltas = {
-    t: df_pivot[df_pivot['type'] == t]['delta'].dropna()
-    for t in df_pivot['type'].unique()
-}
-
-# Compare ctrl vs vip
-if 'ctrl' in group_deltas and 'vip' in group_deltas:
-   stat1, pval1 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip'])
-   x1, x2 = 0, 1  # assuming ctrl is index 0, vip is 1
-   y = max(df_pivot['delta'].max(), 0.01)
-   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
-   if pval1 < 0.001:
-      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
-   elif pval1 < 0.01:
-      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
-   elif pval1 < 0.05:
-      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
-   else:
-      plt.text((x1 + x2)/2, y + 0.005, f'{pval1:.2g}', ha='center')
-
-# Compare ctrl vs vipex
-if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
-   stat2, pval2 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip_ex'])
-   x1, x2 = 0, 2  # assuming vipex is index 2
-   y=max(df_pivot['delta'].max(), 0.01)-.05
-   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
-   if pval2 < 0.001:
-      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
-   elif pval2 < 0.01:
-      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
-   elif pval2 < 0.05:
-      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
-   else:
-      plt.text((x1 + x2)/2, y + 0.005, f'{pval2:.2g}', ha='center')
-
-# Final tweaks
-plt.ylabel('frac time before prediction')
-plt.xlabel('Type')
-plt.legend(title='Condition')
-sns.despine()
-plt.tight_layout()
-plt.show()
-
-# %%
-
-# %%
+pred_rate = df[df.prediction=='predicted']['goal_zone'].values==df[df.prediction=='real']['goal_zone'].values
+pred_rate=sum(pred_rate)/len(pred_rate)
