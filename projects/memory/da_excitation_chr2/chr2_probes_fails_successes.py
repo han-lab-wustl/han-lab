@@ -101,12 +101,13 @@ before_time_rng = range(int(range_val/binsize-2/binsize),
             int(range_val/binsize-0/binsize)) # during and after stim
 # normalize pre-window to 1
 # remember than here we only take led off trials bc of artifact
+pln=0
 trialtype=1
-so_traces = day_date_dff_arr_opto[:,3,trialtype,:]#[learning_day_opto==1]
+so_traces = day_date_dff_arr_opto[:,pln,trialtype,:]#[learning_day_opto==1]
 so_transients_opto = [so_traces[ii,:]-np.nanmean(so_traces[ii,before_time_rng]) for ii,xx in enumerate(range(so_traces.shape[0]))]
 so_transients_opto = [np.nanmax(xx[time_rng]) for xx in so_transients_opto]
 trialtype=0
-so_traces = day_date_dff_arr_nonopto[:,3,trialtype,:]
+so_traces = day_date_dff_arr_nonopto[:,pln,trialtype,:]
 so_transients_nonopto = [so_traces[ii,:]-np.nanmean(so_traces[ii,before_time_rng]) for ii,xx in enumerate(range(so_traces.shape[0]))]
 so_transients_nonopto = [np.nanmax(xx[time_rng]) for xx in so_transients_nonopto]
 
@@ -128,17 +129,16 @@ for i in range(len(df.animal.unique())):
 
 # ax.set_ylim(0, 1.04)
 ax.spines[['top','right']].set_visible(False)
-ax.set_ylabel('$\Delta$ F/F (stratum oriens)')
+ax.set_ylabel(f'$\Delta$ F/F, {planelut[pln]}')
 ledon, ledoff = df.loc[(df.condition=='LED on'), 'so_transient_dff_difference'].values, df.loc[(df.condition=='LED off'), 'so_transient_dff_difference'].values
 t,pval = scipy.stats.ranksums(ledon[~np.isnan(ledon)], ledoff)
-ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 
-                'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
+ledon, ledoff = df_plt.loc[(df_plt.index.get_level_values('condition')=='LED on'), 'so_transient_dff_difference'].values, df_plt.loc[(df_plt.index.get_level_values('condition')=='LED off'), 'so_transient_dff_difference'].values
 t,pval_an = scipy.stats.ttest_rel(ledon[~np.isnan(ledon)], ledoff)
 
 ax.set_title(f'Stim at reward\n\
     per session p={pval:.4f}\n per animal p={pval_an:.4f}',fontsize=12)
 
-# plt.savefig(os.path.join(dst, 'so_transient_quant.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, f'pln{pln}_snc_chr2_transient_quant.svg'), bbox_inches='tight')
 #%%
 # 2.1 quantify superficial layer slopes
 plt.rc('font', size=22)

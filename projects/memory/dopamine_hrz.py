@@ -14,20 +14,19 @@ mpl.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
-from projects.pyr_reward.rewardcell import pe
-rireward_binned_activity_early_late, perireward_binned_activity
+from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
 plt.rcParams["font.family"] = "Arial"
 
 #%%
 plt.close('all')
 # save to pdf
-animal = 'e293'
+animal = 'e291'
 src = r"X:\chrimson_snc_grabda"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [4]#np.arange(11,27)
+days = [5]#np.arange(11,27)
 range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -107,6 +106,7 @@ for day in days:
         scalingf=2/3
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))        
         mask = np.arange(0,eps[len(eps)-1])
+        rewards[:1000]=0
         # mask = np.arange(0,eps[2])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = perireward_binned_activity(dff[mask], rewards[mask], 
@@ -199,3 +199,5 @@ for pln in range(4):
     ax.set_xticklabels(range(-range_val, range_val+1, 2))
     ax.axvline(int(range_val/binsize),linestyle='--',color='k')
     fig.tight_layout()
+
+# %%

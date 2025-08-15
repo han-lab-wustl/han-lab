@@ -34,7 +34,7 @@ animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
 show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
-rolling_win = 10
+rolling_win = 2
 day_date_dff = {}
 for ii,animal in enumerate(animals):
    days = conddf.loc[((conddf.Animal==animal) & (conddf.led==True)), 'Day'].values.astype(int)    
@@ -108,14 +108,17 @@ for ii,animal in enumerate(animals):
 #%%
 # quantification all plns
 # get control traces
-plt.rc('font', size=12)
+plt.rc('font', size=14)
 # settings
 stimsec = 2 # stim duration (s)
-ymin=-0.005
-ymax=0.005
+ymin=-0.015 # chr2
+ymax=0.01
+ymin=-0.006# chr2
+ymax=0.006
+
 height=ymax-ymin
 planes=4
-norm_window = 2 #s
+norm_window = 3 #s
 # plot deep vs. superficial
 # plot control vs. drug
 # assumes 4 planes
@@ -190,8 +193,8 @@ patch_start = int(pre_win_to_show/binsize)
 # plot
 drug = [deep_rewdff_drug, sp_rewdff_drug, sr_rewdff_drug, slm_rewdff_drug]
 saline = [deep_rewdff_saline, sp_rewdff_saline, sr_rewdff_saline, slm_rewdff_saline]
-lbls = ['Deep', 'SP', 'SR', 'SLM']
-fig, axes = plt.subplots(nrows=4, ncols=2,figsize=(6,8), sharex=True)
+lbls = ['SO', 'SP', 'SR', 'SLM']
+fig, axes = plt.subplots(nrows=4, ncols=2,figsize=(6,8), sharex=True,sharey=True)
 
 for i in range(len(saline)):
    # pl ot
@@ -238,7 +241,6 @@ for i in range(len(saline)):
    if i==0: ax.legend(); ax.set_title(f'Raw \n\n {lbls[i]}')
    else: ax.set_title(f'{lbls[i]}')
    ax.set_ylim([ymin,ymax])
-   if i==1: ax.set_xlabel('Time from LED onset (s)')
    ax.set_ylabel('$\Delta$ F/F')
 
 # plot control-drug
@@ -280,7 +282,7 @@ for i in range(len(saline)):
    if i==0: ax.legend(); ax.set_title(f'Subtracted \n\n')
    ax.set_xticks([0,5,15,30])
    ax.set_xticklabels([-1,0,2,5])
-   if i==1: ax.set_xlabel('Time from LED onset (s)')
+   if i==3: ax.set_xlabel('Time from LED onset (s)')
    ax.spines[['top','right']].set_visible(False)
 fig.suptitle('SNc axons, Excitation (Chrimson)')    
 fig.tight_layout()
@@ -476,9 +478,11 @@ slm_rewcond_h = np.array([xx-np.nanmean(drug[1],axis=1) for xx in saline[3].T]).
 deep_stimdff_h = np.nanmean(deep_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],axis=0)
 sp_stimdff_h = np.nanmean(sp_rewcond_h[start_frame:start_frame+int(stimsec/binsize)],axis=0)
 
-t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h[~np.isnan(deep_stimdff_h)], sup_stimdff_h[~np.isnan(sup_stimdff_h)])
+t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h[~np.isnan(deep_stimdff_h)], sp_stimdff_h[~np.isnan(sp_stimdff_h)])
 #%%
-lbls = ['SO','SP','SR','SLM']
+lbls = ['SLM','SR','SP','SO']
+lbls=np.array(lbls)[::-1]
+
 plt.rc('font', size=16)
 dfs = []
 for pln in range(4):
@@ -492,11 +496,8 @@ for pln in range(4):
     dfs.append(df)
 bigdf = pd.concat(dfs)
 bigdf = bigdf.reset_index()
-import seaborn as sns
-
 fig,ax = plt.subplots(figsize=(3,4))
 # pink and grey
-cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
 g=sns.boxplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdf,fill=False,order=lbls,
             linewidth=3)
 # sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',
@@ -533,7 +534,7 @@ bigdfan['mean_dff_during_stim']=bigdfan['mean_dff_during_stim']*100
 # # Sort the DataFrame by the 'City' column
 # bigdfan.sort_values('plane')
 # pink and grey
-fig,ax = plt.subplots(figsize=(3,4))
+fig,ax = plt.subplots(figsize=(4,5))
 g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,order=lbls,palette='Dark2',
         errorbar='se',ax=ax)
 
@@ -572,5 +573,6 @@ reject, pvals_corrected, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh'
 # Annotate corrected p-values
 for i, pval_corr in enumerate(pvals_corrected):
     ax.text(i, y, f'p={pval_corr:.2g}', ha='center', fontsize=12, rotation=45)
-    
+fig.suptitle('SNc axons, Chrimson')
+plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'per_an_snc_chrimson_quant.svg'))
