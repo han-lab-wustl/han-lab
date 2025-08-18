@@ -19,6 +19,7 @@ plt.rcParams["font.family"] = "Arial"
 import matplotlib.patches as patches
 from projects.memory.dopamine import get_rewzones
 # plt.rc('font', size=12)          # controls default text sizes
+from scipy.ndimage import label
 
 plt.close('all')
 # save to pdf
@@ -32,7 +33,7 @@ planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_csv(r'C:\Users\Han\Downloads\data_organization - chrimson_snc.csv')# day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
-show_figs = False # show individual days peri stim plots 
+show_figs = True # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
 rolling_win = 2
 day_date_dff = {}
@@ -59,8 +60,39 @@ for ii,animal in enumerate(animals):
 
          dffdf = pd.DataFrame({'dff': dff})
          dff = np.hstack(dffdf.rolling(rolling_win).mean().values)
-         startofstims=params['optoEvent'][0]
+         stims=params['optoEventALL'][0]
 
+         if np.sum(stims[pln::4].astype(bool))>0:
+            dff[stims[pln::4].astype(bool)] = np.nan
+         else:
+            try:
+               dff[stims[pln-2::4].astype(bool)] = np.nan
+            except:
+               dff[stims[pln+2::4].astype(bool)] = np.nan
+         # Assuming stims, utimedFF, and solenoid2ALL are defined numpy arrays
+         utimedFF = params['utimedFF'][0]
+         # Step 1: Label the regions in stims greater than 0.5
+         abfstims, num_features = label(stims > 0.5)
+         # Step 2: Loop through each feature
+         for dw in range(1, num_features):
+            index_next = np.where(abfstims == (dw + 1))[0]
+            index_current = np.where(abfstims == dw)[0]
+            
+            if len(index_next) > 0 and len(index_current) > 0:
+               time_diff = utimedFF[index_next[0]] - utimedFF[index_current[-1]]
+               
+               if time_diff < 0.5:
+                  abfstims[index_current[0]: index_next[0]] = dw + 1
+         # Step 3: Filter with abfstims > 0.5
+         abfstims = abfstims > 0.5
+         # Step 4: Find consecutive stretches
+         abfrect = consecutive_stretch(np.where(abfstims)[0])
+         min_iind = [int(np.floor(min(xx)/4))-2 for xx in abfrect]
+         if pln==3: min_iind = [int(np.floor(min(xx)/4))-2 for xx in abfrect]           
+         dffdf = pd.DataFrame({'dff': dff})
+         dff = np.hstack(dffdf.rolling(rolling_win).mean().values)
+         startofstims = np.zeros_like(dff)
+         startofstims[min_iind]=1
          # plot mean img
          ax=axes[0,pln]
          ax.imshow(params['params'][0][0][0],cmap='Greys_r')
@@ -522,18 +554,11 @@ plt.savefig(os.path.join(savedst, 'per_trial_snc_chrims_quant.svg'))
 #%%
 # per animal 
 # only take trials >0?
-bigdf=bigdf[bigdf.mean_dff_during_stim>0]
+# bigdf=bigdf[bigdf.mean_dff_during_stim>0]
 bigdfan = bigdf.groupby(['animal', 'plane_subgroup']).mean(numeric_only=True).reset_index()
 bigdfan['mean_dff_during_stim']=bigdfan['mean_dff_during_stim']*100
 # # # Specify the desired order
-# desired_order = ['SLM', 'SR', 'SP', 'SO']
-
-# # Convert the 'City' column to a categorical type with the specified order
-# bigdfan['plane'] = pd.Categorical(bigdfan['plane'], categories=desired_order, ordered=True)
-
-# # Sort the DataFrame by the 'City' column
-# bigdfan.sort_values('plane')
-# pink and grey
+# bigdfan=bigdfan[bigdfan.animal!='e292']
 fig,ax = plt.subplots(figsize=(4,5))
 g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,order=lbls,palette='Dark2',
         errorbar='se',ax=ax)
@@ -555,7 +580,7 @@ for animal, subdf in bigdfan.groupby('animal'):
 ax.set_ylabel('Mean % $\Delta F/F$ during stim.')
 ax.set_xlabel('')
 
-y=0.8
+y=0.3
 fs=14
 i=0
 from statsmodels.stats.multitest import multipletests

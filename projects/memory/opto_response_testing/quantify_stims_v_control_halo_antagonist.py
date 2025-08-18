@@ -100,56 +100,11 @@ for ii,animal in enumerate(animals):
 
         day_date_dff[f'{animal}_{day}_{condition}'] = plndff
 
-#%%
-# quantification
-# get control traces
-plt.rc('font', size=8)
-# settings
-stimsec = 3 # stim duration (s)
-ymin=-0.012
-ymax=0.012
-height=ymax-ymin
-planes=4
-norm_window = 2 #s
-# subtract ctrl
-fig,axes=plt.subplots(nrows=planes,figsize=(3,6))
-ctrl_mean_trace_per_pln=[]; ctrl_mean_trace_per_pln_d=[] # split into saline/none vs. drug days
-for pln in range(planes):
-    ii=0; condition_dff = []; condition_dff_d = []
-    idx_to_catch = []
-    for dy,v in day_date_dff.items():
-        if (conddf.loc[conddf.animal==dy[:4],'condition'].values[0]=='control'):
-            if 'drug' not in dy:
-                rewdFF = day_date_dff[dy][pln] 
-                if rewdFF.shape[1]>0:            
-                    meanrewdFF = np.nanmean(rewdFF,axis=1)
-                    meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
-                    rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
-                    condition_dff.append([meanrewdFF, rewdFF_prewin])
-                else: idx_to_catch.append(ii)
-            elif 'drug' in dy:
-                rewdFF = day_date_dff[dy][pln] 
-                if rewdFF.shape[1]>0:            
-                    meanrewdFF = np.nanmean(rewdFF,axis=1)
-                    meanrewdFF = meanrewdFF-np.nanmean(meanrewdFF[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) #pre-window
-                    rewdFF_prewin = np.array([xx-np.nanmean(xx[int((range_val/binsize)-norm_window/binsize):int(range_val/binsize)]) for xx in rewdFF.T]).T
-                    condition_dff_d.append([meanrewdFF, rewdFF_prewin])
-                else: idx_to_catch.append(ii)
 
-    meanrewdFF = np.nanmean(np.hstack([x[1] for x in condition_dff]),axis=1) # mean across days
-    meanrewdFF_d = np.nanmean(np.hstack([x[1] for x in condition_dff_d]),axis=1) # mean across days
-    ctrl_mean_trace_per_pln.append(meanrewdFF); ctrl_mean_trace_per_pln_d.append(meanrewdFF_d)
-    ax = axes[pln]
-    ax.plot(meanrewdFF, label='control saline')
-    ax.plot(meanrewdFF_d, label='control drug')
-    ax.set_title(f'Plane {pln}')
-    ax.axvline(int(range_val/binsize),color='k',linestyle='--')
-    ax.set_ylim([ymin, ymax])
-    if pln==3: ax.legend()
 #%%
 # plot control vs. drug
 plt.rc('font', size=11)
-ymin=-0.005
+ymin=-0.01
 ymax=0.005
 height=ymax-ymin
 
@@ -621,7 +576,7 @@ sup_stimdff_h = np.nanmean(sup_rewcond_h[int(range_val/binsize):int(range_val/bi
                 axis=0)
 t,pval_deep_vs_sup = scipy.stats.ranksums(deep_stimdff_h, sup_stimdff_h)
 #%%
-plt.rc('font', size=25)
+plt.rc('font', size=16)
 dfs = []
 for pln in range(2):
     df = pd.DataFrame()
@@ -656,10 +611,10 @@ fs=12
 i=0
 for i in range(len(lbls)):
     pval = bigdf.loc[bigdf.plane_subgroup==lbls[i], 'pval'].values[0]
-    ax.text(i, y, f'p={pval:.7f}', ha='center', fontsize=fs, rotation=45)
+    ax.text(i, y, f'p={pval:.2g}', ha='center', fontsize=fs, rotation=45)
     i+=1
 
-ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.7f}', ha='center', 
+ax.text(i, y, f'halo deep vs. super\np={pval_deep_vs_sup:.2g}', ha='center', 
         fontsize=fs, rotation=45)
 ax.set_title('n=trials, 3 animals',pad=100,fontsize=14)
 
@@ -667,6 +622,7 @@ ax.set_title('n=trials, 3 animals',pad=100,fontsize=14)
 # per animal 
 
 bigdfan = bigdf.groupby(['animal', 'condition','plane_subgroup']).mean(numeric_only=True)
+bigdfan['mean_dff_during_stim']=bigdfan['mean_dff_during_stim']*100
 # # # Specify the desired order
 # desired_order = ['SLM', 'SR', 'SP', 'SO']
 
@@ -677,17 +633,15 @@ bigdfan = bigdf.groupby(['animal', 'condition','plane_subgroup']).mean(numeric_o
 # bigdfan.sort_values('plane')
 # pink and grey
 cmap = [np.array([230, 84, 128])/255,np.array([153, 153, 153])/255]
-fig,ax = plt.subplots(figsize=(3.5,5))
-g=sns.barplot(x='condition',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,
-        errorbar='se',ax=ax,linewidth=4,err_kws={'linewidth': 4},
-        palette=cmap)
-sns.stripplot(x='condition',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,
-        s=17,alpha=0.8,ax=ax,palette=cmap,dodge=True)
+fig,ax = plt.subplots(figsize=(4,4))
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdfan,fill=False,errorbar='se',ax=ax,legend=False)
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='condition',data=bigdfan,s=10,alpha=0.7,ax=ax,dodge=True)
 ax.spines[['top','right']].set_visible(False)
 ax.legend(bbox_to_anchor=(1.01, 1.05),fontsize=12)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_xlabel('')
+ax.set_ylabel('Mean % $\Delta F/F$ during stim.')
 
-y=0.0035
+y=0.1
 fs=14
 i=0
 for i in range(len(lbls)):
@@ -696,7 +650,7 @@ for i in range(len(lbls)):
     ctrl = bigdfan.loc[((bigdfan.index.get_level_values('condition')=='Control-YFP') & \
         (bigdfan.index.get_level_values('plane_subgroup')==lbls[i])), 'mean_dff_during_stim'].values
     t,pval = scipy.stats.ttest_ind(halo, ctrl)
-    ax.text(i, y, f'p={pval:.4f}', ha='center', fontsize=fs, rotation=45)
+    ax.text(i, y, f'p={pval:.2g}', ha='center', fontsize=fs, rotation=45)
     i+=1
 
 halo_d = bigdfan.loc[((bigdfan.index.get_level_values('condition')=='eNpHR3.0') & \
@@ -704,31 +658,7 @@ halo_d = bigdfan.loc[((bigdfan.index.get_level_values('condition')=='eNpHR3.0') 
 halo_s = bigdfan.loc[((bigdfan.index.get_level_values('condition')=='eNpHR3.0') & \
     (bigdfan.index.get_level_values('plane_subgroup')==lbls[1])), 'mean_dff_during_stim'].values
 t,pval = scipy.stats.ttest_rel(halo_d, halo_s)
-ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
-    fontsize=fs, rotation=45)
+# ax.text(i, y, f'halo deep vs. super \n p={pval:.4f}', ha='center',
+#     fontsize=fs, rotation=45)
 
-ax.set_title('n=3 animals',pad=100)
-
-# Step 1: Calculate the means and standard deviations
-mean1 = np.mean(halo_d)
-mean2 = np.mean(halo_s)
-std1 = np.std(halo_d, ddof=1)
-std2 = np.std(halo_s, ddof=1)
-
-# Step 2: Calculate pooled standard deviation
-n1, n2 = len(halo_d), len(halo_s)
-pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
-
-# Step 3: Calculate Cohen's d
-cohens_d = (mean1 - mean2) / pooled_std
-
-# Step 4: Perform Power Analysis using the calculated Cohen's d
-alpha = 0.05  # Significance level
-power = 0.8   # Desired power
-
-import statsmodels.stats.power as smp
-analysis = smp.TTestIndPower()
-sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=power, alternative='two-sided')
-
-print(f"Cohen's d: {cohens_d:.4f}")
-print(f"Required sample size per group: {sample_size:.2f}")
+ax.set_title('n=3 animals')
