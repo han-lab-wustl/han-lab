@@ -34,19 +34,34 @@ plt.rcParams["font.family"] = "Arial"
 bins = 90
 goal_window_cm = 20
 conddf=pd.read_csv(r'Z:\condition_df\conddf_performance_chrimson.csv')
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
-savepth = os.path.join(savedst, 'lick_prediction.pdf')
-pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+savedst = r"C:\Users\Han\Desktop\goal_decoding"
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
-iis = [ii for ii in iis if ii!=202]
+iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129]
 dct = {}
 iis=np.array(iis)
 
+def estimate_tuning(fc3, ybinned, goal_zone, cm_per_bin=1, bin_size_cm=3, n_goals=3):
+   trials, time, N = fc3.shape
+   # Re-bin positions to 3 cm bins
+   pos3cm = (ybinned // (bin_size_cm // cm_per_bin)).astype(int)
+   n_pos_bins = pos3cm.max() + 1  # auto-detect number of 3 cm bins
+   tuning = np.zeros((N, n_pos_bins, n_goals))
+   for i in range(N):  # loop over cells
+      for g in range(n_goals):  # loop over goals
+         mask = np.ravel(goal_zone[:, None] == g)  # trial x time
+         spikes = fc3[mask, :,i]
+         positions = pos3cm[mask]
+         for x in range(n_pos_bins):
+               inds = positions == x
+               if inds.sum() > 0:
+                  tuning[i, x, g] = np.nanmean(spikes[inds])
+   return tuning
 # Decoder
 def decode_trial(trial_fc, trial_ybin, goal, tuning):
    T = trial_fc.shape[0]
+   n_pos_bins = tuning.shape[1]
    log_post = np.full((T, n_pos_bins, n_goals), -np.inf)
    log_prior = np.log(np.ones((n_pos_bins, n_goals)) / (n_pos_bins * n_goals))
 
@@ -73,60 +88,254 @@ def decode_trial(trial_fc, trial_ybin, goal, tuning):
 
    return np.exp(log_post)
 
-def process_trial(trial):
-   post = decode_trial(fc3[trial], ybinned[trial], goal_zone[trial], tuning)
+def process_trial(
+   trial,
+   fc3,
+   ybinned,
+   goal_zone,
+   tuning,
+   ep_trials,
+   rewlocs,
+   rewsize,
+   time,
+   lick_trial,
+   decode_trial_fn,
+   pdf,
+   min_frac=0.1,
+   make_plot=False
+):
+   """
+   Process a single trial with PELT changepoint detection, automatically
+   picking penalty so smallest segment >= min_frac * trial length.
+   
+   Parameters
+   ----------
+   trial : int
+      Trial index to process.
+   fc3 : ndarray
+      Calcium data, shape (trials, time, cells).
+   ybinned : ndarray
+      Position data, shape (trials, time).
+   goal_zone : ndarray
+      Goal zone labels for each trial.
+   tuning : ndarray
+      Tuning curves or model input for decoder.
+   ep_trials : ndarray
+      Epoch index for each trial.
+   rewlocs : ndarray
+      Reward location per epoch.
+   rewsize : float
+      Size of reward zone in same units as ybinned.
+   time : ndarray
+      Time vector for a trial.
+   lick_trial : ndarray
+      Lick rate data, shape (trials, time).
+   decode_trial_fn : callable
+      Function that takes (fc3_trial, ybinned_trial, goal_zone_trial, tuning)
+      and returns posterior probabilities [time × position × goal].
+   min_frac : float
+      Minimum segment length as fraction of trial length.
+   """
+
+   # Decode trial
+   ybin_trial = ybinned[trial].copy()
+   if ybin_trial[0]>200: ybin_trial[0]=1.5
+   fc3_trial = fc3[trial].copy()
+   fc3_trial=fc3_trial[ybin_trial>3]
+   ybin_trial=ybin_trial[ybin_trial>3]
+   post = decode_trial_fn(fc3_trial, ybin_trial, goal_zone[trial], tuning)
    post_goal = post.sum(axis=1)  # marginalize over position
-   post_pos = post.sum(axis=2)   # marginalize over goal
+   # post_pos = post.sum(axis=2)   # not used below
 
    ep = ep_trials[trial]
-   rewloc_start = rewlocs[ep - 1] - rewsize / 2
-   ypos_temp = ybinned[trial].copy()
-   ypos_temp[ypos_temp == 0] = 1e6
-   rewloc_ind = np.where(ypos_temp < rewloc_start)[0]
-   if len(rewloc_ind) == 0:
-      return None  # Skip trial if no valid rew index
+   # 10 cm before rewzone start
+   rewloc_start = rewlocs[ep]-( rewsize/2)
 
-   rewloc_ind = rewloc_ind[-1]
-   real_ypos = ybinned[trial][rewloc_ind]
+   # Find index before reward location
+   ypos_temp = ybin_trial.copy()
+   ypos_temp[ypos_temp == 0] = 1e6
+   rewloc_ind_candidates = np.where(ypos_temp < rewloc_start)[0]
+   if len(rewloc_ind_candidates) == 0:
+      return {
+         "trial": trial,
+         "correct": None,
+         "time_before_change": None,
+         "time_to_rew": None,
+         "predicted": None,
+         "penalty_used": None,
+         "fig": None,
+         'changepoint_ind': None,
+         'frames': None
+      }
+   rewloc_ind = rewloc_ind_candidates[-1]
 
    # MAP goal trace
+   # rewloc_ind = np.where(ybinned[trial]==0)[0][0]
    goal_trace = np.argmax(post_goal, axis=1) + 1
-   model = rpt.Pelt(model="l2").fit(goal_trace)
-   bkps = np.array(model.predict(pen=10))
-   changepoint = bkps[bkps < rewloc_ind]
+   trial_len = len(goal_trace[:rewloc_ind])
+   min_seg_len = int(min_frac * trial_len)
 
+   # Automatically find penalty
+   low_pen, high_pen = 1, 1000
+   chosen_pen = None
+   for _ in range(15):  # binary search steps
+      pen = (low_pen + high_pen) / 2
+      bkps = np.array(rpt.Pelt(model="l2").fit(goal_trace).predict(pen=pen))
+      seg_lens = np.diff([0] + bkps.tolist())
+      if len(seg_lens) == 0:
+         break
+      if min(seg_lens) < min_seg_len:
+         low_pen = pen  # too many short segments
+      else:
+         chosen_pen = pen
+         high_pen = pen  # try smaller penalty
+   if chosen_pen is None:
+      chosen_pen = high_pen  # fallback
+
+   # Final changepoint detection
+   bkps = np.array(rpt.Pelt(model="l2").fit(goal_trace).predict(pen=chosen_pen))
+   changepoint = bkps[bkps < rewloc_ind]
+   # Predict goal zone from last changepoint before reward
    if len(changepoint) > 0:
-      pred_goal_zone_cp = np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind])
+      pred_goal_zone_cp = np.ceil(np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind]))
       time_before_change = (rewloc_ind - changepoint[-1]) * np.nanmedian(np.diff(time))
    else:
-      pred_goal_zone_cp = np.nanmedian(goal_trace[:rewloc_ind])
+      pred_goal_zone_cp = np.ceil(np.nanmedian(goal_trace[:rewloc_ind]))
       time_before_change = rewloc_ind * np.nanmedian(np.diff(time))
 
    real_goal_zone = goal_zone[trial] + 1
    correct = pred_goal_zone_cp == real_goal_zone
    time_to_rew = rewloc_ind * np.nanmedian(np.diff(time))
+   # get fraction of time
+   time_before_change=time_before_change/time_to_rew
+   fig = None
+   if make_plot:
+      fig, ax1 = plt.subplots()
+      ax1.plot(goal_trace[:rewloc_ind], label="Goal Trace")
+      for cp in changepoint:
+         ax1.axvline(cp, color='r', linestyle='--', alpha=0.7)
+      if len(lick_trial[trial][:rewloc_ind])>0:
+         ax1.plot(
+            (lick_trial[trial][:rewloc_ind] / np.nanmax(lick_trial[trial][:rewloc_ind])) * 3,
+            label='Lick rate'
+         )
+      # Instead, add small colored rectangles outside right edge:
+      ylim = ax1.get_ylim()
+      # Coordinates just beyond right edge
+      x_rect = len(goal_trace[:rewloc_ind]) + 1
+      width = 2  # small horizontal bar width
+      # Add real reward zone patch
+      ax1.add_patch(
+         plt.Rectangle(
+            (x_rect, goal_zone[trial] + 1 - 0.25),  # x, y bottom left
+            width,
+            0.5,  # height
+            color='k',
+            alpha=0.6,
+            label='Real reward zone'
+         )
+      )
+      # Add predicted reward zone patch
+      ax1.add_patch(
+         plt.Rectangle(
+            (x_rect-(x_rect/3) + width + 0.1, pred_goal_zone_cp - 0.25),
+            width,
+            0.5,
+            color='cyan',
+            alpha=0.8,
+            label='Predicted reward zone'
+         )
+      )
+      # Add text labels next to rectangles
+      ax1.text(x_rect + width/2, goal_zone[trial] + 1,
+               "Real", va='center', ha='center', fontsize=9, color='k')
+      ax1.text(x_rect-(x_rect/3) + width + 0.1 + width/2, pred_goal_zone_cp,
+               "Pred", va='center', ha='center', fontsize=9, color='k')
+      ax1.set_xlabel("Time in trial (Hz)")
+      ax1.set_ylabel("Goal Trace")
+      ax1.legend(loc="upper left")
+      ax2 = ax1.twinx()
+      ax2.plot(ybin_trial[:rewloc_ind], label="Y binned", color='g', alpha=0.6)
+      ax2.set_ylabel("Y Position (binned)")
+      ax2.legend(loc="upper right")
+
+      plt.title(f"Trial {trial}")
+      plt.tight_layout()
 
    return {
       "trial": trial,
       "correct": correct,
       "time_before_change": time_before_change if correct else None,
       "time_to_rew": time_to_rew,
-      "predicted": [pred_goal_zone_cp, real_goal_zone]
+      "predicted": [pred_goal_zone_cp, real_goal_zone],
+      "penalty_used": chosen_pen,
+      "fig": fig,      
+      'changepoint_ind': changepoint,
+      'frames': rewloc_ind
    }
+from matplotlib.backends.backend_pdf import PdfPages
+
+def run_trials_and_save_pdf(
+   trial_list,
+   fc3,
+   ybinned,
+   goal_zone,
+   tuning,
+   ep_trials,
+   rewlocs,
+   rewsize,
+   time,
+   lick_trial,
+   decode_trial_fn,
+   min_frac=0.05,
+   pdf_filename="trial_plots.pdf"
+):
+   """Run process_trial in parallel and save selected trial plots to PDF."""
+   results = Parallel(n_jobs=6)(
+      delayed(process_trial)(
+         trial,
+         fc3,
+         ybinned,
+         goal_zone,
+         tuning,
+         ep_trials,
+         rewlocs,
+         rewsize,
+         time,
+         lick_trial,
+         decode_trial_fn,
+         min_frac,
+         make_plot=True  # only these trials make plots
+      )
+      for trial in trial_list
+   )
+
+   with PdfPages(pdf_filename) as pdf:
+      for res in results:
+         if res is not None and res["fig"] is not None:
+            pdf.savefig(res["fig"])
+            plt.close(res["fig"])  # free memory
+   return results
 
 def get_rewzones(rewlocs, gainf):
+   """
+   spliy into 6!
+   """
    # Initialize the reward zone numbers array with zeros
    rewzonenum = np.zeros(len(rewlocs))
-   
+   bounds = np.array([[40,86],[86,120],[120,160]])*gainf
+   # early v. late prediction
+   # half_bound = [bound[1]/2 for bound in bounds]
+   # new_bounds = [[bounds[ii][0],half_bound[ii]] for ii,nb in enumerate(half_bound)]
+   # new_bounds2 = [[half_bound[ii],bounds[ii][1]] for ii,nb in enumerate(half_bound)]
+   # all_new_bounds = np.array(new_bounds + new_bounds2)
+   all_new_bounds=np.sort(bounds,axis=0)
    # Iterate over each reward location to determine its reward zone
    for kk, loc in enumerate(rewlocs):
-      if 50*gainf <= loc <= 86 * gainf:
-         rewzonenum[kk] = 1  # Reward zone 1
-      elif 86 * gainf <= loc <= 135 * gainf:
-         rewzonenum[kk] = 2  # Reward zone 2
-      elif loc >= 135 * gainf:
-         rewzonenum[kk] = 3  # Reward zone 3
-         
+      for rz,rewzones in enumerate(all_new_bounds):
+         if rewzones[0] <= loc <= rewzones[1]:
+            rewzonenum[kk] = rz+1  # Reward zone 1
+            
    return rewzonenum
 
 
@@ -174,6 +383,8 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
+# iis=iis[iis>129] # control v inhib x ex
+
 for ii in iis:
    # ---------- Load animal info ---------- #
    day = conddf.days.values[ii]
@@ -281,9 +492,10 @@ for ii in iis:
          fc_trial = Fc3[eprng][tr_mask, :]                  # shape (t, n_cells)
          # remove later activity
          ypos_tr = ypos[tr_mask]
-         fc_trial=fc_trial#[(ypos_tr<((rewlocs[ep]-rewsize/2)))]
+         fc_trial[(ypos_tr<3)]=0
          lick_trial = lick_rate[eprng][tr_mask]         # shape (t,)
-         avg_lick_pre_rew = np.nanmedian(lick_trial) # early licks
+         lick_trial[(ypos_tr<3)]=0
+         ypos_tr[(ypos_tr<3)]=0
          if fc_trial.shape[0] >= 10:#; dont exclude probes for now
             fc_trial_binned = fc_trial
             trial_X.append(fc_trial_binned)
@@ -326,55 +538,46 @@ for ii in iis:
    n_trials, T, N = trial_fc_org.shape
    fc3 = trial_fc_org
    ybinned = trial_pos_
+   lick_trial = trial_lick
    goal_zone = np.array(trial_y)-1
+   # SHUFFFLE
+   np.random.shuffle(goal_zone)
 
    n_pos_bins = 90
    n_goals = 3
    dt = np.nanmedian(np.diff(time))  # 10 ms per bin
-   var_pos = 25  # cm^2
-   p_stay_goal = 0.9 ** dt
-
-   def estimate_tuning(fc3, ybinned, goal_zone, cm_per_bin=1, bin_size_cm=3, n_goals=3):
-      trials, time, N = fc3.shape
-      # Re-bin positions to 3 cm bins
-      pos3cm = (ybinned // (bin_size_cm // cm_per_bin)).astype(int)
-      n_pos_bins = pos3cm.max() + 1  # auto-detect number of 3 cm bins
-      tuning = np.zeros((N, n_pos_bins, n_goals))
-      for i in range(N):  # loop over cells
-         for g in range(n_goals):  # loop over goals
-            mask = np.ravel(goal_zone[:, None] == g)  # trial x time
-            spikes = fc3[mask, :,i]
-            positions = pos3cm[mask]
-            for x in range(n_pos_bins):
-                  inds = positions == x
-                  if inds.sum() > 0:
-                     tuning[i, x, g] = np.nanmean(spikes[inds])
-      return tuning
+   var_pos = 20  # cm^2
+   p_stay_goal = .9 ** dt
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.7, random_state=42)
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.3, random_state=42)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
    goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone[test_idx]
-
+   lick_trial_train, lick_trial_test = lick_trial[train_idx], lick_trial[test_idx]
    # training ; use held out trials?
-   tuning_shuf = []
-   for shuf in range(100):
-      goal_zone_shuf=goal_zone[np.random.permutation(len(goal_zone))]
-      # Now use the indices to subset your data
-      fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
-      ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
-      goal_zone_train, goal_zone_test = goal_zone_shuf[train_idx], goal_zone_shuf[test_idx]
-      # training ; use held out trials?
-      tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
-      tuning_shuf.append(tuning)
-   tuning = np.nanmean(np.array(tuning_shuf),axis=0)
+   tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
 
    # Parallel execution
-   results = Parallel(n_jobs=3)(delayed(process_trial)(trial) for trial in test_idx)
-
+   subset_trials = np.sort(test_idx)  # choose trials you want figures for
+   results = run_trials_and_save_pdf(
+      subset_trials,
+      fc3,
+      ybinned,
+      goal_zone,
+      tuning,
+      ep_trials,
+      rewlocs,
+      rewsize,
+      time,
+      lick_trial,
+      decode_trial,
+      min_frac=0.01,
+      pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
+   )
+   
    # Filter out None results (failed trials)
    results = [r for r in results if r is not None]
 
@@ -382,24 +585,14 @@ for ii in iis:
    correct = [r["trial"] for r in results if r["correct"]]
    time_before_change = [r["time_before_change"] for r in results if r["correct"]]
    time_to_rew = [r["time_to_rew"] for r in results]
-   predicted = [r["predicted"] for r in results]      # # Plot goal change points
-      # plt.figure(figsize=(8, 3))
-      # plt.plot(goal_trace, label="Goal (MAP)")
-      # for cp in bkps[:-1]:
-      #    plt.axvline(cp, color='red', linestyle='--')
-      # plt.title("Goal Change Point Detection")
-      # plt.xlabel("Time Bin")
-      # plt.ylabel("Goal")
-      # plt.legend()
-      # plt.tight_layout()
-      # plt.show()
-
-   # plt.figure()
-   # plt.plot(goal_trace)
-   # plt.plot(ybinned[trial]/10)
-   # plt.plot(trial_lick[trial])
+   predicted = [r["predicted"] for r in results]      # # Plot goal change 
+   cps = [r['changepoint_ind'] for r in results]
+   num_frames = [r['frames'] for r in results]
+   
    # opto ind 
-   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]
+   test_idx = np.sort(test_idx)
+   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
+   prev_rew_zone = rzs[eptest-2]
    if len(opto_idx)==0:
       continue   
    opto_s = [xx for xx in opto_idx if xx in strind]
@@ -422,10 +615,10 @@ for ii in iis:
    opto_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_f])
    opto_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in opto_p])
    
-   opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-1]   
+   opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]   
    opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
    # prev ind
-   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
    prev_s = [xx for xx in prev_idx if xx in strind]
    prev_f = [xx for xx in prev_idx if xx in flind]
    prev_p = [xx for xx in prev_idx if xx in probeind]
@@ -447,7 +640,7 @@ for ii in iis:
    prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
    prev_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_p])
 
-   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[hh]==eptest-2]   
+   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
    prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])   
    # rate correct
    total_rate = len(correct)/len(test_idx)
@@ -487,5 +680,144 @@ for ii in iis:
    dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
       prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
       opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
-      predicted,rzs,eps]
+      predicted,rzs,eps,prev_idx,opto_idx,test_idx,strind,flind,probeind,cps,num_frames]
+# last few to find patterns in prediction accuracy
+# %%
+df=pd.DataFrame()
+# 8-12 = pred
+# 13-17 = opto
+# Add all the variables
+df['total_rate'] = [v[0] for k, v in dct.items()]
+df['prev_s_rate'] = [v[7] for k, v in dct.items()]
+df['prev_f_rate'] = [v[8] for k, v in dct.items()]
+df['prev_p_rate'] = [v[9] for k, v in dct.items()]
+df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
+df['prev_time_before_predict_s'] = [v[10] for k, v in dct.items()]
+df['prev_time_before_predict_f'] = [v[11] for k, v in dct.items()]
+df['prev_time_before_predict_p'] = [v[12] for k, v in dct.items()]
+
+df['opto_s_rate'] = [v[14] for k, v in dct.items()]
+df['opto_f_rate'] = [v[15] for k, v in dct.items()]
+df['opto_p_rate'] = [v[16] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+df['opto_time_to_rew'] = [v[20] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+
+df['animals'] = [k.split('_')[0] for k, v in dct.items()]
+df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
+df_long = pd.DataFrame({
+   's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
+   'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
+   'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
+   'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
+   'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
+   'condition': ['prev'] * len(df) + ['opto'] * len(df),
+'animals': df['animals'].tolist() * 2,
+   'days': df['days'].tolist() * 2
+})
+
+cdf = conddf.copy()
+df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
+# df=df[df.s_rate>0]
+# df=df[df.f_rate>0]
+
+# df=df[df.time_before_predict_f<10]
+df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
+df=df[df.optoep>1]
+df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='e200')]
+# remove outlier days
+# df=df[~((df.animals=='e201')&((df.days>62)))]
+df=df[~((df.animals=='z14')&((df.days<33)))]
+# df=df[~((df.animals=='z16')&((df.days>15)))]
+df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
+df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
+df=df[~((df.animals=='e216')&(df.days.isin([57])))]
+df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+df.to_csv(r'Z:\saved_datasets\bayesian_goal_decoding_shuffle.csv', index=None)
+
+var='s_rate'
+order=['prev','opto']
+df=df.groupby(['animals', 'days','condition','type']).mean(numeric_only=True)
+sns.barplot(x='type',y=var,data=df,hue='condition',fill=False,hue_order=order)
+sns.stripplot(x='type',y=var,data=df,hue='condition',dodge=True,hue_order=order)
+# sns.barplot(x='condition',y='f_rate',data=df)
+# Group by animal, type, and condition to get per-animal means
+df_grouped = df.reset_index()
+
+# Pivot to wide format for paired test
+df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
+var='time_before_predict_s'
+order2=['ctrl','vip','vip_ex']
+# Prepare plot
+
+df_pivot=df_pivot[['type','animals',var]].reset_index()
+# Compute opto - prev delta per animal
+df_pivot['delta'] = df_pivot[var]['opto']#-df_pivot[var]['prev']
+
+plt.figure(figsize=(3, 5))
+sns.barplot(
+   data=df_pivot,
+   x='type',
+   y='delta',
+   fill=False,
+   errorbar='se',order=order2
+)
+sns.stripplot(
+   data=df_pivot,
+   x='type',
+   y='delta',
+   dodge=True,order=order2
+)
+
+# Get deltas per group
+group_deltas = {
+    t: df_pivot[df_pivot['type'] == t]['delta'].dropna()
+    for t in df_pivot['type'].unique()
+}
+
+# Compare ctrl vs vip
+if 'ctrl' in group_deltas and 'vip' in group_deltas:
+   stat1, pval1 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip'])
+   x1, x2 = 0, 1  # assuming ctrl is index 0, vip is 1
+   y = max(df_pivot['delta'].max(), 0.01)
+   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
+   if pval1 < 0.001:
+      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
+   elif pval1 < 0.01:
+      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
+   elif pval1 < 0.05:
+      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
+   else:
+      plt.text((x1 + x2)/2, y + 0.005, f'{pval1:.2g}', ha='center')
+
+# Compare ctrl vs vipex
+if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
+   stat2, pval2 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip_ex'])
+   x1, x2 = 0, 2  # assuming vipex is index 2
+   y=max(df_pivot['delta'].max(), 0.01)-.05
+   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
+   if pval2 < 0.001:
+      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
+   elif pval2 < 0.01:
+      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
+   elif pval2 < 0.05:
+      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
+   else:
+      plt.text((x1 + x2)/2, y + 0.005, f'{pval2:.2g}', ha='center')
+
+# Final tweaks
+plt.ylabel('frac time before prediction')
+plt.xlabel('Type')
+plt.legend(title='Condition')
+sns.despine()
+plt.tight_layout()
+plt.show()
+
+# %%
+
 # %%

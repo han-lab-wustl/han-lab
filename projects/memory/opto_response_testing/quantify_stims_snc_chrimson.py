@@ -33,9 +33,9 @@ planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_csv(r'C:\Users\Han\Downloads\data_organization - chrimson_snc.csv')# day vs. condition LUT
 animals = np.unique(conddf.Animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
-show_figs = True # show individual days peri stim plots 
+show_figs = False # show individual days peri stim plots 
 # animals = ['e241', 'e242', 'e243']
-rolling_win = 2
+rolling_win =3
 day_date_dff = {}
 for ii,animal in enumerate(animals):
    days = conddf.loc[((conddf.Animal==animal) & (conddf.led==True)), 'Day'].values.astype(int)    
@@ -146,7 +146,7 @@ stimsec = 2 # stim duration (s)
 ymin=-0.015 # chr2
 ymax=0.01
 ymin=-0.006# chr2
-ymax=0.006
+ymax=0.004
 
 height=ymax-ymin
 planes=4

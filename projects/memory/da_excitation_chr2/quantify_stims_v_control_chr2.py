@@ -36,8 +36,8 @@ planelut  = {0: 'SLM', 1: 'SR' , 2: 'SP', 3: 'SO'}
 conddf = pd.read_csv(r'Z:\chr2_grabda\opto_power_tests\chr2_opto_power_key.csv')
 animals = np.unique(conddf.animal.values.astype(str))
 animals = np.array([an for an in animals if 'nan' not in an])
-show_figs=True
-rolling_win=1
+show_figs=False
+rolling_win=3
 # animals=['e222']
 day_date_dff = {}
 for ii,animal in enumerate(animals):
@@ -157,7 +157,7 @@ ymin=-0.02
 ymax=0.02
 height=ymax-ymin
 planes=4
-norm_window = 3 #s
+norm_window = 1 #s
 # plot deep vs. superficial
 # plot control vs. drug
 # assumes 4 planes
@@ -399,25 +399,28 @@ plt.savefig(os.path.join(savedst, 'per_trial_snc_chr2_quant.svg'))
 
 #%%
 # per animal 
-
+cmap = {'SLM':[0.        , 0.        , 1.        ],
+       'SR':[0.        , 0.50196078, 0.        ],
+       'SP':[0.79607843, 0.63921569, 0.23921569],
+       'SO':[0.90196078, 0.32941176, 0.50196078]}
 bigdfan = bigdf.groupby(['animal','plane_subgroup']).mean(numeric_only=True)
 bigdfan['mean_dff_during_stim']=bigdfan['mean_dff_during_stim']*100
 # pink and grey
 fig,ax = plt.subplots(figsize=(4,5))
-g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,order=lbls,palette='Dark2',
+g=sns.barplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,fill=False,order=lbls,palette=cmap,
         errorbar='se',ax=ax)
-sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,order=lbls,palette='Dark2',
+sns.stripplot(x='plane_subgroup',y='mean_dff_during_stim',hue='plane_subgroup',data=bigdfan,order=lbls,palette=cmap,
         s=10,alpha=0.8,ax=ax)
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('Mean % $\Delta F/F$ during stim.')
 ax.set_xlabel('')
-y=0.5
-fs=14
+y=0.8
+fs=10
 i=0
 for i in range(len(lbls)):
     halo = bigdfan.loc[((bigdfan.index.get_level_values('plane_subgroup')==lbls[i])), 'mean_dff_during_stim'].values
     t,pval = scipy.stats.ttest_1samp(halo,popmean=0)
-    ax.text(i, y, f'p={pval:.2g}', ha='center', fontsize=fs, rotation=45)
+    ax.text(i, y, f'p={pval:.2g}', ha='center', fontsize=fs, rotation=20)
     i+=1
 bigdfan=bigdfan.reset_index()
 # Connect lines per animal
@@ -429,6 +432,6 @@ for animal, subdf in bigdfan.groupby('animal'):
         subdf['mean_dff_during_stim'],
         color='gray', alpha=0.5, linewidth=1.5
     )
-fig.suptitle('SNc axons, ChR2')
+fig.suptitle('SNc axons, Excitation (ChR2)')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'per_an_chr2_quant.svg'))

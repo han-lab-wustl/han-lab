@@ -38,7 +38,7 @@ savedst = r"C:\Users\Han\Desktop\goal_decoding"
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
-iis = [ii for ii in iis if ii!=202]
+iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129]
 dct = {}
 iis=np.array(iis)
 
@@ -383,7 +383,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-# iis=iis[iis>141 bn] # control v inhib x ex
+# iis=iis[iis>168] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -549,7 +549,7 @@ for ii in iis:
 
    all_indices=np.arange(fc3.shape[0])
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.6, random_state=42)
+   train_idx, test_idx = train_test_split(all_indices, test_size=0.3, random_state=42)
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
@@ -720,7 +720,7 @@ df_long = pd.DataFrame({
 
 cdf = conddf.copy()
 df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
-# df=df[df.s_rate>0]
+df=df[df.s_rate>0]
 # df=df[df.f_rate>0]
 
 # df=df[df.time_before_predict_f<10]
@@ -731,15 +731,16 @@ df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='e200')]
 # df=df[~((df.animals=='e201')&((df.days>62)))]
 df=df[~((df.animals=='z14')&((df.days<33)))]
 # df=df[~((df.animals=='z16')&((df.days>15)))]
-df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
+# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+# df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
 df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
 df=df[~((df.animals=='e216')&(df.days.isin([57])))]
 df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+df.to_csv(r'Z:\saved_datasets\bayesian_goal_decoding_70_30_split.csv', index=None)
 
 var='s_rate'
 order=['prev','opto']
-df=df.groupby(['animals','days', 'condition','type']).mean(numeric_only=True)
+df=df.groupby(['animals','days','condition','type']).mean(numeric_only=True)
 sns.barplot(x='type',y=var,data=df,hue='condition',fill=False,hue_order=order)
 sns.stripplot(x='type',y=var,data=df,hue='condition',dodge=True,hue_order=order)
 # sns.barplot(x='condition',y='f_rate',data=df)
@@ -748,13 +749,13 @@ df_grouped = df.reset_index()
 
 # Pivot to wide format for paired test
 df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
-var='time_before_predict_f'
+var='time_before_predict_s'
 order2=['ctrl','vip','vip_ex']
 # Prepare plot
 
 df_pivot=df_pivot[['type','animals',var]].reset_index()
 # Compute opto - prev delta per animal
-df_pivot['delta'] = df_pivot[var]['opto']#-df_pivot[var]['prev']
+df_pivot['delta'] = df_pivot[var]['opto']-df_pivot[var]['prev']
 
 plt.figure(figsize=(3, 5))
 sns.barplot(
