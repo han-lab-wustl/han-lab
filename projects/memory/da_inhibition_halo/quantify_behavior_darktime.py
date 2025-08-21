@@ -9,7 +9,7 @@ sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clon
 from pathlib import Path
 import matplotlib.backends.backend_pdf
 import matplotlib
-from projects.memory.behavior import consecutive_stretch, get_behavior_tuning_curve, get_success_failure_trials, get_lick_selectivity, \
+from projects.memory.behavior import consecutive_stretch, get_behavior_tuning_curve, get_success_failure_trials, get_lick_selectivity, get_lick_selectivity_w_dt,\
     get_lick_selectivity_post_reward, calculate_lick_rate
 import matplotlib as mpl
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -26,8 +26,8 @@ src = r"Y:\halo_grabda"
 animals = ['e241','e242','e243']#,'e242','e243']
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 days_all = [np.arange(93,99),
-        np.arange(85,91),
-        np.arange(94,100)]
+        np.arange(84,91), # incl opp stim days bc mouse didnt really lick!!
+        np.arange(93,100)]
 mem_cond = 'Opto_dark_time'
 opto_cond = 'Opto_memory_dark_time'
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -80,59 +80,7 @@ for ii,animal in enumerate(animals):
         success, fail, str_trials, ftr_trials, ttr, \
         total_trials = get_success_failure_trials(trialnum, rewards)        
         catchtrialsnum = trialnum[VR[16][0].astype(bool)]
-        
-        # probe trials
-        probe = trialnum<3
-        
-        # example plot
-        # if before==True:
-            # import matplotlib.patches as patches
-            # fig, ax = plt.subplots()
-            # lick[ypos<3]=0
-            # ax.plot(ypos[probe])
-            # ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
-            # color='k',s=80,zorder=2)
-            # ax.add_patch(
-            # patches.Rectangle(
-            #     xy=(0,rewloc-10),  # point of origin.
-            #     width=len(ypos[probe]), height=20, linewidth=1, # width is s
-            #     color='slategray', alpha=0.3))
-            # ax.set_ylim([0,270])
-            # ax.spines[['top','right']].set_visible(False)
-            # ax.set_title(f'{day}')
-            # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
-
-        # # example plot during learning
-        # eps = np.where(changerewloc)[0]
-        # rew = (rewards==1).astype(int)
-        # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
-        # mask = np.zeros_like(trialnum).astype(bool)
-        # mask[2000:16000]=True
-        # import matplotlib.patches as patches
-        # fig, ax = plt.subplots(figsize=(9,5))
-        # ax.plot(ypos[mask],zorder=1)
-        # # remove dt licks
-        # lick[ypos<3]=0
-        # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',
-        #         zorder=2)
-        # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
-        #     zorder=2)
-        # # ax.add_patch(
-        # # patches.Rectangle(
-        # #     xy=(0,newrewloc-10),  # point of origin.
-        # #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
-        # #     color='slategray', alpha=0.3))
-        # ax.add_patch(
-        # patches.Rectangle(
-        #     xy=(0,changerewloc[eps][0]/gainf-10),  # point of origin.
-        #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
-        #     color='slategray', alpha=0.3))
-
-        # ax.set_ylim([0,270])
-        # ax.spines[['top','right']].set_visible(False)
-        # plt.savefig(os.path.join(dst, f'hrz_eg_behavior.svg'),bbox_inches='tight')
-        # ax.set_title(f'{day}')
-        # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
+    
 
         try:
             probe = trialnum<str_trials[0] # trials before first successful trial as probes
@@ -140,8 +88,8 @@ for ii,animal in enumerate(animals):
             probe = trialnum<3 
         com_probe = np.nanmean(ypos[probe][lick.astype(bool)[probe]])-rewloc
         pos_bin, vel_probe = get_behavior_tuning_curve(ypos[probe], velocity[probe], bins=270)
-        lick_selectivity = get_lick_selectivity(ypos[probe], trialnum[probe], lick[probe], rewloc, rewsize,
-                        fails_only = True)
+        # added dt bc otherwise no licks
+        lick_selectivity = get_lick_selectivity_w_dt(ypos[probe], trialnum[probe], lick[probe], rewloc, rewsize,fails_only = True)
         # from vip opto
         window_size = 5
         # also estimate sampling rate
@@ -263,7 +211,7 @@ sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean',
                 hue='opto_day_before', data=dfagg,
                 palette={False: "slategray", True: color},
                 s=15,ax=ax)
-ax.set_ylabel('Memory lick selectivity')
+ax.set_ylabel('Recall lick selectivity')
 ax.set_xlabel('LED on day before?')
 
 ans = dfagg.index.get_level_values('animal').unique().values
@@ -277,7 +225,7 @@ ax.get_legend().set_visible(False)
 ax.spines[['top','right']].set_visible(False)
 plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
 # fig.tight_layout()
-# plt.savefig(os.path.join(dst, 'darktime_memory_lick_selectivity.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(dst, 'inhib_darktime_memory_lick_selectivity.svg'), bbox_inches='tight')
 
 #%%
 # lick selectivity last 8 trials

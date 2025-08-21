@@ -358,7 +358,7 @@ ax.set_ylabel('Lick selectivity, last 8 trials')
 ax.set_xticklabels(['LED off', 'LED on'])
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
-ax.set_title('Current Day')
+# ax.set_title('Current Day')
 
 plt.savefig(os.path.join(dst, 'currect_day_lick_sel_inhib.svg'), bbox_inches='tight')
 

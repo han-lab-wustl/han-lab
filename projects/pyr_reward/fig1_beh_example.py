@@ -82,31 +82,7 @@ for ii in iis:
    mask = np.zeros_like(trialnum).astype(bool)
    mask[12920:21920]=1
    # mask[:]=1
-   probes = np.where(trialnum[mask]<3)[0]
-   # mask[eps[0]+8500:eps[1]+2700]=True
-   import matplotlib.patches as patches
-   fig, ax = plt.subplots(figsize=(6,3))
-   ypos=ybinned
-   rew=rewards
-   lick[ybinned<2]=0
-   ybinned[ybinned<2]=np.nan
-   # incorrect licks
-   trials=trialnum[mask]
-   incorrlick=np.zeros_like(lick[mask])
-   for trial in np.unique(trials):
-      tr = trials==trial
-      if trial>2:
-         if sum(rew[mask][tr])<1.5:
-            incorrlick[tr]=lick[mask][tr]
-   nolick = [tr for tr in np.unique(trials) if sum(lick[mask][trials==tr])==0]
-   mask2 = np.ones_like(trials).astype(bool)
-   mask2[[ii for ii,xx in enumerate(trials) if xx in nolick]]=0
-   ax.plot(ypos[mask],zorder=1,label='Mouse Postion',color='slategray')
-   s=9
-   ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,label='Lick')
-   ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s, label='Lick in incorrect trial')
-   ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12, label='Reward')
-   # ax.add_patch(
+n   # ax.add_patch(
    # patches.Rectangle(
    #    xy=(probes[0],0),  # point of origin.
    #    width=probes[-1]-probes[0], height=270, linewidth=1, # width is s

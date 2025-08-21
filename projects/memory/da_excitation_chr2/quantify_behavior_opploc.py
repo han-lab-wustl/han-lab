@@ -76,56 +76,7 @@ for ii,animal in enumerate(animals):
         catchtrialsnum = trialnum[VR[16][0].astype(bool)]
         # probe trials
         probe = trialnum<3
-        # example plot
-        if before==True:
-            rewloc = changerewloc[0]
-            import matplotlib.patches as patches
-            fig, ax = plt.subplots()
-            ax.plot(ypos[probe])
-            ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
-            color='k',s=80)
-            ax.add_patch(
-            patches.Rectangle(
-                xy=(0,rewloc-10),  # point of origin.
-                width=len(ypos[probe]), height=20, linewidth=1, # width is s
-                color='slategray', alpha=0.3))
-            ax.set_ylim([0,270])
-            ax.spines[['top','right']].set_visible(False)
-            ax.set_title(f'{day}')
-            plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
 
-        
-        # example plot during learning
-        eps = np.where(changerewloc)[0]
-        rew = (rewards==1).astype(int)
-        mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
-        mask = np.zeros_like(trialnum).astype(bool)
-        mask[5000:20000]=True
-        import matplotlib.patches as patches
-        fig, ax = plt.subplots(figsize=(6,5))
-        ax.plot(ypos[mask],zorder=1)
-        ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',
-                zorder=2)
-        ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
-            zorder=2)
-        # ax.add_patch(
-        # patches.Rectangle(
-        #     xy=(0,newrewloc-10),  # point of origin.
-        #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
-        #     color='slategray', alpha=0.3))
-        ax.add_patch(
-        patches.Rectangle(
-            xy=(0,changerewloc[eps][0]-10),  # point of origin.
-            width=len(ypos[mask]), height=20, linewidth=1, # width is s
-            color='slategray', alpha=0.3))
-
-        ax.set_ylim([0,270])
-        ax.spines[['top','right']].set_visible(False)
-        # plt.savefig(os.path.join(dst, f'hrz_eg_behavior.svg'),bbox_inches='tight')
-        ax.set_title(f'{day}')
-        plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
-
-        
         # probe = trialnum<str_trials[0] # trials before first successful trial as probes
         com_probe = np.nanmean(ypos[probe][lick.astype(bool)[probe]])-rewloc
         pos_bin, vel_probe = get_behavior_tuning_curve(ypos[probe], velocity[probe], bins=270)
@@ -279,13 +230,13 @@ dfagg = df#.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 x1 = df.loc[df.opto_day_before==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = df.loc[df.opto_day_before==False, 'lick_selectivity_near_rewardloc_mean'].values
 t,pvals1 = scipy.stats.ttest_ind(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-print(f'Per session t-test p-value: {pval:02f}')
+print(f'Per session t-test p-value: {pvals1:02f}')
 
 dfagg = df.groupby(['animal', 'opto_day_before']).mean(numeric_only = True)
 x1 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==True, 'lick_selectivity_near_rewardloc_mean'].values
 x2 = dfagg.loc[dfagg.index.get_level_values('opto_day_before')==False, 'lick_selectivity_near_rewardloc_mean'].values
 t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
-print(f'Paired t-test (n=2) p-value: {pval:02f}')
+print(f'Paired t-test (n=2) p-value: {pvals2:02f}')
 
 
 # velocity
@@ -309,8 +260,15 @@ sns.stripplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean',
                 hue='opto_day_before', data=dfagg,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=15,ax=ax)
+ans = dfagg.index.get_level_values('animal').unique().values
+
+for i in range(len(ans)):
+    ax = sns.lineplot(x='opto_day_before', y='lick_selectivity_near_rewardloc_mean', 
+    data=dfagg[dfagg.index.get_level_values('animal')==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
+    
 ax.get_legend().set_visible(False)
-ax.set_ylabel('Memory lick selectivity')
+ax.set_ylabel('Recall lick selectivity')
 ax.set_xlabel('LED on day before?')
 ax.spines[['top','right']].set_visible(False)
 plt.title(f'persession: {pvals1:.4f}\n paired t-test: {pvals2:.4f}',fontsize=12)
@@ -333,6 +291,12 @@ sns.stripplot(x='opto', y='licks_selectivity_last5trials',
                 hue='opto', data=dfonline,
                 palette={False: "slategray", True: "mediumturquoise"},
                 s=15,ax=ax)
+
+for i in range(len(ans)):
+    ax = sns.lineplot(x='opto', y='licks_selectivity_last5trials', 
+    data=dfonline[dfonline.index.get_level_values('animal')==ans[i]],
+    errorbar=None, color='dimgray', linewidth=2)
+    
 x1 = dfonline.loc[dfonline.index.get_level_values('opto')==True, 'licks_selectivity_last5trials'].values
 x2 = dfonline.loc[dfonline.index.get_level_values('opto')==False, 'licks_selectivity_last5trials'].values
 t,pvals2 = scipy.stats.ttest_rel(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
@@ -342,7 +306,7 @@ t,pvals1 = scipy.stats.ranksums(x1[~np.isnan(x1)], x2[~np.isnan(x2)])
 ax.set_title(f'persession pval = {pvals1:.4f}\n\
     peranimal paired pval = {pvals2:.4f}',fontsize=12)
 ax.set_ylabel('Lick selectivity, last 8 trials')
-ax.set_xticklabels(['LED off', 'LED on'],rotation=45)
+ax.set_xticklabels(['LED off', 'LED on'])
 ax.spines[['top','right']].set_visible(False)
 ax.get_legend().set_visible(False)
 plt.savefig(os.path.join(dst, 'opploc_online_performance.svg'), bbox_inches='tight')

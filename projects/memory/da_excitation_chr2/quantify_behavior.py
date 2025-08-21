@@ -17,7 +17,7 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "Arial"
-plt.rc('font', size=20)          # controls default text sizes
+plt.rc('font', size=16)          # controls default text sizes
 
 plt.close('all')
 # save to pdf
@@ -94,52 +94,77 @@ for ii,animal in enumerate(animals):
         probe = trialnum<3
         
         # example plot
-        # # if before==True:
-        #     rewloc = changerewloc[0]
-        #     import matplotlib.patches as patches
-        #     fig, ax = plt.subplots()
-        #     ax.plot(ypos[probe])
-        #     ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], 
-        #     color='k',s=80)
-        #     ax.add_patch(
-        #     patches.Rectangle(
-        #         xy=(0,rewloc-10),  # point of origin.
-        #         width=len(ypos[probe]), height=20, linewidth=1, # width is s
-        #         color='slategray', alpha=0.3))
-        #     ax.set_ylim([0,270])
-        #     ax.spines[['top','right']].set_visible(False)
-        #     ax.set_title(f'{day}')
-        #     plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
-
-        
+        # if before==True:
+            # import matplotlib.patches as patches
+            # fig, ax = plt.subplots(figsize=(3,3))
+            # ypos[ypos<2]=np.nan
+            # ax.plot(ypos[probe],color='slategray')
+            # ax.scatter(np.where(lick[probe])[0], ypos[np.where(lick[probe])[0]], zorder=2,
+            # color='k',s=9)
+            # ax.add_patch(
+            # patches.Rectangle(
+            #     xy=(0,rewloc-10),  # point of origin.
+            #     width=len(ypos[probe]), height=20, linewidth=1, # width is s
+            #     color='slategray', alpha=0.3))
+            # ax.set_ylim([0,270])
+            # ax.set_yticks([0,270])
+            # ax.set_xticks([0,len(ypos[probe]-1)])
+            # ax.set_xticklabels([0,int((time[probe][-1]-time[probe][0]))])
+            # ax.set_xlabel('Time (s)')
+            # ax.set_ylabel('Track position (cm)')
+            # ax.spines[['top','right']].set_visible(False)
+            # # ax.set_title('Day 2\n Recall probe trials\n3-5 trials at session start')
+            # ax.set_title('Day 2\n Recall')
+            # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior_probes.svg'),bbox_inches='tight')
+            
+            
         # # example plot during learning
         # eps = np.where(changerewloc)[0]
+        # eps=np.append(eps,len(changerewloc)-1)
         # rew = (rewards==1).astype(int)
         # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
-        # mask = np.zeros_like(trialnum).astype(bool)
-        # mask[eps[0]+8500:eps[1]+2700]=True
-        # import matplotlib.patches as patches
-        # fig, ax = plt.subplots(figsize=(9,5))
-        # ax.plot(ypos[mask],zorder=1)
-        # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',
-        #         zorder=2)
-        # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',
-        #     zorder=2)
-        # # ax.add_patch(
-        # # patches.Rectangle(
-        # #     xy=(0,newrewloc-10),  # point of origin.
-        # #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
-        # #     color='slategray', alpha=0.3))
+        # # probes = probe
+        # fig, ax = plt.subplots(figsize=(5,3))
+        # rew=rewards
+        # lick[ypos<2]=0
+        # ypos[ypos<2]=np.nan
+        # # incorrect licks
+        # trials=trialnum[mask]
+        # incorrlick=np.zeros_like(lick[mask])
+        # catchlick=np.zeros_like(lick[mask])
+        # for trial in np.unique(trials):
+        #     tr = trials==trial
+        #     if trial>2:
+        #         if sum(rew[mask][tr])<1.5 and trial not in catchtrialsnum:
+        #             incorrlick[tr]=lick[mask][tr]
+        #         if trial in catchtrialsnum:
+        #             catchlick[tr]=lick[mask][tr]
+        # nolick = [tr for tr in np.unique(trials) if sum(lick[mask][trials==tr])==0]
+        # mask2 = np.ones_like(trials).astype(bool)
+        # mask2[[ii for ii,xx in enumerate(trials) if xx in nolick]]=0
+        # ax.plot(ypos[mask],zorder=1,label='Mouse Postion',color='slategray')
+        # s=9
+        # ax.scatter(np.where(lick[mask])[0], ypos[mask][np.where(lick[mask])[0]], color='k',zorder=2,s=s,label='Lick')
+        # ax.scatter(np.where(incorrlick)[0], ypos[mask][np.where(incorrlick)[0]], color='r',zorder=2,s=s, label='Lick in incorrect trial')
+        # ax.scatter(np.where(catchlick)[0], ypos[mask][np.where(catchlick)[0]], color='orchid',zorder=2,s=s, label='Lick in catch trial')
+
+        # ax.scatter(np.where(rew[mask])[0], ypos[mask][np.where(rew[mask])[0]], color='cyan',zorder=2,s=12, label='Reward')
+
         # ax.add_patch(
         # patches.Rectangle(
         #     xy=(0,changerewloc[eps][0]/gainf-10),  # point of origin.
         #     width=len(ypos[mask]), height=20, linewidth=1, # width is s
         #     color='slategray', alpha=0.3))
-
         # ax.set_ylim([0,270])
+        # ax.set_yticks([0,270])
+        # ax.set_xticks([0,len(ypos[mask]-1)])
+        # ax.set_xticklabels([0,int((time[mask][-1]-time[mask][0])/60)])
+        # ax.set_xlabel('Time (s)')
         # ax.spines[['top','right']].set_visible(False)
-        # plt.savefig(os.path.join(dst, f'hrz_eg_behavior.svg'),bbox_inches='tight')
-        # ax.set_title(f'{day}')
+        # # ax.set_title('Memory single reward zone task\nDay 1\n20-30 rewarded trials')
+        # ax.set_title('Day 1')
+        # ax.set_ylabel('Track position (cm)')
+        # # ax.legend()
         # plt.savefig(os.path.join(dst, f'{animal}_day{day:03d}_behavior.svg'),bbox_inches='tight')
 
         # probe = trialnum<str_trials[0] # trials before first successful trial as probes

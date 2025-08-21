@@ -38,7 +38,7 @@ savedst = r"C:\Users\Han\Desktop\goal_decoding"
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
-iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129]
+iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129 and ii!=164]
 dct = {}
 iis=np.array(iis)
 
@@ -383,7 +383,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-# iis=iis[iis>168] # control v inhib x ex
+# iis=iis[iis>163] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -548,9 +548,13 @@ for ii in iis:
    p_stay_goal = .9 ** dt
 
    all_indices=np.arange(fc3.shape[0])
+   # only for opto ep split into 70/30
+   ep_trials=np.array(ep_trials)
+   opto_trials = all_indices[ep_trials==eptest-1]
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.3, random_state=42)
-   # only for opto ep split into 
+   train_idx, test_idx = train_test_split(opto_trials, test_size=0.3, random_state=42)
+   # add back other ep to training data
+   train_idx = np.append(train_idx, all_indices[ep_trials!=eptest-1])
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
@@ -589,8 +593,7 @@ for ii in iis:
    num_frames = [r['frames'] for r in results]
    
    # opto ind 
-   test_idx = np.sort(test_idx)
-   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
+   opto_idx = subset_trials
    prev_rew_zone = rzs[eptest-2]
    if len(opto_idx)==0:
       continue   
@@ -616,48 +619,7 @@ for ii in iis:
    
    opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]   
    opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
-   # prev ind
-   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
-   prev_s = [xx for xx in prev_idx if xx in strind]
-   prev_f = [xx for xx in prev_idx if xx in flind]
-   prev_p = [xx for xx in prev_idx if xx in probeind]
-   prev_correct_s = [xx for xx in correct if xx in prev_s]
-   prev_correct_f = [xx for xx in correct if xx in prev_f]
-   prev_correct_p = [xx for xx in correct if xx in prev_p]
-   if len(prev_s)>0:
-      prev_s_rate = len(prev_correct_s)/len(prev_s)
-   else: prev_s_rate=np.nan
-   if len(prev_f)>0:
-      prev_f_rate = len(prev_correct_f)/len(prev_f)
-   else: prev_f_rate=np.nan
-   if len(prev_p)>0:
-      prev_p_rate = len(prev_correct_p)/len(prev_p)
-   else: prev_p_rate=np.nan
-   
-   
-   prev_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_s])
-   prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
-   prev_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_p])
 
-   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
-   prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])   
-   # rate correct
-   total_rate = len(correct)/len(test_idx)
-   test_s = [xx for xx in test_idx if xx in strind]
-   test_f = [xx for xx in test_idx if xx in flind]
-   correct_s = [xx for xx in correct if xx in test_s]
-   correct_f = [xx for xx in correct if xx in test_f]
-   # for correct/incorrect trials
-   s_rate = len(correct_s)/len(test_s)
-   if len(test_f)>0:
-      f_rate = len(correct_f)/len(test_f)
-   else: 
-      f_rate=np.nan
-   
-   time_before_predict = np.nanmean(time_before_change)
-   time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_s])
-   time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_f])
-   
    print('####################################')
    print(f'opto correct prediction rate: {opto_s_rate*100:.2g}%')
    print(f'opto incorrect prediction rate: {opto_f_rate*100:.2g}%')
@@ -666,45 +628,27 @@ for ii in iis:
    print(f'opto prediction latency (incorrect trials): {opto_time_before_predict_f:.2g}s')
    print(f'opto prediction latency (probe trials): {opto_time_before_predict_p:.2g}s')
    print(f'opto average time to rew: {opto_time_to_rew:.2g}s')
-   print('####################################')
-   print(f'prev correct prediction rate: {prev_s_rate*100:.2g}%')
-   print(f'prev incorrect prediction rate: {prev_f_rate*100:.2g}%')
-   print(f'prev probe prediction rate: {prev_p_rate*100:.2g}%')
-   print(f'prev prediction latency (correct trials): {prev_time_before_predict_s:.2g}s')
-   print(f'prev prediction latency (incorrect trials): {prev_time_before_predict_f:.2g}s')
-   print(f'prev prediction latency (probe trials): {prev_time_before_predict_p:.2g}s')
-   print(f'prev average time to rew: {prev_time_to_rew:.2g}s')
-   print('####################################')
+
    
-   dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
-      prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
-      opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
-      predicted,rzs,eps,prev_idx,opto_idx,test_idx,strind,flind,probeind,cps,num_frames]
+   dct[f'{animal}_{day}']=[opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
+      predicted,rzs,eps,opto_idx,strind,flind,probeind,cps,num_frames]
 # last few to find patterns in prediction accuracy
 # %%
 df=pd.DataFrame()
 # 8-12 = pred
 # 13-17 = opto
 # Add all the variables
-df['total_rate'] = [v[0] for k, v in dct.items()]
-df['prev_s_rate'] = [v[7] for k, v in dct.items()]
-df['prev_f_rate'] = [v[8] for k, v in dct.items()]
-df['prev_p_rate'] = [v[9] for k, v in dct.items()]
-df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_s'] = [v[10] for k, v in dct.items()]
-df['prev_time_before_predict_f'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_p'] = [v[12] for k, v in dct.items()]
 
-df['opto_s_rate'] = [v[14] for k, v in dct.items()]
-df['opto_f_rate'] = [v[15] for k, v in dct.items()]
-df['opto_p_rate'] = [v[16] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
-df['opto_time_to_rew'] = [v[20] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+df['opto_s_rate'] = [v[0] for k, v in dct.items()]
+df['opto_f_rate'] = [v[1] for k, v in dct.items()]
+df['opto_p_rate'] = [v[2] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[3] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[4] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[5] for k, v in dct.items()]
+df['opto_time_to_rew'] = [v[6] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[7] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[8] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[9] for k, v in dct.items()]
 
 df['animals'] = [k.split('_')[0] for k, v in dct.items()]
 df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
