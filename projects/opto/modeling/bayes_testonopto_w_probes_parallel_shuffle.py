@@ -383,7 +383,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-# iis=iis[iis>168] # control v inhib x ex
+iis=iis[iis>199] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -580,7 +580,7 @@ for ii in iis:
       lick_trial,
       decode_trial,
       min_frac=0.05,
-      pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
+      pdf_filename=os.path.join(savedst,f"{animal}_{day}_shuffle_selected_trials.pdf")
    )
    
    # Filter out None results (failed trials)
@@ -637,139 +637,140 @@ for ii in iis:
 # last few to find patterns in prediction accuracy
 # %%
 df=pd.DataFrame()
-# 8-12 = pred
-# 13-17 = opto
-# Add all the variables
-df['total_rate'] = [v[0] for k, v in dct.items()]
-df['prev_s_rate'] = [v[7] for k, v in dct.items()]
-df['prev_f_rate'] = [v[8] for k, v in dct.items()]
-df['prev_p_rate'] = [v[9] for k, v in dct.items()]
-df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_s'] = [v[10] for k, v in dct.items()]
-df['prev_time_before_predict_f'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_p'] = [v[12] for k, v in dct.items()]
-
-df['opto_s_rate'] = [v[14] for k, v in dct.items()]
-df['opto_f_rate'] = [v[15] for k, v in dct.items()]
-df['opto_p_rate'] = [v[16] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
-df['opto_time_to_rew'] = [v[20] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+df['opto_s_rate'] = [v[0] for k, v in dct.items()]
+df['opto_f_rate'] = [v[1] for k, v in dct.items()]
+df['opto_p_rate'] = [v[2] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[3] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[4] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[5] for k, v in dct.items()]
+df['opto_time_to_rew'] = [v[6] for k, v in dct.items()]
 
 df['animals'] = [k.split('_')[0] for k, v in dct.items()]
 df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
-df_long = pd.DataFrame({
-   's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
-   'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
-   'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
-   'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
-   'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
-   'condition': ['prev'] * len(df) + ['opto'] * len(df),
-'animals': df['animals'].tolist() * 2,
-   'days': df['days'].tolist() * 2
-})
+df['opto_s_rate']=df['opto_s_rate']*100
+# average correct/incorrect
+# df['opto_s_rate'] = df[['opto_s_rate', 'opto_f_rate']].mean(axis=1)
+df['opto_time_before_predict_s'] = df[['opto_time_before_predict_s', 'opto_time_before_predict_f']].mean(axis=1)
+df['opto_time_before_predict_s']=df['opto_time_before_predict_s']*100
 
 cdf = conddf.copy()
-df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
-df=df[df.s_rate>0]
-# df=df[df.f_rate>0]
+df = pd.merge(df, cdf, on=['animals', 'days'], how='inner')
+# df=df[df.opto_s_rate>0]
 
-# df=df[df.time_before_predict_f<10]
 df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
-df=df[df.optoep>1]
-df=df[(df.animals!='e189')&(df.animals!='e190')&(df.animals!='e200')]
+df=df[(df.optoep>1) | (df.optoep==0)]
+# HACK!! ADDED IN BETWEEN CTRL DAYS
+df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
-# df=df[~((df.animals=='e201')&((df.days>62)))]
+df=df[~((df.animals=='e201')&((df.days>62)))]
 df=df[~((df.animals=='z14')&((df.days<33)))]
-# df=df[~((df.animals=='z16')&((df.days>15)))]
-# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-# df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
-df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
-df=df[~((df.animals=='e216')&(df.days.isin([57])))]
-df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
-df.to_csv(r'Z:\saved_datasets\bayesian_goal_decoding_70_30_split.csv', index=None)
+# df=df[~((df.animals=='e200')&((df.days<75)))]
 
-var='s_rate'
-order=['prev','opto']
-df=df.groupby(['animals','days','condition','type']).mean(numeric_only=True)
-sns.barplot(x='type',y=var,data=df,hue='condition',fill=False,hue_order=order)
-sns.stripplot(x='type',y=var,data=df,hue='condition',dodge=True,hue_order=order)
+df=df[~((df.animals=='z16')&((df.days>15)))]
+# df=df[~((df.animals=='e186')&((df.days>15)))]
+# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
+df=df[~((df.animals=='e216')&(df.days.isin([55,57])))]
+df=df[~((df.animals=='e218')&(df.days.isin([35,41,55])))]
+# df.to_csv(r'Z:\saved_datasets\bayesian_goal_decoding_70_30_split.csv', index=None)
+pl=['slategray','red','darkgoldenrod']
+order = ['ctrl','vip','vip_ex']
+
+fig,axes=plt.subplots(ncols=2)
+ax=axes[0]
+var='opto_s_rate'
+df=df.groupby(['animals','days','type']).mean(numeric_only=True)
+dfan=df.groupby(['animals','type']).mean(numeric_only=True)
+sns.barplot(x='type',y=var,data=df,fill=False,ax=ax,palette=pl)
+sns.stripplot(x='type',y=var,data=df,ax=ax,alpha=0.3,palette=pl)
+sns.stripplot(x='type',y=var,data=dfan,ax=ax,s=10,alpha=.7,palette=pl)
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+df = df.reset_index()
+group_counts = df.groupby("type")[var].count()
+# Add text annotations above each bar
+for i, t in enumerate(order):
+    n = group_counts.get(t, 0)
+    y = df[df['type'] == t][var].mean()  # bar height (mean)
+    ax.text(i, y + 0.05*y, f"n={n}", ha='center', va='bottom', fontsize=10)
+ax.set_xlabel('')
 # sns.barplot(x='condition',y='f_rate',data=df)
 # Group by animal, type, and condition to get per-animal means
+def add_sig_bar(ax, x1, x2, y, h, p):
+    """
+    Draws a significance bar with asterisks between x1 and x2 at height y+h.
+    """
+    ax.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1.5, c='k')
+    if p < 0.001:
+        stars = '***'
+    elif p < 0.01:
+        stars = '**'
+    elif p < 0.05:
+        stars = '*'
+    else:
+        stars = 'n.s.'
+    ax.text((x1+x2)/2, y+h, f'p={p:.2g}', ha='center', va='bottom',fontsize=10)
+# Example: compare ctrl vs vip and ctrl vs vipex
+df = df.reset_index()
+order = ['ctrl','vip','vip_ex']
+ymax = df[var].max()
+h = ymax * 0.1  # bracket height step
+
+pairs = [('ctrl','vip'), ('ctrl','vip_ex')]
+for i,(a,b) in enumerate(pairs):
+   x1 = df.loc[df.type==a, var].dropna().values
+   x2 = df.loc[df.type==b, var].dropna().values
+   t, p = scipy.stats.ttest_ind(x1, x2)
+   add_sig_bar(ax,
+               order.index(a),
+               order.index(b),
+               y=ymax*1.05 + i*h,
+               h=h*0.2,  # short vertical tick
+               p=p)
+ax.set_ylabel('% Correct prediction')
+
+var='opto_time_before_predict_s'
+ax=axes[1]# df=df.groupby(['animals','days','type']).mean(numeric_only=True)
+sns.barplot(x='type',y=var,data=df,fill=False,ax=ax,palette=pl)
+sns.stripplot(x='type',y=var,data=df,ax=ax,alpha=0.3,hue='type',palette=pl)
+sns.stripplot(x='type',y=var,data=dfan,ax=ax,s=10,alpha=.7,hue='type',palette=pl)
 df_grouped = df.reset_index()
-
-# Pivot to wide format for paired test
-df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
-var='time_before_predict_s'
-order2=['ctrl','vip','vip_ex']
-# Prepare plot
-
-df_pivot=df_pivot[['type','animals',var]].reset_index()
-# Compute opto - prev delta per animal
-df_pivot['delta'] = df_pivot[var]['opto']-df_pivot[var]['prev']
-
-plt.figure(figsize=(3, 5))
-sns.barplot(
-   data=df_pivot,
-   x='type',
-   y='delta',
-   fill=False,
-   errorbar='se',order=order2
-)
-sns.stripplot(
-   data=df_pivot,
-   x='type',
-   y='delta',
-   dodge=True,order=order2
-)
-
-# Get deltas per group
-group_deltas = {
-    t: df_pivot[df_pivot['type'] == t]['delta'].dropna()
-    for t in df_pivot['type'].unique()
-}
-
-# Compare ctrl vs vip
-if 'ctrl' in group_deltas and 'vip' in group_deltas:
-   stat1, pval1 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip'])
-   x1, x2 = 0, 1  # assuming ctrl is index 0, vip is 1
-   y = max(df_pivot['delta'].max(), 0.01)
-   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
-   if pval1 < 0.001:
-      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
-   elif pval1 < 0.01:
-      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
-   elif pval1 < 0.05:
-      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
-   else:
-      plt.text((x1 + x2)/2, y + 0.005, f'{pval1:.2g}', ha='center')
-
-# Compare ctrl vs vipex
-if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
-   stat2, pval2 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip_ex'])
-   x1, x2 = 0, 2  # assuming vipex is index 2
-   y=max(df_pivot['delta'].max(), 0.01)-.05
-   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
-   if pval2 < 0.001:
-      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
-   elif pval2 < 0.01:
-      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
-   elif pval2 < 0.05:
-      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
-   else:
-      plt.text((x1 + x2)/2, y + 0.005, f'{pval2:.2g}', ha='center')
+dfan=dfan.reset_index()
+# Add lines per animal
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_xlabel('')
+group_counts = df.groupby("type")[var].count()
+# Add text annotations above each bar
+for i, t in enumerate(order):
+    n = group_counts.get(t, 0)
+    y = df[df['type'] == t][var].mean()  # bar height (mean)
+    ax.text(i, y + 0.05*y, f"n={n}", ha='center', va='bottom', fontsize=10)
 
 # Final tweaks
-plt.ylabel('frac time before prediction')
-plt.xlabel('Type')
-plt.legend(title='Condition')
+ax.set_ylabel('% Time in correct prediction')
+# Example: compare ctrl vs vip and ctrl vs vipex
+df = df.reset_index()
+order = ['ctrl','vip','vip_ex']
+ymax = df[var].max()
+h = ymax * 0.1  # bracket height step
+
+pairs = [('ctrl','vip'), ('ctrl','vip_ex')]
+for i,(a,b) in enumerate(pairs):
+   x1 = df.loc[df.type==a, var].dropna().values
+   x2 = df.loc[df.type==b, var].dropna().values
+   t, p = scipy.stats.ranksums(x1, x2)
+   add_sig_bar(ax,
+               order.index(a),
+               order.index(b),
+               y=ymax*1.05 + i*h,
+               h=h*0.2,  # short vertical tick
+               p=p)
+
 sns.despine()
+fig.suptitle('Goal decoding')
 plt.tight_layout()
-plt.show()
+df.to_csv(r'Z:\saved_datasets\decoding_shuffle_202509.csv')
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
+plt.savefig(os.path.join(savedst, 'shuffle_goal_decoding_opto.svg'), bbox_inches='tight')
 
 # %%
 

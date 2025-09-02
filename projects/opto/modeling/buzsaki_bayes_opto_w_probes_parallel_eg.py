@@ -1,5 +1,10 @@
 #%%
-
+"""
+8/31/25
+- train in 70% of opto trials, all trials in rest of epochs
+- test on 30% of opto trials only
+- no min window for changepoint
+"""
 import matplotlib.pyplot as plt
 import ruptures as rpt
 from scipy.ndimage import gaussian_filter1d
@@ -11,6 +16,7 @@ from sklearn.decomposition import PCA
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 from joblib import Parallel, delayed
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 import numpy as np, sys
 import scipy.io, scipy.interpolate, scipy.stats
@@ -38,9 +44,11 @@ savedst = r"C:\Users\Han\Desktop\goal_decoding"
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
-iis = [ii for ii in iis if ii!=202]
+iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129 and ii!=164]
 dct = {}
 iis=np.array(iis)
+def moving_average(x, window_size=5):
+   return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 
 def estimate_tuning(fc3, ybinned, goal_zone, cm_per_bin=1, bin_size_cm=3, n_goals=3):
    trials, time, N = fc3.shape
@@ -140,36 +148,42 @@ def process_trial(
    # Decode trial
    ybin_trial = ybinned[trial].copy()
    if ybin_trial[0]>200: ybin_trial[0]=1.5
-   post = decode_trial_fn(fc3[trial], ybin_trial, goal_zone[trial], tuning)
+   fc3_trial = fc3[trial].copy()
+   fc3_trial=fc3_trial[ybin_trial>3]
+   ybin_trial=ybin_trial[ybin_trial>3]
+   post = decode_trial_fn(fc3_trial, ybin_trial, goal_zone[trial], tuning)
    post_goal = post.sum(axis=1)  # marginalize over position
-   # post_pos = post.sum(axis=2)   # not used below
 
    ep = ep_trials[trial]
    # 10 cm before rewzone start
-   rewloc_start = rewlocs[ep]-( rewsize / 2)-5
+   rewloc_start = rewlocs[ep]-( rewsize/2)
 
    # Find index before reward location
    ypos_temp = ybin_trial.copy()
    ypos_temp[ypos_temp == 0] = 1e6
    rewloc_ind_candidates = np.where(ypos_temp < rewloc_start)[0]
-   if len(rewloc_ind_candidates) == 0:
-      return {
-         "trial": trial,
-         "correct": None,
-         "time_before_change": None,
-         "time_to_rew": None,
-         "predicted": None,
-         "penalty_used": None,
-         "fig": None,
-         'changepoint_ind': None,
-         'frames': None
-      }
+   # if len(rewloc_ind_candidates) == 0:
+   #    return {
+   #       "trial": trial,
+   #       "correct": None,
+   #       "time_before_change": None,
+   #       "time_to_rew": None,
+   #       "predicted": None,
+   #       "penalty_used": None,
+   #       "fig": None,
+   #       'changepoint_ind': None,
+   #       'frames': None
+   #    }
    rewloc_ind = rewloc_ind_candidates[-1]
+   prob_map = np.nanmax(post,axis=0).T
+   prob_map=np.array([moving_average(prob) for prob in prob_map])
 
    # MAP goal trace
    # rewloc_ind = np.where(ybinned[trial]==0)[0][0]
+   # over position bins instead of trial time
+   post_goal = post.sum(axis=0)
    goal_trace = np.argmax(post_goal, axis=1) + 1
-   trial_len = len(goal_trace[:rewloc_ind])
+   trial_len = len(goal_trace[:int(rewlocs[eptest-1]/3)])
    min_seg_len = int(min_frac * trial_len)
 
    # Automatically find penalty
@@ -191,7 +205,33 @@ def process_trial(
 
    # Final changepoint detection
    bkps = np.array(rpt.Pelt(model="l2").fit(goal_trace).predict(pen=chosen_pen))
-   changepoint = bkps[bkps < rewloc_ind]
+   # by pos bin not trial nuM!! the below code wont work 
+   changepoint = bkps[bkps < int(rewlocs[eptest-1]/3)]
+   fig, ax = plt.subplots(figsize=(3,1))
+   im = ax.imshow(prob_map, aspect='auto', origin='lower', cmap='Blues')
+   ax.axvline(rewlocs[eptest-1]/3, color='k', linewidth=3, linestyle='--',label='Reward loc.')
+   for cpi,cp in enumerate(changepoint):
+      if cpi==0:
+         ax.axvline(cp, color='r', linewidth=1, linestyle='--',label='Changepoint')
+      else:
+         ax.axvline(cp, color='r', linewidth=1, linestyle='--')
+   ax.set_xlabel("Track position (cm)")
+   ax.set_xticks([0,90])
+   ax.set_xticklabels([0,270])
+   ax.set_yticks([0,1,2])
+   ax.set_yticklabels([1,2,3])
+   ax.set_ylabel("Area")
+
+   # add colorbar to the right side
+   cbar = fig.colorbar(im, ax=ax, orientation='vertical')
+   cbar.set_label("Probability")
+   cbar.set_ticks([0, 1])
+   cbar.set_ticklabels(["0", "1"])
+   # ax.legend()
+   plt.tight_layout()
+   savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+   plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig5_decoding_probability_{trial}.svg'), bbox_inches='tight')
+
    # Predict goal zone from last changepoint before reward
    if len(changepoint) > 0:
       pred_goal_zone_cp = np.ceil(np.nanmedian(goal_trace[changepoint[-1]:rewloc_ind]))
@@ -380,8 +420,8 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-# iis=iis[iis>141 bn] # control v inhib x ex
-
+# iis=iis[iis>163] # control v inhib x ex
+# iis=[129,166,49]
 for ii in iis:
    # ---------- Load animal info ---------- #
    day = conddf.days.values[ii]
@@ -545,20 +585,51 @@ for ii in iis:
    p_stay_goal = .9 ** dt
 
    all_indices=np.arange(fc3.shape[0])
+   # only for opto ep split into 70/30
+   ep_trials=np.array(ep_trials)
+   opto_trials = all_indices[ep_trials==eptest-1]
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(all_indices, test_size=0.6, random_state=42)
+   train_idx, test_idx = train_test_split(opto_trials, test_size=0.3, random_state=42)
+   # add back other ep to training data
+   train_idx = np.append(train_idx, all_indices[ep_trials!=eptest-1])
    # Now use the indices to subset your data
    fc3_train, fc3_test = fc3[train_idx], fc3[test_idx]
    ybinned_train, ybinned_test = ybinned[train_idx], ybinned[test_idx]
    goal_zone_train, goal_zone_test = goal_zone[train_idx], goal_zone[test_idx]
    lick_trial_train, lick_trial_test = lick_trial[train_idx], lick_trial[test_idx]
+   def normalize_rows(x):
+      x_min = np.min(x, axis=1, keepdims=True)
+      x_max = np.max(x, axis=1, keepdims=True)
+      return (x - x_min) / (x_max - x_min + 1e-10)
+   # Moving average function
+   def moving_average(x, window_size=5):
+      return np.convolve(x, np.ones(window_size)/window_size, mode='same')
    # training ; use held out trials?
    tuning = estimate_tuning(fc3_train, ybinned_train, goal_zone_train)
+   goal = int(rzs[eptest-1]-1)
+   tuning_goal = tuning[:, :, goal]  
+   # find peak bin per neuron
+   peak_bin = np.argmax(tuning_goal, axis=1)
+   plt.rc('font', size=16)
+   # sort neuron indices by their peak location
+   sort_idx = np.argsort(peak_bin)[::-1]
+   tuning_goal = np.array([moving_average(tc) for tc in tuning_goal])
+   tuning_goal=normalize_rows(tuning_goal)
+   # plot sorted tuning curves
+   fig,ax = plt.subplots(figsize=(3,5))
+   ax.imshow(tuning_goal[sort_idx], aspect='auto', origin='lower')
+   ax.axvline(rewlocs[eptest-1]/3,color='w',linewidth=3,linestyle='--')
+   ax.set_xlabel("Track position (cm)")
+   ax.set_xticks([0,90])
+   ax.set_xticklabels([0,270])
+   ax.set_yticks([0,tuning.shape[0]])
+   ax.set_yticklabels([tuning.shape[0],1])
+   ax.set_ylabel("All pyramidal cells (sorted)")
+   savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+   plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig5_decoding_tc.svg'), bbox_inches='tight')
 
    # Parallel execution
    subset_trials = np.sort(test_idx)  # choose trials you want figures for
-   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
-   subset_trials = np.sort(opto_idx)
    results = run_trials_and_save_pdf(
       subset_trials,
       fc3,
@@ -571,17 +642,10 @@ for ii in iis:
       time,
       lick_trial,
       decode_trial,
-      min_frac=0.05,
+      min_frac=0,
       pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
    )
-   # test
-   # plt.plot(ybinned[trial]/135,label='position')
-   # plt.plot(goal_trace,label='predicted rew zone')
-   # plt.axhline((rewlocs[eptest-1]-rewsize/2)/135,color='k',label='rew loc center')
-   # for cp in changepoint:
-   #    plt.axvline(cp,linestyle='--',color='r', label='change points')
-   # plt.legend()
-   # plt.title(f'VIP inhibition mouse\nPrevious reward loc. = {rewlocs[eptest-2]}\nCurrent rew loc. = {rewlocs[eptest-1]}')
+   
    # Filter out None results (failed trials)
    results = [r for r in results if r is not None]
 
@@ -594,7 +658,8 @@ for ii in iis:
    num_frames = [r['frames'] for r in results]
    
    # opto ind 
-   opto_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]
+   opto_idx = subset_trials
+   prev_rew_zone = rzs[eptest-2]
    if len(opto_idx)==0:
       continue   
    opto_s = [xx for xx in opto_idx if xx in strind]
@@ -619,48 +684,7 @@ for ii in iis:
    
    opto_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-1]   
    opto_time_to_rew = np.nanmean(np.array(time_to_rew)[opto_idx])
-   # prev ind
-   prev_idx = [xx for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
-   prev_s = [xx for xx in prev_idx if xx in strind]
-   prev_f = [xx for xx in prev_idx if xx in flind]
-   prev_p = [xx for xx in prev_idx if xx in probeind]
-   prev_correct_s = [xx for xx in correct if xx in prev_s]
-   prev_correct_f = [xx for xx in correct if xx in prev_f]
-   prev_correct_p = [xx for xx in correct if xx in prev_p]
-   if len(prev_s)>0:
-      prev_s_rate = len(prev_correct_s)/len(prev_s)
-   else: prev_s_rate=np.nan
-   if len(prev_f)>0:
-      prev_f_rate = len(prev_correct_f)/len(prev_f)
-   else: prev_f_rate=np.nan
-   if len(prev_p)>0:
-      prev_p_rate = len(prev_correct_p)/len(prev_p)
-   else: prev_p_rate=np.nan
-   
-   
-   prev_time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_s])
-   prev_time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_f])
-   prev_time_before_predict_p = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in prev_p])
 
-   prev_idx = [hh for hh,xx in enumerate(test_idx) if ep_trials[xx]==eptest-2]   
-   prev_time_to_rew = np.nanmean(np.array(time_to_rew)[prev_idx])   
-   # rate correct
-   total_rate = len(correct)/len(test_idx)
-   test_s = [xx for xx in test_idx if xx in strind]
-   test_f = [xx for xx in test_idx if xx in flind]
-   correct_s = [xx for xx in correct if xx in test_s]
-   correct_f = [xx for xx in correct if xx in test_f]
-   # for correct/incorrect trials
-   s_rate = len(correct_s)/len(test_s)
-   if len(test_f)>0:
-      f_rate = len(correct_f)/len(test_f)
-   else: 
-      f_rate=np.nan
-   
-   time_before_predict = np.nanmean(time_before_change)
-   time_before_predict_s = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_s])
-   time_before_predict_f = np.nanmean([xx for ii,xx in enumerate(time_before_change) if correct[ii] in test_f])
-   
    print('####################################')
    print(f'opto correct prediction rate: {opto_s_rate*100:.2g}%')
    print(f'opto incorrect prediction rate: {opto_f_rate*100:.2g}%')
@@ -669,155 +693,147 @@ for ii in iis:
    print(f'opto prediction latency (incorrect trials): {opto_time_before_predict_f:.2g}s')
    print(f'opto prediction latency (probe trials): {opto_time_before_predict_p:.2g}s')
    print(f'opto average time to rew: {opto_time_to_rew:.2g}s')
-   print('####################################')
-   print(f'prev correct prediction rate: {prev_s_rate*100:.2g}%')
-   print(f'prev incorrect prediction rate: {prev_f_rate*100:.2g}%')
-   print(f'prev probe prediction rate: {prev_p_rate*100:.2g}%')
-   print(f'prev prediction latency (correct trials): {prev_time_before_predict_s:.2g}s')
-   print(f'prev prediction latency (incorrect trials): {prev_time_before_predict_f:.2g}s')
-   print(f'prev prediction latency (probe trials): {prev_time_before_predict_p:.2g}s')
-   print(f'prev average time to rew: {prev_time_to_rew:.2g}s')
-   print('####################################')
+
    
-   dct[f'{animal}_{day}']=[total_rate,s_rate,f_rate,time_before_predict, time_before_predict_s,time_before_predict_f,time_to_rew,
-      prev_s_rate, prev_f_rate,  prev_p_rate, prev_time_before_predict_s, prev_time_before_predict_f, prev_time_before_predict_p, prev_time_to_rew,
-      opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
-      predicted,rzs,eps,prev_idx,opto_idx,test_idx,strind,flind,probeind,cps,num_frames]
+   dct[f'{animal}_{day}']=[opto_s_rate, opto_f_rate, opto_p_rate, opto_time_before_predict_s, opto_time_before_predict_f, opto_time_before_predict_p, opto_time_to_rew,
+      predicted,rzs,eps,opto_idx,strind,flind,probeind,cps,num_frames]
 # last few to find patterns in prediction accuracy
 # %%
 df=pd.DataFrame()
-# 8-12 = pred
-# 13-17 = opto
-# Add all the variables
-df['total_rate'] = [v[0] for k, v in dct.items()]
-df['prev_s_rate'] = [v[7] for k, v in dct.items()]
-df['prev_f_rate'] = [v[8] for k, v in dct.items()]
-df['prev_p_rate'] = [v[9] for k, v in dct.items()]
-df['prev_time_to_rew'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_s'] = [v[10] for k, v in dct.items()]
-df['prev_time_before_predict_f'] = [v[11] for k, v in dct.items()]
-df['prev_time_before_predict_p'] = [v[12] for k, v in dct.items()]
+plt.rc('font', size=18)          # controls default text sizes
 
-df['opto_s_rate'] = [v[14] for k, v in dct.items()]
-df['opto_f_rate'] = [v[15] for k, v in dct.items()]
-df['opto_p_rate'] = [v[16] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
-df['opto_time_to_rew'] = [v[20] for k, v in dct.items()]
-df['opto_time_before_predict_s'] = [v[17] for k, v in dct.items()]
-df['opto_time_before_predict_f'] = [v[18] for k, v in dct.items()]
-df['opto_time_before_predict_p'] = [v[19] for k, v in dct.items()]
+df['opto_s_rate'] = [v[0] for k, v in dct.items()]
+df['opto_f_rate'] = [v[1] for k, v in dct.items()]
+df['opto_p_rate'] = [v[2] for k, v in dct.items()]
+df['opto_time_before_predict_s'] = [v[3] for k, v in dct.items()]
+df['opto_time_before_predict_f'] = [v[4] for k, v in dct.items()]
+df['opto_time_before_predict_p'] = [v[5] for k, v in dct.items()]
+df['opto_time_to_rew'] = [v[6] for k, v in dct.items()]
 
 df['animals'] = [k.split('_')[0] for k, v in dct.items()]
 df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
-df_long = pd.DataFrame({
-   's_rate': df['prev_s_rate'].tolist() + df['opto_s_rate'].tolist(),
-   'f_rate': df['prev_f_rate'].tolist() + df['opto_f_rate'].tolist(),
-   'time_before_predict_s': df['prev_time_before_predict_s'].tolist() + df['opto_time_before_predict_s'].tolist(),
-   'time_before_predict_f': df['prev_time_before_predict_f'].tolist() + df['opto_time_before_predict_f'].tolist(),
-   'time_to_rew': df['prev_time_to_rew'].tolist() + df['opto_time_to_rew'].tolist(),
-   'condition': ['prev'] * len(df) + ['opto'] * len(df),
-'animals': df['animals'].tolist() * 2,
-   'days': df['days'].tolist() * 2
-})
+df['opto_s_rate']=df['opto_s_rate']*100
+# average correct/incorrect
+# df['opto_s_rate'] = df[['opto_s_rate', 'opto_f_rate']].mean(axis=1)
+df['opto_time_before_predict_s'] = df[['opto_time_before_predict_s', 'opto_time_before_predict_f']].mean(axis=1)
+df['opto_time_before_predict_s']=df['opto_time_before_predict_s']*100
 
 cdf = conddf.copy()
-df = pd.merge(df_long, cdf, on=['animals', 'days'], how='inner')
-# df=df[df.s_rate>0]
-# df=df[df.f_rate>0]
+df = pd.merge(df, cdf, on=['animals', 'days'], how='inner')
+# df=df[df.opto_s_rate>0]
 
-# df=df[df.time_before_predict_f<10]
 df['type']=[xx if 'vip' in xx else 'ctrl' for xx in df.in_type]
-df=df[df.optoep>1]
+df=df[(df.optoep>1) | (df.optoep==0)]
+# HACK!! ADDED IN BETWEEN CTRL DAYS
 df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
-# df=df[~((df.animals=='e201')&((df.days>62)))]
+df=df[~((df.animals=='e201')&((df.days>62)))]
 df=df[~((df.animals=='z14')&((df.days<33)))]
-# df=df[~((df.animals=='z16')&((df.days>15)))]
-df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-df=df[~((df.animals=='z15')&((df.days<2)|(df.days.isin([9,12]))))]
-df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
-df=df[~((df.animals=='e216')&(df.days.isin([57])))]
-df=df[~((df.animals=='e218')&(df.days.isin([41,55])))]
+# df=df[~((df.animals=='e200')&((df.days<75)))]
 
-var='s_rate'
-order=['prev','opto']
-df=df.groupby(['animals', 'condition','type']).mean(numeric_only=True)
-sns.barplot(x='type',y=var,data=df,hue='condition',fill=False,hue_order=order)
-sns.stripplot(x='type',y=var,data=df,hue='condition',dodge=True,hue_order=order)
+df=df[~((df.animals=='z16')&((df.days>15)))]
+# df=df[~((df.animals=='e186')&((df.days>15)))]
+# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
+df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
+df=df[~((df.animals=='e216')&(df.days.isin([55,57])))]
+df=df[~((df.animals=='e218')&(df.days.isin([35,41,55])))]
+# df.to_csv(r'Z:\saved_datasets\bayesian_goal_decoding_70_30_split.csv', index=None)
+pl=['slategray','red','darkgoldenrod']
+
+fig,axes=plt.subplots(ncols=2)
+ax=axes[0]
+var='opto_s_rate'
+df=df.groupby(['animals','days','type']).mean(numeric_only=True)
+dfan=df.groupby(['animals','type']).mean(numeric_only=True)
+sns.barplot(x='type',y=var,data=df,fill=False,ax=ax,palette=pl)
+sns.stripplot(x='type',y=var,data=df,ax=ax,alpha=0.3,palette=pl)
+sns.stripplot(x='type',y=var,data=dfan,ax=ax,s=10,alpha=.7,palette=pl)
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+df = df.reset_index()
+group_counts = df.groupby("type")[var].count()
+# Add text annotations above each bar
+for i, t in enumerate(order):
+    n = group_counts.get(t, 0)
+    y = df[df['type'] == t][var].mean()  # bar height (mean)
+    ax.text(i, y + 0.05*y, f"n={n}", ha='center', va='bottom', fontsize=10)
+ax.set_xlabel('')
 # sns.barplot(x='condition',y='f_rate',data=df)
 # Group by animal, type, and condition to get per-animal means
+def add_sig_bar(ax, x1, x2, y, h, p):
+    """
+    Draws a significance bar with asterisks between x1 and x2 at height y+h.
+    """
+    ax.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1.5, c='k')
+    if p < 0.001:
+        stars = '***'
+    elif p < 0.01:
+        stars = '**'
+    elif p < 0.05:
+        stars = '*'
+    else:
+        stars = 'n.s.'
+    ax.text((x1+x2)/2, y+h, f'p={p:.2g}', ha='center', va='bottom',fontsize=10)
+# Example: compare ctrl vs vip and ctrl vs vipex
+df = df.reset_index()
+order = ['ctrl','vip','vip_ex']
+ymax = df[var].max()
+h = ymax * 0.1  # bracket height step
+
+pairs = [('ctrl','vip'), ('ctrl','vip_ex')]
+for i,(a,b) in enumerate(pairs):
+   x1 = df.loc[df.type==a, var].dropna().values
+   x2 = df.loc[df.type==b, var].dropna().values
+   t, p = scipy.stats.ttest_ind(x1, x2)
+   add_sig_bar(ax,
+               order.index(a),
+               order.index(b),
+               y=ymax*1.05 + i*h,
+               h=h*0.2,  # short vertical tick
+               p=p)
+ax.set_ylabel('% Correct prediction')
+
+var='opto_time_before_predict_s'
+ax=axes[1]# df=df.groupby(['animals','days','type']).mean(numeric_only=True)
+sns.barplot(x='type',y=var,data=df,fill=False,ax=ax,palette=pl)
+sns.stripplot(x='type',y=var,data=df,ax=ax,alpha=0.3,hue='type',palette=pl)
+sns.stripplot(x='type',y=var,data=dfan,ax=ax,s=10,alpha=.7,hue='type',palette=pl)
 df_grouped = df.reset_index()
-
-# Pivot to wide format for paired test
-df_pivot = df_grouped.pivot(index=['animals','days', 'type'], columns='condition').reset_index()
-var='time_before_predict_s'
-order2=['ctrl','vip','vip_ex']
-# Prepare plot
-
-df_pivot=df_pivot[['type','animals',var]].reset_index()
-# Compute opto - prev delta per animal
-df_pivot['delta'] = df_pivot[var]['opto']#-df_pivot[var]['prev']
-
-plt.figure(figsize=(3, 5))
-sns.barplot(
-   data=df_pivot,
-   x='type',
-   y='delta',
-   fill=False,
-   errorbar='se',order=order2
-)
-sns.stripplot(
-   data=df_pivot,
-   x='type',
-   y='delta',
-   dodge=True,order=order2
-)
-
-# Get deltas per group
-group_deltas = {
-    t: df_pivot[df_pivot['type'] == t]['delta'].dropna()
-    for t in df_pivot['type'].unique()
-}
-
-# Compare ctrl vs vip
-if 'ctrl' in group_deltas and 'vip' in group_deltas:
-   stat1, pval1 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip'])
-   x1, x2 = 0, 1  # assuming ctrl is index 0, vip is 1
-   y = max(df_pivot['delta'].max(), 0.01)
-   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
-   if pval1 < 0.001:
-      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
-   elif pval1 < 0.01:
-      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
-   elif pval1 < 0.05:
-      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
-   else:
-      plt.text((x1 + x2)/2, y + 0.005, f'{pval1:.2g}', ha='center')
-
-# Compare ctrl vs vipex
-if 'ctrl' in group_deltas and 'vip_ex' in group_deltas:
-   stat2, pval2 = scipy.stats.ranksums(group_deltas['ctrl'], group_deltas['vip_ex'])
-   x1, x2 = 0, 2  # assuming vipex is index 2
-   y=max(df_pivot['delta'].max(), 0.01)-.05
-   plt.plot([x1, x1, x2, x2], [y, y + 0.003, y + 0.003, y], lw=1.5, color='k')
-   if pval2 < 0.001:
-      plt.text((x1 + x2)/2, y + 0.005, '***', ha='center')
-   elif pval2 < 0.01:
-      plt.text((x1 + x2)/2, y + 0.005, '**', ha='center')
-   elif pval2 < 0.05:
-      plt.text((x1 + x2)/2, y + 0.005, '*', ha='center')
-   else:
-      plt.text((x1 + x2)/2, y + 0.005, f'{pval2:.2g}', ha='center')
+dfan=dfan.reset_index()
+# Add lines per animal
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_xlabel('')
+group_counts = df.groupby("type")[var].count()
+# Add text annotations above each bar
+for i, t in enumerate(order):
+    n = group_counts.get(t, 0)
+    y = df[df['type'] == t][var].mean()  # bar height (mean)
+    ax.text(i, y + 0.05*y, f"n={n}", ha='center', va='bottom', fontsize=10)
 
 # Final tweaks
-plt.ylabel('frac time before prediction')
-plt.xlabel('Type')
-plt.legend(title='Condition')
+ax.set_ylabel('% Time in correct prediction')
+# Example: compare ctrl vs vip and ctrl vs vipex
+df = df.reset_index()
+order = ['ctrl','vip','vip_ex']
+ymax = df[var].max()
+h = ymax * 0.1  # bracket height step
+
+pairs = [('ctrl','vip'), ('ctrl','vip_ex')]
+for i,(a,b) in enumerate(pairs):
+   x1 = df.loc[df.type==a, var].dropna().values
+   x2 = df.loc[df.type==b, var].dropna().values
+   t, p = scipy.stats.ranksums(x1, x2)
+   add_sig_bar(ax,
+               order.index(a),
+               order.index(b),
+               y=ymax*1.05 + i*h,
+               h=h*0.2,  # short vertical tick
+               p=p)
+
 sns.despine()
+fig.suptitle('Goal decoding')
 plt.tight_layout()
-plt.show()
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
+plt.savefig(os.path.join(savedst, 'goal_decoding_opto.svg'), bbox_inches='tight')
 
 # %%
 
