@@ -44,7 +44,7 @@ savedst = r"C:\Users\Han\Desktop\goal_decoding"
 
 # conddf = conddf[(conddf.optoep>1)]
 iis = np.arange(len(conddf))  # Animal indices
-iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129 and ii!=164]
+iis = [ii for ii in iis if ii!=202 and ii!=40 and ii!=129 and ii!=164 and ii!=199]
 dct = {}
 iis=np.array(iis)
 
@@ -390,7 +390,7 @@ def get_success_failure_trials(trialnum, reward):
    return success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials
 # iis=iis[iis>2]
 #%%
-# iis=iis[iis>163] # control v inhib x ex
+# iis=iis[ii s>199] # control v inhib x ex
 
 for ii in iis:
    # ---------- Load animal info ---------- #
@@ -559,7 +559,7 @@ for ii in iis:
    ep_trials=np.array(ep_trials)
    opto_trials = all_indices[ep_trials==eptest-1]
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(opto_trials, test_size=0.3, random_state=42)
+   train_idx, test_idx = train_test_split(opto_trials, test_size=0.4, random_state=42)
    # add back other ep to training data
    train_idx = np.append(train_idx, all_indices[ep_trials!=eptest-1])
    # Now use the indices to subset your data
@@ -657,7 +657,7 @@ df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
 df['opto_s_rate']=df['opto_s_rate']*100
 # average correct/incorrect
 # df['opto_s_rate'] = df[['opto_s_rate', 'opto_f_rate']].mean(axis=1)
-df['opto_time_before_predict_s'] = df[['opto_time_before_predict_s', 'opto_time_before_predict_f']].mean(axis=1)
+# df['opto_time_before_predict_s'] = df[['opto_time_before_predict_s', 'opto_time_before_predict_f']].mean(axis=1)
 df['opto_time_before_predict_s']=df['opto_time_before_predict_s']*100
 
 cdf = conddf.copy()
@@ -670,17 +670,19 @@ df=df[(df.optoep>1) | (df.optoep==0)]
 df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 df=df[~((df.animals=='e201')&((df.days>62)))]
-df=df[~((df.animals=='z14')&((df.days<33)))]
-# df=df[~((df.animals=='e200')&((df.days<75)))]
+df=df[~((df.animals=='z14')&((df.days<33)|(df.days.isin([54]))))]
+df=df[~((df.animals=='e200')&((df.days<75)))]
+df=df[~((df.animals=='z15')&((df.days.isin([15,16]))))]
 
-df=df[~((df.animals=='z16')&((df.days>15)))]
+# df=df[~((df.animals=='z16')&((df.days>15)))]
 # df=df[~((df.animals=='e186')&((df.days>15)))]
-# df=df[~((df.animals=='z17')&((df.days<2)|(df.days.isin([3,4,5,9,18]))))]
-df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
-df=df[~((df.animals=='e216')&(df.days.isin([55,57])))]
-df=df[~((df.animals=='e218')&(df.days.isin([35,41,55])))]
+df=df[~((df.animals=='z17')&((df.days<9)|(df.days.isin([20,22]))))]
+# df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
+# df=df[~((df.animals=='e216')&(df.days.isin([41,55,57])))]
+# df=df[~((df.animals=='e218')&(df.days.isin([35])))]
 # df.to_csv(r'Z:\saved_datasets\bayesian_goal_decoding_70_30_split.csv', index=None)
 pl=['slategray','red','darkgoldenrod']
+order = ['ctrl','vip','vip_ex']
 
 fig,axes=plt.subplots(ncols=2)
 ax=axes[0]
@@ -717,7 +719,6 @@ def add_sig_bar(ax, x1, x2, y, h, p):
     ax.text((x1+x2)/2, y+h, f'p={p:.2g}', ha='center', va='bottom',fontsize=10)
 # Example: compare ctrl vs vip and ctrl vs vipex
 df = df.reset_index()
-order = ['ctrl','vip','vip_ex']
 ymax = df[var].max()
 h = ymax * 0.1  # bracket height step
 
@@ -725,7 +726,7 @@ pairs = [('ctrl','vip'), ('ctrl','vip_ex')]
 for i,(a,b) in enumerate(pairs):
    x1 = df.loc[df.type==a, var].dropna().values
    x2 = df.loc[df.type==b, var].dropna().values
-   t, p = scipy.stats.ttest_ind(x1, x2)
+   t, p = scipy.stats.ranksums(x1, x2)
    add_sig_bar(ax,
                order.index(a),
                order.index(b),
