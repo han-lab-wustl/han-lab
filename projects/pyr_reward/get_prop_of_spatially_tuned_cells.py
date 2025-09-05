@@ -106,7 +106,7 @@ df['epoch']=np.concatenate([np.arange(len(xx))+1 for xx in rates_all])
 df=df[df.epoch<5]
 df=df.groupby(['animal','epoch']).mean(numeric_only=True)
 df=df.reset_index()
-df=df[(df.animal!='e189')]
+# df=df[(df.animal!='e189')]
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 s=10
 a=.7
@@ -143,7 +143,7 @@ print(f"Kruskal-Wallis H = {stat:.3f}, p = {pval:.4g}")
 import scikit_posthocs as sp
 
 # Dunn's post hoc test with Holm correction
-posthoc = sp.posthoc_dunn(df, val_col='spatial_tuned_per_ep_all', group_col='epoch', p_adjust='holm')
+posthoc = sp.posthoc_dunn(df, val_col='spatial_tuned_per_ep_all', group_col='epoch', p_adjust='fdr_bh')
 
 print("Dunn's test with Holm correction:\n", posthoc)
 counts = df.groupby('epoch')['spatial_tuned_per_ep_all'].count()

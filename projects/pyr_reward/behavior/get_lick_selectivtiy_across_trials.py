@@ -134,7 +134,7 @@ lick_tcs_lst = [v for k,v in lick_selectivity.items()]
 ans = np.array([k.split('_')[0] for k,v in lick_selectivity.items()])
 
 # max 21 correct trials
-fig,axes=plt.subplots(ncols=2,nrows=2,figsize=(6,5),sharex=True,sharey=True)
+fig,axes=plt.subplots(ncols=4,figsize=(10,3.5),sharex=True,sharey=True)
 axes=axes.flatten()
 for i in range(4):
     ax=axes[i]
@@ -162,7 +162,7 @@ for i in range(4):
         ax.set_ylabel('Lick selectivity')
     if i==3: ax.set_xlabel('# correct trials across epoch')
     ax.set_title(f'Epoch {i+1}')
-# ax.legend(fontsize=10)
+ax.legend(fontsize=10)
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'lick_selectivity_across_epoch_suppfig1_beh.svg'), bbox_inches='tight')
 

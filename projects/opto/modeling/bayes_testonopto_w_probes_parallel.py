@@ -584,7 +584,7 @@ for ii in iis:
       time,
       lick_trial,
       decode_trial,
-      min_frac=0.2,
+      min_frac=0,
       pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
    )
    

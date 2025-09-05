@@ -229,11 +229,17 @@ df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
 df_org=df
 df=df.groupby(['animals','days','condition','epoch']).mean(numeric_only=True).reset_index()
 df=df.groupby(['animals','condition','epoch']).mean(numeric_only=True).reset_index()
+# compare to shuffle
+df_shuffle = pd.read_csv(r'Z:\saved_datasets\lick_corr_shuffle.csv')
+
 hue_order=['prev','opto']
 fig, ax = plt.subplots(figsize=(5,4))
 pl = {'opto': 'grey', 'prev': 'k'}
 sns.barplot(x='condition',y='av_lick_corr', hue='epoch',data=df,fill=False,errorbar='se',palette=pl,legend=False,hue_order=hue_order)
-sns.stripplot(x='condition',y='av_lick_corr', hue='epoch',data=df,dodge=True,palette=pl,s=10,alpha=0.7,hue_order=hue_order)
+ax = sns.barplot(data=df_shuffle, # correct shift
+        x='condition', y='av_lick_corr',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
+# sns.stripplot(x='condition',y='av_lick_corr', hue='epoch',data=df,dodge=True,palette=pl,s=10,alpha=0.7,hue_order=hue_order)
 
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
@@ -280,9 +286,10 @@ for cond in conds:
     elif pval < 0.05:
         stars = '*'
     else:
-        stars = 'n.s.'
+        stars = ''
 
-    ax.text(x, height + h + asterisk_y_offset, stars, ha='center', va='bottom', fontsize=16)
+    ax.text(x, height, stars, ha='center', va='bottom', fontsize=40)
+    ax.text(x, height + h + asterisk_y_offset+asterisk_y_offset, f't={tstat:.3g},p={pval:.3g}', ha='center', va='bottom', fontsize=6)
 
     # Optional: draw connecting lines per animal
     animals = subdf['animals'].unique()
@@ -290,7 +297,8 @@ for cond in conds:
         a_pre = subdf[(subdf['animals'] == animal) & (subdf['epoch'] == 'prev')]['av_lick_corr'].values
         a_post = subdf[(subdf['animals'] == animal) & (subdf['epoch'] == 'opto')]['av_lick_corr'].values
         if len(a_pre) > 0 and len(a_post) > 0:
-            ax.plot([x - 0.2, x + 0.2], [a_pre[0], a_post[0]], color='gray', alpha=0.5, lw=1.5)
+            ax.plot([x - 0.2, x + 0.2], [a_pre[0], a_post[0]], color='gray', alpha=0.7, lw=1.5)
+
 plt.savefig(os.path.join(savedst, f'fig5_mean_lick_correlation.svg'), bbox_inches='tight')
 
 #%%

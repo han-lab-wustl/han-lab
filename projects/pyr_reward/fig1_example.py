@@ -17,7 +17,7 @@ import warnings
 warnings.filterwarnings("ignore")
 # import condition df
 conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_col=None)
-savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
 savepth = os.path.join(savedst, 'vip_opto_reward_relative.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
@@ -204,8 +204,7 @@ ax.spines[['top', 'right']].set_visible(False)
 ax.set_xlabel('\nReward-centric distance ($\Theta$)')
 ax.set_xticks([0,75,150])
 ax.set_xticklabels(['$-\pi$',0,'$\pi$'])
-plt.savefig(os.path.join(
-                         , f'{animal}_{day}_fig1_tc.svg'), bbox_inches='tight')
+plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_tc.svg'), bbox_inches='tight')
 
 #%% 
 # add tuning curves
@@ -236,17 +235,20 @@ for en,ep in enumerate([0,2]):
    # Plot
    im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
    im_list.append(im)
-   ax.axvline(rewlocs[ep] / 3, color='w', linestyle='--')
+   ax.axvline(rewlocs[ep] / 3, color='w', linestyle='--',linewidth=4)
    if ep == 0:
       ax.set_ylabel('Place cell #')
    ax.set_title(f'Epoch {en+1}')
+   ax.set_yticks([0,len(pltt)-1])
+   ax.set_yticklabels([1,len(pltt)])
 
 ax.set_xlabel('Track position (cm)')
 ax.set_xticks([0, 90])
 ax.set_xticklabels([0, 270])
+fig.suptitle('Place cells')
 # Add colorbar
 cbar = fig.colorbar(im_list[1], ax=axes[1], orientation='vertical', fraction=0.08, pad=0)
-cbar.set_label('Normalized activity')
+cbar.set_label('Norm. $\Delta F/F$')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_place_map.svg'), bbox_inches='tight')
 
@@ -279,11 +281,14 @@ for en,ep in enumerate([0,2]):
    # Plot
    im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
    im_list.append(im)
-   ax.axvline(rewlocs[ep] / 3, color='w', linestyle='--')
+   ax.axvline(rewlocs[ep] / 3, color='w', linestyle='--',linewidth=4)
    if ep == 0:
       ax.set_ylabel('Reward cell #')
    ax.set_title(f'Epoch {en+1}')
+   ax.set_yticks([0,len(pltt)-1])
+   ax.set_yticklabels([1,len(pltt)])
 
+fig.suptitle('Reward cells')
 ax.set_xlabel('Track position (cm)')
 ax.set_xticks([0, 90])
 ax.set_xticklabels([0, 270])

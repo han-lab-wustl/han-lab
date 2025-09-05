@@ -35,7 +35,7 @@ ls_perm_all=[]
 perms=[]
 # cm_window = [10,20,30,40,50,60,70,80] # cm
 # iterate through all animals
-#%%
+
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
@@ -91,7 +91,7 @@ for ii in range(len(conddf)):
         rate=np.nanmean(np.array(rates))
         if f'{animal}_{day:03d}_index{ii:03d}' in radian_alignment_saved.keys():
                 tcs_correct, coms_correct, tcs_fail, coms_fail, \
-                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
+                com_goal, goal_cell_shuf_ps_per_comp_av,goal_cell_shuf_ps_av,_,__,___ = radian_alignment_saved[f'{animal}_{day:03d}_index{ii:03d}']            
         else:# remake tuning curves relative to reward        
         # 9/19/24
         # find correct trials within each epoch!!!!
@@ -104,8 +104,7 @@ for ii in range(len(conddf)):
                 skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
                 Fc3 = Fc3[:, skew>2] # only keep cells with skew greateer than 2
 
-                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,
-                rewards,forwardvel,rewsize,bin_size)          
+                tcs_correct, coms_correct, tcs_fail, coms_fail = make_tuning_curves_radians_by_trialtype(eps,rewlocs,ybinned,rad,Fc3,trialnum,rewards,forwardvel,rewsize,bin_size)          
         # change to relative value 
         coms_rewrel = np.array([com-np.pi for com in coms_correct])
         perm = list(combinations(range(len(coms_correct)), 2)) 
@@ -129,7 +128,7 @@ df2['rates'] = [np.nanmean(xx)*100 for xx in rates_perm_all]
 df['lick_selectivity'] = [np.nanmean(xx) for xx in ls_perm_all]
 df2['num_epochs'] = [2]*len(df2)
 df=pd.concat([df,df2])
-df=df[df.animals!='e189']
+# df=df[df.animals!='e189']
 # number of epochs vs. rates    
 fig,ax = plt.subplots(figsize=(3,4))
 df_plt=df[df.num_epochs<5]
