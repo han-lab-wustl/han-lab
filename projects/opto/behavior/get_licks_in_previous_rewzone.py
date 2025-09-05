@@ -3,7 +3,7 @@ make lick tuning curve
 get licks in old vs. new reward zone pos
 """
 #%%
-import numpy as np, h5py, scipy, matplotlib.pyplot as plt, syns, pandas as pd
+import numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 import pickle, seaborn as sns, random
 import matplotlib.patches as patches
 import seaborn as sns
@@ -90,53 +90,55 @@ for _,ii in enumerate(range(len(conddf))):
     licks = np.hstack(VR['lick'])
     reward=(np.hstack(VR['reward'])==1).astype(int)
     eptest = conddf.optoep.values[ii]    
-    if conddf.optoep.values[ii]<2: 
-        eptest = random.randint(2,3)   
-        if len(eps)<4: eptest = 2 # if no 3 epochs 
-    opto_ep = eptest
-    # lick rate in reward zone (exclude consumption licks)
-    time = np.hstack(VR['time'])
-    dt = np.nanmedian(np.diff(time))
-    lick_rate = smooth_lick_rate(licks,dt)
-    lick_rate[forwardvel<1]=np.nan
-    # lick_rate[lick_rate>6]=np.nan
-    rzs = get_rewzones(rewlocs, 1/scalingf)
-    # lick rate +/- 20 cm near new vs. old rew zone
-    if True:#abs(rzs[eptest-1]-rzs[eptest-2])==2: # only far to near/near to far conditions
-        bound=40
-        eprng = np.arange(eps[eptest-1],eps[eptest])
-        trials = trialnum[eprng]
-        trial_max = np.nanmax(trials)
-        success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials=get_success_failure_trials(trials, reward[eprng])
-        # last few trials
-        trials_keep = trials>(trial_max-15)
-        # only incorrects
-        # only first probe
-        # probe_trials=[0,1]
-        # ftr_trials=ftr_trials[:5]
-        # trials_keep = np.array([True if xx in ftr_trials else False for xx in trials])
-        if np.sum(trials_keep)>0: # only if incorrect exists
-            _,lick_tc = get_behavior_tuning_curve(ybinned[eprng][trials_keep], lick_rate[eprng][trials_keep], bins=270)
-            ypos=ybinned[eprng][trials_keep]
-            # test
-            # if ii%20==0:
-            #     plt.figure()
-            #     plt.plot(lick_tc.values)
-            #     plt.axvline(rewlocs[eptest-1],color='b')
-            #     plt.axvline(rewlocs[eptest-2],color='r')
-            #     plt.title(f'{animal},{day}')
-            # get lick tc before old v new
-            lick_rate_old_all_tr=np.nanmean(lick_tc.values[int(rewlocs[eptest-2]-bound):int(rewlocs[eptest-2])])
-            lick_rate_new_all_tr=np.nanmean(lick_tc.values[int(rewlocs[eptest-1]-bound):int(rewlocs[eptest-1])])
-            lick_selectivity[f'{animal}_{day:03d}_{in_type}'] = [lick_rate_old_all_tr,lick_rate_new_all_tr,eptest, rzs,lick_tc.values,rewlocs] 
+    if (eptest>1) or (in_type=='vip' and eptest==0): # ONLY OPTO SESSIONS
+        if conddf.optoep.values[ii]<2: 
+            eptest = random.randint(2,3)   
+            if len(eps)<4: eptest = 2 # if no 3 epochs 
+        opto_ep = eptest
+        # lick rate in reward zone (exclude consumption licks)
+        time = np.hstack(VR['time'])
+        dt = np.nanmedian(np.diff(time))
+        lick_rate = smooth_lick_rate(licks,dt)
+        lick_rate[forwardvel<2]=np.nan
+        # lick_rate[lick_rate>6]=np.nan
+        rzs = get_rewzones(rewlocs, 1/scalingf)
+        # lick rate +/- 20 cm near new vs. old rew zone
+        if True:#abs(rzs[eptest-1]-rzs[eptest-2])==2: # only far to near/near to far conditions
+            bound=40
+            eprng = np.arange(eps[eptest-1],eps[eptest])
+            trials = trialnum[eprng]
+            trial_max = np.nanmax(trials)
+            success, fail, str_trials, ftr_trials, probe_trials, ttr, total_trials=get_success_failure_trials(trials, reward[eprng])
+            # last few trials
+            trials_keep = trials>(trial_max-8)
+            # only incorrects
+            # only first probe
+            # probe_trials=[0,1]
+            # ftr_trials=ftr_trials[:5]
+            # trials_keep = np.array([True if xx in ftr_trials else False for xx in trials])
+            if np.sum(trials_keep)>0: # only if incorrect exists
+                _,lick_tc = get_behavior_tuning_curve(ybinned[eprng][trials_keep], lick_rate[eprng][trials_keep], bins=270)
+                ypos=ybinned[eprng][trials_keep]
+                # test
+                # if ii%20==0:
+                #     plt.figure()
+                #     plt.plot(lick_tc.values)
+                #     plt.axvline(rewlocs[eptest-1],color='b')
+                #     plt.axvline(rewlocs[eptest-2],color='r')
+                #     plt.title(f'{animal},{day}')
+                # get lick tc before old v new
+                lick_rate_old_all_tr=np.nanmean(lick_tc.values[int(rewlocs[eptest-2]-bound):int(rewlocs[eptest-2])])
+                lick_rate_new_all_tr=np.nanmean(lick_tc.values[int(rewlocs[eptest-1]-bound):int(rewlocs[eptest-1])])
+                lick_selectivity[f'{animal}_{day:03d}_{in_type}'] = [lick_rate_old_all_tr,lick_rate_new_all_tr,eptest, rzs,lick_tc.values,rewlocs] 
 
 #%%
 # plot
 
 # all tcs 
 plt.rc('font', size=12)          # controls default text sizes
-transitions = [[1,2],[1,3],[2,3],[3,2],[3,1]]
-fig,axes=plt.subplots(ncols=2,nrows=3,sharey=True,sharex=True,figsize=(5,6))
+transitions = [[1,2],[1,3],[2,1],[2,3],[3,1],[3,2]]
+fig,axes=plt.subplots(ncols=3,nrows=2,sharey=True,sharex=True,
+        figsize=(6,4.5))
 axes=axes.flatten()
 for kk,tr in enumerate(transitions):
     rewloc_from=tr[0]
@@ -169,7 +171,7 @@ for kk,tr in enumerate(transitions):
 
     import matplotlib.patches as patches
     # Example range: x=80 to x=120, full y-range of the plot
-    ranges=[[80,129],[129,170],[180,231]]
+    ranges=[[80,129],[129,178],[180,231]]
     x_start, x_end = ranges[rewloc_to-1]
     ymin, ymax = ax.get_ylim()
     rect = patches.Rectangle(
@@ -191,14 +193,145 @@ for kk,tr in enumerate(transitions):
     )
     ax.add_patch(rect)
     # ax.legend(fontsize=8)
-    ax.set_title(rf'Reward area {rewloc_from} $ \rightarrow$ {rewloc_to}')
+    ax.set_title(rf'Reward area {rewloc_from}$\rightarrow${rewloc_to}')
     if kk==0: ax.set_ylabel('Lick rate (licks/s)')
     if kk==4: ax.set_xlabel('Track position (cm)')
     ax.set_xticks([0,270])
     # if kk==5: ax.axis('off')
-fig.suptitle('All trials')
+fig.suptitle('Lick tuning, last 8 trials\nLED on epoch')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'lick_tuning_all_transitions.svg'), bbox_inches='tight')
+#%%
+# reward area ranges in bins
+# ranges = [[80,129],[129,170],[180,231]]
+
+def avg_lick_in_range(arr, start, end, sess_ids):
+    """
+    Compute average lick rate within [start:end] per trial,
+    then average per session.
+    arr: trials x bins
+    sess_ids: list of session IDs matching arr rows
+    """
+    if arr.size == 0:
+        return pd.DataFrame()
+    df = pd.DataFrame({
+        "sess": sess_ids,
+        "val": np.nanmean(arr[:, start-20:start], axis=1)
+    })
+    return df.groupby("sess")["val"].mean().reset_index()
+
+# storage
+all_dfs = []
+
+for kk, tr in enumerate(transitions):
+    rewloc_from, rewloc_to = tr
+    curr_start, curr_end = ranges[rewloc_to-1]
+    prev_start, prev_end = ranges[rewloc_from-1]
+
+    # ----- Control -----
+    sess_ids_ctrl = [k.split('_')[0] for k,v in lick_selectivity.items()
+                     if len(v[4])==270 and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                     and (k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)]
+    lick_tcs_ctrl = np.array([v[4] for k,v in lick_selectivity.items()
+                     if len(v[4])==270 and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                     and (k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)])
+
+    df_prev = avg_lick_in_range(lick_tcs_ctrl, prev_start, prev_end, sess_ids_ctrl)
+    df_prev["condition"] = "Control"; df_prev["transition"] = f"{rewloc_from}->{rewloc_to}"; df_prev["zone"] = "Previous"
+    df_curr = avg_lick_in_range(lick_tcs_ctrl, curr_start, curr_end, sess_ids_ctrl)
+    df_curr["condition"] = "Control"; df_curr["transition"] = f"{rewloc_from}->{rewloc_to}"; df_curr["zone"] = "Current"
+    all_dfs.extend([df_prev, df_curr])
+
+    # ----- Excit -----
+    sess_ids_ex = [k.split('_')[0] for k,v in lick_selectivity.items()
+                   if len(v[4])==270 and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                   and k.split('_')[0] in vip_ex]
+    lick_tcs_excit = np.array([v[4] for k,v in lick_selectivity.items()
+                   if len(v[4])==270 and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                   and k.split('_')[0] in vip_ex])
+
+    df_prev = avg_lick_in_range(lick_tcs_excit, prev_start, prev_end, sess_ids_ex)
+    df_prev["condition"] = "VIP Excitation"; df_prev["transition"] = f"{rewloc_from}->{rewloc_to}"; df_prev["zone"] = "Previous"
+    df_curr = avg_lick_in_range(lick_tcs_excit, curr_start, curr_end, sess_ids_ex)
+    df_curr["condition"] = "VIP Excitation"; df_curr["transition"] = f"{rewloc_from}->{rewloc_to}"; df_curr["zone"] = "Current"
+    all_dfs.extend([df_prev, df_curr])
+
+    # ----- Inhib -----
+    sess_ids_inhib = [k.split('_')[0] for k,v in lick_selectivity.items()
+                      if len(v[4])==270 and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                      and k.split('_')[0] in vip_an]
+    lick_tcs_inhib = np.array([v[4] for k,v in lick_selectivity.items()
+                      if len(v[4])==270 and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                      and k.split('_')[0] in vip_an])
+
+    df_prev = avg_lick_in_range(lick_tcs_inhib, prev_start, prev_end, sess_ids_inhib)
+    df_prev["condition"] = "VIP Inhibition"; df_prev["transition"] = f"{rewloc_from}->{rewloc_to}"; df_prev["zone"] = "Previous"
+    df_curr = avg_lick_in_range(lick_tcs_inhib, curr_start, curr_end, sess_ids_inhib)
+    df_curr["condition"] = "VIP Inhibition"; df_curr["transition"] = f"{rewloc_from}->{rewloc_to}"; df_curr["zone"] = "Current"
+    all_dfs.extend([df_prev, df_curr])
+plt.rc('font', size=14)          # controls default text sizes
+
+from scipy import stats
+from statannotations.Annotator import Annotator
+
+# Define group order and palette
+order = ['Control','VIP Inhibition','VIP Excitation']
+pl = {'Control': "slategray", 'VIP Inhibition': "red", 'VIP Excitation': 'darkgoldenrod'}
+
+# Make figure
+fig, axes = plt.subplots(1, 2, figsize=(4,3), sharey=True)
+
+for i, zone in enumerate(['Current','Previous']):
+    ax = axes[i]
+    sub = df_all[df_all["zone"]==zone]
+
+    sns.barplot(
+        data=sub, x="zone", y="val", hue="condition",
+        errorbar="se", palette=pl, hue_order=order, ax=ax, fill=False,legend=False
+    )    
+    sns.stripplot(
+        data=sub, x="zone", y="val", hue="condition",dodge=True,
+        palette=pl, hue_order=order, ax=ax, alpha=0.7
+    )
+
+    # Count unique sessions per group
+    n_sessions = sub.groupby("condition")["val"].nunique()
+
+    # Get actual bar positions from the containers
+    for patch, cond in zip(ax.patches, order*1):  # one group of patches per hue
+        # Only annotate first set (since 'zone' is constant)
+        height = patch.get_height()
+        xpos = patch.get_x() + patch.get_width()/2
+        n = n_sessions.get(cond, 0)
+        ax.text(xpos, height + 0.05, f"(n={n})",
+                ha="center", va="bottom", fontsize=9)
+
+    # Comparisons
+    pairs = [
+        (("Current", "Control"), ("Current", "VIP Inhibition")),
+        (("Current", "Control"), ("Current", "VIP Excitation")),
+    ]
+    if zone=="Previous":
+        pairs = [
+            (("Previous", "Control"), ("Previous", "VIP Inhibition")),
+            (("Previous", "Control"), ("Previous", "VIP Excitation")),
+        ]
+
+    annot = Annotator(ax, pairs, data=sub, x="zone", y="val", hue="condition", hue_order=order)
+    annot.configure(test='Mann-Whitney', text_format='star', loc='inside', comparisons_correction="fdr_bh")
+    annot.apply_and_annotate()
+
+    # ax.set_title(f"{zone} reward area")
+    ax.set_ylabel("Lick rate (licks/s)" if i==0 else "")
+    ax.set_xlabel("")
+    ax.spines[['top','right']].set_visible(False)
+    ax.get_legend().remove()
+
+fig.tight_layout()
+ax.legend()
+
+plt.savefig(os.path.join(savedst, f'lick_tuning_all_transitions_quant.svg'), bbox_inches='tight')
+
 #%%
 #%%
 # all tcs 

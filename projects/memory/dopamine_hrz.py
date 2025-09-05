@@ -25,7 +25,7 @@ src = r"X:\chrimson_snc_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [14]#np.arange(11,27)
+days = [15]#np.arange(11,27)
 range_val=8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -106,6 +106,7 @@ for day in days:
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))        
         mask = np.arange(0,eps[len(eps)-1])
         rewards[:1000]=0
+        # rewards[-1000:]=0
         # mask = np.arange(0,eps[2])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
             rewdFF = perireward_binned_activity(dff[mask], rewards[mask], 

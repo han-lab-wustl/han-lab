@@ -30,8 +30,10 @@ iis=conddf[(conddf.animals=='z14') & (conddf.optoep>1)].index
 iis=[13,166]
 cm_window=20
 span=[[0,16920],[15200,48600]]
+colors=['darkgoldenrod','red']
 # span=[[0,30000]]*len(iis)
 for kk,ii in enumerate(iis):
+
    day = int(conddf.days.values[ii])
    animal = conddf.animals.values[ii]
    if animal=='e145': pln=2  
@@ -205,11 +207,10 @@ for kk,ii in enumerate(iis):
          (inhib_span[0], probe_y + bar_height + 1),  # place above probe bar
          inhib_span[1] - inhib_span[0] + 1,
          bar_height,
-         color='red',
+         color=colors[kk],
          alpha=0.2,
          linewidth=0,
          zorder=2,
-         label='VIP Inhibition'
       )
    )
    # Add text label above the bar
@@ -223,6 +224,33 @@ for kk,ii in enumerate(iis):
          zorder=4
       )
 
+   unique_trials = np.unique(trialnum[mask][inhib_span[0]:inhib_span[1]])
+   # for tr in unique_trials:
+   for tr in unique_trials:
+         
+      tr_mask = trialnum[mask][inhib_span[0]:inhib_span[1]] == tr
+      # get reward location for this trial
+      trial_rewloc = rewlocs[eptest-1]
+      # horizontal span in x (samples belonging to this trial)
+      start_idx = np.where(tr_mask)[0][0]+inhib_span[0]
+      end_idx   = np.where(rewards[mask][inhib_span[0]:inhib_span[1]][tr_mask]>0)[0]
+      if len(end_idx)==0:
+         end_idx = np.where(ybinned[mask][inhib_span[0]:inhib_span[1]][tr_mask]>trial_rewloc-10)[0][1]
+      else:
+         end_idx=end_idx[0]
+      # Add rectangle patch spanning ypos 0 → reward location
+      # add one rectangle per trial
+      print(start_idx,end_idx)
+      rect = patches.Rectangle(
+         (start_idx, 0),                  # x=start index, y=0
+         end_idx,             # width (duration of trial)
+         trial_rewloc,                    # height (reward zone location)
+         linewidth=0,
+         facecolor=colors[kk],
+         alpha=0.2,
+         zorder=0
+      )
+      ax.add_patch(rect)
 
    ax.set_ylim([0, 350])   
    # plt.tight_layout()

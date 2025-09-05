@@ -559,7 +559,7 @@ for ii in iis:
    ep_trials=np.array(ep_trials)
    opto_trials = all_indices[ep_trials==eptest-1]
    # Split indices instead of the data directly
-   train_idx, test_idx = train_test_split(opto_trials, test_size=0.4, random_state=42)
+   train_idx, test_idx = train_test_split(opto_trials, test_size=0.3, random_state=42)
    # add back other ep to training data
    train_idx = np.append(train_idx, all_indices[ep_trials!=eptest-1])
    # Now use the indices to subset your data
@@ -584,7 +584,7 @@ for ii in iis:
       time,
       lick_trial,
       decode_trial,
-      min_frac=0,
+      min_frac=0.2,
       pdf_filename=os.path.join(savedst,f"{animal}_{day}_selected_trials.pdf")
    )
    
@@ -656,7 +656,7 @@ df['animals'] = [k.split('_')[0] for k, v in dct.items()]
 df['days'] = [int(k.split('_')[1]) for k, v in dct.items()]
 df['opto_s_rate']=df['opto_s_rate']*100
 # average correct/incorrect
-# df['opto_s_rate'] = df[['opto_s_rate', 'opto_f_rate']].mean(axis=1)
+df['opto_s_rate'] = df[['opto_s_rate', 'opto_f_rate']].mean(axis=1)
 # df['opto_time_before_predict_s'] = df[['opto_time_before_predict_s', 'opto_time_before_predict_f']].mean(axis=1)
 df['opto_time_before_predict_s']=df['opto_time_before_predict_s']*100
 
@@ -671,7 +671,7 @@ df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 df=df[~((df.animals=='e201')&((df.days>62)))]
 df=df[~((df.animals=='z14')&((df.days<33)|(df.days.isin([54]))))]
-df=df[~((df.animals=='e200')&((df.days<75)))]
+# df=df[~((df.animals=='e200')&((df.days<75)))]
 df=df[~((df.animals=='z15')&((df.days.isin([15,16]))))]
 
 # df=df[~((df.animals=='z16')&((df.days>15)))]
@@ -733,7 +733,7 @@ for i,(a,b) in enumerate(pairs):
                y=ymax*1.05 + i*h,
                h=h*0.2,  # short vertical tick
                p=p)
-ax.set_ylabel('% Correct prediction')
+ax.set_ylabel('Accuracy (%)')
 
 var='opto_time_before_predict_s'
 ax=axes[1]# df=df.groupby(['animals','days','type']).mean(numeric_only=True)
@@ -773,7 +773,7 @@ for i,(a,b) in enumerate(pairs):
                p=p)
 
 sns.despine()
-fig.suptitle('Goal decoding')
+fig.suptitle('Bayesian goal decoding')
 plt.tight_layout()
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
 plt.savefig(os.path.join(savedst, 'goal_decoding_opto.svg'), bbox_inches='tight')

@@ -30,7 +30,7 @@ def main(file_path, output_folder='heatmap_stack'):
 
 
 # Example usage
-file_path = r"Y:\halo_grabda\e243\33\241209_ZD_000_001\suite2p\plane3\reg_tif\file004500.tif"
+file_path = r"X:\chrimson_snc_grabda\e291\18\250903_ZD_000_000\suite2p\plane3\reg_tif\file002500.tif"
 output_folder=r'C:\Users\Han\Desktop\so'
 p_values = main(file_path,output_folder)
 
