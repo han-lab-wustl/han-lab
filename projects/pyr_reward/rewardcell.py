@@ -3033,13 +3033,14 @@ def get_goal_cells(rz, goal_window, coms_correct, cell_type = 'all'):
     rz_perm = [(int(rz[p[0]]),int(rz[p[1]])) for p in perm] 
     rz_perm=[p for jj,p in enumerate(rz_perm) if len(com_goal_postrew[jj])>0]
     # remove empty epochs
+    # save non empty epochs
     com_goal_postrew=[com for com in com_goal_postrew if len(com)>0]
 
     if len(com_goal_postrew)>0:
         goal_cells = intersect_arrays(*com_goal_postrew); 
     else:
         goal_cells=[]
-    return goal_cells, com_goal, perm, rz_perm
+    return goal_cells, com_goal_postrew, perm, rz_perm
 
 def get_goal_cells_time(rz, goal_window, coms_correct, cell_type = 'all'):    
     # change to relative value 

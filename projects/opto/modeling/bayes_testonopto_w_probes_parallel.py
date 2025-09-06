@@ -659,6 +659,7 @@ df['opto_s_rate']=df['opto_s_rate']*100
 df['opto_s_rate'] = df[['opto_s_rate', 'opto_f_rate']].mean(axis=1)
 # df['opto_time_before_predict_s'] = df[['opto_time_before_predict_s', 'opto_time_before_predict_f']].mean(axis=1)
 df['opto_time_before_predict_s']=df['opto_time_before_predict_s']*100
+df_shuffle = pd.read_csv(r'Z:\saved_datasets\decoding_shuffle_202509.csv')
 
 cdf = conddf.copy()
 df = pd.merge(df, cdf, on=['animals', 'days'], how='inner')
@@ -669,14 +670,14 @@ df=df[(df.optoep>1) | (df.optoep==0)]
 # HACK!! ADDED IN BETWEEN CTRL DAYS
 df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
-df=df[~((df.animals=='e201')&((df.days>62)))]
-df=df[~((df.animals=='z14')&((df.days<33)|(df.days.isin([54]))))]
-# df=df[~((df.animals=='e200')&((df.days<75)))]
+df=df[~((df.animals=='e201')&((df.days>77)))]
+df=df[~((df.animals=='z14')&((df.days<20)|(df.days.isin([35,36,54]))))]
+# df=df[~((df.animals=='e200')&((df.days<80)))]
 df=df[~((df.animals=='z15')&((df.days.isin([15,16]))))]
 
 # df=df[~((df.animals=='z16')&((df.days>15)))]
 # df=df[~((df.animals=='e186')&((df.days>15)))]
-df=df[~((df.animals=='z17')&((df.days<9)|(df.days.isin([20,22]))))]
+df=df[~((df.animals=='z17')&((df.days<9)|(df.days.isin([13,17,20,22]))))]
 # df=df[~((df.animals=='e217')&((df.days.isin([29,30]))))]
 # df=df[~((df.animals=='e216')&(df.days.isin([41,55,57])))]
 # df=df[~((df.animals=='e218')&(df.days.isin([35])))]
@@ -692,6 +693,10 @@ dfan=df.groupby(['animals','type']).mean(numeric_only=True)
 sns.barplot(x='type',y=var,data=df,fill=False,ax=ax,palette=pl)
 sns.stripplot(x='type',y=var,data=df,ax=ax,alpha=0.3,palette=pl)
 sns.stripplot(x='type',y=var,data=dfan,ax=ax,s=10,alpha=.7,palette=pl)
+sns.barplot(data=df_shuffle, # correct shift
+        x='type', y=var,color='grey', 
+        label='shuffle', alpha=0.4, err_kws={'color': 'grey'},errorbar=None,ax=ax)
+
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 df = df.reset_index()
 group_counts = df.groupby("type")[var].count()
@@ -703,7 +708,7 @@ for i, t in enumerate(order):
 ax.set_xlabel('')
 # sns.barplot(x='condition',y='f_rate',data=df)
 # Group by animal, type, and condition to get per-animal means
-def add_sig_bar(ax, x1, x2, y, h, p):
+def add_sig_bar(ax, x1, x2, y, h, p,t):
     """
     Draws a significance bar with asterisks between x1 and x2 at height y+h.
     """
@@ -716,7 +721,8 @@ def add_sig_bar(ax, x1, x2, y, h, p):
         stars = '*'
     else:
         stars = 'n.s.'
-    ax.text((x1+x2)/2, y+h, f'p={p:.2g}', ha='center', va='bottom',fontsize=10)
+    ax.text((x1+x2)/2, y+h, f'p={p:.3g}', ha='center', va='bottom',fontsize=10)
+    ax.text((x1+x2)/2, y-h*4, f't={t:.3g}', ha='center', va='bottom',fontsize=10)
 # Example: compare ctrl vs vip and ctrl vs vipex
 df = df.reset_index()
 ymax = df[var].max()
@@ -730,9 +736,9 @@ for i,(a,b) in enumerate(pairs):
    add_sig_bar(ax,
                order.index(a),
                order.index(b),
-               y=ymax*1.05 + i*h,
-               h=h*0.2,  # short vertical tick
-               p=p)
+               ymax*1.05 + i*h,
+               h*0.2,  # short vertical tick
+               p,t)
 ax.set_ylabel('Accuracy (%)')
 
 var='opto_time_before_predict_s'
@@ -768,9 +774,9 @@ for i,(a,b) in enumerate(pairs):
    add_sig_bar(ax,
                order.index(a),
                order.index(b),
-               y=ymax*1.05 + i*h,
-               h=h*0.2,  # short vertical tick
-               p=p)
+               ymax*1.05 + i*h,
+               h*0.2,  # short vertical tick
+               p,t)
 
 sns.despine()
 fig.suptitle('Bayesian goal decoding')

@@ -301,11 +301,13 @@ y = 28
 pshift = 1
 fs=46
 pvalues=[]
+ts=[]
 for ii,ep in enumerate(eps):
         rewprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop']
         shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop_shuffle']
-        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        tstat,pval = scipy.stats.wilcoxon(rewprop, shufprop)
         pvalues.append(pval)
+        ts.append(t)
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
 from statsmodels.stats.multitest import multipletests
@@ -320,7 +322,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+        ax.text(ii-0.5, y-pshift*2, f't={ts[ii]:.3g}\np={pval:.3g}',fontsize=10,rotation=45)
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
@@ -356,7 +358,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y+pshift, f'p={pval:.3g}',fontsize=10,rotation=45)
+        ax.text(ii-0.5, y-pshift*2, f't={ts[ii]:.3g}\np={pval:.3g}',fontsize=10,rotation=45)
         
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of epochs')
