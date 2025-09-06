@@ -264,7 +264,7 @@ df_perms = pd.DataFrame()
 goal_cell_perm = [xx[1] for xx in p_goal_cells]
 goal_cell_perm_shuf = [xx[1][0][~np.isnan(xx[1][0])] for xx in goal_cell_null]
 df_perms['goal_cell_prop'] = np.concatenate(goal_cell_perm)
-df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
+df_perms['goal_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)[:len(df_perms)] # HACK
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
 df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
@@ -283,7 +283,7 @@ df_plt2 = df_plt2.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
 df_plt2=df_plt2.reset_index()
 df_plt2['goal_cell_prop'] =df_plt2['goal_cell_prop'] *100
 df_plt2['goal_cell_prop_shuffle'] =df_plt2['goal_cell_prop_shuffle'] *100
-df_plt2=df_plt2[df_plt2.animals!='e200']
+# df_plt2=df_plt2[df_plt2.animals!='e189']
 # number of epochs vs. reward cell prop incl combinations    
 fig,axes = plt.subplots(figsize=(6.5,4),ncols=2,sharex=True)
 ax=axes[0]
@@ -313,15 +313,16 @@ ax.set_ylabel('Reward cell % ')
 eps = [2,3,4]
 y = 37
 pshift = 4
-fs=46
+fs=38
 pvalues = []
-
+ts=[]
 # Step 1: Compute p-values
 for ep in eps:
     rewprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop']
     shufprop = df_plt2.loc[(df_plt2.num_epochs == ep), 'goal_cell_prop_shuffle']
-    _, pval = scipy.stats.wilcoxon(rewprop, shufprop)
+    t, pval = scipy.stats.wilcoxon(rewprop, shufprop)
     pvalues.append(pval)
+    ts.append(t)
     
 from statsmodels.stats.multitest import fdrcorrection
 # Step 2: FDR correction
@@ -341,6 +342,8 @@ for ii, (ep, pval_corr, sig) in enumerate(zip(eps, pvals_fdr, reject)):
         ax.text(ii, y, stars, ha='center', fontsize=fs)
     else:
         ax.text(ii, y, stars, ha='center', fontsize=fs, color='gray')  # Optional: fade non-sig
+    ax.text(ii, y-10, f'p={pval_corr:.3g}\nt={ts[ii]:.3g}', ha='center', fontsize=10, color='k')  # Optional: fade non-sig
+
 ax.set_title('Reward cells')
 
 # subtract from shuffle

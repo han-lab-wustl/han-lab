@@ -20,12 +20,12 @@ plt.rcParams["font.family"] = "Arial"
 plt.close('all')
 # save to pdf
 animal = 'e220'
-src = r"Z:\pavlov_extinction\cs_4s_us"
+src = r"Z:\pavlov_extinction\cs_only"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov4s_{os.path.basename(src)}.pdf"))
-days = [17,18,19,20,21]#np.arange(11,27)
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov_cs_only_{os.path.basename(src)}.pdf"))
+days = [2]#np.arange(11,27)
 range_val=12; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -58,7 +58,7 @@ for day in days:
       
       # plt.close(fig)
       dffdf = pd.DataFrame({'dff': dff})
-      dff = np.hstack(dffdf.rolling(5).mean().values)
+      dff = np.hstack(dffdf.rolling(10).mean().values)
       rewards = np.hstack(params['solenoid2'])
       velocity = np.hstack(params['forwardvel'])
       veldf = pd.DataFrame({'velocity': velocity})
@@ -143,34 +143,126 @@ for day in days:
       ax.set_xlabel('Time from CS (s)')
       fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
       fig.tight_layout()
-      pdf.savefig(fig)        
+      pdf.savefig(fig)  
+      plt.close('all')      
       plndff.append(clean_arr)
-   day_date_dff[str(day)] = plndff
+   day_date_dff[str(day)] = [plndff,vel,licktr]
 pdf.close()
 
 #%%
+trialnum = 100
 # heatmap across days
-alltr = np.array([np.concatenate([v[i] for k,v in day_date_dff.items()]) for i in range(4)])
+alltr = [np.vstack([v[0][i] for k,v in day_date_dff.items() if len(v[0])==4]) for i in range(4)]
+velalltr = np.hstack([v[1] for k,v in day_date_dff.items()]).T
+lickalltr = np.hstack([v[2] for k,v in day_date_dff.items()]).T
+
 # all trials
 for pln in range(4): 
-    fig, axes = plt.subplots(ncols=2,width_ratios=[1,1.5],sharex=True,figsize=(6,3))
-    ax=axes[0]
-    cax=ax.imshow(alltr[pln,:,:])    
-    ax.set_xlabel('Time from CS (s)')
-    ax.set_ylabel('Trials (last 4 days)')
-    ax.axvline(int(range_val/binsize),linestyle='--',color='w')
-    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
-    ax.set_title(f'Plane {planelut[pln]}')
-    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-    ax=axes[1]
-    mf = np.nanmean(alltr[pln,:,:],axis=0)
-    ax.plot(mf)    
-    ax.fill_between(range(0,int(range_val/binsize)*2), 
-    mf-scipy.stats.sem(alltr[pln,:,:],axis=0,nan_policy='omit'),
-    mf+scipy.stats.sem(alltr[pln,:,:],axis=0,nan_policy='omit'), alpha=0.3)
-    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-    ax.set_xticklabels(range(-range_val, range_val+1, 2))
-    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-    fig.tight_layout()
+   fig, axes = plt.subplots(ncols=2,nrows=6,sharex=True,figsize=(5,8),sharey='row')
+   ax=axes[0,0]
+   arr=alltr[pln][:trialnum]
+   cax=ax.imshow(arr,aspect='auto',cmap='jet')    
+   ax.set_ylabel('Trials (early trials)')
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+   ax.set_title(f'Plane {planelut[pln]}')
+   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+   ax=axes[1,0]
+   mf = np.nanmean(arr,axis=0)
+   ax.plot(mf)    
+   ax.fill_between(range(0,int(range_val/binsize)*2), 
+   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
+   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
+   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+   ax.set_xticklabels(range(-range_val, range_val+1, 2))
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   fig.tight_layout()
+
+   ax=axes[0,1]
+   arr=alltr[pln][-trialnum:]
+   cax=ax.imshow(arr,aspect='auto',cmap='jet')    
+   ax.set_xlabel('Time from CS (s)')
+   ax.set_ylabel('Trials (late trials)')
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+   ax.set_title(f'Plane {planelut[pln]}')
+   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+   ax=axes[1,1]
+   mf = np.nanmean(arr,axis=0)
+   ax.plot(mf)    
+   ax.fill_between(range(0,int(range_val/binsize)*2), 
+   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
+   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
+   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+   ax.set_xticklabels(range(-range_val, range_val+1, 2))
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   
+   # licks
+   ax=axes[2,0]
+   arr=lickalltr[:trialnum]
+   cax=ax.imshow(arr,aspect='auto',cmap='Blues')    
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+   ax=axes[3,0]
+   mf = np.nanmean(arr,axis=0)
+   ax.plot(mf)    
+   ax.set_ylabel('Licks')
+   ax.fill_between(range(0,int(range_val/binsize)*2), 
+   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
+   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
+   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
+   ax.set_xticklabels(range(-range_val, range_val+1, 2))
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   ax=axes[2,1]
+   arr=lickalltr[-trialnum:]
+   cax=ax.imshow(arr,aspect='auto',cmap='Blues')    
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+   ax=axes[3,1]
+   mf = np.nanmean(arr,axis=0)
+   ax.plot(mf)    
+   ax.set_ylabel('Licks')
+   ax.fill_between(range(0,int(range_val/binsize)*2), 
+   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
+   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   
+   # vel
+   # licks
+   ax=axes[4,0]
+   arr=velalltr[:trialnum]
+   cax=ax.imshow(arr,aspect='auto',cmap='Greys')    
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+   ax=axes[5,0]
+   mf = np.nanmean(arr,axis=0)
+   ax.plot(mf)    
+   ax.set_ylabel('Licks')
+   ax.fill_between(range(0,int(range_val/binsize)*2), 
+   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
+   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   ax=axes[4,1]
+   arr=velalltr[-trialnum:]
+   cax=ax.imshow(arr,aspect='auto',cmap='Greys')    
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
+   ax=axes[5,1]
+   mf = np.nanmean(arr,axis=0)
+   ax.plot(mf)    
+   ax.set_ylabel('Velocity')
+   ax.fill_between(range(0,int(range_val/binsize)*2), 
+   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
+   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
+   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
+   ax.set_xticklabels(range(-range_val, range_val+1, 4))
+   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
+   ax.set_xlabel('Time from CS (s)')
+
+   fig.tight_layout()
 
 # %%
