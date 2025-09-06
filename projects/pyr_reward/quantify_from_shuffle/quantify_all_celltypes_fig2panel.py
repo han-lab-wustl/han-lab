@@ -126,6 +126,100 @@ savedst=r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels
 # fig.suptitle('Including delay period')
 plt.savefig(os.path.join(savedst, 'allrewtype_cell_prop.svg'), 
         bbox_inches='tight')
+
+#%% combine pre and post
+
+from statsmodels.stats.multitest import multipletests
+
+plt.rc('font', size=20) 
+# number of epochs vs. reward cell prop    
+fig, ax = plt.subplots(figsize=(4,4))
+
+df_plt = df[df.num_epochs < 5].copy()
+df_plt['cell_type'] = df_plt['cell_type'].str.capitalize()
+
+# --- Collapse pre/post into Near/Far ---
+mapping = {
+    'Near pre-reward': 'Near',
+    'Near post-reward': 'Near',
+    'Far pre-reward': 'Far',
+    'Far post-reward': 'Far'
+}
+df_plt['cell_group'] = df_plt['cell_type'].map(mapping)
+
+order = ['Near', 'Far']
+colors = [sns.color_palette("Dark2")[3], (0.6, 0.3, 0.4)]
+
+# Average across animals
+df_plt = df_plt.groupby(['animals','num_epochs','cell_group']).mean(numeric_only=True).reset_index()
+
+# Stripplot + barplot
+sns.barplot(x='num_epochs', y='goal_cell_prop',
+            data=df_plt, hue='cell_group', hue_order=order,
+            palette=colors, fill=False, ax=ax, errorbar='se')
+sns.barplot(data=df_plt, x='num_epochs', y='goal_cell_prop_shuffle',
+            hue='cell_group', hue_order=order,
+            color='grey', alpha=0.3, err_kws={'color': 'grey'}, 
+            errorbar=None, ax=ax, legend=False)
+# for ep in sorted(df_plt.num_epochs.unique()):
+#     d_ep = df_plt[df_plt.num_epochs == ep]
+#     for animal in d_ep.animals.unique():
+#         d_an = d_ep[d_ep.animals == animal]
+#         if set(d_an.cell_group) >= {"Near", "Far"}:
+#             near_val = d_an[d_an.cell_group == "Near"]['goal_cell_prop'].values[0]
+#             far_val = d_an[d_an.cell_group == "Far"]['goal_cell_prop'].values[0]
+            
+#             # x positions: match dodge spacing of hue
+#             x_near = ep - 0.2
+#             x_far  = ep + 0.2
+#             ax.plot([x_near-2, x_far-2], [near_val, far_val], 
+#                     color='dimgray', alpha=0.5, linewidth=1)
+
+# --- Stats ---
+results = []
+for ep in sorted(df_plt.num_epochs.unique()):
+    for i, ct in enumerate(order):
+        dsub = df_plt[(df_plt.cell_group == ct) & (df_plt.num_epochs == ep)]
+        if len(dsub) >= 2:
+            stat, pval = scipy.stats.wilcoxon(dsub['goal_cell_prop'], dsub['goal_cell_prop_shuffle'])
+            results.append({
+                'epoch': ep, 'cell_type': ct, 'pval': pval,'stat':stat,
+                'xidx': i, 'ymax': dsub[['goal_cell_prop','goal_cell_prop_shuffle']].values.max()
+            })
+
+raw_pvals = [r['pval'] for r in results]
+rej, pvals_corr, _, _ = multipletests(raw_pvals, method='fdr_bh')
+
+for r, pcorr in zip(results, pvals_corr):
+    ep = r['epoch']
+    ct = r['cell_type']
+    xpos = ep - 2.3 + (.4 * r['xidx'])
+    ymax = r['ymax'] - 5
+    
+    # Stars
+    if pcorr < 0.001:
+        star = '***'
+    elif pcorr < 0.01:
+        star = '**'
+    elif pcorr < 0.05:
+        star = '*'
+    else:
+        star = ''
+    
+    if star:
+        ax.text(xpos+.1, ymax + 2.2, star, ha='center', fontsize=30)
+    ax.text(xpos, ymax + 5, f'p={pcorr:.3g},w={r["stat"]:.3g}', ha='center', fontsize=8)
+
+
+# --- Final cleanup ---
+ax.spines[['top','right']].set_visible(False)
+ax.set_ylabel('Reward cell %')
+ax.set_xlabel('# of epochs')
+ax.legend(title='Cell type', fontsize=14, title_fontsize=14)
+
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper\panels_main_figures'
+plt.savefig(os.path.join(savedst, 'near_far_rew_cell_prop.svg'), bbox_inches='tight')
+
 #%%
 animals=['e145', 'e186', 'e190', 'e201', 'e216', 'e218', 'z16', 'z8', 'z9']
 df = pd.DataFrame({
@@ -215,4 +309,47 @@ for ct in df['cell_type'].unique():
                   color='gray', alpha=0.5, linewidth=1.5)
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'decay_rewardcell_dark_time.svg'), 
+        bbox_inches='tight')
+#%%
+#%% Combine Pre- and Post-reward
+df_combined = df.groupby(['animal','location'])['tau'].mean().reset_index()
+
+# Plot
+fig, ax = plt.subplots(figsize=(3,5))
+order=['Near','Far']
+# Overlay barplot (mean ± SEM)
+sns.barplot(x='location', y='tau', data=df_combined, palette=colors, errorbar='se', ax=ax,order=order,fill=False)
+
+# Add connecting lines for each animal
+for animal in df_combined['animal'].unique():
+    y_near = df_combined[(df_combined.animal==animal) & (df_combined.location=='Near')]['tau'].values[0]
+    y_far  = df_combined[(df_combined.animal==animal) & (df_combined.location=='Far')]['tau'].values[0]
+    ax.plot([0,1], [y_near, y_far], color='gray', alpha=0.5, linewidth=1.5)
+
+near = df[(df.location == 'Near')].set_index('animal')['tau']
+far = df[(df.location == 'Far')].set_index('animal')['tau']
+common_animals = near.index.intersection(far.index)
+stat, pval = scipy.stats.wilcoxon(near[common_animals], far[common_animals])
+
+# Add significance star
+height = max(df_combined['tau'])
+if pval < 0.001:
+    star = '***'
+elif pval < 0.01:
+    star = '**'
+elif pval < 0.05:
+    star = '*'
+else:
+    star = ''
+ax.text(0.5, height, star, ha='center', va='bottom', fontsize=30)
+ax.text(0.5, height, (stat, pval), ha='center', va='bottom', fontsize=8)
+
+ax.plot([0,0,1,1], [height-0.2,height,height,height-0.2], color='k')
+
+
+ax.set_ylabel(r'Decay over epochs ($\tau$)')
+ax.set_xlabel('')
+ax.spines[['top', 'right']].set_visible(False)
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'decay_rewardcell_nearvfar.svg'), 
         bbox_inches='tight')

@@ -25,7 +25,7 @@ src = r"Z:\pavlov_extinction\cs_only"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov_cs_only_{os.path.basename(src)}.pdf"))
-days = [2]#np.arange(11,27)
+days = [5]#np.arange(11,27)
 range_val=12; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -240,7 +240,7 @@ for pln in range(4):
    ax=axes[5,0]
    mf = np.nanmean(arr,axis=0)
    ax.plot(mf)    
-   ax.set_ylabel('Licks')
+   ax.set_ylabel('Velocity')
    ax.fill_between(range(0,int(range_val/binsize)*2), 
    mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
    mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)

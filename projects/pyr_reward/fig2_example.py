@@ -160,141 +160,22 @@ if True:
    pcs_all=[xx for xx in pcs_all if xx not in goal_cells]
    # pcs_all = pcs
 
-#%%
-# place v rew v far rew
-# individual cell tc
-def moving_average(x, window_size=2):
-    return np.convolve(x, np.ones(window_size)/window_size, mode='same')
-plt.rc('font', size=16) 
-colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
-lbls=['Place', 'Reward','Reward-aligned']
-
-fig,axes=plt.subplots(ncols=3,figsize=(10,2.5),sharey=True)
-clls=[7,5]
-for ll,cll in enumerate(clls):
-   ax=axes[ll]
-   for ep in range(4):
-      if ll==0: # pc
-         pltt = moving_average(tcs_correct_abs[ep,cll,:])
-      else:
-         pltt = moving_average(tcs_correct_abs_no_si[ep,cll,:])
-      ax.plot(pltt,color=colors[ep],linewidth=2,label=f'Epoch {ep+1}')
-      ax.axvline(rewlocs[ep]/3,color=colors[ep],linestyle='--')
-      if ll==0:
-         ax.axvline(coms_correct_abs[ep,cll]/3,color=colors[ep],linestyle='-.')
-      # else:
-      #    ax.axvline(coms_correct_abs_no_si[ep,cll]/3,color=colors[ep],linestyle='-.')
-   if ll==0:
-      ax.set_ylabel('$\Delta$ F/F')
-   ax.spines[['top', 'right']].set_visible(False)
-   ax.set_title(lbls[ll])
-   ax.set_xticks([0,90])
-   ax.set_xticklabels([0,270])
-   ax.legend()
-
-ax.set_xlabel('Track position (cm)')
-ax=axes[2]
-for ep in range(len(tcs_correct_abs)):
-   pltt = moving_average(tcs_correct[ep,cll,:])
-   ax.plot(pltt,color=colors[ep],linewidth=2)
-ax.set_title(lbls[2])
-ax.axvline(75,color='k',linestyle='--')
-ax.spines[['top', 'right']].set_visible(False)
-ax.set_xlabel('\nReward-centric distance ($\Theta$)')
-ax.set_xticks([0,75,150])
-ax.set_xticklabels(['$-\pi$',0,'$\pi$'])
-plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_tc.svg'), bbox_inches='tight')
-
-#%% 
+#%%#%% fig 2 eg
 # add tuning curves
-# place map
 # Function for row-wise normalization
 def normalize_rows(x):
     x_min = np.min(x, axis=1, keepdims=True)
     x_max = np.max(x, axis=1, keepdims=True)
     return (x - x_min) / (x_max - x_min + 1e-10)
-
 # Moving average function
 def moving_average(x, window_size=1):
     return np.convolve(x, np.ones(window_size)/window_size, mode='same')
-
-plt.rc('font', size=18)
-lbls = ['Place', 'Reward', 'Reward-aligned']
-fig, axes = plt.subplots(nrows=2,ncols=2, figsize=(6,7), sharex=True)
-im_list = []  # to store imshow objects for colorbar
-for en,ep in enumerate([0,3]):
-   ax = axes[0,en]
-   # Apply moving average and stack
-   pltt = [moving_average(tcs_correct_abs[ep, cll, :]) for cll in pcs_all]
-   pltt = np.array(pltt)
-   # Sort by COM
-   pltt = pltt[np.argsort(coms_correct_abs[0][pcs_all])]
-   # Normalize each row
-   pltt = normalize_rows(pltt)
-   # Plot
-   im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
-   im_list.append(im)
-   ax.axvline(rewlocs[ep] / 3, color='w', linestyle='--',linewidth=4)
-   if ep == 0:
-      ax.set_ylabel('Place cell #')
-   ax.set_title(f'Epoch {ep+1}')
-   ax.set_yticks([0,len(pltt)-1])
-   ax.set_yticklabels([1,len(pltt)])
-
-ax.set_xticks([0, 90])
-ax.set_xticklabels([0, 270])
-fig.suptitle('Place cells')
-# plt.tight_layout()
-# plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_place_map.svg'), bbox_inches='tight')
-
-# fig, axes = plt.subplots(nncols=2, figsize=(6,4), sharex=True, sharey=True)
-for en,ep in enumerate([0,3]):
-   ax = axes[1,en]
-   # Apply moving average and stack
-   pltt = [moving_average(tcs_correct_abs_no_si[ep, cll, :]) for cll in goal_cells]
-   pltt = np.array(pltt)
-   # Sort by COM
-   pltt = pltt[np.argsort(coms_correct_abs_no_si[0][goal_cells])]
-   # Normalize each row
-   pltt = normalize_rows(pltt)
-   # Plot
-   im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
-   im_list.append(im)
-   ax.axvline(rewlocs[ep] / 3, color='w', linestyle='--',linewidth=4)
-   if ep == 0:
-      ax.set_ylabel('Reward cell #')
-   ax.set_yticks([0,len(pltt)-1])
-   ax.set_yticklabels([1,len(pltt)])
-
-fig.suptitle('Place and reward cells, mouse 201')
-ax.set_xlabel('Track position (cm)')
-ax.set_xticks([0, 90])
-ax.set_xticklabels([0, 270])
-# Add colorbar
-cbar_ax = fig.add_axes([0.9, 0.55, 0.02, 0.25])  # [left, bottom, width, height]
-cbar = fig.colorbar(im_list[0], cax=cbar_ax)
-cbar.set_label('Norm. $\Delta F/F$')
-
-plt.tight_layout(rect=[0, 0, 0.95, 1])  # leave space on the right for the cbar
-
-plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig1_place_rew_map.svg'), bbox_inches='tight')
-
-#%% fig 2 eg
-# add tuning curves
-# Function for row-wise normalization
-def normalize_rows(x):
-    x_min = np.min(x, axis=1, keepdims=True)
-    x_max = np.max(x, axis=1, keepdims=True)
-    return (x - x_min) / (x_max - x_min + 1e-10)
-# Moving average function
-def moving_average(x, window_size=5):
-    return np.convolve(x, np.ones(window_size)/window_size, mode='same')
-plt.rc('font', size=18)
-fig, axes = plt.subplots(ncols=3,nrows=3, figsize=(9,8), sharex=True, sharey='row',height_ratios=[4,1,1])
+plt.rc('font', size=16)
+fig, axes = plt.subplots(ncols=4,nrows=3, figsize=(9,5), sharex=True, sharey='row',height_ratios=[3,1,1])
 im_list = []  # to store imshow objects for colorbar
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 
-for en,ep in enumerate([0,1,2]):
+for en,ep in enumerate([0,1,2,3]):
    ax = axes[0,en]
    # Apply moving average and stack
    pltt = [moving_average(tcs_correct[ep, cll, :]) for cll in goal_cells]
@@ -303,6 +184,8 @@ for en,ep in enumerate([0,1,2]):
    pltt = pltt[np.argsort(coms_correct[0][goal_cells])]
    # Normalize each row
    pltt = normalize_rows(pltt)
+   ax.set_yticks([0,len(pltt)-1])
+   ax.set_yticklabels([1,len(pltt)])
    # Plot
    im = ax.imshow(pltt, aspect='auto', cmap='viridis', vmin=0, vmax=1)
    im_list.append(im)
@@ -312,9 +195,7 @@ for en,ep in enumerate([0,1,2]):
    ax.axvline(bins_dt//2, color='w', linestyle='--',linewidth=3)
    if ep == 0:
       ax.set_ylabel('Reward cell #')
-   if ep == 2:
-      ax.set_xlabel('Reward-centric distance ($\Theta$)')
-   ax.set_title(f'Epoch {en+1}\n Reward @ {int(rewlocs[ep])} cm')
+   ax.set_title(f'Epoch {en+1}\n Reward at {int(rewlocs[ep])} cm',fontsize=14)
    ax=axes[1,en]
    ax.plot(lick_tcs_correct[ep][0],color=colors[en])
    ax.spines[['top', 'right']].set_visible(False)
@@ -331,7 +212,7 @@ for en,ep in enumerate([0,1,2]):
 ax.set_xticks([0, thres1, bins_dt/2, thres2, bins_dt])
 ax.set_xticklabels(['-$\\pi$','-$\\pi/4$',0,'$\\pi/4$','$\\pi$'])
 # Add colorbar
-cbar = fig.colorbar(im_list[0], ax=axes[0,2], orientation='vertical', fraction=0.05, pad=0.05)
+cbar = fig.colorbar(im_list[0], ax=axes[0,3], orientation='vertical', fraction=0.05, pad=0.05)
 cbar.set_label('Norm. $\Delta F/F$')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'{animal}_{day}_fig2_rew_map.svg'), bbox_inches='tight')

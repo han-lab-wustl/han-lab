@@ -111,41 +111,40 @@ for ii in range(len(conddf)):
         # get average per combination
         rates_perm = [np.nanmean([rates[p[0]],rates[p[1]]]) for p in perm]
         ls_perm = [np.nanmean([ls[p[0]],ls[p[1]]]) for p in perm]
-        rates_perm_all.append(rates)
-        ls_perm_all.append(ls)
+        rates_perm_all.append(rates_perm)
+        ls_perm_all.append(ls_perm)
         perms.append(perm)
 #%%
 # plot goal cells across epochs
 plt.rc('font', size=20)
-dfc = conddf.copy()
-dfc = dfc[((dfc.animals!='e217')) & (dfc.optoep<2)]
-df=pd.DataFrame()
-df['rates'] = np.concatenate([xx for xx in rates_perm_all])*100
-df['epoch'] = np.concatenate([np.arange(len(xx))+1 for xx in rates_perm_all])
-df['animals'] = np.concatenate([[xx]*len(rates_perm_all[ii]) for ii,xx in enumerate(dfc.animals.values)])
-colors=['k','slategray','darkcyan','darkgoldenrod']
-
+df = conddf.copy()
+df = df[((df.animals!='e217')) & (df.optoep<2)]
+df['num_epochs'] = [max(max(xx))+1 for xx in perms]
+df['rates'] = [np.nanmean(xx)*100 for xx in rates_perm_all]
+df['lick_selectivity'] = [np.nanmean(xx) for xx in ls_perm_all]
+# add epoch combinations
+df2=df.copy()
+df2['rates'] = [np.nanmean(xx)*100 for xx in rates_perm_all]
+df['lick_selectivity'] = [np.nanmean(xx) for xx in ls_perm_all]
+df2['num_epochs'] = [2]*len(df2)
+df=pd.concat([df,df2])
 # df=df[df.animals!='e189']
 # number of epochs vs. rates    
-fig,ax = plt.subplots(figsize=(4,4))
-df_plt=df[df.epoch<5]
+fig,ax = plt.subplots(figsize=(3,4))
+df_plt=df[df.num_epochs<5]
 # av across mice
-df_plt = df_plt.groupby(['animals','epoch']).mean(numeric_only=True)
-sns.barplot(x='epoch', y='rates',hue='epoch',palette=colors,
+df_plt = df_plt.groupby(['animals','num_epochs']).mean(numeric_only=True)
+sns.stripplot(x='num_epochs', y='rates',color='k',
+        data=df_plt,alpha=0.7,
+        s=10)
+sns.barplot(x='num_epochs', y='rates',
         data=df_plt,
-        fill=False,ax=ax, color='k', errorbar='se',legend=False)
+        fill=False,ax=ax, color='k', errorbar='se')
 ax.spines[['top','right']].set_visible(False)
 ax.set_ylabel('% Correct trials')
-ax.set_xlabel('Epoch')
+ax.set_xlabel('# of epochs')
 # Group rates by number of epochs
-grouped = df_plt.groupby('epoch')['rates'].apply(list)
-# draw connecting lines per animal
-for animal, dfa in df_plt.groupby('animals'):
-        dfa=dfa.reset_index()
-        ax.plot(
-                dfa['epoch']-1, dfa['rates'],
-                linewidth=1.5, alpha=0.5, color='gray'
-        )
+grouped = df_plt.groupby('num_epochs')['rates'].apply(list)
 
 # Filter out groups with <2 data points (optional for robustness)
 valid_groups = [g for g in grouped if len(g) > 1]
@@ -157,13 +156,13 @@ if len(valid_groups) > 1:
     print(f"H-statistic = {stat:.3f}, p = {p:.4f}")
 else:
     print("Not enough valid groups to run Kruskal-Wallis test.")
-summary = df_plt.groupby('epoch')['rates'].agg(['mean', scipy.stats.sem]).reset_index()
-summary.columns = ['epoch', 'mean_rate', 'sem_rate']
+summary = df_plt.groupby('num_epochs')['rates'].agg(['mean', scipy.stats.sem]).reset_index()
+summary.columns = ['num_epochs', 'mean_rate', 'sem_rate']
 
 print("Mean ± SEM of % correct trials per number of epochs:")
 print(summary)
-ax.set_title('Task performance')
-plt.savefig(os.path.join(savedst, 'p_correct_trials_per_epoch.svg'))
+
+plt.savefig(os.path.join(savedst, 'p_correct_trials.svg'))
 
 #%%
 fig,ax = plt.subplots(figsize=(3,5))

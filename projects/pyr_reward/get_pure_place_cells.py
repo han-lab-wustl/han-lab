@@ -233,7 +233,7 @@ df_perms['place_cell_prop'] = np.concatenate(goal_cell_perm)
 df_perms['place_cell_prop_shuffle'] = np.concatenate(goal_cell_perm_shuf)
 df_perm_animals = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.animals.values)]
 df_perms['animals'] = np.concatenate(df_perm_animals)
-df_perms = df_perms[df_perms.animals!='e189']
+# df_perms = df_perms[df_perms.animals!='e189']
 df_permsav = df_perms.groupby(['animals','epoch_comparison']).mean(numeric_only=True)
 # df_perm_days = [[xx]*len(goal_cell_perm[ii]) for ii,xx in enumerate(df.session_num.values)]
 # df_perms['session_num'] = np.concatenate(df_perm_days)
@@ -266,6 +266,138 @@ for ep in eps:
 # take a mean of all epoch comparisons
 df_perms['num_epochs'] = [2]*len(df_perms)
 df_permsav2 = df_perms.groupby(['animals', 'num_epochs']).mean(numeric_only=True)
+df_permsav=df_permsav.reset_index()
+epcomp = [f'Epoch {int(xx[1])+1}, Epoch {int(xx[4])+1}' for xx in df_permsav.epoch_comparison.values]
+df_permsav['epoch_comparison']=epcomp
+df_permsav['place_cell_prop']=df_permsav['place_cell_prop']*100
+df_permsav['place_cell_prop_shuffle']=df_permsav['place_cell_prop_shuffle']*100
+
+#%% 
+# for figure; place cells in any epoch
+df_permsav=df_permsav[(df_permsav.epoch_comparison!='Epoch 1, Epoch 5') & (df_permsav.epoch_comparison!='Epoch 2, Epoch 5') & (df_permsav.epoch_comparison!='Epoch 3, Epoch 5') & (df_permsav.epoch_comparison!='Epoch 4, Epoch 5')]
+
+df_permsav=df_permsav[(df_permsav.epoch_comparison=='Epoch 1, Epoch 2') | (df_permsav.epoch_comparison=='Epoch 2, Epoch 3') | (df_permsav.epoch_comparison=='Epoch 3, Epoch 4')]
+
+fig,ax = plt.subplots(figsize=(3,4))
+sns.barplot(x='epoch_comparison', y='place_cell_prop',
+        data=df_permsav,
+        fill=False,ax=ax, color='indigo', errorbar='se')
+sns.barplot(data=df_permsav, # correct shift
+        x='epoch_comparison', y='place_cell_prop_shuffle',color='grey', 
+        label='shuffle', alpha=0.5, err_kws={'color': 'grey'},errorbar=None,ax=ax)
+
+ax.spines[['top','right']].set_visible(False)
+ax.legend(bbox_to_anchor=(1.01, 1.05))
+ax.set_xticklabels(ax.get_xticklabels(),rotation=20)
+eps = df_permsav.epoch_comparison.unique()
+pvalues=[]
+for ep in eps:
+        # rewprop = df_plt.loc[(df_plt.num_epochs==ep), 'goal_cell_prop']
+        rewprop = df_permsav.loc[(df_permsav.epoch_comparison==ep), 
+        'place_cell_prop'].values
+        shufprop = df_permsav.loc[(df_permsav.epoch_comparison==ep), 
+                'place_cell_prop_shuffle'].values
+        t,pval = scipy.stats.wilcoxon(rewprop, shufprop)
+        print(f'{ep} epochs, pval: {pval},w = {t},n={len(rewprop)}')
+        pvalues.append(pval)
+
+from statsmodels.stats.multitest import multipletests
+reject, pvals_corrected, _, _ = multipletests(pvalues, method='fdr_bh')
+
+y=32
+fs=38
+for ii,ep in enumerate(eps):
+        pval=pvals_corrected[ii]
+        # statistical annotation        
+        if pval < 0.001:
+                ax.text(ii, y, "***", ha='center', fontsize=fs)
+        elif pval < 0.01:
+                ax.text(ii, y, "**", ha='center', fontsize=fs)
+        elif pval < 0.05:
+                ax.text(ii, y, "*", ha='center', fontsize=fs)
+
+ax.set_xlabel('')
+ax.set_ylabel('Place cell %')
+ans = df_permsav.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=np.arange(len(df_permsav[df_permsav.animals==ans[i]])), y='place_cell_prop', 
+    data=df_permsav[df_permsav.animals==ans[i]],
+    errorbar=None, color='dimgray', linewidth=1.5, alpha=0.5,ax=ax)
+
+groups = [df_permsav.loc[df_permsav.epoch_comparison==ep, 'place_cell_prop'].values
+          for ep in df_permsav.epoch_comparison.unique()]
+
+H, p_kw = scipy.stats.kruskal(*groups)
+print(f"Kruskal–Wallis: H={H:.3f}, p={p_kw:.3g}")
+
+# =========================
+# Post-hoc pairwise Dunn test if KW significant
+# =========================
+import scikit_posthocs as sp_post
+if p_kw < 0.05:
+        dunn = sp_post.posthoc_dunn(df_permsav, val_col='place_cell_prop', 
+                                group_col='epoch_comparison', p_adjust='fdr_bh')
+        print(dunn)
+        
+import itertools
+
+# Set label
+ax.set_ylabel('Place cell %')
+
+# Add subject-level lines
+ans = df_permsav.animals.unique()
+for i in range(len(ans)):
+    ax = sns.lineplot(x=np.arange(len(df_permsav[df_permsav.animals==ans[i]])),
+                      y='place_cell_prop',
+                      data=df_permsav[df_permsav.animals==ans[i]],
+                      errorbar=None, color='dimgray',
+                      linewidth=1.5, alpha=0.2, ax=ax)
+
+# Kruskal–Wallis
+groups = [df_permsav.loc[df_permsav.epoch_comparison==ep, 'place_cell_prop'].values
+          for ep in df_permsav.epoch_comparison.unique()]
+H, p_kw = scipy.stats.kruskal(*groups)
+print(f"Kruskal–Wallis: H={H:.3f}, p={p_kw:.3g}")
+h=1.5
+# Post-hoc Dunn test
+import scikit_posthocs as sp_post
+if p_kw < 0.05:
+    dunn = sp_post.posthoc_dunn(df_permsav,
+                                val_col='place_cell_prop',
+                                group_col='epoch_comparison',
+                                p_adjust='fdr_bh')
+    print(dunn)
+
+    # =============================
+    # Draw comparison bars manually
+    # =============================
+    xticks = df_permsav.epoch_comparison.unique()
+    y_max = df_permsav['place_cell_prop'].max()
+    bar_height = y_max * 0.1   # height increment for bars
+    current_y = y_max + bar_height
+
+    for (i, j) in itertools.combinations(range(len(xticks)), 2):
+        pval = dunn.iloc[i, j]
+        if pval < 0.05:
+            # draw line
+            x1, x2 = i, j
+            ax.plot([x1, x1, x2, x2],
+                    [current_y, current_y+h, current_y+h, current_y],
+                    lw=1.5, c='k')n
+            # significance stars
+            if pval < 0.001:
+                stars = '***'
+            elif pval < 0.01:
+                stars = '**'
+            else:
+                stars = '*'
+            ax.text((x1+x2)/2, current_y+0.015, stars,
+                    ha='center', va='bottom', fontsize=fs)
+            current_y += bar_height  # increment for next bar
+fig.suptitle('Place cells between two epochs')
+plt.savefig(os.path.join(savedst, 'place_cell_prop_btwn_two_ep.svg'), 
+        bbox_inches='tight')
+
 #%%
 df_plt2 = pd.concat([df_permsav2,df_plt])
 df_plt2 = df_plt2[df_plt2.index.get_level_values('num_epochs')<5]
@@ -307,7 +439,7 @@ for ii,ep in enumerate(eps):
         shufprop = df_plt2.loc[(df_plt2.num_epochs==ep), 'place_cell_prop_shuffle']
         tstat,pval = scipy.stats.wilcoxon(rewprop, shufprop)
         pvalues.append(pval)
-        ts.append(t)
+        ts.append(tstat)
         print(f'{ep} epochs, pval: {pval}')
 # correct pvalues
 from statsmodels.stats.multitest import multipletests
@@ -322,7 +454,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y-pshift*2, f't={ts[ii]:.3g}\np={pval:.3g}',fontsize=10,rotation=45)
+        # ax.text(ii-0.5, y-pshift*2, f't={ts[ii]:.3g}\np={pval:.3g}',fontsize=10,rotation=45)
 # make lines
 ans = df_plt2.animals.unique()
 for i in range(len(ans)):
@@ -358,7 +490,7 @@ for ii,ep in enumerate(eps):
                 ax.text(ii, y, "**", ha='center', fontsize=fs)
         elif pval < 0.05:
                 ax.text(ii, y, "*", ha='center', fontsize=fs)
-        ax.text(ii-0.5, y-pshift*2, f't={ts[ii]:.3g}\np={pval:.3g}',fontsize=10,rotation=45)
+        # ax.text(ii-0.5, y-pshift*2, f't={ts[ii]:.3g}\np={pval:.3g}',fontsize=10,rotation=45)
         
 ax.spines[['top','right']].set_visible(False)
 ax.set_xlabel('# of epochs')
@@ -366,7 +498,7 @@ ax.set_ylabel('')
 ax.set_title('Place cell %-shuffle',pad=30)
 ax.set_ylim([-1,20
              ])
-
+fig.suptitle('Dedicated place cells')
 
 plt.savefig(os.path.join(savedst, 'place_cell_prop_per_an.svg'), 
         bbox_inches='tight')
