@@ -9,6 +9,68 @@ import os, sys, shutil, tifffile, numpy as np, pandas as pd, re, tarfile
 from datetime import datetime
 from pathlib import Path
 
+# fix tarikul fld struc
+def fix_tarikul_fld_struct(root):
+    # root = Path(r'\\storage1.ris.wustl.edu\ebhan\Archive\Tarikul\E222\CS_4s_US\Day_01')
+
+    for dirpath, _, filenames in os.walk(root):
+        for fname in filenames:
+            fpath = Path(dirpath) / fname
+
+            if fname.endswith(".sbx") or (fname.endswith(".mat") and "time" not in fname):
+                # Group imaging files by base name (without extension)
+                base = fpath.stem
+                new_dir = Path(dirpath) / base
+                new_dir.mkdir(exist_ok=True)
+                shutil.move(str(fpath), str(new_dir / fname))
+
+            elif fname.endswith(".mat") and "time" in fname:
+                # Behavior VR files
+                behav_dir = Path(dirpath) / "behavior" / "vr"
+                behav_dir.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(fpath), str(behav_dir / fname))
+
+def fix_tarikul_params_struct(root):
+    # Root where all Day_xx folders live
+# root = Path(r"\\storage1.ris.wustl.edu\ehban\Archive\Tarikul\E222\CS_4s_US")
+    root=Path(root)
+    # Walk through all subdirectories
+    for params_dir in root.rglob("params"):
+        if params_dir.is_dir():
+            parent = params_dir.parent
+            print(f"Processing: {params_dir}")
+
+            # Move each file up one level
+            for item in params_dir.iterdir():
+                target = parent / item.name
+                if target.exists():
+                    # Avoid overwriting by renaming
+                    target = parent / f"{item.stem}_from_params{item.suffix}"
+                shutil.move(str(item), str(target))
+
+            # Remove empty params folder
+            try:
+                os.rmdir(params_dir)
+                print(f"Deleted: {params_dir}")
+            except OSError:
+                print(f"Could not remove {params_dir} (not empty?)")
+    # add suite2p to img dir
+    for day in listdir(root):
+        day=Path(day)
+
+        suite2p_dir = day / "suite2p"
+        if suite2p_dir.exists():
+            # Find the *000* folder (imaging directory)
+            candidates = [d for d in day.iterdir() if d.is_dir() and "000" in d.name]
+            if len(candidates) == 1:
+                dest = candidates[0] / "suite2p"
+                print(f"Moving {suite2p_dir} -> {dest}")
+                shutil.move(str(suite2p_dir), str(dest))
+            elif len(candidates) == 0:
+                print(f"No *000* folder found in {day}")
+            else:
+                print(f"Multiple *000* folders found in {day}, skipping.")
+
 def makedir(dr):
     if not os.path.exists(dr): os.mkdir(dr)
     return dr
@@ -87,6 +149,7 @@ def copydopaminefldstruct(src, dst, days, overwrite=False,
     days = [os.path.join(src,str(xx)) for xx in days]
     # move all converted fmats to separate folder
     for day in days:  
+        print(day)
         dst_day = os.path.join(dst,os.path.basename(day))
         if not os.path.exists(dst_day): shutil.copytree(day, dst_day, ignore=ig_f)
         # for zahra, add the scanbox fld
@@ -94,19 +157,21 @@ def copydopaminefldstruct(src, dst, days, overwrite=False,
             imgfl1=day
         else:
             imgfl1 = [os.path.join(day, xx) for xx in os.listdir(day) if "000" in xx][0]
-        imgfl = [os.path.join(imgfl1, xx) for xx in os.listdir(imgfl1) if "suite2p" in xx][0]
-        planes = range(len([xx for xx in listdir(imgfl) if "plane" in xx]))
-        # imgfl = pth
-        for plane in planes:
-            mat = os.path.join(imgfl, f"plane{plane}", "reg_tif", "params.mat") 
-            if os.path.exists(mat):
-                copypth = os.path.join(dst_day, os.path.basename(imgfl1), "suite2p", f"plane{plane}", "reg_tif")
-                # if not os.path.exists(os.path.dirname(copypth)): os.makedirs(os.path.dirname(copypth))
-                if os.path.exists(os.path.join(copypth, 'params.mat')) and overwrite==False:
-                    print(f"*********Params file for day {day} already exists in {dst}*********")    
-                else:
-                    shutil.copy(mat, copypth)            
-                    print(f"*********Copied {day} Params file to {dst_day}*********")
+        imgfl = [os.path.join(imgfl1, xx) for xx in os.listdir(imgfl1) if "suite2p" in xx]
+        if len(imgfl)>0: # check if processed
+            imgfl=imgfl[0]
+            planes = range(len([xx for xx in listdir(imgfl) if "plane" in xx]))
+            # imgfl = pth
+            for plane in planes:
+                mat = os.path.join(imgfl, f"plane{plane}", "reg_tif", "params.mat") 
+                if os.path.exists(mat):
+                    copypth = os.path.join(dst_day, os.path.basename(imgfl1), "suite2p", f"plane{plane}", "reg_tif")
+                    # if not os.path.exists(os.path.dirname(copypth)): os.makedirs(os.path.dirname(copypth))
+                    if os.path.exists(os.path.join(copypth, 'params.mat')) and overwrite==False:
+                        print(f"*********Params file for day {day} already exists in {dst}*********")    
+                    else:
+                        shutil.copy(mat, copypth)            
+                        print(f"*********Copied {day} Params file to {dst_day}*********")
 
 def copyfmats(src, dst, animal, days, overwrite=False, 
             weeks=False, weekdir=False, planes=[0], combined=False):

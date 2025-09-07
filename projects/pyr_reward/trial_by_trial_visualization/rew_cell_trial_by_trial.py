@@ -139,40 +139,57 @@ else:
 # abs distance
 trialstates, licks_all, tcs_all, coms_all, ypos_max_all_ep, vels_all =make_tuning_curves_time_trial_by_trial_w_darktime(eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells], trialnum, rewards, forwardvel, scalingf,bins=150)
 
-def moving_average(x, window_size=3):
+def moving_average(x, window_size=2):
         return np.convolve(x, np.ones(window_size)/window_size, mode='same')
 
 # (eps, rewlocs, rewsize, lick, ybinned, time, Fc3[:,goal_cells],trialnum, rewards, forwardvel, scalingf,bins=bins_dt)
 #%%
 plt.rc('font', size=16)
+pre_goal_cells = [np.nanmedian(coms_correct[:,gc],axis=0)-np.pi for gc in np.unique(np.concatenate(com_goal))]
+pre_goal_cells=np.unique(np.concatenate(com_goal))[(np.array(pre_goal_cells)<0) & (np.array(pre_goal_cells)>-np.pi/4)]
+
 # plot the distance tuning
 # panel for fig 4
-fig, axes = plt.subplots(ncols=len(tcs_correct),nrows = 3,figsize=(7,4.5),sharex=True,sharey=True)
+fig, axes = plt.subplots(ncols=len(tcs_correct),nrows = 4,figsize=(8.5,8),sharex=True,sharey='row')
 axes=axes.flatten()
-typrz = ['Near', 'Far', 'Near']
 gcs=[24] # pre and post
 colors = ['k', 'slategray', 'darkcyan', 'darkgoldenrod', 'orchid']
 color_typ = sns.color_palette('Dark2')
 for ep in range(len(tcs_correct)):
         ax=axes[ep]
         m=moving_average(tcs_correct_abs[ep, goal_cells[gcs[0]]].T, window_size=3)
-        sem=scipy.stats.sem(tcs[ep][gcs[0],:,:],axis=0, nan_policy='omit')
-        m=m/np.nanmax(m)
         ax.plot(m,color=color_typ[0],label='Pre')
-        ax.fill_between(np.arange(len(m)), m - sem, m + sem, color=color_typ[0], alpha=0.5)
         # m=moving_average(tcs_correct_abs[ep, goal_cells[gcs[1]]].T, window_size=3)
         # m=m/np.nanmax(m)
         # ax.plot(m,color=color_typ[1],label='Post')
-        ax.axvline(rewlocs[ep]/bin_size,color=colors[ep],linestyle='--')
+        ax.axvline(rewlocs[ep]/bin_size,color='k',linestyle='--')
         ax.spines[['top', 'right']].set_visible(False)
-        ax.set_title(f'Epoch {ep+1}\n Reward @ {int(rewlocs[ep]-5)} cm\n{typrz[ep]} Reward Zone',fontsize=14)
+        ax.set_title(f'Epoch {ep+1}\n Reward at {int(rewlocs[ep]-5)}\nSingle cell',fontsize=14)
         ax.set_xticks([0,90])
         ax.set_xticklabels([0,270])
-        if ep==0: ax.set_ylabel('Norm. $\Delta$ F/F')
-ax.legend()
+        ax.set_ylim([-.03,0.6])
+        
+        if ep==0: ax.set_ylabel('$\Delta$ F/F')
 
+# average of all cells
 for ep in range(len(tcs_correct)):
         ax=axes[ep+len(tcs_correct)]
+        m=np.nanmean(np.array([moving_average(tcs_correct_abs[ep, gc].T, window_size=3) for gc in pre_goal_cells]),axis=0)
+        sem=scipy.stats.sem(tcs_correct_abs[ep, pre_goal_cells],axis=0, nan_policy='omit')
+        # m=m/np.nanmax(m)
+        # sem=sem/np.nanmax(sem)
+        ax.plot(m,color=color_typ[0],label='Pre')
+        ax.fill_between(np.arange(len(m)), m - sem, m + sem, color=color_typ[0], alpha=0.5)
+        ax.set_title(f'Population',fontsize=14)
+        ax.axvline(rewlocs[ep]/bin_size,color='k',linestyle='--')
+        ax.spines[['top', 'right']].set_visible(False)
+        ax.set_xticks([0,90])
+        ax.set_xticklabels([0,270])
+        ax.set_ylim([-.03,0.1])
+        if ep==0: ax.set_ylabel('$\Delta$ F/F')
+
+for ep in range(len(tcs_correct)):
+        ax=axes[ep+len(tcs_correct)*2]
         m=moving_average(lick_correct_abs[ep][0], window_size=3)
         m=m/np.nanmax(m)
         ax.plot(m,color=colors[ep])
@@ -182,7 +199,7 @@ for ep in range(len(tcs_correct)):
         ax.set_xticklabels([0,270])
         if ep==0: ax.set_ylabel('Norm. licks')
 for ep in range(len(tcs_correct)):
-        ax=axes[ep+len(tcs_correct)*2]
+        ax=axes[ep+len(tcs_correct)*3]
         m=moving_average(vel_correct_abs[ep][0], window_size=3)
         m=m/np.nanmax(m)
         ax.plot(m,color=colors[ep])
@@ -202,7 +219,9 @@ for ep in range(len(tcs_correct)):
         #     alpha=0.5
         #     )  
 ax.set_xlabel('Track position (cm)')
-# plt.tight_layout()               
+fig.suptitle('Pre-reward cells')  
+plt.tight_layout() 
+            
 plt.savefig(os.path.join(savedst, f'{animal}_{day}_pre_reward_.svg'))
 
 #%%

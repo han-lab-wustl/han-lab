@@ -158,7 +158,7 @@ rewc = 'cornflowerblue'
 a=0.7
 animal='e145'
 # histogram of shufflel v. real
-fig, axes = plt.subplots(nrows=2,ncols=2,sharex=True, sharey=True,figsize=(8,7))
+fig, axes = plt.subplots(nrows=2,ncols=2,sharex=True, sharey=True,figsize=(6,6))
 axes=axes.flatten()
 ax=axes[0]
 shuf = [xx*100 for xx in dct[animal][1]]
@@ -244,33 +244,19 @@ df['Group'] = df.apply(
     lambda row: f"Real" if row['Condition'] == 'Real' else 'Shuffle',
     axis=1
 )
-fig, ax = plt.subplots(figsize=(7,6))
+fig, ax = plt.subplots(figsize=(5,5))
 s = 10
-
-# Plot lines connecting real and shuffle for each animal and transition
-for animal in df['Animal'].unique():
-    for tr, trans in enumerate(df['Transition'].unique()):
-        d_an = df[(df['Animal'] == animal) & (df['Transition'] == trans)]
-        if len(d_an) == 2:  # has both real and shuffle
-            # x positions adjusted for dodge:
-            x_real = tr - 0.2
-            x_shuffle = tr + 0.2
-            y_real = d_an[d_an['Condition']=='Real']['Value'].values[0]
-            y_shuffle = d_an[d_an['Condition']=='Shuffle']['Value'].values[0]
-            ax.plot([x_real, x_shuffle], [y_real, y_shuffle], color='gray', linewidth=1.5, zorder=0,alpha=0.5)
 
 # Stripplot with dodge for side-by-side points
 # sns.stripplot(data=df, x='Transition', y='Value', hue='Group',
 #               dodge=True, palette=palette, alpha=0.7, s=s, ax=ax)
 
 # Barplot with dodge for side-by-side bars
-sns.barplot(data=df, x='Transition', y='Value', hue='Group',
-            palette=palette, dodge=True, errorbar='se', fill=False, ax=ax)
+sns.barplot(data=df[df.Group=='Real'], x='Transition', y='Value',  dodge=True, errorbar='se', fill=False, ax=ax,color='mediumslateblue')
+sns.barplot(data=df[df.Group=='Shuffle'], x='Transition', y='Value',  label='shuffle', alpha=0.4, color='grey',err_kws={'color': 'grey'},errorbar=None,ax=ax)
 
 ax.set_ylabel('% Cell transition')
 plt.xticks(rotation=25)
-
-ax.legend_.remove()  # remove legend for now
 # --- Run paired t-tests and annotate ---
 # Step 1: Collect p-values for all transitions
 p_vals = []
@@ -303,7 +289,7 @@ y_max = df['Value'].max()-10
 for i, (trans, p_corr) in enumerate(zip(transitions, p_vals_corrected)):
     stars = pval_to_asterisks(p_corr)
     ax.text(i, y_max + y_max*0.05, stars, ha='center', va='bottom', fontsize=46)
-    # ax.text(i, y_max + y_max*0.05-5, p_corr, ha='center', va='bottom', fontsize=8)
+    ax.text(i, y_max + y_max*0.05-5, (t_stats[i],p_corr), ha='center', va='bottom', fontsize=8)
 
 ax.spines[['top','right']].set_visible(False)
 # ax.set_title('Real vs Shuffle Transitions')

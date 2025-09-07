@@ -373,6 +373,24 @@ rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(
 # rewstops_trials_per_an_av = [[np.nanmean(np.hstack(yy)[int((range_val/binsize)+(mov_start/binsize)):int((range_val/binsize)+(secs_post_rew/binsize))],axis=0)[0] for yy in xx] for xx in rewstops_trials_per_an]
 
 #%%
+def wilcoxon_r(x, y):
+    # x, y are paired arrays (same subjects)
+    W, p = scipy.stats.wilcoxon(x, y, zero_method="wilcox")
+    diffs = x - y
+    n = np.count_nonzero(diffs)  # exclude zero diffs
+    if n == 0:
+        return np.nan, p
+
+    # Normal approximation for Wilcoxon (no ties/zeros correction here)
+    mean_W = n * (n + 1) / 4
+    sd_W = np.sqrt(n * (n + 1) * (2*n + 1) / 24)
+    Z = (W - mean_W) / sd_W
+
+    # Enforce direction from the actual mean difference
+    Z = np.sign(np.nanmean(diffs)) * abs(Z)
+    r = Z / np.sqrt(n)
+    return r, p
+
 # plot
 plt.rc('font', size=18) 
 import itertools
@@ -391,7 +409,7 @@ df['trial_type'] = np.concatenate([['non_rewarded_stops_wo_licks']*len(nrewstops
                 ['rewarded_stops']*len(rewstops_trials_per_an_av_concat)])
 df['animal'] = np.concatenate([an_nrewstops_wo_licks_trials_per_an_av_concat,
             an_nrewstops_w_licks_trials_per_an_av_concat,an_rewstops_trials_per_an_av_concat])
-df=df[(df.animal!='e189')&(df.animal!='e139')&(df.animal!='e145')]
+df=df[(df.animal!='e189')&(df.animal!='e145')&(df.animal!='e139')]
 # combined nonrew 
 # non_reward_df = df[df['trial_type'].isin(['non_rewarded_stops_wo_licks', 'non_reward_stops_w_licks'])]
 # non_reward_avg = non_reward_df.groupby('animal')['activity'].mean().reset_index()
@@ -406,7 +424,7 @@ df=df[(df.animal!='e189')&(df.animal!='e139')&(df.animal!='e145')]
 df=df.reset_index()
 palette = {'rewarded_stops':'seagreen', 'non_rewarded_stops_wo_licks': 'firebrick', 'non_reward_stops_w_licks': 'sienna'}
 # plot all cells
-fig,ax=plt.subplots(figsize=(4,6))
+fig,ax=plt.subplots(figsize=(3.5,5))
     
 df = df.groupby(['animal', 'trial_type']).mean().reset_index()
 s=12
@@ -438,14 +456,16 @@ trial_types = df['trial_type'].unique()
 comparisons = list(itertools.combinations(trial_types, 2))
 # Store p-values
 p_values = []
-test_results = {}
+test_results = []
 for group1, group2 in comparisons:
     # Extract paired data (same animals)
     paired_data = df.pivot(index="animal", columns="trial_type", values="activity").dropna()
-    # Perform paired t-test
-    t_stat, p_val = scipy.stats.wilcoxon(paired_data[group1], paired_data[group2])
-    p_values.append(p_val)
-    test_results[(group1, group2)] = p_val
+    x,y=paired_data[group2],paired_data[group1] 
+    # Wilcoxon r (signed)
+    r_w, p_w = wilcoxon_r(x, y)
+    p_values.append(p_w)
+    test_results.append([p_w, r_w])
+    p_values.append(p_w)
 
 # Apply Bonferroni correction
 reject, pvals_corrected, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
@@ -474,12 +494,12 @@ for i, ((group1, group2), corrected_p) in enumerate(zip(comparisons, pvals_corre
     
     # Annotate with corrected p-value
     p_text = f"p = {corrected_p:.3g}"    
-    ax.text((x1 + x2) / 2, y + y_offset * 0.3, p_text, 
-             ha='center', va='bottom', fontsize=12)
+    ax.text((x1 + x2) / 2, y + y_offset * 0.3, (f'{test_results[i][1]:.3g},{corrected_p:.3g}'), 
+             ha='center', va='bottom', fontsize=10)
     ax.text((x1 + x2) / 2, y, '*', 
             ha='center', va='bottom', fontsize=42)
 
-ax.set_xticklabels(['Licks','No licks','Rewarded'])
+ax.set_xticklabels(['No licks','Licks','Rewarded'])
 ax.set_ylabel('Mean $\Delta F/F$ (after-before mov.)')
 ax.set_xlabel('Trial type')
 # fig.suptitle('Stops\nNear post-reward cells')
