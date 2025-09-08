@@ -4,11 +4,11 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e221";
-days = [5:8];
+days = [14];
 src = 'Z:\pavlov_extinction\cs_4s_us';
 
 for day=days
-    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "behavior\vr\*.mat"));
+    daypth = dir(fullfile(src, mouse_name, sprintf('%i',day), "**\*time*.mat"));
 %     sprintf('%i',day), sprintf('%s*mat', mouse_name)));%, 
     fmatfl = dir(fullfile(src, mouse_name, sprintf('%i',day), '**\params.mat')); 
     savepthfmat = VRalign_dopamine(fullfile(daypth.folder, daypth.name),fmatfl, length(fmatfl));
