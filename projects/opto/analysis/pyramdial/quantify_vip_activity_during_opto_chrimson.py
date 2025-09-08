@@ -4,8 +4,8 @@ import os, scipy, sys
 import glob, numpy as np, matplotlib.pyplot as plt
 import matplotlib as mpl, pandas as pd, seaborn as sns
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
@@ -45,7 +45,7 @@ for m, mouse_name in enumerate(mice):
         ybinned = data['ybinned'].flatten()
         forwardvel = data['forwardvel'].flatten()
         timedFF = data['timedFF'].flatten()
-        rewards = np.hstack(data['rewards'])==1
+        rewards = np.hstack(data['rewards'])==0.5
         licks = data['licks']
         trialnum = data['trialnum'].flatten()
         print(daypath)
@@ -167,6 +167,38 @@ for ii,dy in enumerate(range(dyrng)):
     if r<int(np.ceil(np.sqrt(dyrng)))-1: r+=1
     else: c+=1; r=0
 fig.tight_layout()
+#%%
+#  stim figure
+dy =9
+from matplotlib.patches import Rectangle
+
+rng = np.arange(int(range_val/binsize))
+fig,ax=plt.subplots(figsize=(4,3))
+meantc = dffs_cp_dys[dy][1][rng]
+ax.plot(meantc, color='k',label='LED off')   
+xmin,xmax = ax.get_xlim()     
+ax.fill_between(np.arange(0,(range_val)/binsize), 
+        meantc-scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'),
+        meantc+scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'), 
+        color = 'k', alpha=0.2)        
+meantc = dffs_cp_dys[dy][0][rng]        
+ax.plot(meantc, color='darkgoldenrod',label='LED on') 
+ax.fill_between(np.arange(0,(range_val)/binsize), 
+meantc-scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'),
+meantc+scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'), 
+color = 'darkgoldenrod', alpha=0.2)        
+ax.set_xlabel('Position from reward (cm)')
+ax.set_ylabel('$\Delta F/F$')
+ax.set_xticks([0, int(range_val/binsize)])
+ax.set_xticklabels([-153,0])
+ax.spines[['top','right']].set_visible(False)
+ax.add_patch(Rectangle((0, 1.5), int(range_val/binsize),2,
+           color='lightcoral', alpha=.3, zorder=0))
+ax.legend(fontsize=14)
+ax.set_title('VIP Neuron, Excitation\n mouse 14')
+
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
+plt.savefig(os.path.join(savedst,'vip_ex_stim_eg.svg'),bbox_inches='tight')
 
 #%%
 # plot mean activity between diff epochs
@@ -194,15 +226,15 @@ df['average_dff'] = np.concatenate([ctrl, opto])
 df['condition'] = ['LED off'] * len(ctrl) + ['LED on'] * len(opto)
 
 # Plot
-fig, ax = plt.subplots(figsize=(2.5, 5))
+fig, ax = plt.subplots(figsize=(2.2, 4))
 sns.barplot(
     data=df, x='condition', y='average_dff', hue='condition', ax=ax, fill=False,
     palette={'LED off': "k", 'LED on': "darkgoldenrod"}, alpha=a
 )
-sns.stripplot(
-    data=df, x='condition', y='average_dff', hue='condition', ax=ax, s=s,
-    palette={'LED off': "k", 'LED on': "darkgoldenrod"}, alpha=a, dodge=False
-)
+# sns.stripplot(
+#     data=df, x='condition', y='average_dff', hue='condition', ax=ax, s=s,
+#     palette={'LED off': "k", 'LED on': "darkgoldenrod"}, alpha=a, dodge=False
+# )
 
 # Add connecting lines
 for i in range(len(opto)):
@@ -214,7 +246,7 @@ ax.set_xlabel('')
 ax.set_ylabel('VIP Pre-Reward $\Delta$F/F')
 
 # Wilcoxon test and annotation
-t, pval = scipy.stats.wilcoxon(opto, ctrl)
+t, pval = scipy.stats.ttest_ind(opto, ctrl)
 if pval < 0.001:
     ax.text(ii, y, "***", ha='center', fontsize=fs)
 elif pval < 0.01:
@@ -229,7 +261,6 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 plt.savefig(os.path.join(savedst, 'vip_pre_reward_dff_chrimson.svg'), bbox_inches='tight')
 
 #%% 
-from matplotlib.patches import Rectangle
 
 def add_reward_zone_patches(ax, ypos_segment, start_idx, 
         rewloc, color='lightcoral', alpha=0.3):

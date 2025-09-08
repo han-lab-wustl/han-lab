@@ -4,14 +4,14 @@ import os, scipy, sys
 import glob, numpy as np, matplotlib.pyplot as plt
 import matplotlib as mpl, pandas as pd, seaborn as sns
 mpl.rcParams['svg.fonttype'] = 'none'
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["xtick.major.size"] = 10
+mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 plt.rc('font', size=20)          # controls default text sizes
 plt.rcParams["font.family"] = "Arial"
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 from projects.DLC_behavior_classification import eye
-
+from projects.pyr_reward.rewardcell import wilcoxon_r
 # Definitions and setups
 mice = ["e216", "e218"]
 dys_s = [[37,41,54], [38, 41, 44, 50]]
@@ -168,9 +168,40 @@ for ii,dy in enumerate(range(dyrng)):
         if r<int(np.ceil(np.sqrt(dyrng)))-1: r+=1
         else: c+=1; r=0
 fig.tight_layout()
+#%%
+#  stim figure
+dy =1
+rng = np.arange(int(range_val/binsize))
+fig,ax=plt.subplots(figsize=(4,3))
+meantc = dffs_cp_dys[dy][1][rng]
+ax.plot(meantc, color='k',label='LED off')   
+xmin,xmax = ax.get_xlim()     
+ax.fill_between(np.arange(0,(range_val)/binsize), 
+        meantc-scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'),
+        meantc+scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'), 
+        color = 'k', alpha=0.2)        
+meantc = dffs_cp_dys[dy][0][rng]        
+ax.plot(meantc, color='r',label='LED on') 
+ax.fill_between(np.arange(0,(range_val)/binsize), 
+meantc-scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'),
+meantc+scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'), 
+color = 'r', alpha=0.2)        
+ax.set_xlabel('Position from reward (cm)')
+ax.set_ylabel('$\Delta F/F$')
+ax.set_xticks([0, int(range_val/binsize)])
+ax.set_xticklabels([-122,0])
+ax.spines[['top','right']].set_visible(False)
+ax.add_patch(Rectangle((0, 0), int(range_val/binsize),.75,
+            color='mediumturquoise', alpha=.3, zorder=0))
+ax.legend()
+ax.set_title('VIP Neuron, Inhibition\n mouse 216')
+
+savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
+plt.savefig(os.path.join(savedst,'vip_inhib_stim_eg.svg'),bbox_inches='tight')
 
 #%%
 s=12
+plt.rc('font', size=20)
 # plot mean activity between diff epochs
 t=int(range_val/binsize)
 opto_ = [np.nanmean(xx[0][:t]) for xx in dffs_cp_dys][:10]
@@ -198,15 +229,15 @@ df['average_dff'] = np.concatenate([ctrl, opto])
 df['condition'] = ['LED off'] * len(ctrl) + ['LED on'] * len(opto)
 
 # Plot
-fig, ax = plt.subplots(figsize=(2.5, 5))
+fig, ax = plt.subplots(figsize=(2.5, 4))
 sns.barplot(
     data=df, x='condition', y='average_dff', hue='condition', ax=ax, fill=False,
     palette={'LED off': "k", 'LED on': "r"}, alpha=a
 )
-sns.stripplot(
-    data=df, x='condition', y='average_dff', hue='condition', ax=ax, s=s,
-    palette={'LED off': "k", 'LED on': "r"}, alpha=a, dodge=False
-)
+# sns.stripplot(
+#     data=df, x='condition', y='average_dff', hue='condition', ax=ax, s=s,
+#     palette={'LED off': "k", 'LED on': "r"}, alpha=a, dodge=False
+# )
 
 # Add connecting lines
 for i in range(len(opto)):
@@ -216,7 +247,7 @@ ax.spines[['top', 'right']].set_visible(False)
 ax.set_xlabel('')
 ax.set_ylabel('VIP Pre-Reward $\Delta$F/F')
 # Wilcoxon test and annotation
-t, pval = scipy.stats.wilcoxon(opto, ctrl)
+t, pval = scipy.stats.ttest_rel(np.array(opto), np.array(ctrl))
 if pval < 0.001:
     ax.text(ii, y, "***", ha='center', fontsize=fs)
 elif pval < 0.01:

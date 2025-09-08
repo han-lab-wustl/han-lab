@@ -27,6 +27,8 @@ with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
 savepth = os.path.join(savedst, 'width.pdf')
 pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
+import scipy.stats as stats
+from statsmodels.stats.multitest import multipletests
 
 #%%
 # initialize var
@@ -89,9 +91,9 @@ anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e216')]
+# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e216')]
 # multiple by binsize
-anrzdf['width_cm'] =anrzdf['width_cm'] *3
+anrzdf['width_cm'] =anrzdf['width_cm']
 # sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,palette='Dark2',hue_order=hue_order)
 sns.boxplot(x='cell_type',y='width_cm',hue='epoch',data=anrzdf,
         fill=False,palette=pl,order=hue_order,
@@ -153,8 +155,8 @@ x_map = {'Pre':0, 'Post':1,'Place':2}
 offset = {'Pre':-0.1, 'Post':+0.1,'Place':+0.1}
 
 # === Add significance bars ===
-bar_height = 3   # height of the bar above the max value
-tick_height = 3  # vertical height of the small bar ends
+bar_height = 2   # height of the bar above the max value
+tick_height = 1.5  # vertical height of the small bar ends
 text_offset = 1.5  # text offset above the bar
 bar_width = 0.2   # how far apart the ends of the bar should go (aligned with box offsets)
 
@@ -177,7 +179,8 @@ for _, row in posthoc.iterrows():
     # Draw text
     ax.text((x1 + x2)/2, y + tick_height + text_offset, stars,
             ha='center', va='bottom', fontsize=18)
-
+fig.suptitle(fr'Area 1 $\rightarrow$ 3')
+ax.set_xticklabels(['Pre-reward', 'Post-reward', 'Place'],rotation=20)
 plt.savefig(os.path.join(os.path.join(savedst, 'near_to_far_dark_time_field_width.svg')))
 
 #%%
@@ -402,9 +405,9 @@ anrzdf = rzdf.groupby(['animal', 'epoch', 'cell_type']).mean(numeric_only=True)
 anrzdf=anrzdf.reset_index()
 anrzdf = anrzdf.sort_values(by="cell_type", ascending=False)
 anrzdf = anrzdf.sort_values(by="epoch", ascending=True)
-anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e216')]
+# anrzdf=anrzdf[(anrzdf.animal!='e189') & (anrzdf.animal!='e190') & (anrzdf.animal!='e216')]
 # multiple by binsize
-anrzdf['width_cm'] =anrzdf['width_cm'] *3
+anrzdf['width_cm'] =anrzdf['width_cm']
 # sns.stripplot(x='epoch',y='width_cm',data=anrzdf,hue='cell_type',alpha=0.7,dodge=True,s=s,palette='Dark2',hue_order=hue_order)
 sns.boxplot(x='cell_type',y='width_cm',hue='epoch',data=anrzdf,hue_order=order,
         fill=False,palette=pl,order=hue_order,
@@ -466,7 +469,7 @@ x_map = {'Pre':0, 'Post':1,'Place':2}
 offset = {'Pre':-0.1, 'Post':+0.1,'Place':+0.1}
 # === Add significance bars ===
 bar_height = 3   # height of the bar above the max value
-tick_height = 3  # vertical height of the small bar ends
+tick_height = 1.5  # vertical height of the small bar ends
 text_offset = 1.5  # text offset above the bar
 bar_width = 0.2   # how far apart the ends of the bar should go (aligned with box offsets)
 
@@ -489,7 +492,8 @@ for _, row in posthoc.iterrows():
     # Draw text
     ax.text((x1 + x2)/2, y + tick_height + text_offset, stars,
             ha='center', va='bottom', fontsize=18)
-
+fig.suptitle(fr'Area 3 $\rightarrow$ 1')
+ax.set_xticklabels(['Pre-reward', 'Post-reward', 'Place'],rotation=20)
 plt.savefig(os.path.join(os.path.join(savedst, 'far_to_near_dark_time_field_width.svg')))
 #%%
 
@@ -656,8 +660,6 @@ plt.tight_layout()
 plt.savefig(os.path.join(os.path.join(savedst, 'vel_field_width.svg')))
 
 #%%
-import scipy.stats as stats
-from statsmodels.stats.multitest import multipletests
 
 def get_transition_df(lickbigdf, rz_pairs):
     rzdf = pd.concat([

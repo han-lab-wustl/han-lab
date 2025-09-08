@@ -25,6 +25,24 @@ from projects.opto.behavior.behavior import get_success_failure_trials, smooth_l
 from projects.memory.behavior import get_lick_selectivity
 from collections import Counter
 
+def wilcoxon_r(x, y):
+    # x, y are paired arrays (same subjects)
+    W, p = scipy.stats.wilcoxon(x, y, zero_method="wilcox")
+    diffs = x - y
+    n = np.count_nonzero(diffs)  # exclude zero diffs
+    if n == 0:
+        return np.nan, p
+
+    # Normal approximation for Wilcoxon (no ties/zeros correction here)
+    mean_W = n * (n + 1) / 4
+    sd_W = np.sqrt(n * (n + 1) * (2*n + 1) / 24)
+    Z = (W - mean_W) / sd_W
+
+    # Enforce direction from the actual mean difference
+    Z = np.sign(np.nanmean(diffs)) * abs(Z)
+    r = Z / np.sqrt(n)
+    return r, p
+
 def cosine_sim_ignore_nan(a, b):
     # Mask where both vectors have valid (non-NaN) values
     mask = ~np.isnan(a) & ~np.isnan(b)
