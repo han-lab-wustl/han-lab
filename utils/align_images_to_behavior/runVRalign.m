@@ -3,8 +3,8 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e221";
-days = [14];
+mouse_name = "e222";
+days = [8:10];
 src = 'Z:\pavlov_extinction\cs_4s_us';
 
 for day=days
@@ -26,9 +26,9 @@ savepthfmat = VRalign_dopamine_w_opto_events(vrfl,fmatfl, length(fmatfl));
 disp(savepthfmat)
 %%
 clear all;
-mouse_name = "e242";
-days = [61,62,63];
-src = 'Y:\halo_grabda';
+mouse_name = "e291";
+days = [19];
+src = 'X:/chrimson_snc_grabda';
 
 for day=days
     daypth = dir(fullfile(src, mouse_name, string(day), "behavior\vr\*.mat"));

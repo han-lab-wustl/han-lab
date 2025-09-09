@@ -29,7 +29,7 @@ mind = 0
 nbins = 90
 bin_size = 3                
 binsize = 0.1 # s
-range_val = 8
+range_val = 15
 # Processing loop
 for m, mouse_name in enumerate(mice):
     days = dys_s[m]
@@ -169,29 +169,31 @@ for ii,dy in enumerate(range(dyrng)):
         else: c+=1; r=0
 fig.tight_layout()
 #%%
+from matplotlib.patches import Rectangle
+
 #  stim figure
-dy =1
-rng = np.arange(int(range_val/binsize))
+dy=1
+rng = np.arange(int((range_val+6)/binsize))
 fig,ax=plt.subplots(figsize=(4,3))
 meantc = dffs_cp_dys[dy][1][rng]
 ax.plot(meantc, color='k',label='LED off')   
 xmin,xmax = ax.get_xlim()     
-ax.fill_between(np.arange(0,(range_val)/binsize), 
+ax.fill_between(rng, 
         meantc-scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'),
         meantc+scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'), 
         color = 'k', alpha=0.2)        
 meantc = dffs_cp_dys[dy][0][rng]        
 ax.plot(meantc, color='r',label='LED on') 
-ax.fill_between(np.arange(0,(range_val)/binsize), 
+ax.fill_between(rng, 
 meantc-scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'),
 meantc+scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'), 
 color = 'r', alpha=0.2)        
-ax.set_xlabel('Position from reward (cm)')
+ax.set_xlabel('Time from CS (s)')
 ax.set_ylabel('$\Delta F/F$')
-ax.set_xticks([0, int(range_val/binsize)])
-ax.set_xticklabels([-122,0])
+ax.set_xticks([0, int((range_val)/binsize),int((range_val+6)/binsize)])
+ax.set_xticklabels([-range_val,0,6])
 ax.spines[['top','right']].set_visible(False)
-ax.add_patch(Rectangle((0, 0), int(range_val/binsize),.75,
+ax.add_patch(Rectangle((30, 0), int((range_val-2)/binsize),.75,
             color='mediumturquoise', alpha=.3, zorder=0))
 ax.legend()
 ax.set_title('VIP Neuron, Inhibition\n mouse 216')
@@ -254,8 +256,8 @@ elif pval < 0.01:
     ax.text(ii, y, "**", ha='center', fontsize=fs)
 elif pval < 0.05:
     ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii - 0.5, y + pshift, f'p={pval:.3g}', fontsize=12)
-ax.set_title('Inhibition')
+ax.text(ii - 0.5, y, f't={t:.3g},\np={pval:.3g}', fontsize=12)
+ax.set_title('VIP Inhibition')
 
 # Save figure
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
@@ -265,7 +267,6 @@ plt.savefig(os.path.join(savedst,'vip_pre_reward_dff.svg'),bbox_inches='tight')
 # plot individual traces
 # e218, day 35,38
 
-from matplotlib.patches import Rectangle
 
 def add_reward_zone_patches(ax, ypos_segment, start_idx, 
         rewloc, color='lightcoral', alpha=0.3):

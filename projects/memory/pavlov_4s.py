@@ -1,5 +1,6 @@
-"""zahra's dopamine hrz analysis
-march 2024
+"""zahra's pavlov 4s analysis
+sept 2025
+e221 - 15-26 redo
 """
 #%%
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
@@ -19,15 +20,14 @@ plt.rcParams["font.family"] = "Arial"
 
 plt.close('all')
 # save to pdf
-animal = 'e222'
+animal = 'e220'
 src = r"Z:\pavlov_extinction\cs_4s_us"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-days = np.arange(2,4)#np.arange(11,27)
+days = np.arange(1,21)#np.arange(11,27)
 range_val=15; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-old = False
 # False = True # print out per day figs
 day_date_dff = {}
 for day in days: 
@@ -40,7 +40,7 @@ for day in days:
          gainf = VR['scalingFACTOR'][0][0]
          rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
       except:
-         rewsize = 10
+         rewsize = 10 
          gainf=1/1.5
 
       planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
@@ -49,10 +49,9 @@ for day in days:
       params_keys = params.keys()
       keys = params['params'].dtype
       # dff is in row 7 - roibasemean3/basemean
-      if old:
-         dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
-         # dff = np.hstack(params['params'][0][0][10])/np.nanmean(np.hstack(params['params'][0][0][10]))
-      else:
+      # old
+      dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
+      if np.nanmax(dff)>1.1:          
          dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))
       
       # plt.close(fig)
@@ -95,7 +94,7 @@ for day in days:
       # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
       # Select rows that do not contain any NaNs
       clean_arr = rewdFF.T#[~rows_with_nans]    
-      fig, axes = plt.subplots(nrows=2,ncols=2,figsize=(8,5))
+      fig, axes = plt.subplots(nrows=2,ncols=2,figsize=(6,4))
       axes = axes.flatten()  # Flatten the axes array for easier plotting
       ax=axes[0]
       ax.imshow(params['params'][0][0][0],cmap="Greys_r")
@@ -103,8 +102,10 @@ for day in days:
       ax.axis('off')
       ax = axes[1]
       ax.imshow(clean_arr)
-      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-      ax.set_xticklabels(range(-range_val, range_val+1, 1))
+      tick=20
+      ticklbl=4
+      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,tick))
+      ax.set_xticklabels(range(-range_val, range_val+1, ticklbl))
       ax.set_title('Correct Trials')
       ax.axvline(int(range_val/binsize),linestyle='--',color='w')
       ax.set_ylabel('Trial #')
@@ -114,8 +115,8 @@ for day in days:
       ax.fill_between(range(0,int(range_val/binsize)*2), 
                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)
-      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-      ax.set_xticklabels(range(-range_val, range_val+1, 1))
+      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,tick))
+      ax.set_xticklabels(range(-range_val, range_val+1, ticklbl))
       ax.axvline(int(range_val/binsize),linestyle='--',color='k')
       ax.spines[['top','right']].set_visible(False)        
       ax = axes[2]
@@ -133,8 +134,8 @@ for day in days:
          meanlick-scipy.stats.sem(licktr,axis=1,nan_policy='omit'),
          meanlick+scipy.stats.sem(licktr,axis=1,nan_policy='omit'), alpha=0.3,
          color='slategray')
-      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
-      ax.set_xticklabels(range(-range_val, range_val+1, 1))
+      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,tick))
+      ax.set_xticklabels(range(-range_val, range_val+1, ticklbl))
       ax.axvline(int(range_val/binsize),linestyle='--',color='k')
       ax.spines[['top','right']].set_visible(False)
       ax.set_ylabel('Velocity (cm/s)')
@@ -142,6 +143,7 @@ for day in days:
       ax.set_xlabel('Time from CS (s)')
       fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
       fig.tight_layout()
+      plt.show()
       # plt.close('all')      
       plndff.append(clean_arr)
    day_date_dff[str(day)] = [plndff,vel,licktr]

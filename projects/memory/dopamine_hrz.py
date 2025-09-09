@@ -25,8 +25,8 @@ src = r"X:\chrimson_snc_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [15]#np.arange(11,27)
-range_val=8; binsize=0.2
+days = [14]#np.arange(11,27)
+range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs

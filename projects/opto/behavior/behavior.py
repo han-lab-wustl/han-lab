@@ -323,6 +323,13 @@ def get_performance(eptest, eps, trialnum, rewards, licks, \
     # already excludes probe trials
     success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
     rate_opto = success / total_trials
+    # chunk into segments of behavior
+    # first 1/3
+    diff = (eps[eptotest+1]-eps[eptotest])/3
+    rng = np.arange(eps[eptotest], int(eps[eptotest]+diff))
+    success_, fail_, strials_, ftrials_, ttr_, total_trials_ = get_success_failure_trials(
+    trialnum[rng],rewards[rng])
+    rate_opto_13 = success_ / total_trials_
     trials_bwn_success_opto =  np.diff(np.array(strials))
     # get lick prob
     pos_bin_opto, lick_probability_opto = get_behavior_tuning_curve(ybinned_, licks_)
@@ -366,7 +373,13 @@ def get_performance(eptest, eps, trialnum, rewards, licks, \
     time_ = time[eprng]
     rewloc = np.ceil(rewlocs[eptotest-1]).astype(int)
     success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum_, reward_)
-    rate_prev = success / total_trials 
+    rate_prev = success / total_trials
+    # chunk into segments of behavior
+    # first 1/3
+    diff = (eps[eptotest]-eps[eptotest-1])/3
+    rng = np.arange(eps[eptotest-1], int(eps[eptotest-1]+diff))
+    success_, fail_, strials_, ftrials_, ttr_, total_trials_ = get_success_failure_trials(trialnum[rng],rewards[rng])    
+    rate_prev_13 = success_ / total_trials_
     trials_bwn_success_prev =  np.diff(np.array(strials))
     # lick prob
     pos_bin_prev, lick_probability_prev = get_behavior_tuning_curve(ybinned_, licks_)
@@ -400,7 +413,7 @@ def get_performance(eptest, eps, trialnum, rewards, licks, \
     mask = np.array([xx in ttr[-12:] for xx in trialnum_])
     com_prev = np.nanmean(ybinned_[mask][licks_[mask].astype(bool)])-(rewloc-(rewsize/2))
     
-    return rate_opto, rate_prev, lick_prob_opto, \
+    return rate_opto, rate_prev, rate_opto_13, rate_prev_13, lick_prob_opto, \
     lick_prob_prev, trials_bwn_success_opto, trials_bwn_success_prev, \
     vel_opto, vel_prev, lick_selectivity_per_trial_opto, lick_selectivity_per_trial_prev, \
     lick_rate_opto, lick_rate_prev, com_opto, com_prev, lick_rate_opto_late, lick_rate_prev_late,\

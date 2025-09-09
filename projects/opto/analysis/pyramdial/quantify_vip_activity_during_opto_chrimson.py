@@ -27,7 +27,7 @@ mind = 0
 nbins = 90
 bin_size = 3                
 binsize = 0.1 # s
-range_val = 5
+range_val = 12
 # Processing loop
 for m, mouse_name in enumerate(mice):
     days = dys_s[m]
@@ -172,29 +172,29 @@ fig.tight_layout()
 dy =9
 from matplotlib.patches import Rectangle
 
-rng = np.arange(int(range_val/binsize))
+rng = np.arange(int((range_val+6)/binsize))
 fig,ax=plt.subplots(figsize=(4,3))
 meantc = dffs_cp_dys[dy][1][rng]
 ax.plot(meantc, color='k',label='LED off')   
 xmin,xmax = ax.get_xlim()     
-ax.fill_between(np.arange(0,(range_val)/binsize), 
+ax.fill_between(rng, 
         meantc-scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'),
         meantc+scipy.stats.sem(dffs_cp_dys[dy][3][rng],axis=1,nan_policy='omit'), 
         color = 'k', alpha=0.2)        
 meantc = dffs_cp_dys[dy][0][rng]        
 ax.plot(meantc, color='darkgoldenrod',label='LED on') 
-ax.fill_between(np.arange(0,(range_val)/binsize), 
+ax.fill_between(rng, 
 meantc-scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'),
 meantc+scipy.stats.sem(dffs_cp_dys[dy][2][rng],axis=1,nan_policy='omit'), 
 color = 'darkgoldenrod', alpha=0.2)        
-ax.set_xlabel('Position from reward (cm)')
+ax.set_xlabel('Time from CS (s)')
 ax.set_ylabel('$\Delta F/F$')
-ax.set_xticks([0, int(range_val/binsize)])
-ax.set_xticklabels([-153,0])
+ax.set_xticks([0, int((range_val)/binsize),int((range_val+6)/binsize)])
+ax.set_xticklabels([-range_val,0,6])
 ax.spines[['top','right']].set_visible(False)
-ax.add_patch(Rectangle((0, 1.5), int(range_val/binsize),2,
-           color='lightcoral', alpha=.3, zorder=0))
-ax.legend(fontsize=14)
+ax.add_patch(Rectangle((35, 0), int((range_val-3)/binsize),3,
+            color='lightcoral', alpha=.3, zorder=0))
+ax.legend()
 ax.set_title('VIP Neuron, Excitation\n mouse 14')
 
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
@@ -253,8 +253,8 @@ elif pval < 0.01:
     ax.text(ii, y, "**", ha='center', fontsize=fs)
 elif pval < 0.05:
     ax.text(ii, y, "*", ha='center', fontsize=fs)
-ax.text(ii - 0.5, y + pshift, f'p={pval:.3g}', fontsize=12)
-ax.set_title('Excitation')
+ax.text(ii - 0.5, y, f't={t:.3g}\np={pval:.3g}', fontsize=12)
+ax.set_title('VIP Excitation')
 
 # Save figure
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
