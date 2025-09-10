@@ -25,7 +25,7 @@ from projects.pyr_reward.rewardcell import get_radian_position,create_mask_from_
     get_radian_position_first_lick_after_rew, get_rewzones, cosine_sim_ignore_nan
 from projects.pyr_reward.placecell import get_tuning_curve, calc_COM_EH, make_tuning_curves_by_trialtype_w_darktime, make_tuning_curves_time_trial_by_trial_w_darktime, intersect_arrays
 from projects.opto.behavior.behavior import get_success_failure_trials, smooth_lick_rate
-from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 
 conddf = pd.read_csv(r"Z:\condition_df\conddf_pyr_goal_cells.csv", index_col=None)
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\pyramidal_cell_paper'
@@ -161,8 +161,8 @@ for ii in range(len(conddf)):
         # pcs that are not goal cells
         pcs = [xx for xx in pcs if xx not in goal_cells]   
         ########## correct trials      
-        lick_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_correct_abs[ep]))==0))] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_correct_abs[ep]))==0))]  for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
         # save this 
         dfs=[]
         df = pd.DataFrame()
@@ -175,8 +175,8 @@ for ii in range(len(conddf)):
         df['day']=[day]*len(df)
         dfs.append(df)
         ########## incorrect trials      
-        lick_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([goal_cells]*len(tcs_correct_abs))
@@ -198,8 +198,8 @@ for ii in range(len(conddf)):
             goal_cells=[]
         goal_cells = np.unique(np.concatenate(com_goal_postrew)).astype(int)        
         ########## correct trials      
-        lick_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_correct_abs[ep]))==0))] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_correct_abs[ep]))==0))]  for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([goal_cells]*len(tcs_correct_abs))
@@ -211,8 +211,8 @@ for ii in range(len(conddf)):
         df['day']=[day]*len(df)
         dfs.append(df)
         ########## incorrect trials      
-        lick_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in goal_cells] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([goal_cells]*len(tcs_correct_abs))
@@ -229,8 +229,8 @@ for ii in range(len(conddf)):
         coms_correct_abs_rewrel=np.array([com-rewlocs[kk] for kk, com in enumerate(coms_correct_abs)])
         pre_pcs = [xx for xx in pcs if np.nanmedian(coms_correct_abs_rewrel,axis=0)[xx]<0]
         ########## correct trials      
-        lick_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_correct_abs[ep]))==0))] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_correct_abs[ep]))==0))]  for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in pre_pcs] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in pre_pcs] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([pre_pcs]*len(tcs_correct_abs))
@@ -242,8 +242,8 @@ for ii in range(len(conddf)):
         df['day']=[day]*len(df)
         dfs.append(df)
         ########## incorrect trials      
-        lick_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in pre_pcs] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in pre_pcs] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([pre_pcs]*len(tcs_correct_abs))
@@ -259,8 +259,8 @@ for ii in range(len(conddf)):
         pcs = [xx for xx in pcs if xx not in goal_cells] 
         post_pcs = [xx for xx in pcs if np.nanmedian(coms_correct_abs_rewrel,axis=0)[xx]>0]
         ########## correct trials      
-        lick_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_correct_abs[ep]))==0))] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_correct_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_correct_abs[ep]))==0))]  for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], lick_correct_abs[ep][0])[0] for cll in post_pcs] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_correct_abs[ep,cll,:], vel_correct_abs[ep][0])[0] for cll in post_pcs] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([post_pcs]*len(tcs_correct_abs))
@@ -272,8 +272,8 @@ for ii in range(len(conddf)):
         df['day']=[day]*len(df)
         dfs.append(df)
         ########## incorrect trials      
-        lick_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(lick_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
-        vel_tc_cs = [[pearsonr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in goal_cells if ((np.sum(np.isnan(tcs_fail_abs[ep,cll,:]))==0) and (np.sum(np.isnan(vel_fail_abs[ep]))==0)) ] for ep in range(len(tcs_correct_abs))]
+        lick_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], lick_fail_abs[ep][0])[0] for cll in post_pcs] for ep in range(len(tcs_correct_abs))]
+        vel_tc_cs = [[spearmanr(tcs_fail_abs[ep,cll,:], vel_fail_abs[ep][0])[0] for cll in post_pcs] for ep in range(len(tcs_correct_abs))]
         # save this 
         df = pd.DataFrame()
         df['cellid']=np.concatenate([post_pcs]*len(tcs_correct_abs))

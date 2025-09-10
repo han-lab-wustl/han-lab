@@ -95,7 +95,8 @@ df['rates13_diff']=df['rates13_diff']*100
 df['rates_diff']=df['rates_diff']*100
 # df['rates_diff'] = [dct['rates'][1] for dct in dcts]
 df['velocity_diff'] = [np.diff(dct['velocity'])[0] for dct in dcts]
-df['velocity'] = [dct['velocity'][1] for dct in dcts]
+df['velocity_opto'] = [dct['velocity'][1] for dct in dcts]
+df['velocity_prev'] = [dct['velocity'][0] for dct in dcts]
 df['lick_rate_opto'] = [np.nanmean(dct['lick_rate'][1]) for dct in dcts] # opto
 df['lick_rate_prev'] = [np.nanmean(dct['lick_rate'][0]) for dct in dcts] # opto
 df['lick_rate_diff'] = [np.nanmean(dct['lick_rate'][1])-np.nanmean(dct['lick_rate'][0]) for dct in dcts] # opto
@@ -188,8 +189,8 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05):
 # Pairwise Mann-Whitney U testsn (Wilcoxon rank-sum)
 p_vals = []
 for c1, c2 in comparisons:
-    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['rates_diff'].dropna()
-    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['rates_diff'].dropna()
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['rates13_diff'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['rates13_diff'].dropna()
     stat, p = stats.ranksums(x1, x2, alternative='two-sided')
     p_vals.append(p)
 # Correct for multiple comparisons
@@ -308,41 +309,53 @@ sample_size = analysis.solve_power(effect_size=cohens_d, alpha=alpha, power=powe
 print(f"Cohen's d: {cohens_d:.4f}")
 print(f"Required sample size per group: {sample_size:.2f}")
 #%%
-# velocity diff
+# velocity
 
-# plot lick selectivity and lick com
-# bigdf_plot = df.groupby(['animals', 'condition', 'opto']).median(numeric_only=True)
-a=0.7
-fig,ax = plt.subplots(figsize=(4,5))
-sns.barplot(x="condition", y="velocity_diff",hue='condition', data=bigdf_plot,
-    palette=pl,                
-            errorbar='se', fill=False,ax=ax)
-sns.stripplot(x="condition", y="velocity_diff",hue='condition', data=bigdf_plot,
-            palette=pl,alpha=a,                
-            s=s,ax=ax)
-ax.spines[['top','right']].set_visible(False)
-ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=30)
-ax.set_ylabel(f'Pre-reward velocity (LEDon-LEDoff)')
+fig, axes = plt.subplots(ncols = 2, figsize=(7.5,4.5),width_ratios=[1.8,1])
+# expand opto vs. prev
+ax=axes[0]
+dfex = pd.DataFrame()
+dfex['velocity'] = np.concatenate([bigdf_plot.velocity_opto, bigdf_plot.velocity_prev])
+dfex['condition'] = np.concatenate([bigdf_plot.condition]*2)
+dfex['animal'] = np.concatenate([bigdf_plot.animals]*2)
+dfex['ep'] = np.concatenate([['opto']*len(bigdf_plot), ['prev']*len(bigdf_plot)])
+pl=['k','slategray']
+sns.barplot(x="condition", y="velocity", hue='ep', data=dfex,hue_order=['prev','opto'],
+             errorbar='se', fill=False, ax=ax,palette=pl,legend=False)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('Velocity (cm/s)')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 ax.set_xlabel('')
+# --- Add connecting lines ---
+# Get the x positions of the dodge stripplot points
+pos = {('prev', 0): -0.2, ('opto', 0): 0.2}  # shift per hue
+for cond in dfex['condition'].unique():
+    cond_mask = dfex['condition'] == cond
+    for animal, subdf in dfex[cond_mask].groupby('animal'):
+        if {'prev', 'opto'} <= set(subdf['ep']):  # only draw if both present
+            x = [list(dfex['condition'].unique()).index(cond) + pos[('prev', 0)],
+                 list(dfex['condition'].unique()).index(cond) + pos[('opto', 0)]]
+            y = subdf.set_index('ep').loc[['prev', 'opto'], 'velocity']
+            ax.plot(x, y, color="gray", linewidth=1.5,alpha=0.5, zorder=0)
 
-# Pairwise Mann-Whitney U tests (Wilcoxon rank-sum)
-conds = ['ctrl', 'vip', 'vip_ex']
-comparisons = list(itertools.combinations(conds, 2))[:-1]
-p_vals = []
-for c1, c2 in comparisons:
-    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['velocity_diff'].dropna()
-    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['velocity_diff'].dropna()
-    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
-    p_vals.append(p)
-# Correct for multiple comparisons
-reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+ax=axes[1]
+
+sns.barplot(x="condition", y="velocity_diff", hue='condition', data=bigdf_plot,
+            palette=pl, errorbar='se', fill=False, ax=ax)
+sns.stripplot(x="condition", y="velocity_diff", hue='condition', data=bigdf_plot,
+              palette=pl, alpha=a, s=s, ax=ax)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_xticks([0, 1, 2])
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_ylabel('Velocity (cm/s)\n(LEDoff-LEDon)')
+ax.set_xlabel('')
 # Add significance annotations
-p_vals_corrected=p_vals
-def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
+def add_sig(ax, group1, group2, y_pos, t,pval, xoffset=0.05):
     x1 = conds.index(group1)
     x2 = conds.index(group2)
     x_center = (x1 + x2) / 2
-    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + height, y_pos + height, y_pos], lw=1.5, color='black')
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + .5, y_pos + .5, y_pos], lw=1.5, color='black')
     if pval < 0.001:
         sig = '***'
     elif pval < 0.01:
@@ -350,21 +363,31 @@ def add_sig(ax, group1, group2, y_pos, pval, xoffset=0.05,height=0.01):
     elif pval < 0.05:
         sig = '*'
     else:
-        sig = 'ns'
-    if sig!='ns':
-        plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=40)
-    else:
-        plt.text(x_center, y_pos+.5, sig, ha='center', va='bottom', fontsize=16)
-    # plt.text(x_center, y_pos, f'p={pval:.3g}', ha='center', fontsize=8)
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=38)
+    plt.text(x_center, y_pos, f't={t:.3g}\np={pval:.3g}', ha='center', fontsize=8)
+# Pairwise Mann-Whitney U testsn (Wilcoxon rank-sum)
+p_vals = []
+tstat=[]
+for c1, c2 in comparisons:
+    x1 = bigdf_plot[bigdf_plot['condition'] == c1]['velocity_diff'].dropna()
+    x2 = bigdf_plot[bigdf_plot['condition'] == c2]['velocity_diff'].dropna()
+    stat, p = stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+    tstat.append(stat)
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
 
 # Plot all pairwise comparisons
-y_start = bigdf_plot['velocity_diff'].max()-1.5
+y_start = bigdf_plot['velocity_diff'].max()-1
 gap = 2
 for i, (c1, c2) in enumerate(comparisons):
-    add_sig(ax, c1, c2, y_start, p_vals_corrected[i],height=.4)
+    add_sig(ax, c1, c2, y_start, tstat[i],p_vals_corrected[i])
     y_start += gap
+# ax.set_ylim([-35,10])
 plt.tight_layout()
-plt.savefig(os.path.join(savedst, 'velocity_opto_all.svg'),  bbox_inches='tight')
+fig.suptitle('Pre-reward velocity')
+plt.savefig(os.path.join(savedst, 'velocity_opto.svg'), bbox_inches='tight')
 
 #%%
 # plot lick selectivity and lick com

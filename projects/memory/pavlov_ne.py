@@ -21,13 +21,13 @@ plt.rcParams["font.family"] = "Arial"
 
 plt.close('all')
 # save to pdf
-animal = 'e221'
-src = r"Z:\pavlov_extinction\cs_4s_us"
+animal = 'e274'
+src = r"Z:\grabne"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov4s_{animal}.pdf"))
-days = np.arange(20,21)#np.arange(11,27)
+days = ['Day_02']#np.arange(11,27)
 range_val=15; binsize=0.2
 close=False
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}

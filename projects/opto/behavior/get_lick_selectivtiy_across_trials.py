@@ -66,14 +66,14 @@ conddf = pd.read_csv(r"Z:\condition_df\conddf_performance_chrimson.csv", index_c
 savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 # exclude some animals and sessions
 conddf=conddf[(conddf.animals!='e189') & (conddf.animals!='e190')]
-conddf=conddf[~((conddf.animals=='e201')&((conddf.days>62)))]
-# conddf=conddf[~((conddf.animals=='z14')&((conddf.days<33)|(conddf.days.isin([54]))))]
-# # conddf=conddf[~((conddf.animals=='e200')&((conddf.days<75)))]
-# conddf=conddf[~((conddf.animals=='z15')&((conddf.days.isin([15,16]))))]
+# conddf=conddf[~((conddf.animals=='e201')&((conddf.days>62)))]
+conddf=conddf[~((conddf.animals=='z14')&((conddf.days.isin([54]))))]
+# conddf=conddf[~((conddf.animals=='e200')&((conddf.days<75)))]
+conddf=conddf[~((conddf.animals=='z15')&((conddf.days.isin([15,16]))))]
 
-# # conddf=conddf[~((conddf.animals=='z16')&((conddf.days>15)))]
-# # conddf=conddf[~((conddf.animals=='e186')&((conddf.days>15)))]
-# conddf=conddf[~((conddf.animals=='z17')&((conddf.days<9)|(conddf.days.isin([20,22]))))]
+# conddf=conddf[~((conddf.animals=='z16')&((conddf.days>15)))]
+# conddf=conddf[~((conddf.animals=='e186')&((conddf.days>15)))]
+conddf=conddf[~((conddf.animals=='z17')&((conddf.days<9)|(conddf.days.isin([20,22]))))]
 
 lick_selectivity = {} # collecting
 for _,ii in enumerate(range(len(conddf))):
@@ -81,7 +81,6 @@ for _,ii in enumerate(range(len(conddf))):
     in_type = conddf.in_type.values[ii] if 'vip' in conddf.in_type.values[ii] else 'ctrl'             
     day = conddf.days.values[ii]
     params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane0_Fall.mat"
-    print(params_pth)
     fall = scipy.io.loadmat(params_pth, variable_names=['VR'])
     VR = fall['VR'][0][0][()]
     eps = np.where(np.hstack(VR['changeRewLoc']>0))[0]
@@ -99,7 +98,8 @@ for _,ii in enumerate(range(len(conddf))):
     licks = np.hstack(VR['lick'])
     reward=(np.hstack(VR['reward'])==1).astype(int)
     eptest = conddf.optoep.values[ii]    
-    if (eptest>1) or (in_type=='vip' and eptest==0): # ONLY OPTO SESSIONS
+    if (eptest>1) or (in_type=='vip_ex' and eptest==0) or (in_type=='vip' and eptest==0) or (in_type=='vip' and eptest==1): # ONLY OPTO SESSIONS
+        print(params_pth)
         if conddf.optoep.values[ii]<2: 
             eptest = random.randint(2,3)   
             if len(eps)<4: eptest = 2 # if no 3 epochs 
@@ -109,6 +109,7 @@ for _,ii in enumerate(range(len(conddf))):
         dt = np.nanmedian(np.diff(time))
         lick_rate = smooth_lick_rate(licks,dt)
         lick_rate[forwardvel<2]=np.nan
+        licks[forwardvel<2]=0
         # lick_rate[lick_rate>6]=np.nan
         rzs = get_rewzones(rewlocs, 1/scalingf)
         # lick rate +/- 20 cm near new vs. old rew zone
@@ -161,41 +162,51 @@ for i in range(2):
     lick_tcs_inhib_ = [v[i] for k,v in lick_selectivity.items() if k.split('_')[0] in vip_an]
     lick_tcs_excit_ = [v[i] for k,v in lick_selectivity.items() if k.split('_')[0] in vip_ex]
     lick_tcs_ctrl_ = [v[i] for k,v in lick_selectivity.items() if (k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)]
-
-    lick_tcs_inhib=np.ones((len(lick_tcs_inhib_),21))*np.nan
+    maxtr= 30
+    lick_tcs_inhib=np.ones((len(lick_tcs_inhib_),maxtr))*np.nan
     for ll,ls in enumerate(lick_tcs_inhib_):
-        lick_tcs_inhib[ll,:len(ls)]=ls
-    lick_tcs_excit=np.ones((len(lick_tcs_excit_),21))*np.nan
+        if len(ls)<maxtr:
+            lick_tcs_inhib[ll,:len(ls)]=ls
+        else:
+            lick_tcs_inhib[ll,:maxtr]=ls[:maxtr]
+            
+    lick_tcs_excit=np.ones((len(lick_tcs_excit_),maxtr))*np.nan
     for ll,ls in enumerate(lick_tcs_excit_):
-        lick_tcs_excit[ll,:len(ls)]=ls
-    lick_tcs_ctrl=np.ones((len(lick_tcs_ctrl_),21))*np.nan
+        if len(ls)<maxtr:
+            lick_tcs_excit[ll,:len(ls)]=ls
+        else:
+            lick_tcs_excit[ll,:maxtr]=ls[:maxtr]
+    lick_tcs_ctrl=np.ones((len(lick_tcs_ctrl_),maxtr))*np.nan
     for ll,ls in enumerate(lick_tcs_ctrl_):
-        lick_tcs_ctrl[ll,:len(ls)]=ls
+        if len(ls)<maxtr:
+            lick_tcs_ctrl[ll,:len(ls)]=ls
+        else:
+            lick_tcs_ctrl[ll,:maxtr]=ls[:maxtr]
 
     ax.plot(np.nanmean(lick_tcs_ctrl,axis=0),color='slategray',label='Control')
     m=np.nanmean(lick_tcs_ctrl,axis=0)
-    ax.fill_between(range(0,21), 
+    ax.fill_between(range(0,maxtr), 
         m-scipy.stats.sem(lick_tcs_ctrl,axis=0,nan_policy='omit'),
         m+scipy.stats.sem(lick_tcs_ctrl,axis=0,nan_policy='omit'), alpha=0.2,color='slategray')
     ax.plot(np.nanmean(lick_tcs_inhib,axis=0),color='red',label='VIP Inhibition')
     m=np.nanmean(lick_tcs_inhib,axis=0)
-    ax.fill_between(range(0,21), 
+    ax.fill_between(range(0,maxtr), 
         m-scipy.stats.sem(lick_tcs_inhib,axis=0,nan_policy='omit'),
         m+scipy.stats.sem(lick_tcs_inhib,axis=0,nan_policy='omit'), alpha=0.2,color='r')
     ax.plot(np.nanmean(lick_tcs_excit,axis=0),color='darkgoldenrod',label='VIP Excitation')
     m=np.nanmean(lick_tcs_excit,axis=0)
-    ax.fill_between(range(0,21), 
+    ax.fill_between(range(0,maxtr), 
         m-scipy.stats.sem(lick_tcs_excit,axis=0,nan_policy='omit'),
         m+scipy.stats.sem(lick_tcs_excit,axis=0,nan_policy='omit'), alpha=0.2,color='darkgoldenrod')
     ax.set_xticks([0,10,20])
     ax.set_xticklabels([1,11,21])
     ax.spines[['top','right']].set_visible(False)    
-    ax.axhline(0.8,color='k',linestyle='--')
     if i==0: 
         ax.set_ylabel('Lick selectivity')
-        ax.set_xlabel('# correct trials across epoch')
     ax.set_title(f'LED {cond[i]} epoch')
 ax.legend(fontsize=8)
+fig.suptitle('Lick selectivity across trials')
+ax.set_xlabel('# correct trials across epoch')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'lick_selectivity_across_epoch.svg'), bbox_inches='tight')
 #%%
@@ -210,7 +221,7 @@ vip_an = ['e217','e216','e218']
 vip_ex = ['z15','z14','z17']
 cond = ['off','on']
 all_dfs = []
-triallim=8
+triallim= 7
 for i in range(2):
     # Extract per-condition
     lick_tcs_inhib_ = [v[i] for k,v in lick_selectivity.items() if k.split('_')[0] in vip_an]
@@ -229,13 +240,17 @@ for i in range(2):
     lick_tcs_ctrl  = pad(lick_tcs_ctrl_)
 
     # Take average of last 10 trials
-    inhib_last10 = np.nanmean(lick_tcs_inhib[:, -triallim:], axis=1)
-    excit_last10 = np.nanmean(lick_tcs_excit[:, -triallim:], axis=1)
-    ctrl_last10  = np.nanmean(lick_tcs_ctrl[:, -triallim:], axis=1)
+    inhib_last10 = np.nanmean(lick_tcs_inhib[:, :triallim], axis=1)
+    excit_last10 = np.nanmean(lick_tcs_excit[:,:triallim], axis=1)
+    ctrl_last10  = np.nanmean(lick_tcs_ctrl[:, :triallim], axis=1)
+    an_inhib =[k.split('_')[0] for k,v in lick_selectivity.items() if k.split('_')[0] in vip_an]
+    an_ex =[k.split('_')[0] for k,v in lick_selectivity.items() if k.split('_')[0] in vip_ex]
+    an_c =[k.split('_')[0] for k,v in lick_selectivity.items() if(k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)]
 
     # Build dataframe
     df = pd.DataFrame({
         "val": np.concatenate([ctrl_last10, inhib_last10, excit_last10]),
+        "animal": np.concatenate([an_c,an_inhib, an_ex]),
         "condition": (["Control"]*len(ctrl_last10) +
                       ["VIP Inhibition"]*len(inhib_last10) +
                       ["VIP Excitation"]*len(excit_last10)),
@@ -245,7 +260,7 @@ for i in range(2):
 
 # Concatenate across LED off/on
 df_all = pd.concat(all_dfs, ignore_index=True)
-
+# df_all = df_all.groupby(['animal','condition','epoch']).mean(numeric_only=True).reset_index()
 # ---- PLOT ----
 order = ["Control","VIP Inhibition","VIP Excitation"]
 palette = {"Control":"slategray","VIP Inhibition":"red","VIP Excitation":"darkgoldenrod"}
@@ -257,8 +272,8 @@ for i, epoch in enumerate(cond):
     sub = df_all[df_all["epoch"]==epoch]
     sns.barplot(data=sub, x="condition", y="val", order=order,
                 palette=palette, errorbar="se", ax=ax, fill=False)
-    sns.stripplot(data=sub, x="condition", y="val", order=order,s=4,
-                  palette=palette, ax=ax, alpha=0.7, jitter=True)
+    # sns.stripplot(data=sub, x="condition", y="val", order=order,s=4,
+    #               palette=palette, ax=ax, alpha=0.7, jitter=True)
     # Annotate n above each bar
     n_sessions = sub.groupby("condition").size()
     ymax = sub["val"].max()

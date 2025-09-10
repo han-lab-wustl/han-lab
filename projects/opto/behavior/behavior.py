@@ -115,7 +115,9 @@ def get_lick_selectivity(ypos, trialnum, lick, rewloc, rewsize,
         start_postion = rewloc-(.5*rewsize)
         last_quarter = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t/start_postion > 0.75))[0]].sum()
         pre_rew_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t > 3))[0]].sum()
-        total_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t > 3))[0]].sum()
+        total_licks = lick_t[np.where((ypos_t > 3))[0]].sum()
+        # just get pre-reward licks as totle licks for now
+        total_licks=pre_rew_licks
         pre_n_rew_licks = lick_t[np.where((ypos_t/start_postion < 1) & (ypos_t<rewloc+(.5*rewsize)+1) & (ypos_t > 3))[0]].sum()
         in_rew_zone = lick_t[np.where((ypos_t>start_postion) & (ypos_t<(rewloc+(.5*rewsize))))[0]].sum()
         # if fails_only==True:
