@@ -19,13 +19,13 @@ plt.rcParams["font.family"] = "Arial"
 
 plt.close('all')
 # save to pdf
-animal = 'e220'
-src = r"Z:\pavlov_extinction\cs_only"
+animal = 'e291'
+src = r"X:\chrimson_snc_grabda"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov_cs_only_{os.path.basename(src)}.pdf"))
-days = [5]#np.arange(11,27)
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov_cs_{os.path.basename(src)}.pdf"))
+days = [22]#np.arange(11,27)
 range_val=12; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
@@ -144,7 +144,7 @@ for day in days:
       fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
       fig.tight_layout()
       pdf.savefig(fig)  
-      plt.close('all')      
+      # plt.close('all')      
       plndff.append(clean_arr)
    day_date_dff[str(day)] = [plndff,vel,licktr]
 pdf.close()

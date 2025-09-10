@@ -4,7 +4,7 @@
 % run from han-lab dir
 clear all;
 mouse_name = "e221";
-days = [19,20];
+days = [24];
 src = 'Z:\pavlov_extinction\cs_4s_us';
 
 for day=days

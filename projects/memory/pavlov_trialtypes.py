@@ -1,9 +1,7 @@
-"""zahra's pavlov 4s analysis
-sept 2025
-e221 - 15-26 redo
+"""zahra's dopamine hrz analysis
+march 2024
 """
 #%%
-
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 
@@ -21,17 +19,17 @@ plt.rcParams["font.family"] = "Arial"
 
 plt.close('all')
 # save to pdf
-animal = 'e222'
-src = r"Z:\pavlov_extinction\cs_4s_us"
+animal = 'e291'
+src = r"X:\chrimson_snc_grabda"
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov4s_{animal}.pdf"))
-days = np.arange(10,12)#np.arange(11,27)
-range_val=15; binsize=0.2
-close=False
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov_cs_{os.path.basename(src)}.pdf"))
+days = [22]#np.arange(11,27)
+range_val=8; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
-# False = True # print out per day figs
+old = False
+# figs = True # print out per day figs
 day_date_dff = {}
 for day in days: 
    plndff = []
@@ -43,23 +41,26 @@ for day in days:
          gainf = VR['scalingFACTOR'][0][0]
          rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
       except:
-         rewsize = 10 
+         rewsize = 10
          gainf=1/1.5
+
       planenum = os.path.basename(os.path.dirname(os.path.dirname(path)))
       pln = int(planenum[-1])
       layer = planelut[pln]
       params_keys = params.keys()
       keys = params['params'].dtype
       # dff is in row 7 - roibasemean3/basemean
-      # old
-      dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
-      if np.nanmax(dff)>1.1:          
+      if old:
+         dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
+         # dff = np.hstack(params['params'][0][0][10])/np.nanmean(np.hstack(params['params'][0][0][10]))
+      else:
          dff = np.hstack(params['params'][0][0][6][0][0])/np.nanmean(np.hstack(params['params'][0][0][6][0][0]))
       
       # plt.close(fig)
       dffdf = pd.DataFrame({'dff': dff})
-      dff = np.hstack(dffdf.rolling(10).mean().values)
+      dff = np.hstack(dffdf.rolling(2).mean().values)
       rewards = np.hstack(params['solenoid2'])
+      us = np.hstack(params['rewards'])
       velocity = np.hstack(params['forwardvel'])
       veldf = pd.DataFrame({'velocity': velocity})
       velocity = np.hstack(veldf.rolling(10).mean().values)
@@ -69,7 +70,7 @@ for day in days:
       changeRewLoc = np.hstack(params['changeRewLoc'])
       eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/gainf
       eps = np.append(eps, len(changeRewLoc))
-
+      doubles=us>1
       # plot pre-first reward dop activity  
       timedFF = np.hstack(params['timedFF'])
       # aligned to CS
@@ -104,10 +105,8 @@ for day in days:
       ax.axis('off')
       ax = axes[1]
       ax.imshow(clean_arr)
-      tick=20
-      ticklbl=4
-      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,tick))
-      ax.set_xticklabels(range(-range_val, range_val+1, ticklbl))
+      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+      ax.set_xticklabels(range(-range_val, range_val+1, 1))
       ax.set_title('Correct Trials')
       ax.axvline(int(range_val/binsize),linestyle='--',color='w')
       ax.set_ylabel('Trial #')
@@ -117,8 +116,8 @@ for day in days:
       ax.fill_between(range(0,int(range_val/binsize)*2), 
                meanrewdFF-scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'),
                meanrewdFF+scipy.stats.sem(rewdFF,axis=1,nan_policy='omit'), alpha=0.5)
-      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,tick))
-      ax.set_xticklabels(range(-range_val, range_val+1, ticklbl))
+      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+      ax.set_xticklabels(range(-range_val, range_val+1, 1))
       ax.axvline(int(range_val/binsize),linestyle='--',color='k')
       ax.spines[['top','right']].set_visible(False)        
       ax = axes[2]
@@ -136,8 +135,8 @@ for day in days:
          meanlick-scipy.stats.sem(licktr,axis=1,nan_policy='omit'),
          meanlick+scipy.stats.sem(licktr,axis=1,nan_policy='omit'), alpha=0.3,
          color='slategray')
-      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,tick))
-      ax.set_xticklabels(range(-range_val, range_val+1, ticklbl))
+      ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+      ax.set_xticklabels(range(-range_val, range_val+1, 1))
       ax.axvline(int(range_val/binsize),linestyle='--',color='k')
       ax.spines[['top','right']].set_visible(False)
       ax.set_ylabel('Velocity (cm/s)')
@@ -145,18 +144,14 @@ for day in days:
       ax.set_xlabel('Time from CS (s)')
       fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
       fig.tight_layout()
-      
-      if close:
-         pdf.savefig(fig)  
-         plt.close('all') 
-      else: 
-         plt.show()    
+      pdf.savefig(fig)  
+      # plt.close('all')      
       plndff.append(clean_arr)
    day_date_dff[str(day)] = [plndff,vel,licktr]
-if close:
-   pdf.close()
+pdf.close()
+
 #%%
-trialnum = 300
+trialnum = 100
 # heatmap across days
 alltr = [np.vstack([v[0][i] for k,v in day_date_dff.items() if len(v[0])==4]) for i in range(4)]
 velalltr = np.hstack([v[1] for k,v in day_date_dff.items()]).T
@@ -170,7 +165,6 @@ for pln in range(4):
    cax=ax.imshow(arr,aspect='auto',cmap='jet')    
    ax.set_ylabel('Trials (early trials)')
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
    ax.set_title(f'Plane {planelut[pln]}')
    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
@@ -183,7 +177,6 @@ for pln in range(4):
    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
    ax.set_xticklabels(range(-range_val, range_val+1, 2))
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    fig.tight_layout()
 
    ax=axes[0,1]
@@ -192,7 +185,6 @@ for pln in range(4):
    ax.set_xlabel('Time from CS (s)')
    ax.set_ylabel('Trials (late trials)')
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
    ax.set_title(f'Plane {planelut[pln]}')
    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
@@ -205,14 +197,12 @@ for pln in range(4):
    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
    ax.set_xticklabels(range(-range_val, range_val+1, 2))
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    
    # licks
    ax=axes[2,0]
    arr=lickalltr[:trialnum]
    cax=ax.imshow(arr,aspect='auto',cmap='Blues')    
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
    ax=axes[3,0]
@@ -225,12 +215,10 @@ for pln in range(4):
    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
    ax.set_xticklabels(range(-range_val, range_val+1, 2))
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    ax=axes[2,1]
    arr=lickalltr[-trialnum:]
    cax=ax.imshow(arr,aspect='auto',cmap='Blues')    
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
    ax=axes[3,1]
@@ -241,7 +229,6 @@ for pln in range(4):
    mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
    mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    
    # vel
    # licks
@@ -249,23 +236,20 @@ for pln in range(4):
    arr=velalltr[:trialnum]
    cax=ax.imshow(arr,aspect='auto',cmap='Greys')    
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
    ax=axes[5,0]
    mf = np.nanmean(arr,axis=0)
    ax.plot(mf)    
-   ax.set_ylabel('Licks')
+   ax.set_ylabel('Velocity')
    ax.fill_between(range(0,int(range_val/binsize)*2), 
    mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
    mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    ax=axes[4,1]
    arr=velalltr[-trialnum:]
    cax=ax.imshow(arr,aspect='auto',cmap='Greys')    
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
    fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
    ax=axes[5,1]
@@ -278,7 +262,6 @@ for pln in range(4):
    ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
    ax.set_xticklabels(range(-range_val, range_val+1, 4))
    ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
    ax.set_xlabel('Time from CS (s)')
 
    fig.tight_layout()
