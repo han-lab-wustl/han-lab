@@ -32,8 +32,8 @@ def copy_params_mat_with_custom_structure(src_dir, dst_dir):
         print("No params.mat file found in the source directory.")  # Debug: Alert if no file found
 
 # Example usage
-source_directory = r"E:\Ziyi\Data\GrabNE_mice\E274\hrz\27\250522_ZH_000_000"
-destination_directory = r"\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\GRABNE_mice\E274\27"
+source_directory = r"E:\Ziyi\Data\E277_redopto_testing\250729_ZH_000_001"
+destination_directory = r"\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\E277_redopto"
 
 copy_params_mat_with_custom_structure(source_directory, destination_directory)
 

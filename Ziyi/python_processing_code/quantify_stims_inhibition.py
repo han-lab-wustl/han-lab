@@ -28,7 +28,7 @@ plt.close('all')
 #     f"halo_opto.pdf"))
 
 # src = r"Z:\halo_grabda"
-srcs = [r"\\storage1.ris.wustl.edu\ebhan\Active\Ziyi\Shared_Data\VTA_mice_copy\E277\9"]
+srcs = [r"E:\Ziyi\Data\E277_redopto_testing"]
 # animals = ['e241']
 # days_all = [[1]]
 

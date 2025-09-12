@@ -1,4 +1,3 @@
-
 %First select the behavior file for the imaging session, and then select the number of planes that
 %were imaged and the cell traces for each of these planes.
 %HRZ Edition!!! Here alignment is made at the end of this section. If you

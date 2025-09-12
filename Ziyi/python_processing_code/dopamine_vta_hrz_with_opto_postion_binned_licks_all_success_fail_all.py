@@ -19,7 +19,7 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
-from Ziyi.python_processing_code.functions.function_code import spatial_binned_activity
+from Ziyi.python_processing_code.functions.function_code import spatial_binned_activity,nan_after_reward_all_epochs
 from projects.DLC_behavior_classification import eye
 plt.rcParams["font.family"] = "Arial"
 
@@ -30,12 +30,13 @@ animal = ''
 src = r"E:\Ziyi\Data\VTA_mice\hrz\E277"
 src = os.path.join(src,animal)
 dst = r"E:\Ziyi"
-save_dir = r'C:\Users\HanLab\Downloads\figure'
+save_dir = r'C:\Users\HanLab\Downloads\figure_1'
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
 #days = np.arange(19,23)
 # opto days [19,20,22,23]
 # control days [21,24]
-days = [36]
+save_figs = False
+days = [37]
 #range_val=20; binsize=0.2
 numtrialsstim=2 # every 10 trials stim w 1 trial off
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
@@ -104,8 +105,10 @@ for day in days:
         changeRewLoc = np.hstack(params['changeRewLoc'])
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/gainf
         eps = np.append(eps, len(changeRewLoc))
+
         dt = np.nanmedian(np.diff(timedFF))
-        lick_rate = smooth_lick_rate(licks, dt, sigma_sec=0.5)
+        lick_rate = smooth_lick_rate(licks, dt, sigma_sec=0.7)
+        lick_rate = nan_after_reward_all_epochs(lick_rate, rewards, trialnum, eps)
         
         #eps_opto_mask = np.zeros(len(stims), dtype=bool)
 
@@ -124,7 +127,7 @@ for day in days:
             for j in range(len(epsALL) - 1)
         ])
         
-        #epsALL_has_stim = [True, False,False,False]
+        epsALL_has_stim = [True, False, False]
         # For each epsALL segment that has stim, mark the corresponding eps segment
         for j in range(len(epsALL_has_stim)):
             if epsALL_has_stim[j] and j < len(eps) - 1:
@@ -186,7 +189,7 @@ for day in days:
         _, meanvel_opto_str, __, vel_opto_str = spatial_binned_activity(
             velocity_opto_eps[str_bool_opto], ybinned_opto_eps[str_bool_opto], trialnum_opto_eps[str_bool_opto], binsize=9, track_length=270)
         _, meanlick_opto_str, __, licktr_opto_str = spatial_binned_activity(
-            lick_rate_opto_eps[str_bool_opto], ybinned_opto_eps[str_bool_opto], trialnum_opto_eps[str_bool_opto], binsize=9, track_length=270)
+            licks_opto_eps[str_bool_opto], ybinned_opto_eps[str_bool_opto], trialnum_opto_eps[str_bool_opto], binsize=9, track_length=270)
 
         # FTR
         ftr_bool_opto = np.array([(xx in ftr_trials_opto) and (xx % numtrialsstim == 1) for xx in trialnum_opto_eps])
@@ -206,7 +209,7 @@ for day in days:
         velocity_opto_eps[ftr_bool_opto], ybinned_opto_eps[ftr_bool_opto], trialnum_opto_eps[ftr_bool_opto], binsize=9, 
         track_length=270)
         _, meanlick_opto_ftr, __, licktr_opto_ftr = spatial_binned_activity(
-            lick_rate_opto_eps[ftr_bool_opto], ybinned_opto_eps[ftr_bool_opto], trialnum_opto_eps[ftr_bool_opto], binsize=9, 
+            licks_opto_eps[ftr_bool_opto], ybinned_opto_eps[ftr_bool_opto], trialnum_opto_eps[ftr_bool_opto], binsize=9, 
             track_length=270)
 
         # TTR
@@ -227,7 +230,7 @@ for day in days:
         velocity_opto_eps[ttr_bool_opto], ybinned_opto_eps[ttr_bool_opto], trialnum_opto_eps[ttr_bool_opto], binsize=9, 
         track_length=270)
         _, meanlick_opto_ttr, __, licktr_opto_ttr = spatial_binned_activity(
-            lick_rate_opto_eps[ttr_bool_opto], ybinned_opto_eps[ttr_bool_opto], trialnum_opto_eps[ttr_bool_opto], binsize=9, 
+            licks_opto_eps[ttr_bool_opto], ybinned_opto_eps[ttr_bool_opto], trialnum_opto_eps[ttr_bool_opto], binsize=9, 
             track_length=270)
 
     
@@ -251,7 +254,7 @@ for day in days:
             velocity_opto_eps[str_bool_nonopto], ybinned_opto_eps[str_bool_nonopto], trialnum_opto_eps[str_bool_nonopto], binsize=9, 
             track_length=270)
         _, meanlick_nonopto_str, __, licktr_nonopto_str = spatial_binned_activity(
-            lick_rate_opto_eps[str_bool_nonopto], ybinned_opto_eps[str_bool_nonopto], trialnum_opto_eps[str_bool_nonopto], binsize=9, 
+            licks_opto_eps[str_bool_nonopto], ybinned_opto_eps[str_bool_nonopto], trialnum_opto_eps[str_bool_nonopto], binsize=9, 
             track_length=270)
         
         # --- FTR TRIALS (nonopto) ---
@@ -273,7 +276,7 @@ for day in days:
             velocity_opto_eps[ftr_bool_nonopto], ybinned_opto_eps[ftr_bool_nonopto], trialnum_opto_eps[ftr_bool_nonopto], binsize=9, 
             track_length=270)
         _, meanlick_nonopto_ftr, __, licktr_nonopto_ftr = spatial_binned_activity(
-            lick_rate_opto_eps[ftr_bool_nonopto], ybinned_opto_eps[ftr_bool_nonopto], trialnum_opto_eps[ftr_bool_nonopto], binsize=9, 
+            licks_opto_eps[ftr_bool_nonopto], ybinned_opto_eps[ftr_bool_nonopto], trialnum_opto_eps[ftr_bool_nonopto], binsize=9, 
             track_length=270)
 
         # --- TTR TRIALS (nonopto) ---
@@ -295,7 +298,7 @@ for day in days:
             velocity_opto_eps[ttr_bool_nonopto], ybinned_opto_eps[ttr_bool_nonopto], trialnum_opto_eps[ttr_bool_nonopto], binsize=9, 
             track_length=270)
         _, meanlick_nonopto_ttr, __, licktr_nonopto_ttr = spatial_binned_activity(
-            lick_rate_opto_eps[ttr_bool_nonopto], ybinned_opto_eps[ttr_bool_nonopto], trialnum_opto_eps[ttr_bool_nonopto], binsize=9, 
+            licks_opto_eps[ttr_bool_nonopto], ybinned_opto_eps[ttr_bool_nonopto], trialnum_opto_eps[ttr_bool_nonopto], binsize=9, 
             track_length=270)
 
     
@@ -305,6 +308,7 @@ for day in days:
         rewards_nonopto_eps = rewards[eps_nonopto_mask]
         dff_nonopto_eps = dff[eps_nonopto_mask]
         timedFF_nonopto_eps = timedFF[eps_nonopto_mask]
+        lick_rate_nonopto_eps = lick_rate[eps_nonopto_mask]
         velocity_nonopto_eps = velocity[eps_nonopto_mask]
         lick_rate_nonopto_eps = lick_rate[eps_nonopto_mask]
 
@@ -420,10 +424,10 @@ for day in days:
                     in_patch = True
                 elif opto_stim_trs[i] == 0 and in_patch:
                     end = i
-                    ax.axvspan(start, end, color='darkorange', alpha=0.5, zorder=0)
+                    ax.axvspan(start, end, color='pink', alpha=0.5, zorder=0)
                     in_patch = False
             if in_patch:  # in case the last segment goes to the end
-                ax.axvspan(start, len(opto_stim_trs), color='darkorgane', alpha=0.5, zorder=0)
+                ax.axvspan(start, len(opto_stim_trs), color='pink', alpha=0.5, zorder=0)
 
             ax.set_title(f'Behavior, Day {day}')
             ax.set_ylabel('Position (cm)')
@@ -432,12 +436,12 @@ for day in days:
             ax.set_xlabel('Time (minutes)')
             fig.tight_layout()
 
-
-            #fig.savefig(os.path.join(save_dir, f"behavior_day_{day}.png"))
+            if save_figs:
+                fig.savefig(os.path.join(save_dir, f"behavior_day_{day}.png"))
             plt.show()
             
         # === Step 1: Build reward_summary using existing aligned variables ===
-        reward_summary = {
+        position_binned_data = {
             'opto': {
                 'str': {
                     'dff': rewdFF_opto_str,
@@ -490,7 +494,25 @@ for day in days:
                 }
             }
         }
+
+
         
+        '''
+        summary_path = "position_binned_summary_all_days.npz"
+
+        # Load existing file if it exists
+        if os.path.exists(summary_path):
+            existing_data = dict(np.load(summary_path, allow_pickle=True))
+        else:
+            existing_data = {}
+
+        # Update with current day
+        existing_data[f'day_{day}'] = position_binned_data
+
+        # Save back to npz file
+        np.savez_compressed(summary_path, **existing_data)
+        
+        '''
         groups = ['opto', 'nonopto_opto_epoch', 'nonopto_nonopto_epoch']
         trial_types = ['str', 'ftr', 'ttr']
         signals = ['dff', 'lick']
@@ -499,6 +521,8 @@ for day in days:
             ('opto', 'nonopto_nonopto_epoch'),
             ('nonopto_opto_epoch', 'nonopto_nonopto_epoch')
         ]
+        
+
 
         # Bin setup
         n_bins = 30
@@ -514,7 +538,7 @@ for day in days:
                 gs = matplotlib.gridspec.GridSpec(3, 2, width_ratios=[2, 1])
 
                 for i, trial_type in enumerate(trial_types):
-                    data = reward_summary[group][trial_type][signal]
+                    data = position_binned_data[group][trial_type][signal]
                     mean = np.nanmean(data, axis=1)
                     sem = np.nanstd(data, axis=1) / np.sqrt(np.sum(~np.isnan(data), axis=1))
 
@@ -541,7 +565,12 @@ for day in days:
                         ax1.set_xlabel('Position (cm)')
 
                 plt.tight_layout(rect=[0, 0, 1, 0.96])
+                os.makedirs(save_dir, exist_ok=True)
+                save_path = os.path.join(save_dir, f'{signal}_{group}_Day{day}_summary.png')
+                if save_figs:
+                    plt.savefig(save_path, dpi=300)
                 plt.show()
+                plt.close()
 
         # 2. Plot comparison figures with STR, FTR, TTR as subplots
         for signal in signals:
@@ -555,7 +584,7 @@ for day in days:
                     for group, color, label in zip([group_a, group_b],
                                                 ['tab:blue', 'tab:orange'],
                                                 [group_a, group_b]):
-                        data = reward_summary[group][trial_type][signal]
+                        data = position_binned_data[group][trial_type][signal]
                         mean = np.nanmean(data, axis=1)
                         sem = np.nanstd(data, axis=1) / np.sqrt(np.sum(~np.isnan(data), axis=1))
 
@@ -569,9 +598,14 @@ for day in days:
                     ax.set_xticks(xticks)
                     ax.set_xticklabels(xtick_labels)
                     ax.legend()
-
+                
                 plt.tight_layout(rect=[0, 0, 1, 0.95])
+                os.makedirs(save_dir, exist_ok=True)
+                save_path = os.path.join(save_dir, f'{signal}_{group_a}_vs_{group_b}_Day{day}_comparison.png')
+                if save_figs:
+                    plt.savefig(save_path, dpi=300)
                 plt.show()
+                plt.close()
 
 
 # Define save paths
