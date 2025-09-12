@@ -3,8 +3,8 @@
 %based on Zahra's pipeline folder structure
 % run from han-lab dir
 clear all;
-mouse_name = "e221";
-days = [24];
+mouse_name = "e222";
+days = [30];
 src = 'Z:\pavlov_extinction\cs_4s_us';
 
 for day=days

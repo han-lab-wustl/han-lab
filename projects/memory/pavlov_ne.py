@@ -27,7 +27,7 @@ src = r"Z:\grabne"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov_ne_{animal}.pdf"))
-days = ['Day_09']#np.arange(11,27)
+days = ['Day_17','Day_18','Day_19','Day_20']#np.arange(11,27)
 range_val=5; binsize=0.2
 close=False
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}

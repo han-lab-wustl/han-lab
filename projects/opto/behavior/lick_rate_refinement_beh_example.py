@@ -24,16 +24,53 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(savepth)
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
 with open(saveddataset, "rb") as fp: #unpickle
         radian_alignment_saved = pickle.load(fp)
-# initialize var
 #%%
-
-iis=[13,166]
-cm_window=20
-span=[[0,16920],[15200,48600]]
-colors=['lightcoral','mediumturquoise']
+# test which animals have the same rew loc shufts
+iis=conddf[(conddf.animals=='z17') & (conddf.optoep>1)].index
 # span=[[0,30000]]*len(iis)
 for kk,ii in enumerate(iis):
+   day = int(conddf.days.values[ii])
+   animal = conddf.animals.values[ii]
+   params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+   print(params_pth)
+   plt.rc('font', size=16)
+   fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+   'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+   'stat', 'licks'])
+   VR = fall['VR'][0][0][()]
+   scalingf = VR['scalingFACTOR'][0][0]
+   try:
+      rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+   except:
+      rewsize = 10
+   ybinned = fall['ybinned'][0]/scalingf
+   track_length=180/scalingf    
+   forwardvel = fall['forwardvel'][0]    
+   changeRewLoc = np.hstack(fall['changeRewLoc'])
+   trialnum=fall['trialnum'][0]
+   rewards = fall['rewards'][0]
+   time = fall['timedFF'][0]
+   lick = fall['licks'][0]
+   # set vars
+   eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+   # only test opto vs. ctrl
+   eptest = conddf.optoep.values[ii]
+   if conddf.optoep.values[ii]<2: 
+      eptest = random.randint(2,3)   
+      if len(eps)<4: eptest = 2 # if no 3 epochs 
+   eptest=int(eptest)-1
+   print(rewlocs[eptest-1],rewlocs[eptest])
+   print(rewlocs)
 
+#%%
+iis=conddf[(conddf.animals=='z14') & (conddf.optoep>1)].index
+iis=[169,34]
+cm_window=20
+span=[[25000,45500],[3000,8800]]
+colors=['mediumturquoise','lightcoral']
+
+# span=[[0,30000]]*len(iis)
+for kk,ii in enumerate(iis):
    day = int(conddf.days.values[ii])
    animal = conddf.animals.values[ii]
    if animal=='e145': pln=2  
@@ -73,7 +110,7 @@ for kk,ii in enumerate(iis):
    if conddf.optoep.values[ii]<2: 
       eptest = random.randint(2,3)   
       if len(eps)<4: eptest = 2 # if no 3 epochs 
-   eptest=int(eptest)   
+   eptest=int(eptest) -1  
    lasttr=8 # last trials
    bins=90
    rad = get_radian_position_first_lick_after_rew(eps, ybinned, lick, rewards, rewsize,rewlocs, trialnum, track_length) # get radian coordinates
@@ -81,7 +118,7 @@ for kk,ii in enumerate(iis):
    bin_size=track_length_rad/bins
    # behavior eg
    # example plot during learning
-   eprng = np.arange(eps[0],eps[2])
+   eprng = np.arange(eps[eptest-1],eps[eptest])
    # mask = np.array([True if xx>10 and xx<28 else False for xx in trialnum])
    mask = np.zeros_like(trialnum).astype(bool)
    mask[span[kk][0]:span[kk][1]]=1
@@ -89,7 +126,8 @@ for kk,ii in enumerate(iis):
    probes = np.where(trialnum[mask]<3)[0]
    # mask[eps[0]+8500:eps[1]+2700]=True
    import matplotlib.patches as patches
-   fig, ax = plt.subplots(figsize=(9,3))
+   
+   fig, ax = plt.subplots(figsize=(6,3))
    ypos=ybinned
    rew=rewards
    lick[ybinned<2]=0
@@ -183,7 +221,6 @@ for kk,ii in enumerate(iis):
       (probe_stretches[0][-1]+1, len(ypos[mask]), '', '#42a5f5ff'),
       ]
 
-
    # Draw bars
    for i, (start, end, label, color) in enumerate(epoch_spans):
       ax.add_patch(
@@ -207,7 +244,10 @@ for kk,ii in enumerate(iis):
          fontsize=14,
          zorder=4
       )
-   inhib_span = [probe_stretches[0][-1]+1, probe_stretches[1][0]]  # start and end of inhibition
+   try:
+      inhib_span = [probe_stretches[0][-1]+1, probe_stretches[1][0]]  # start and end of inhibition
+   except:
+      inhib_span = [probe_stretches[0][-1]+1, len(ypos[mask])-1]
    bar_height=30
    probe_y=245
    ax.add_patch(
@@ -219,6 +259,7 @@ for kk,ii in enumerate(iis):
          alpha=0.4,
          linewidth=0,
          zorder=2,
+         label='VIP Inhibition'
       )
    )
    # Add text label above the bar
@@ -238,12 +279,15 @@ for kk,ii in enumerate(iis):
          
       tr_mask = trialnum[mask][inhib_span[0]:inhib_span[1]] == tr
       # get reward location for this trial
-      trial_rewloc = rewlocs[eptest-1]
+      trial_rewloc = rewlocs[eptest]
       # horizontal span in x (samples belonging to this trial)
       start_idx = np.where(tr_mask)[0][0]+inhib_span[0]
       end_idx   = np.where(rewards[mask][inhib_span[0]:inhib_span[1]][tr_mask]>0)[0]
       if len(end_idx)==0:
-         end_idx = np.where(ybinned[mask][inhib_span[0]:inhib_span[1]][tr_mask]>trial_rewloc-10)[0][1]
+         try:
+            end_idx = np.where(ybinned[mask][inhib_span[0]:inhib_span[1]][tr_mask]>trial_rewloc-10)[0][1]
+         except:
+            end_idx=0
       else:
          end_idx=end_idx[0]
       # Add rectangle patch spanning ypos 0 → reward location
@@ -255,11 +299,12 @@ for kk,ii in enumerate(iis):
          trial_rewloc,                    # height (reward zone location)
          linewidth=0,
          facecolor=colors[kk],
-         alpha=0.2,
+         alpha=0.4,
          zorder=0
       )
       ax.add_patch(rect)
 
    ax.set_ylim([0, 350])   
+   fig.suptitle('Licks in previous reward area')
    # plt.tight_layout()
-   plt.savefig(os.path.join(savedst, f'fig4_beh_{animal}_{day}.svg'),bbox_inches='tight')
+   plt.savefig(os.path.join(savedst, f'lick_rate_refine_beh_{animal}_{day}.svg'),bbox_inches='tight')

@@ -27,9 +27,11 @@ with open(saveddataset, "rb") as fp: #unpickle
 # initialize var
 #%%
 iis=conddf[(conddf.animals=='z14') & (conddf.optoep>1)].index
-iis=[38]
+iis=[38,169]
 cm_window=20
-span=[[7600,15270]]
+span=[[7600,15270],[20000,50000]]
+colors=['mediumturquoise','mediumturquoise']
+
 # span=[[0,30000]]*len(iis)
 for kk,ii in enumerate(iis):
    day = int(conddf.days.values[ii])
@@ -168,12 +170,19 @@ for kk,ii in enumerate(iis):
    epoch_bar_height = 2
    probe_stretches=consecutive_stretch(probes)
    # Define x-ranges for each epoch (in sample indices)
-   epoch_spans = [
+   try:
+      epoch_spans = [
+         (-500, probes[0]-1, 'Control Epoch', '#42a5f5ff'),
+         (probe_stretches[0][0], probe_stretches[0][-1], 'Probes', 'royalblue'),
+         (probe_stretches[0][-1]+1, probe_stretches[1][0], '', '#42a5f5ff'),
+         (probe_stretches[1][0], probe_stretches[1][-1], 'Probes', 'royalblue'),
+      ]
+   except:
+      epoch_spans = [
       (-500, probes[0]-1, 'Control Epoch', '#42a5f5ff'),
       (probe_stretches[0][0], probe_stretches[0][-1], 'Probes', 'royalblue'),
-      (probe_stretches[0][-1]+1, probe_stretches[1][0], '', '#42a5f5ff'),
-      (probe_stretches[1][0], probe_stretches[1][-1], 'Probes', 'royalblue'),
-   ]
+      (probe_stretches[0][-1]+1, len(ypos[mask]), '', '#42a5f5ff'),
+      ]
 
    # Draw bars
    for i, (start, end, label, color) in enumerate(epoch_spans):
@@ -206,8 +215,8 @@ for kk,ii in enumerate(iis):
          (inhib_span[0], probe_y + bar_height + 1),  # place above probe bar
          inhib_span[1] - inhib_span[0] + 1,
          bar_height,
-         color='red',
-         alpha=0.2,
+         color='mediumturquoise',
+         alpha=0.4,
          linewidth=0,
          zorder=2,
          label='VIP Inhibition'

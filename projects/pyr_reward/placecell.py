@@ -560,6 +560,70 @@ def make_tuning_curves_early(eps,rewlocs,ybinned,Fc3,trialnum,
                 coms_fail[ep, :] = com    
     return tcs_correct, coms_correct, tcs_fail, coms_fail
 
+# all trial types for opto
+
+def make_tuning_curves_all_trialtypes(eps,rewlocs,ybinned,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,eptrials=3,
+            velocity_filter=False):
+    tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = ybinned[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        F = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F_all = F[moving_middle,:]
+        relpos_all = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            mask = [True if xx in ttr[-lasttr:] else False for xx in trialnum[eprng][moving_middle]]
+            F = F_all[mask,:]
+            relpos = relpos_all[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,bin_size)
+            tcs_correct[ep, :,:] = tc
+            coms_correct[ep, :] = com
+    return tcs_correct, coms_correct
+
+def make_tuning_curves_all_trialtypes_early(eps,rewlocs,ybinned,Fc3,trialnum,
+            rewards,forwardvel,rewsize,bin_size,lasttr=8,bins=90,eptrials=3,
+            velocity_filter=False):
+    tcs_correct = np.ones((len(eps)-1, Fc3.shape[1], bins))*np.nan
+    coms_correct = np.ones((len(eps)-1, Fc3.shape[1]))*np.nan
+    # remake tuning curves relative to reward        
+    for ep in range(len(eps)-1):
+        eprng = np.arange(eps[ep],eps[ep+1])
+        eprng = eprng[ybinned[eprng]>2] # exclude dark time
+        rewloc = rewlocs[ep]
+        relpos = ybinned[eprng]        
+        success, fail, strials, ftrials, ttr, total_trials = get_success_failure_trials(trialnum[eprng], rewards[eprng])
+        F = Fc3[eprng,:]            
+        # simpler metric to get moving time
+        if velocity_filter==True:
+            moving_middle = forwardvel[eprng]>5 # velocity > 5 cm/s
+        else:
+            moving_middle = np.ones_like(forwardvel[eprng]).astype(bool)
+        F_all = F[moving_middle,:]
+        relpos_all = np.array(relpos)[moving_middle]
+        if len(ttr)>lasttr: # only if ep has more than x trials
+            # last 8 correct trials
+            mask = [True if xx in ttr[:lasttr] else False for xx in trialnum[eprng][moving_middle]]
+            F = F_all[mask,:]
+            relpos = relpos_all[mask]                
+            tc = np.array([get_tuning_curve(relpos, f, bins=bins) for f in F.T])
+            com = calc_COM_EH(tc,bin_size)
+            tcs_correct[ep, :,:] = tc
+            coms_correct[ep, :] = com
+           
+    return tcs_correct, coms_correct
+
 def get_place_field_widths(tuning_curves, threshold=0.5):
     """
     Calculate place field widths around peak firing fields for each cell.
@@ -638,6 +702,7 @@ def calculate_global_remapping(data_reward1, data_reward2,
     shuffled_distribution = shuffled_CS_
     
     return P, H, real_distribution, shuffled_distribution, p_values, global_remapping
+
 
 def get_cosine_similarity(vec1, vec2):
     cos_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))

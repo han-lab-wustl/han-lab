@@ -133,6 +133,7 @@ for _,ii in enumerate(range(len(conddf))):
          # ftr_trials=ftr_trials[:10]
          # trials_keep = np.array([True if xx in ftr_trials else False for xx in trials])
          lick_tc_per_trial=[]
+         trial_state_per_trial=[]
          if np.sum(trials_keep)>0: # only if incorrect exists
             for tr in np.unique(trials[trials_keep]):
                mask = trials[trials_keep]==tr
@@ -151,84 +152,90 @@ for _,ii in enumerate(range(len(conddf))):
                lick_rate_old_all_tr=np.nanmean(lick_tc.values[int(rewlocs[eptest-2]-bound):int(rewlocs[eptest-2])])
                lick_rate_new_all_tr=np.nanmean(lick_tc.values[int(rewlocs[eptest-1]-bound):int(rewlocs[eptest-1])])
                lick_tc_per_trial.append(lick_tc_pad)
-            lick_selectivity[f'{animal}_{day:03d}_{in_type}'] = [lick_rate_old_all_tr,lick_rate_new_all_tr,eptest, rzs,lick_tc_per_trial,rewlocs] 
+               if tr in str_trials: trial_state=np.ones_like(lick_tc_pad)
+               elif tr in ftr_trials: trial_state=np.zeros_like(lick_tc_pad)
+               else:
+                  trial_state=np.ones_like(lick_tc_pad)*-1
+               trial_state_per_trial.append(trial_state)
+            lick_selectivity[f'{animal}_{day:03d}_{in_type}'] = [lick_rate_old_all_tr,lick_rate_new_all_tr,eptest, rzs,lick_tc_per_trial,rewlocs,trial_state_per_trial] 
 
+#%%
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import matplotlib.patches as patches
+import matplotlib.colors as mcolors
 
-plt.rc('font', size=14)
+plt.rc('font', size=16)
 
-transitions = [[3,1]]
+transitions = [[2,3]]
 vip_an = ['e217','e216','e218']
 vip_ex = ['z15','z14','z17']
 binsz = 2
-ranges = [[80/binsz,129/binsz],[129/binsz,178/binsz],[180/binsz,231/binsz]]
+ranges = [[80/binsz,140/binsz],[129/binsz,178/binsz],[180/binsz,240/binsz]]
+
+# Trial type colormap
+trial_colors = {1: 'green', 0: 'grey', -1: 'yellow'}
+trial_labels = {1: 'Correct', 0: 'Incorrect', -1: 'Probe'}
+trial_cmap = mcolors.ListedColormap([trial_colors[-1], trial_colors[0], trial_colors[1]])
+trial_norm = mcolors.BoundaryNorm([-1.5, -0.5, 0.5, 1.5], trial_cmap.N)
 
 for kk, tr in enumerate(transitions):
-    rewloc_from, rewloc_to = tr
+   rewloc_from, rewloc_to = tr
 
-    lick_tcs = {
-        'Inhibition': [v[4] for k,v in lick_selectivity.items()
-                       if (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
-                       and k.split('_')[0] in vip_an],
-        'Excitation': [v[4] for k,v in lick_selectivity.items()
-                       if (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
-                       and k.split('_')[0] in vip_ex],
-        'Control': [v[4] for k,v in lick_selectivity.items()
-                    if (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
-                    and (k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)]
-    }
+   lick_tcs = {
+      'Inhibition': [(v[4], v[6]) for k,v in lick_selectivity.items()
+                     if (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                     and k.split('_')[0] in vip_an],
+      'Excitation': [(v[4], v[6]) for k,v in lick_selectivity.items()
+                     if (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                     and k.split('_')[0] in vip_ex],
+      'Control': [(v[4], v[6]) for k,v in lick_selectivity.items()
+                  if (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from)
+                  and (k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)]
+   }
 
-    for cond, tcs in lick_tcs.items():
-        for i_sess, Z in enumerate(tcs):
-            Z = np.array(Z, dtype=np.float64)
-            if np.isnan(Z).any():
-               Z = np.nan_to_num(Z, nan=0.0)  # replace NaN with 0
-            else:
-               Z = Z
-            n_trials, n_bins = Z.shape
-            X, Y = np.meshgrid(np.arange(n_bins), np.arange(n_trials))
+   for cond, tcs in lick_tcs.items():
+      for i_sess, (Z, trial_state) in enumerate(tcs):
+         Z = np.array(Z, dtype=np.float64)
+         Z = np.nan_to_num(Z, nan=0.0)[:-1,:]
+         trial_state = np.array(trial_state, dtype=np.float64)[:-1,:]
+         n_trials, n_bins = Z.shape
+         fig, ax = plt.subplots(figsize=(4,3.5))
+         # Lick rate heatmap
+         im = ax.imshow(Z, aspect='auto', cmap='Blues')
+         # Trial state heatmap overlay
+         ax.imshow(trial_state, aspect='auto', cmap=trial_cmap, norm=trial_norm, alpha=0.5)
+         # Overlay reward zones
+         for zone_idx, color in zip([rewloc_from-1, rewloc_to-1], ['grey','black']):
+               x_start, x_end = ranges[zone_idx]
+               rect = patches.Rectangle(
+                  (x_start, -0.5),
+                  x_end-x_start,
+                  n_trials,
+                  linewidth=3,
+                  edgecolor=color,
+                  facecolor='none',
+                  linestyle='--'
+               )
+               ax.add_patch(rect)
 
-            fig = plt.figure(figsize=(4,5))
-            ax = fig.add_subplot(111, projection='3d')
-
-            # Surface plot
-            cmap = {'Inhibition':'Reds', 'Excitation':'YlOrBr', 'Control':'Greys'}
-            surf = ax.plot_surface(X, Y, Z, cmap=cmap[cond], edgecolor='k', linewidth=0.3, zorder=0)
-
-            # Set limits to make sure rectangles are visible
-            ax.set_xlim(0, n_bins-1)
-            ax.set_ylim(0, n_trials-1)
-            ax.set_zlim(Z.min(), Z.max()+0.5)
-
-            # Add reward zone rectangles
-            for zone_idx, color in zip([rewloc_from-1, rewloc_to-1], ['blue','black']):
-                x_start, x_end = ranges[zone_idx]
-                y_start, y_end = 0, n_trials-1
-                z_start, z_end = Z.min(), Z.max() + 0.5
-                # 6 faces of a box
-                verts = [
-                    [[x_start, y_start, z_start],[x_end, y_start, z_start],[x_end, y_end, z_start],[x_start, y_end, z_start]], # bottom
-                    [[x_start, y_start, z_end],[x_end, y_start, z_end],[x_end, y_end, z_end],[x_start, y_end, z_end]], # top
-                    [[x_start, y_start, z_start],[x_start, y_start, z_end],[x_start, y_end, z_end],[x_start, y_end, z_start]], # left
-                    [[x_end, y_start, z_start],[x_end, y_start, z_end],[x_end, y_end, z_end],[x_end, y_end, z_start]], # right
-                    [[x_start, y_start, z_start],[x_start, y_start, z_end],[x_end, y_start, z_end],[x_end, y_start, z_start]], # front
-                    [[x_start, y_end, z_start],[x_start, y_end, z_end],[x_end, y_end, z_end],[x_end, y_end, z_start]] # back
-                ]
-                for v in verts:
-                    poly = Poly3DCollection([v], facecolor=color, alpha=0.2, zorder=1)
-                    ax.add_collection3d(poly)
-
-            ax.set_xlabel('Track position (cm)')
-            ax.set_xticks([0,135])
-            ax.set_xticklabels([0,270])
-            ax.set_yticks([0,n_trials-1])
-            ax.set_yticklabels([1,n_trials])
-            ax.set_ylabel('Trial')
-            ax.set_zlabel('Lick rate')
-            ax.set_title(f'{cond} - Transition {rewloc_from}->{rewloc_to} - Session {i_sess+1}')
-            plt.tight_layout()
-            plt.savefig(os.path.join(savedst, f'lick_rate_trial_by_trial_{cond}_{i_sess}_{tr[0]}_to_{tr[1]}.svg'), bbox_inches='tight')
-#%%
+         ax.set_xlabel('Track position (cm)')
+         ax.set_ylabel('Trial')
+         ax.set_xticks([0, n_bins-1])
+         ax.set_xticklabels([0, 270])
+         ax.set_yticks([0, n_trials-1])
+         ax.set_yticklabels([1, n_trials])
+         ax.set_title(rf'{cond}, Area {rewloc_from}$\rightarrow${rewloc_to}')
+         # Lick rate colorbar
+         cbar = fig.colorbar(im, ax=ax, fraction=0.05)
+         cbar.set_label('Lick rate (licks/s)')
+         # Trial type legend
+         from matplotlib.patches import Patch
+         legend_elements = [Patch(facecolor=color, edgecolor='k', label=label) 
+                              for label, color in trial_colors.items()]
+         # ax.legend(handles=legend_elements, title="Trial type", loc='upper right')
+         plt.tight_layout()
+         plt.savefig(os.path.join(savedst, f'lick_rate_trial_by_trial_heatmap_trialstate_{cond}_{i_sess}_{tr[0]}_to_{tr[1]}.svg'),
+                     bbox_inches='tight')
+         plt.close()

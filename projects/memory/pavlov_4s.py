@@ -3,7 +3,6 @@ sept 2025
 e221 - 15-26 redo
 """
 #%%
-
 import os, numpy as np, h5py, scipy, matplotlib.pyplot as plt, sys, pandas as pd
 sys.path.append(r'C:\Users\Han\Documents\MATLAB\han-lab') ## custom to your clone
 
@@ -27,9 +26,13 @@ src = r"Z:\pavlov_extinction\cs_4s_us"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"pavlov4s_{animal}.pdf"))
-days = np.arange(10,12)#np.arange(11,27)
+#e222
+# days = [ 1, 2,3,4,  5,  6,  7,  8,  9,10, 11, 12, 13, 14, 15, 19, 20, 21, 22, 23, 24, 26, 27, 28,29, 30, 31]#np.arange(11,27)
+#e221
+days = [31]
+# days=[1,2,4,6,7,9,10,12,13,14,16,17,18] #e220
 range_val=15; binsize=0.2
-close=False
+close=True
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 # False = True # print out per day figs
 day_date_dff = {}
@@ -156,131 +159,94 @@ for day in days:
 if close:
    pdf.close()
 #%%
-trialnum = 300
-# heatmap across days
-alltr = [np.vstack([v[0][i] for k,v in day_date_dff.items() if len(v[0])==4]) for i in range(4)]
-velalltr = np.hstack([v[1] for k,v in day_date_dff.items()]).T
-lickalltr = np.hstack([v[2] for k,v in day_date_dff.items()]).T
+# across days heatmap
+alltr = [[np.nanmean(v[0][i],axis=0) for k,v in day_date_dff.items() if len(v[0])==4] for i in range(4)]
+velalltr = [np.nanmean(v[1],axis=1) for k,v in day_date_dff.items()]
+lickalltr = [np.nanmean(v[2],axis=1)  for k,v in day_date_dff.items()]
 
-# all trials
-for pln in range(4): 
-   fig, axes = plt.subplots(ncols=2,nrows=6,sharex=True,figsize=(5,8),sharey='row')
-   ax=axes[0,0]
-   arr=alltr[pln][:trialnum]
-   cax=ax.imshow(arr,aspect='auto',cmap='jet')    
-   ax.set_ylabel('Trials (early trials)')
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+time_start, time_end = -5, 15.0   # desired display window (s)
+vline1, vline2 = 0.0, 4.0           # vertical lines to draw
+vmax=1.007
+fig, axes = plt.subplots(nrows=4, ncols=4,sharex=True, figsize=(10,8), sharey='row')
+for pln in range(4):
+
+
+   # ---- helper to crop columns to [time_start, time_end] ----
+   def crop_to_time_window(arr, time_start, time_end, range_val):
+      """
+      arr: (n_rows, n_bins)
+      range_val: original peri window half-width used when binning (so arr maps to [-range_val, +range_val])
+      returns: cropped_arr, start_idx, end_idx
+      """
+      n_bins = arr.shape[1]
+      orig_time = np.linspace(-range_val, range_val, n_bins)   # original bin centers
+      start_idx = np.searchsorted(orig_time, time_start, side='left')
+      end_idx = np.searchsorted(orig_time, time_end, side='right') - 1
+      start_idx = max(0, start_idx)
+      end_idx = min(n_bins-1, end_idx)
+      if end_idx <= start_idx:
+         raise ValueError(f"Bad crop: start {start_idx}, end {end_idx}, n_bins {n_bins}, orig_time[0]={orig_time[0]:.2f}, orig_time[-1]={orig_time[-1]:.2f}")
+      cropped = arr[:, start_idx:(end_idx+1)]
+      return cropped, start_idx, end_idx
+
+   # --- ΔF/F raster (top) ---
+   ax = axes[0,pln]
+   arr = np.array(alltr[pln])         # shape: (n_days / trials, n_bins)
+   cropped, sidx, eidx = crop_to_time_window(arr, time_start, time_end, range_val)
+   # show with extent mapping columns -> time_start..time_end
+   im = ax.imshow(cropped, aspect='auto', cmap='viridis',
+                  extent=[time_start, time_end, 0, cropped.shape[0]])
+   if pln==0: ax.set_ylabel('Days')
    ax.set_title(f'Plane {planelut[pln]}')
-   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-   ax=axes[1,0]
-   mf = np.nanmean(arr,axis=0)
-   ax.plot(mf)    
-   ax.fill_between(range(0,int(range_val/binsize)*2), 
-   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
-   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
-   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-   ax.set_xticklabels(range(-range_val, range_val+1, 2))
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   fig.tight_layout()
+   ax.axvline(vline1, linestyle='--', color='k')
+   ax.axvline(vline2, color='k')
+   div = make_axes_locatable(ax)
+   cax = div.append_axes("right", size="5%", pad=0.05)
+   fig.colorbar(im, cax=cax)
+   # optional: print crop info
+   # print(f"Plane {pln}: ΔF/F cropped cols {sidx}:{eidx+1} -> {cropped.shape[1]} bins")
 
-   ax=axes[0,1]
-   arr=alltr[pln][-trialnum:]
-   cax=ax.imshow(arr,aspect='auto',cmap='jet')    
-   ax.set_xlabel('Time from CS (s)')
-   ax.set_ylabel('Trials (late trials)')
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
-   ax.set_title(f'Plane {planelut[pln]}')
-   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-   ax=axes[1,1]
-   mf = np.nanmean(arr,axis=0)
-   ax.plot(mf)    
-   ax.fill_between(range(0,int(range_val/binsize)*2), 
-   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
-   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
-   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-   ax.set_xticklabels(range(-range_val, range_val+1, 2))
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   
-   # licks
-   ax=axes[2,0]
-   arr=lickalltr[:trialnum]
-   cax=ax.imshow(arr,aspect='auto',cmap='Blues')    
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
-   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-   ax=axes[3,0]
-   mf = np.nanmean(arr,axis=0)
-   ax.plot(mf)    
-   ax.set_ylabel('Licks')
-   ax.fill_between(range(0,int(range_val/binsize)*2), 
-   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
-   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
-   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,10))
-   ax.set_xticklabels(range(-range_val, range_val+1, 2))
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   ax=axes[2,1]
-   arr=lickalltr[-trialnum:]
-   cax=ax.imshow(arr,aspect='auto',cmap='Blues')    
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
-   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-   ax=axes[3,1]
-   mf = np.nanmean(arr,axis=0)
-   ax.plot(mf)    
-   ax.set_ylabel('Licks')
-   ax.fill_between(range(0,int(range_val/binsize)*2), 
-   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
-   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   
-   # vel
-   # licks
-   ax=axes[4,0]
-   arr=velalltr[:trialnum]
-   cax=ax.imshow(arr,aspect='auto',cmap='Greys')    
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
-   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-   ax=axes[5,0]
-   mf = np.nanmean(arr,axis=0)
-   ax.plot(mf)    
-   ax.set_ylabel('Licks')
-   ax.fill_between(range(0,int(range_val/binsize)*2), 
-   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
-   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   ax=axes[4,1]
-   arr=velalltr[-trialnum:]
-   cax=ax.imshow(arr,aspect='auto',cmap='Greys')    
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   # ax.set_yticks(range(0,pln_mean[:,pln,:].shape[0],2))
-   fig.colorbar(cax,ax=ax,fraction=0.01, pad=0.04)
-   ax=axes[5,1]
-   mf = np.nanmean(arr,axis=0)
-   ax.plot(mf)    
-   ax.set_ylabel('Velocity')
-   ax.fill_between(range(0,int(range_val/binsize)*2), 
-   mf-scipy.stats.sem(arr,axis=0,nan_policy='omit'),
-   mf+scipy.stats.sem(arr,axis=0,nan_policy='omit'), alpha=0.3)
-   ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,20))
-   ax.set_xticklabels(range(-range_val, range_val+1, 4))
-   ax.axvline(int(range_val/binsize),linestyle='--',color='k')
-   ax.axvline(int(range_val/binsize)+int(4/binsize),color='green')
-   ax.set_xlabel('Time from CS (s)')
+   # --- licks raster (middle 1) ---
+   ax = axes[1,pln]
+   arr = np.array(lickalltr)
+   cropped, sidx, eidx = crop_to_time_window(arr, time_start, time_end, range_val)
+   im = ax.imshow(cropped, aspect='auto', cmap='Blues',
+                  extent=[time_start, time_end, 0, cropped.shape[0]])
+   ax.axvline(vline1, linestyle='--', color='k')
+   ax.axvline(vline2, color='k')
+   div = make_axes_locatable(ax)
+   cax = div.append_axes("right", size="5%", pad=0.05)
+   fig.colorbar(im, cax=cax,label='Licks')
 
-   fig.tight_layout()
+   # --- velocity raster (middle 2) ---
+   ax = axes[2,pln]
+   arr = np.array(velalltr)   # or whichever vel array you use
+   cropped, sidx, eidx = crop_to_time_window(arr, time_start, time_end, range_val)
+   im = ax.imshow(cropped, aspect='auto', cmap='Greys',
+                  extent=[time_start, time_end, 0, cropped.shape[0]])
+   ax.axvline(vline1, linestyle='--', color='k')
+   ax.axvline(vline2, color='k')
+   div = make_axes_locatable(ax)
+   cax = div.append_axes("right", size="5%", pad=0.05)
+   fig.colorbar(im, cax=cax,label='Velocity')
 
-# %%
+   # --- mean trace (bottom) ---
+   ax = axes[3,pln]
+   # compute mean from the SAME columns used for the ΔF/F raster above
+   # (use alltr[pln] and sidx/eidx from that crop)
+   mean_trace = np.nanmean(np.array(alltr[pln])[:, sidx:(eidx+1)][-5:], axis=0)  # last 10 days as before
+   time_axis = np.linspace(time_start, time_end, mean_trace.size)
+   ax.plot(time_axis, mean_trace)
+   ax.axvline(vline1, linestyle='--', color='k')
+   ax.axvline(vline2, color='k')
+   ax.set_xlim(time_start, time_end)
+   div = make_axes_locatable(ax)
+   cax = div.append_axes("right", size="5%", pad=0.05)
+   fig.colorbar(im, cax=cax)
+   ax.set_title('Last 5 day average')
+   ax.set_ylim([.995,vmax])
+fig.suptitle(f'{animal}')
+fig.tight_layout()
+

@@ -25,8 +25,8 @@ src = r"X:\chrimson_snc_grabda"
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [14]#np.arange(11,27)
-range_val=10; binsize=0.2
+days = [19]#np.arange(11,27)
+range_val=5; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs
@@ -73,7 +73,7 @@ for day in days:
         timedFF = np.hstack(params['timedFF'])
         # plot behavior
         if pln==0:
-            fig, ax = plt.subplots(figsize=(15,6))            
+            fig, ax = plt.subplots(figsize=(10,4))            
             ax.plot(ybinned,zorder=1)
             ax.scatter(np.where(rewards>0)[0], ybinned[np.where(rewards>0)[0]], 
                 color = 'cyan', s=30,zorder=3)
@@ -123,7 +123,7 @@ for day in days:
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
         # Select rows that do not contain any NaNs
         clean_arr = rewdFF.T#[~rows_with_nans]    
-        fig, axes = plt.subplots(nrows=2,ncols=2,figsize=(8,5))
+        fig, axes = plt.subplots(nrows=2,ncols=2,figsize=(6,4))
         axes = axes.flatten()  # Flatten the axes array for easier plotting
         ax=axes[0]
         ax.imshow(params['params'][0][0][0],cmap="Greys_r")

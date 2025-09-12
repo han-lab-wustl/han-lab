@@ -31,7 +31,7 @@ with open(saveddataset, "rb") as fp: #unpickle
 # initialize var
 #%%
 ii=40
-iis=[130,166,49] # control v inhib x ex
+iis=[144,166,46] # control v inhib x ex
 # iis=[126,166,49] # control v inhib x ex
 
 datarasters=[]
@@ -74,8 +74,8 @@ for ii in iis:
    # only test opto vs. ctrl
    eptest = conddf.optoep.values[ii]
    if conddf.optoep.values[ii]<2: 
-            eptest = random.randint(2,3)   
-            if len(eps)<4: eptest = 2 # if no 3 epochs 
+      eptest = 3
+            # if len(eps)<4: eptest = 2 # if no 3 epochs 
    eptest=int(eptest)   
    lasttr=8 # last trials
    bins=90
@@ -91,7 +91,7 @@ for ii in iis:
    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0]).astype(bool))]
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
    # if animal!='z14' and animal!='e200' and animal!='e189':                
-   Fc3 = Fc3[:, skew>2] # only keep cells with skew greater than 2
+   Fc3 = Fc3[:, skew>1.5] # only keep cells with skew greater than 2
    # tc w/ dark time
    print('making tuning curves...\n')
    track_length_dt = 550 # cm estimate based on 99.9% of ypos
@@ -165,14 +165,50 @@ def normalize_rows(arr):
    return arr_new # do not norm
 lbls=['Control', 'VIP Inhibition', 'VIP Excitation']
 colors=['grey','mediumspringgreen','lightcoral']
+# get max values of all tcs
 # Apply normalization before plotting
 for kk, lbl in enumerate(lbls):
    tcs_correct_pc,tcs_correct_gc,coms_correct_pc,coms_correct_gc, rewlocs, eptest, lick_tcs_correct_abs, vel_tcs_correct_abs=datarasters[kk]
+   # reward
+   tcs_normalized = normalize_rows(tcs_correct_gc[eptest-1])
+   tcpc=normalize_rows(tcs_correct_pc[eptest-1])
+   ax = axes[1,kk]
+   # 1 = ledon
+   tclen=np.nanmax([tcs_normalized.shape[0],tcpc.shape[0]])
+   mat = np.ones((tclen,tcs_normalized.shape[1]))*np.nan
+   mat[:tcs_normalized.shape[0],:] = tcs_normalized[np.argsort(coms_correct_gc[1])]
+   im = ax.imshow(mat,vmin=0,vmax=vmax,aspect='auto')
+   ax.set_title(f'Reward')
+   ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
+   if kk == 0:
+      ax.set_ylabel('Reward cell # (sorted)')
+   ax.set_yticks([0,len(tcs_normalized)-1])
+   ax.set_yticks([1,len(tcs_normalized)])
+   ax.set_xticks([0, bins // 2, bins]) 
+   ax.set_xticklabels([0,135,270])
+   ax = axes[2,kk]
+   # 1 = ledon
+   ax.plot(lick_tcs_correct_abs[eptest-1][0],color='k')
+   ax.axvline(rewlocs[eptest-1]/3,color='k', linestyle='--',linewidth=3)
+   ax.spines['top'].set_visible(False)
+   ax.spines['right'].set_visible(False)
+   if kk==0: ax.set_ylabel('Lick rate (Hz)')
+   ax = axes[3,kk]
+   # 1 = ledon
+   ax.plot(vel_tcs_correct_abs[eptest-1][0],color='grey')
+   ax.axvline(rewlocs[eptest-1]/3,color='k', linestyle='--',linewidth=3)
+   ax.spines[['top','right']].set_visible(False)
+   
+   if kk==0: 
+      ax.set_ylabel('Velocity (cm/s)')
+      ax.set_xlabel('Track position (cm)')
+
    # place
    tcs_normalized = normalize_rows(tcs_correct_pc[eptest-1])
    ax = axes[0,kk]
-   # 1 = ledon
-   im = ax.imshow(tcs_normalized[np.argsort(coms_correct_pc[1])], aspect='auto',vmin=0,vmax=vmax)
+   mat = np.ones((tclen,tcs_normalized.shape[1]))*np.nan
+   mat[:tcs_normalized.shape[0],:] = tcs_normalized[np.argsort(coms_correct_pc[1])]
+   im = ax.imshow(mat,vmin=0,vmax=vmax,aspect='auto')
    ax.set_title(f'{lbls[kk]} \n Place')
    ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
    # Add red patch above raster
@@ -189,6 +225,7 @@ for kk, lbl in enumerate(lbls):
    )
    ax.add_patch(red_patch)
    ax.set_yticks([0,len(tcs_normalized)-1])
+   ax.set_yticks([1,len(tcs_normalized)])
    ax.set_xticks([0, bins // 2, bins]) 
    ax.set_xticklabels([0,135,270])
    if kk == 0:
@@ -196,33 +233,6 @@ for kk, lbl in enumerate(lbls):
       cbar_ax = fig.add_axes([.91, .65, 0.015, 0.2])  # [left, bottom, width, height]
       cbar = fig.colorbar(im, cax=cbar_ax)
       cbar.set_label(f'Norm. $\Delta$ F/F')
-   # reward
-   tcs_normalized = normalize_rows(tcs_correct_gc[eptest-1])
-   ax = axes[1,kk]
-   # 1 = ledon
-   im = ax.imshow(tcs_normalized[np.argsort(coms_correct_gc[1])], aspect='auto',vmin=0,vmax=vmax)
-   ax.set_title(f'Reward')
-   ax.axvline((rewlocs[eptest-1]-5) / 3, color='w', linestyle='--',linewidth=3)
-   if kk == 0:
-      ax.set_ylabel('Reward cell # (sorted)')
-   ax.set_yticks([0,len(tcs_normalized)-1])
-   ax.set_xticks([0, bins // 2, bins]) 
-   ax.set_xticklabels([0,135,270])
-   ax = axes[2,kk]
-   # 1 = ledon
-   ax.plot(lick_tcs_correct_abs[eptest-1][0],color='k')
-   ax.axvline(rewlocs[eptest-1]/3,color='k', linestyle='--',linewidth=3)
-   ax.spines['top'].set_visible(False)
-   ax.spines['right'].set_visible(False)
-   if kk==0: ax.set_ylabel('Lick rate (licks/s)')
-   ax = axes[3,kk]
-   # 1 = ledon
-   ax.plot(vel_tcs_correct_abs[eptest-1][0],color='grey')
-   ax.axvline(rewlocs[eptest-1]/3,color='k', linestyle='--',linewidth=3)
-   ax.set_xlabel('Track position (cm)')
-   ax.spines[['top','right']].set_visible(False)
-   
-   if kk==0: ax.set_ylabel('Velocity (cm/s)')
 
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
 plt.savefig(os.path.join(savedst, f'fig4_eg_tuning_curves.svg'), bbox_inches='tight')

@@ -123,9 +123,9 @@ for _,ii in enumerate(range(len(conddf))):
             # last few trials
         if True:
             # FIRST FEW TRIALS
-            # trials_keep = (trials<11) & (trials>2)
+            trials_keep = (trials<11) & (trials>2)
             # LAST FEW TRIALS
-            trials_keep = (trials<trial_max-10)
+            # trials_keep = (trials<trial_max-10)
             #a ll trials
             # trials_keep = np.ones_like(trials).astype(bool)
             # only incorrects
@@ -151,11 +151,14 @@ for _,ii in enumerate(range(len(conddf))):
 #%%
 # plot
 # all tcs 
-# all trials
-plt.rc('font', size=12)          # controls default text sizes
+# get lick rate preceding rew area for all types
+# plt.rc('font', size=12)          # controls default text sizes
+
+prev = []
+curr= []
 transitions = [[1,2],[1,3],[2,3],[3,1]]
-fig,axes=plt.subplots(ncols=2,nrows=2,sharey=True,sharex=True,
-        figsize=(5,4))
+fig,axes=plt.subplots(ncols=4,sharey=True,sharex=True,
+        figsize=(8,3))
 axes=axes.flatten()
 for kk,tr in enumerate(transitions):
     rewloc_from=tr[0]
@@ -168,6 +171,7 @@ for kk,tr in enumerate(transitions):
     lick_tcs_excit = np.array([v[4] for k,v in lick_selectivity.items() if len(v[4])==bins and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from) and k.split('_')[0] in vip_ex])
 
     lick_tcs_ctrl = np.array([v[4] for k,v in lick_selectivity.items() if len(v[4])==bins and (v[3][eptest-1]==rewloc_to and v[3][eptest-2]==rewloc_from) and (k.split('_')[0] not in vip_ex) and (k.split('_')[0] not in vip_an)])
+    
     ax=axes[kk]
     ax.plot(np.nanmean(lick_tcs_ctrl,axis=0),color='slategray',label=f'Control (n={lick_tcs_ctrl.shape[0]})')
     m=np.nanmean(lick_tcs_ctrl,axis=0)
@@ -191,22 +195,29 @@ for kk,tr in enumerate(transitions):
     binsz=2
     ranges=[[80/binsz,129/binsz],[129/binsz,178/binsz],[180/binsz,231/binsz]]
     x_start, x_end = ranges[rewloc_to-1]
+    rng = [int(x_start-30/binsz),int(x_end+10/binsz)]
+    curr.append([lick_tcs_ctrl[:,rng[0]:rng[1]],lick_tcs_inhib[:,rng[0]:rng[1]],lick_tcs_excit[:,rng[0]:rng[1]]])
+
     ymin, ymax = ax.get_ylim()
+    ymin=7
+    ymax=10
     rect = patches.Rectangle(
         (x_start, ymin),             # (x,y) lower-left corner
         x_end - x_start,             # width
         ymax - ymin,                 # height
-        linewidth=1.5, edgecolor='black',
+        linewidth=1.5, edgecolor='cornflowerblue',
         facecolor='none', linestyle='--',label='Current reward area'
     )
     ax.add_patch(rect)
     x_start, x_end = ranges[rewloc_from-1]
-    ymin, ymax = ax.get_ylim()
+    rng = [int(x_start-30/binsz),int(x_end+10/binsz)]
+    prev.append([lick_tcs_ctrl[:,rng[0]:rng[1]],lick_tcs_inhib[:,rng[0]:rng[1]],lick_tcs_excit[:,rng[0]:rng[1]]])
+
     rect = patches.Rectangle(
         (x_start, ymin),             # (x,y) lower-left corner
         x_end - x_start,             # width
         ymax - ymin,                 # height
-        linewidth=1.5, edgecolor='blue',
+        linewidth=1.5, edgecolor='k',
         facecolor='none', linestyle='--',label='Previous reward area'
     )
     ax.add_patch(rect)
@@ -216,7 +227,7 @@ for kk,tr in enumerate(transitions):
     # ax.set_xticks([0,bins])
     # if kk==5: ax.axis('off')
 # ax.legend(fontsize=8)
-fig.suptitle('Lick tuning, last 8 trials\nLED on epoch')
+fig.suptitle('Lick tuning, first 8 trials\nLED on epoch')
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, f'lick_tuning_all_transitions.svg'), bbox_inches='tight')
 #%%
@@ -418,22 +429,15 @@ for idx, row in df_stats.iterrows():
     cond1 = row['cond1']
     cond2 = row['cond2']
     zone = row['Zone']
-
     # X positions for bars
     x1 = order.index(cond1)
     x2 = order.index(cond2)
-
     # Y positions: get max bar height in this zone/cond
     y1 = df_plot[(df_plot['condition']==cond1) & (df_plot['zone']==zone)]['val'].max()
     y2 = df_plot[(df_plot['condition']==cond2) & (df_plot['zone']==zone)]['val'].max()
     y_base = max(y1, y2)
     bracket_height = 0.5  # vertical size of the bracket
     line_width = 1
-
-    # Coordinates for the bracket
-    x_coords = [x1, x1, x2, x2]
-    y_coords = [y_bar, y_bar+bracket_height, y_bar+bracket_height, y_bar]
-
     # Apply stacking offset if multiple bars for same zone
     key = (zone, x1, x2)
     if key in y_offsets:
@@ -442,13 +446,16 @@ for idx, row in df_stats.iterrows():
         y_bar = y_base + bar_height_offset
     y_offsets[key] = y_bar
 
+    # Coordinates for the bracket
+    x_coords = [x1, x1, x2, x2]
+    y_coords = [y_bar, y_bar+bracket_height, y_bar+bracket_height, y_bar]
+
     if row['Significant']:
         # Horizontal line
         # Draw the bracket
         ax.plot(x_coords, y_coords, color='k', lw=line_width)
         # Asterisk
         ax.text((x1+x2)/2, y_bar + 0.05, "*", ha='center', va='bottom', fontsize=30)
-
 
 # Clean up
 ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
