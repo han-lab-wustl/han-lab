@@ -28,10 +28,40 @@ saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_
 with open(saveddataset, "rb") as fp: #unpickle
    radian_alignment_saved = pickle.load(fp)
 #%%
-# initialize var
+# check animals for epoch
+iis = conddf[conddf.animals=='z9'].index
+for ii in iis:
+   day = int(conddf.days.values[ii])
+   animal = conddf.animals.values[ii]
+   if animal=='e145': pln=2  
+   else: pln=0
+   params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
+   print(params_pth)
+
+   fall = scipy.io.loadmat(params_pth, variable_names=['coms', 'changeRewLoc', 
+   'timedFF', 'ybinned', 'VR', 'forwardvel', 'trialnum', 'rewards', 'iscell', 'bordercells',
+   'stat', 'licks'])
+   VR = fall['VR'][0][0][()]
+   scalingf = VR['scalingFACTOR'][0][0]
+   try:
+      rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+   except:
+      rewsize = 10
+   ybinned = fall['ybinned'][0]/scalingf
+   track_length=180/scalingf    
+   forwardvel = fall['forwardvel'][0]    
+   changeRewLoc = np.hstack(fall['changeRewLoc'])
+   trialnum=fall['trialnum'][0] 
+   rewards = fall['rewards'][0]
+   time = fall['timedFF'][0]
+   lick = fall['licks'][0]
+   # set vars
+   eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))
+   print(rewlocs,ii)
+
 #%%
 ii=40
-iis=[144,166,46] # control v inhib x ex
+iis=[135,166,46] # control v inhib x ex
 # iis=[126,166,49] # control v inhib x ex
 
 datarasters=[]
@@ -74,7 +104,7 @@ for ii in iis:
    # only test opto vs. ctrl
    eptest = conddf.optoep.values[ii]
    if conddf.optoep.values[ii]<2: 
-      eptest = 3
+      eptest = 2
             # if len(eps)<4: eptest = 2 # if no 3 epochs 
    eptest=int(eptest)   
    lasttr=8 # last trials
@@ -91,8 +121,14 @@ for ii in iis:
    dFF = dFF[:, ((fall['iscell'][:,0]).astype(bool) & ~(fall['bordercells'][0]).astype(bool))]
    skew = scipy.stats.skew(dFF, nan_policy='omit', axis=0)
    # if animal!='z14' and animal!='e200' and animal!='e189':                
-   Fc3 = Fc3[:, skew>1.5] # only keep cells with skew greater than 2
+   Fc3 = Fc3[:, skew>1.7] # only keep cells with skew greater than 2
    # tc w/ dark time
+   # limit to 300 neurons?
+   try:
+      nums = random.sample(range(Fc3.shape[1]), 300)
+      Fc3=Fc3[:,nums]
+   except Exception as e:
+      print(e)
    print('making tuning curves...\n')
    track_length_dt = 550 # cm estimate based on 99.9% of ypos
    track_length_rad_dt = track_length_dt*(2*np.pi/track_length_dt) # estimate bin for dark time
@@ -233,6 +269,6 @@ for kk, lbl in enumerate(lbls):
       cbar_ax = fig.add_axes([.91, .65, 0.015, 0.2])  # [left, bottom, width, height]
       cbar = fig.colorbar(im, cax=cbar_ax)
       cbar.set_label(f'Norm. $\Delta$ F/F')
-
+fig.suptitle('Place and reward cells during VIP modulation')
 plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar
 plt.savefig(os.path.join(savedst, f'fig4_eg_tuning_curves.svg'), bbox_inches='tight')

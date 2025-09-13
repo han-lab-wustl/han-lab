@@ -50,7 +50,7 @@ bins=90
 for ii in range(len(conddf)):
     day = conddf.days.values[ii]
     animal = conddf.animals.values[ii]
-    if ii!=179:
+    if ii!=202:
         if animal=='e145': pln=2 
         else: pln=0
         params_pth = rf"Y:\analysis\fmats\{animal}\days\{animal}_day{day:03d}_plane{pln}_Fall.mat"
@@ -99,8 +99,10 @@ for ii in range(len(conddf)):
         pc_bool = np.sum(pcs,axis=0)>=len(eps)-2
         # looser restrictions
         pc_bool = np.sum(pcs,axis=0)>=1        
-        if animal=='e200' or animal=='e217' or animal=='z17':
-            Fc3 = Fc3[:,((skew>1)&pc_bool)]
+        if animal=='e200' or animal=='e217':            
+            Fc3 = Fc3[:,((skew>1.2))]
+        elif animal=='z17':
+            Fc3 = Fc3[:,((skew>1.2)&pc_bool)]
         else:
             Fc3 = Fc3[:,((skew>2)&pc_bool)] # only keep cells with skew greater than 2
         # if no cells pass these crit
@@ -289,7 +291,8 @@ df['place_cell_prop_shuffle']=df['place_cell_prop_shuffle']*100
 df=df[df.place_cell_prop>0]
 
 # number of epochs vs. reward cell prop    
-fig,axes = plt.subplots(ncols=2,figsize=(10,5))
+fig,axes = plt.subplots(ncols=2,figsize=(8,3),sharex=True,sharey=True)
+ax=axes[0]
 # av across mice
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 
@@ -297,71 +300,111 @@ df=df[(df.animals!='e189')&(df.animals!='e190')]
 # remove outlier days
 # df=df[~((df.animals=='z14')&(df.days<33))]
 df=df[~((df.animals=='z15')&(df.days<8))]
-df=df[~((df.animals=='e217')&(df.days<9)&(df.days==26))]
-df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
-df=df[~((df.animals=='e200')&((df.days.isin([64,67,68,81,84]))))]
-
-# df=df[~((df.animals=='e218')&(df.days>44))]
-
+# df=df[~((df.animals=='e217')&(df.days<9)&(df.days.isin([29,30,31])))]
+# df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
+df=df[~((df.animals=='e218')&(df.days>54))]
+pl =['k','slategray']
 df_plt = df
 df_plt = df_plt.groupby(['animals','condition','opto']).mean(numeric_only=True).reset_index()
-ax=axes[0]
-sns.stripplot(x='opto', y='place_cell_prop',
-        hue='condition',data=df_plt,
-        palette=pl,dodge=True,
-        s=s,alpha=0.7)
-sns.barplot(x='opto', y='place_cell_prop',hue='condition',
+sns.barplot(x='condition', y='place_cell_prop_early',hue='opto',
         data=df_plt,
         palette=pl,
         fill=False,ax=ax, color='k', errorbar='se',legend=False)
-sns.barplot(x='opto', y='place_cell_prop_shuffle',hue='condition',
-        data=df_plt,ax=ax, color='dimgrey',alpha=0.3,
-        err_kws={'color': 'grey'},errorbar=None,legend=False)
+# ----- connecting lines per animal -----
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='place_cell_prop_early').dropna()
+    xpos = list(df_plt['condition'].unique()).index(cond)
+    for _, row in wide.iterrows():
+        ax.plot([xpos-0.2, xpos+0.2], [row[False], row[True]], color='gray', alpha=0.5, lw=1.5)
+
+# ----- paired stats -----
+stats_results = {}
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='place_cell_prop_early').dropna()
+    if wide.shape[1]==2:
+        t,p = stats.ttest_rel(wide[False], wide[True])
+        stats_results[cond] = {'t':t, 'p':p, 'n':len(wide)}
+    else:
+        stats_results[cond] = None
+
+
+# ----- annotate p-values -----
+for i, cond in enumerate(df_plt['condition'].unique()):
+    res = stats_results[cond]
+    if res is not None:
+        p = res['p']
+        ymax = df_plt[df_plt['condition']==cond]['place_cell_prop_early'].max()
+        # choose stars
+        if p < 0.001:
+            stars = '***'
+        elif p < 0.01:
+            stars = '**'
+        elif p < 0.05:
+            stars = '*'
+        else:
+            stars = f"ns"
+        ax.text(i, ymax*1.15, stars, ha='center', va='bottom', fontsize=14)
+        ax.text(i, ymax*1.01, f't={res["t"]:.3g}\np={p:.3g}', ha='center', va='bottom', fontsize=9)
+
 ax.spines[['top','right']].set_visible(False)
 new_labels = {'ctrl': 'Control', 'vip': 'VIP\nInhibition', 'vip_ex': 'VIP\nExcitation'}
-handles, labels = ax.get_legend_handles_labels()
-labels = [new_labels.get(label, label) for label in labels]
-ax.legend(handles, labels, bbox_to_anchor=(.95, 1.0))
 ax.set_xlabel('')
-ax.set_xticks([0,1], labels=['LEDoff', 'LEDon'])
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 ax.set_ylabel('Place cell %')
+ax.set_title('First 8 trials')
+ax=axes[1]
+### late
+sns.barplot(x='condition', y='place_cell_prop',hue='opto',
+        data=df_plt,
+        palette=pl,
+        fill=False,ax=ax, color='k', errorbar='se',legend=False)
+# ----- connecting lines per animal -----
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='place_cell_prop').dropna()
+    xpos = list(df_plt['condition'].unique()).index(cond)
+    for _, row in wide.iterrows():
+        ax.plot([xpos-0.2, xpos+0.2], [row[False], row[True]], color='gray', alpha=0.5, lw=1.5)
 
-# 2-way ANOVA
-model = ols('place_cell_prop ~ C(condition) * C(opto)', data=df_plt).fit()
-anova_table = anova_lm(model, typ=2)
-print(anova_table)
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
-# Post-hoc Tukey HSD
-df_plt['group'] = df_plt['condition'] + '_' + str(df_plt['opto'])
-tukey = pairwise_tukeyhsd(endog=df_plt['place_cell_prop'],
-                          groups=df_plt['group'],
-                          alpha=0.05)
-print(tukey.summary())
-# Add annotations manually
-from statannotations.Annotator import Annotator
-# Define pairs to compare based on Tukey results
-pairs = [
-    (('True', 'ctrl'), ('False', 'ctrl')),
-    (('True', 'vip'), ('False', 'vip')),
-    (('True', 'vip_ex'), ('False', 'vip_ex')),
-    (('True', 'ctrl'), ('True', 'vip')),
-    (('True', 'ctrl'), ('True', 'vip_ex'))
-]
-# Format data for Annotator
-df_plt['opto'] = df_plt['opto'].astype(str)
-annot = Annotator(ax, pairs,data=df_plt, x='opto', y='place_cell_prop',
-                  hue='condition', palette=pl, dodge=True)
+# ----- paired stats -----
+stats_results = {}
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='place_cell_prop').dropna()
+    if wide.shape[1]==2:
+        t,p = stats.ttest_rel(wide[False], wide[True])
+        stats_results[cond] = {'t':t, 'p':p, 'n':len(wide)}
+    else:
+        stats_results[cond] = None
 
-annot.configure(test=None, text_format='star', loc='outside')
-pvalues = []
-for (o1, c1), (o2, c2) in pairs:
-    group1 = df_plt[(df_plt['opto'] == o1) & (df_plt['condition'] == c1)]['place_cell_prop']
-    group2 = df_plt[(df_plt['opto'] == o2) & (df_plt['condition'] == c2)]['place_cell_prop']
-    stat, pval = scipy.stats.ttest_ind(group1, group2)
-    pvalues.append(pval)
 
-annot.set_pvalues_and_annotate(pvalues)
-plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto.svg'),bbox_inches='tight')
+# ----- annotate p-values -----
+for i, cond in enumerate(df_plt['condition'].unique()):
+    res = stats_results[cond]
+    if res is not None:
+        p = res['p']
+        ymax = df_plt[df_plt['condition']==cond]['place_cell_prop'].max()
+        # choose stars
+        if p < 0.001:
+            stars = '***'
+        elif p < 0.01:
+            stars = '**'
+        elif p < 0.05:
+            stars = '*'
+        else:
+            stars = f"ns"
+        ax.text(i, ymax*1.15, stars, ha='center', va='bottom', fontsize=14)
+        ax.text(i, ymax*1.01, f't={res["t"]:.3g}\np={p:.3g}', ha='center', va='bottom', fontsize=9)
+
+ax.spines[['top','right']].set_visible(False)
+new_labels = {'ctrl': 'Control', 'vip': 'VIP\nInhibition', 'vip_ex': 'VIP\nExcitation'}
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_title('Last 8 trials')
+fig.suptitle('Place cells')
+plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto_early_late.svg'),bbox_inches='tight')
 #%%
 # subtract by led off sessions
 # ----------------------------------------
@@ -375,7 +418,7 @@ plt.savefig(os.path.join(savedst, 'place_cell_prop_ctrlvopto.svg'),bbox_inches='
 
 df_an = df_plt.copy()
 df_an = df_an.sort_values(['animals', 'condition'])
-df_an['opto'] = [True if xx=='True' else False for xx in df_an.opto]
+df_an['opto'] = [True if xx==True else False for xx in df_an.opto]
 
 # compute delta for each condition per animal
 delta_vals = []
@@ -395,7 +438,6 @@ df_delta['delta_combined'] = df_delta[['delta_late', 'delta_early']].mean(axis=1
 # Now we can plot side by side
 fig, axs = plt.subplots(1, 3, figsize=(11,6),sharey=True)
 
-pl ={'ctrl': "slategray", 'vip': 'red', 'vip_ex': 'darkgoldenrod'}
 a = 0.7
 s = 12
 
@@ -517,6 +559,8 @@ for i, (cond1, cond2) in enumerate(pairs):
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_all.svg'), bbox_inches='tight')
 #%%
 # just place and other 
+pl ={'ctrl': "slategray", 'vip': 'red', 'vip_ex': 'darkgoldenrod'}
+
 fig,axes=plt.subplots(ncols=2,figsize=(7,4),sharey=True)
 ax=axes[0]
 sns.stripplot(data=df_delta, x='condition', y='delta_combined', ax=ax, 
@@ -595,6 +639,8 @@ for i, (cond1, cond2) in enumerate(pairs):
 plt.savefig(os.path.join(savedst, 'place_cell_prop_difference_av.svg'), bbox_inches='tight')
 
 #%% 
+pl ={'ctrl': "slategray", 'vip': 'red', 'vip_ex': 'darkgoldenrod'}
+
 # correlate with rates diff
 beh = pd.read_csv(r'Z:\condition_df\vip_opto_behavior.csv')
 beh=beh[(beh.animals.isin(df.animals.values))&(beh.days.isin(df.days.values))]
@@ -608,14 +654,15 @@ slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(beh.rates_d
 print(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
 
 # Plot scatter plot with regression line
-fig,ax=plt.subplots(figsize=(6,5))
+fig,ax=plt.subplots(figsize=(4,4))
 sns.scatterplot(x=beh.rates_diff.values, y=y,hue=df_an.loc[(df_an.opto==True),'condition'].values,s=300,alpha=.7,palette=pl,ax=ax)
 ax.plot(beh.rates_diff.values, intercept + slope * beh.rates_diff.values, color='steelblue', label='Regression Line',linewidth=3)
 ax.legend()
 ax.set_xlabel("% Correct trials (LEDon-LEDoff)")
-ax.set_ylabel("Place cell %")
-ax.set_title(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
+ax.set_ylabel("Place cell % (LEDon)")
+ax.set_title(f"r={r_value:.3g}, p={p_value:.3g}",fontsize=16)
 ax.spines[['top', 'right']].set_visible(False)
+fig.suptitle('Place cell vs. task performance')
 plt.savefig(os.path.join(savedst, 'placecell_v_performance.svg'), bbox_inches='tight')
 
 #%%

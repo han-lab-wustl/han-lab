@@ -15,18 +15,20 @@ mpl.rcParams["xtick.major.size"] = 10
 mpl.rcParams["ytick.major.size"] = 10
 import matplotlib.pyplot as plt
 from projects.pyr_reward.rewardcell import perireward_binned_activity_early_late, perireward_binned_activity
+from projects.opto.behavior.behavior import smooth_lick_rate
 plt.rcParams["font.family"] = "Arial"
 
 plt.close('all')
 # save to pdf
-animal = 'e294'
+animal = 'e291'
 src = r"X:\chrimson_snc_grabda"
+# src=r'\\storage1.ris.wustl.edu\ebhan\Active\DopamineData\HRZ'
 # src=r'Y:\halo_grabda'
 src = os.path.join(src,animal)
 dst = r"C:\Users\Han\Box\neuro_phd_stuff\han_2023-\dopamine_projects"
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(dst,f"hrz_{os.path.basename(src)}.pdf"))
-days = [19]#np.arange(11,27)
-range_val=5; binsize=0.2
+days = [21]#np.arange(11,27)
+range_val=10; binsize=0.2
 planelut = {0: 'SLM', 1: 'SR', 2: 'SP', 3: 'SO'}
 old = False
 # figs = True # print out per day figs
@@ -36,10 +38,10 @@ for day in days:
     # for each plane
     for path in Path(os.path.join(src, str(day))).rglob('params.mat'):
         params = scipy.io.loadmat(path)
-        VR = params['VR'][0][0][()]
-        gainf = VR['scalingFACTOR'][0][0]
         try:
-            rewsize = VR['settings']['rewardZone'][0][0][0][0]/scalingf        
+            VR = params['VR'][0][0][()]
+            gainf = VR['scalingFACTOR'][0][0]
+            rewsize = VR['settings']['rewardZone'][0][0][0][0]/gainf        
         except:
             rewsize = 10
 
@@ -49,7 +51,7 @@ for day in days:
         params_keys = params.keys()
         keys = params['params'].dtype
         # dff is in row 7 - roibasemean3/basemean
-        if old:
+        if old==True:
             dff = np.hstack(params['params'][0][0][7][0][0])/np.nanmean(np.hstack(params['params'][0][0][7][0][0]))
             # dff = np.hstack(params['params'][0][0][10])/np.nanmean(np.hstack(params['params'][0][0][10]))
         else:
@@ -105,7 +107,7 @@ for day in days:
         scalingf=2/3
         eps = np.where(changeRewLoc>0)[0];rewlocs = changeRewLoc[eps]/scalingf;eps = np.append(eps, len(changeRewLoc))        
         mask = np.arange(0,eps[len(eps)-1])
-        rewards[:1000]=0
+        # rewards[:1000]=0
         # rewards[-1000:]=0
         # mask = np.arange(0,eps[2])
         normmeanrewdFF, meanrewdFF, normrewdFF, \
@@ -115,22 +117,23 @@ for day in days:
         _, meanvel, __, vel = perireward_binned_activity(velocity[mask], rewards[mask], 
             timedFF[mask], trialnum[mask],
             range_val, binsize)
-        _, meanlick, __, licktr = perireward_binned_activity(licks[mask], rewards[mask], 
-                timedFF[mask], trialnum[mask],
+        dt = np.nanmedian(np.diff(timedFF))
+        lick_rate=smooth_lick_rate(licks,dt)
+        _, meanlick, __, licktr = perireward_binned_activity(lick_rate[mask], rewards[mask], timedFF[mask], trialnum[mask],
                 range_val, binsize)
 
         # Find the rows that contain NaNs
         # rows_with_nans = np.any(np.isnan(rewdFF.T), axis=1)
         # Select rows that do not contain any NaNs
         clean_arr = rewdFF.T#[~rows_with_nans]    
-        fig, axes = plt.subplots(nrows=2,ncols=2,figsize=(6,4))
+        fig, axes = plt.subplots(nrows=3,ncols=2,figsize=(6,6))
         axes = axes.flatten()  # Flatten the axes array for easier plotting
         ax=axes[0]
         ax.imshow(params['params'][0][0][0],cmap="Greys_r")
         ax.imshow(params['params'][0][0][5][0][0],cmap="Greens",alpha=0.4)
         ax.axis('off')
         ax = axes[1]
-        ax.imshow(clean_arr)
+        ax.imshow(clean_arr,aspect='auto')
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.set_title('Correct Trials')
@@ -146,7 +149,7 @@ for day in days:
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.axvline(int(range_val/binsize),linestyle='--',color='k')
         ax.spines[['top','right']].set_visible(False)        
-        ax = axes[2]
+        ax = axes[4]
         ax2 = ax.twinx()
         meanvel=np.nanmedian(vel,axis=1)
         ax.plot(meanvel,color='k')   
@@ -161,14 +164,24 @@ for day in days:
             meanlick-scipy.stats.sem(licktr,axis=1,nan_policy='omit'),
             meanlick+scipy.stats.sem(licktr,axis=1,nan_policy='omit'), alpha=0.3,
             color='slategray')
+        ax.set_ylabel('Velocity (cm/s)')
+        ax2.set_ylabel('Lick rate')
         ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
         ax.set_xticklabels(range(-range_val, range_val+1, 1))
         ax.axvline(int(range_val/binsize),linestyle='--',color='k')
         ax.spines[['top','right']].set_visible(False)
-        ax.set_ylabel('Velocity (cm/s)')
-        ax2.set_ylabel('Licks')
+        # heatmap licks
+        ax = axes[2]
+        ax.imshow(licktr.T,aspect='auto',cmap='Blues')
+        ax.set_xticks(range(0, (int(range_val/binsize)*2)+1,5))
+        ax.set_xticklabels(range(-range_val, range_val+1, 1))
+        ax.set_title('Licks')
+        ax.axvline(int(range_val/binsize),linestyle='--',color='w')
+        ax.set_ylabel('Trial #')
+        ax.spines[['top','right']].set_visible(False)
         ax.set_xlabel('Time from CS (s)')
-        fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}')        
+        fig.suptitle(f'Peri CS, {animal}, Day {day}, {layer}') 
+               
         fig.tight_layout()
         pdf.savefig(fig)        
         plndff.append(clean_arr)

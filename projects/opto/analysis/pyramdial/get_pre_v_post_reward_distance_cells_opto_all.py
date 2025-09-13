@@ -55,171 +55,7 @@ with open(saveddataset, "wb") as fp:   #Pickling
     pickle.dump(radian_alignment, fp) 
 
 #%%
-# top down approach
-# 1) com dist in opto vs. control
-# 3) place v. reward
-# tcs_correct, coms_correct, tcs_fail, coms_fail,
-# tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
-# 1) get coms correct
-df = conddf.copy()
-df = df.drop([191]) # skipped e217 day
-# Filter out unwanted
-keep = ~((df.animals == 'z14') & (df.days < 15))
-keep &= ~((df.animals == 'z15') & (df.days < 8))
-keep &= ~((df.animals == 'e217') &((df.days < 9) | (df.days.isin[26,29,30])))
-keep &= ~((df.animals == 'e216') & (df.days < 32))
-keep &= ~((df.animals=='e200')&((df.days.isin([67]))))
-keep &= ~((df.animals=='e218')&(df.days>44))
-
-df = df[keep].reset_index(drop=True)
-mask = keep.values
-keys = list(radian_alignment.keys())
-radian_alignment_newcoms= {k: radian_alignment[k] for k, m in zip(keys, mask) if m}
-coms_correct = [xx[1] for k,xx in radian_alignment_newcoms.items()]
-tcs_correct = [xx[0] for k,xx in radian_alignment_newcoms.items()]
-optoep = [xx if xx>1 else 2 for xx in df.optoep.values]
-# opto comparison
-coms_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] if len(xx)>optoep[ep]-1 else xx[[optoep[ep]-3,optoep[ep]-2],:] for ep,xx in enumerate(coms_correct)]
-# tcs_correct = [xx[[optoep[ep]-2,optoep[ep]-1],:] for ep,xx in enumerate(tcs_correct)]
-coms_correct_prev = [xx[0] for ep,xx in enumerate(coms_correct)]
-coms_correct_opto = [xx[1] for ep,xx in enumerate(coms_correct)]
-
-vip_in_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
-vip_in_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]>1))]
-vip_in_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
-vip_in_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip') and (df.optoep.values[kk]==-1))]
-# excitation
-vip_ex_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
-vip_ex_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]>1))]
-vip_ex_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
-vip_ex_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if ((df.in_type.values[kk]=='vip_ex') and (df.optoep.values[kk]<1))]
-#control
-ctrl_com_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
-ctrl_com_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]>1))]
-ctrl_com_ctrl_prev = [xx for kk,xx in enumerate(coms_correct_prev) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
-ctrl_com_ctrl_opto = [xx for kk,xx in enumerate(coms_correct_opto) if (('vip' not in df.in_type.values[kk]) and (df.optoep.values[kk]<1))]
-#%%
-plots = [[ctrl_com_prev,vip_in_com_prev,vip_ex_com_prev,ctrl_com_ctrl_prev,vip_in_com_ctrl_prev,vip_ex_com_ctrl_prev],
-        [ctrl_com_opto,vip_in_com_opto,vip_ex_com_opto,ctrl_com_ctrl_opto,vip_in_com_ctrl_opto,vip_ex_com_ctrl_opto]]
-lbls=['ctrl_ledon','vip_in_ledon','vip_ex_ledon','ctrl_ledoff','vip_in_ledoff','vip_ex_ledoff']
-a=0.4
-fig,axes=plt.subplots(ncols=3,nrows=2,figsize=(17,10))
-axes=axes.flatten()
-for pl in range(len(plots[0])):
-    ax=axes[pl]
-    # Concatenate and subtract pi
-    data_prev = np.concatenate(plots[0][pl]) - np.pi
-    data_opto = np.concatenate(plots[1][pl]) - np.pi
-    ax.hist(data_prev,alpha=a,label='prev_ep',bins=100,density=True)
-    ax.hist(data_opto,alpha=a,label='opto_ep',bins=100,density=True)
-    # KDE plots
-    sns.kdeplot(data_prev, ax=ax, label='prev_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
-    sns.kdeplot(data_opto, ax=ax, label='opto_ep', fill=True, alpha=.1, linewidth=1.5,legend=False)
-    ax.set_title(lbls[pl])
-    ax.set_xlim([-np.pi/4,np.pi])
-    ax.axvline(0, color='gray', linewidth=2,linestyle='--')
-ax.legend()
-#%%
-# First compute differences for each group
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Combine per-group previous and opto data
-labels = ['ctrl', 'vip_in', 'vip_ex']
-
-# Plotting
-a = 0.4
-fig, axs = plt.subplots(ncols=3, figsize=(17, 10), sharey=True)
-axs = axs.flatten()
-
-# Define range for density evaluation
-xs = np.linspace(-np.pi, np.pi, 500)
-
-for i, (prev, opto, label) in enumerate(zip(plots[0], plots[1], labels)):
-    ax = axs[i]
-    prev_vals = np.concatenate(prev) - np.pi
-    opto_vals = np.concatenate(opto) - np.pi
-    prev_vals = prev_vals[np.isfinite(prev_vals)]
-    opto_vals = opto_vals[np.isfinite(opto_vals)]
-    # Estimate densities
-    prev_kde = scipy.stats.kde.gaussian_kde(prev_vals)
-    opto_kde = scipy.stats.kde.gaussian_kde(opto_vals)
-    prev_density = prev_kde(xs)
-    opto_density = opto_kde(xs)
-    diff_density = opto_density - prev_density
-
-    # Plot the density difference
-    ax.plot(xs, diff_density, label='opto - prev')
-    ax.axhline(0, color='grey', linewidth=2, linestyle='--')
-    ax.fill_between(xs, 0, diff_density, color='grey', alpha=0.4)
-    ax.set_title(f'{label} (opto - prev)')
-    # ax.set_xlim([-np.pi/4, np.pi])
-
-ax.legend()
-plt.tight_layout()
-plt.show()
-
-
-#%%
-# quantify
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from scipy.stats import wilcoxon
-
-# Set up
-windows = np.arange(0,np.pi,.1)
-conds = ['ctrl', 'vip_in', 'vip_ex']
-groupings = [
-    (ctrl_com_prev, ctrl_com_opto),
-    (vip_in_com_prev, vip_in_com_opto),
-    (vip_ex_com_prev, vip_ex_com_opto)
-]
-# Assume df.animals has same order as groupings
-animal_ids = {
-    'ctrl': df[(~df.in_type.str.contains('vip')) & (df.optoep > 1)].animals.values,
-    'vip_in': df[(df.in_type == 'vip') & (df.optoep > 1)].animals.values,
-    'vip_ex': df[(df.in_type == 'vip_ex') & (df.optoep > 1)].animals.values,
-}
-
-# Collect trial data with animal ID
-rows = []
-for w in windows:
-    for cond, (prev_group, opto_group) in zip(conds, groupings):
-        for p, o, animal in zip(prev_group, opto_group, animal_ids[cond]):
-            prev = np.array(p) - np.pi
-            opto = np.array(o) - np.pi
-            frac_prev = np.mean(np.abs(prev) < w)
-            frac_opto = np.mean(np.abs(opto) < w)
-            diff = frac_opto - frac_prev
-            rows.append({'window': w, 'cond': cond, 'diff': diff, 'animal': animal})
-
-df_density = pd.DataFrame(rows)
-
-# Aggregate: per animal average for each window and condition
-df_animal_avg = df_density.groupby(['window', 'cond', 'animal'])['diff'].mean().reset_index()
-
-# Seaborn plot
-plt.figure(figsize=(10, 5))
-sns.lineplot(data=df_animal_avg, x='window', y='diff', hue='cond', marker='o', err_style='bars', errorbar='se')
-plt.axhline(0, color='gray', linestyle='--')
-plt.xlabel('COM window width (radians)')
-plt.ylabel('Δ density near 0 (LEDon - LEDoff)')
-plt.title('Change in reward-centered COM density (per animal avg)')
-plt.legend(title='Condition')
-plt.tight_layout()
-plt.show()
-
-# Wilcoxon test per group at window=0.2
-for wtest in windows:
-    print(f"\nWilcoxon test at ±{wtest} rad (per-animal averages):")
-    vals1 = df_animal_avg[(df_animal_avg['window'] == wtest) & (df_animal_avg['cond'] == 'vip_in')]['diff']
-    vals2 = df_animal_avg[(df_animal_avg['window'] == wtest) & (df_animal_avg['cond'] == 'ctrl')]['diff']
-    stat, pval = scipy.stats.ttest_ind(vals1,vals2)
-    print(f"{cond}: p = {pval:.3g}, n = {len(vals1)}")
-
-# %%
+a=0.5
 # rew cell %
 # separate out variables
 df = conddf.copy()
@@ -236,8 +72,10 @@ goal_cell_prop = np.concatenate([[xx['goal_cell_prop'] for xx in cll] for cll in
 
 realdf= pd.DataFrame()
 realdf['goal_cell_prop']=goal_cell_prop
+realdf['goal_cell_prop']=realdf['goal_cell_prop']*100
 lbl = ['pre_late', 'post_late', 'pre_early', 'post_early']
 realdf['cell_type']=np.concatenate([[lbl[kk]]*len(cll) for kk,cll in enumerate(all_cells)])
+realdf['epoch_dur'] = ['early' if 'early' in xx else 'late' for xx in realdf.cell_type]
 realdf['animal']=np.concatenate([df.animals]*len(all_cells))
 realdf['optoep']=np.concatenate([df.optoep]*len(all_cells))
 realdf['opto']=[True if xx>1 else False for xx in realdf['optoep']]
@@ -248,17 +86,17 @@ realdf['day']=np.concatenate([df.days]*len(all_cells))
 realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
-realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
+# realdf=realdf[~((realdf.animal=='e201')&((realdf.day>62)))]
 realdf=realdf[~((realdf.animal=='z14')&((realdf.day<33)))]
-realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
+# realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
 realdf=realdf[~((realdf.animal=='z15')&((realdf.day<8)|(realdf.day.isin([15]))))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,29,30,26]))))]
 realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([47,55,57]))))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
+# realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
 realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
-realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
+# realdf=realdf[~((realdf.animal=='e186')&(realdf.day.isin([34,37,40])))]
 # realdf=realdf[(realdf.optoep==0)|(realdf.optoep==1)|(realdf.optoep>1)]
-dfagg=realdf.groupby(['animal', 'cell_type', 'condition','opto']).mean(numeric_only=True)
+dfagg=realdf.groupby(['animal', 'cell_type', 'condition','opto']).mean(numeric_only=True).reset_index()
 s=12
 # Pivot to get a DataFrame with separate columns for opto==False and opto==True
 plt.rc('font', size=20)          # controls default text sizes
@@ -268,13 +106,114 @@ pivoted = dfagg.pivot_table(
     values='goal_cell_prop',
     fill_value=0
 ).reset_index()
-# all sessions
-# pivoted = dfagg.reset_index().drop(columns=['index']).pivot(
-#     index=['animal', 'cell_type','day', 'condition'],  # keep all rows distinct
-#     columns='opto',
-#     values='goal_cell_prop'
-# ).reset_index()
+# compare between groups
+dfbig=realdf.groupby(['animal', 'epoch_dur','condition','opto']).mean(numeric_only=True).reset_index()
+dfbig['animals']=dfbig['animal']
+dfagg=dfbig[dfbig.epoch_dur=='early']
 
+# number of epochs vs. reward cell prop    
+fig,axes = plt.subplots(ncols=2,figsize=(8,3),sharex=True,sharey=True)
+ax=axes[0]
+# av across mice
+pl =['k','slategray']
+df_plt =dfagg
+sns.barplot(x='condition', y='goal_cell_prop',hue='opto',
+        data=df_plt,
+        palette=pl,
+        fill=False,ax=ax, color='k', errorbar='se',legend=False)
+# ----- connecting lines per animal -----
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='goal_cell_prop').dropna()
+    xpos = list(df_plt['condition'].unique()).index(cond)
+    for _, row in wide.iterrows():
+        ax.plot([xpos-0.2, xpos+0.2], [row[False], row[True]], color='gray', alpha=0.5, lw=1.5)
+# ----- paired stats -----
+stats_results = {}
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='goal_cell_prop').dropna()
+    if wide.shape[1]==2:
+        t,p = scipy.stats.ttest_rel(wide[False], wide[True])
+        stats_results[cond] = {'t':t, 'p':p, 'n':len(wide)}
+    else:
+        stats_results[cond] = None
+# ----- annotate p-values -----
+for i, cond in enumerate(df_plt['condition'].unique()):
+    res = stats_results[cond]
+    if res is not None:
+        p = res['p']
+        ymax = df_plt[df_plt['condition']==cond]['goal_cell_prop'].max()
+        # choose stars
+        if p < 0.001:
+            stars = '***'
+        elif p < 0.01:
+            stars = '**'
+        elif p < 0.05:
+            stars = '*'
+        else:
+            stars = f"ns"
+        ax.text(i, ymax*1.15, stars, ha='center', va='bottom', fontsize=14)
+        ax.text(i, ymax*1.01, f't={res["t"]:.3g}\np={p:.3g}', ha='center', va='bottom', fontsize=9)
+
+ax.spines[['top','right']].set_visible(False)
+new_labels = {'ctrl': 'Control', 'vip': 'VIP\nInhibition', 'vip_ex': 'VIP\nExcitation'}
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_ylabel('Reward cell %')
+ax.set_title('First 8 trials')
+
+ax=axes[1]
+### late
+dfagg=dfbig[dfbig.epoch_dur=='late']
+df_plt = dfagg
+sns.barplot(x='condition', y='goal_cell_prop',hue='opto',
+        data=df_plt,
+        palette=pl,
+        fill=False,ax=ax, color='k', errorbar='se',legend=False)
+# ----- connecting lines per animal -----
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='goal_cell_prop').dropna()
+    xpos = list(df_plt['condition'].unique()).index(cond)
+    for _, row in wide.iterrows():
+        ax.plot([xpos-0.2, xpos+0.2], [row[False], row[True]], color='gray', alpha=0.5, lw=1.5)
+# ----- paired stats -----
+stats_results = {}
+for cond in df_plt['condition'].unique():
+    sub = df_plt[df_plt['condition']==cond]
+    wide = sub.pivot(index='animals', columns='opto', values='goal_cell_prop').dropna()
+    if wide.shape[1]==2:
+        t,p = scipy.stats.ttest_rel(wide[False], wide[True])
+        stats_results[cond] = {'t':t, 'p':p, 'n':len(wide)}
+    else:
+        stats_results[cond] = None
+# ----- annotate p-values -----
+for i, cond in enumerate(df_plt['condition'].unique()):
+    res = stats_results[cond]
+    if res is not None:
+        p = res['p']
+        ymax = df_plt[df_plt['condition']==cond]['goal_cell_prop'].max()
+        # choose stars
+        if p < 0.001:
+            stars = '***'
+        elif p < 0.01:
+            stars = '**'
+        elif p < 0.05:
+            stars = '*'
+        else:
+            stars = f"ns"
+        ax.text(i, ymax*1.15, stars, ha='center', va='bottom', fontsize=14)
+        ax.text(i, ymax*1.01, f't={res["t"]:.3g}\np={p:.3g}', ha='center', va='bottom', fontsize=9)
+
+ax.spines[['top','right']].set_visible(False)
+new_labels = {'ctrl': 'Control', 'vip': 'VIP\nInhibition', 'vip_ex': 'VIP\nExcitation'}
+ax.set_xlabel('')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_title('Last 8 trials')
+
+plt.savefig(os.path.join(savedst, 'goal_cell_prop_ctrlvopto_early_late.svg'),bbox_inches='tight')
+#%%
 pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
 # Rename the columns for clarity
 pivoted.columns.name = None  # remove multiindex name
@@ -334,6 +273,7 @@ for cl, cll in enumerate(cellty):
 
 plt.tight_layout()
 plt.savefig(os.path.join(savedst, 'early_v_late_cell_type_reward_cellp_opto.svg'), bbox_inches='tight')
+#%%
 # Map old cell types to new ones
 cell_type_map = {
     'pre_late': 'late',
@@ -503,12 +443,12 @@ realdf=realdf[realdf['goal_cell_prop']>0]
 realdf=realdf[(realdf.animal!='e189')&(realdf.animal!='e190')]
 # remove outlier days
 realdf=realdf[~((realdf.animal=='z14')&((realdf.day<33)))]
-realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
+# realdf=realdf[~((realdf.animal=='z16')&((realdf.day>13)))]
 realdf=realdf[~((realdf.animal=='z15')&((realdf.day<8)|(realdf.day.isin([15]))))]
 realdf=realdf[~((realdf.animal=='e217')&((realdf.day<9)|(realdf.day.isin([21,29,30,26]))))]
-realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([47,55,57]))))]
-realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
-realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
+# realdf=realdf[~((realdf.animal=='e216')&((realdf.day<32)|(realdf.day.isin([47,55,57]))))]
+# realdf=realdf[~((realdf.animal=='e200')&((realdf.day.isin([67,68,81]))))]
+# realdf=realdf[~((realdf.animal=='e218')&(realdf.day.isin([41,55])))]
 cell_type_map = {
     'pre_late': 'all',
     'pre_early': 'all',
@@ -526,7 +466,7 @@ pivoted_avg = dfagg_avg.pivot_table(
     values='goal_cell_prop'
 ).reset_index()
 pivoted_avg.columns.name = None
-pivoted_avg = pivoted_avg.rename(columns={False: 'goal_cell_prop_off', True: 'goal_cell_prop_on'})
+pivoted_avg = pivoted_avg.rename(columns={False: 'goaln_cell_prop_off', True: 'goal_cell_prop_on'})
 pivoted_avg['difference'] = pivoted_avg['goal_cell_prop_on']#-pivoted_avg['goal_cell_prop_off']
 pivoted_avg['difference']=pivoted_avg['difference']*100
 # pivoted_avg=pivoted_avg[pivoted_avg.cell_type=='early']
@@ -538,14 +478,15 @@ beh=beh[beh.opto==True]
 slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(beh.rates_diff.values, pivoted_avg.difference.values)
 print(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
 # Plot scatter plot with regression line
-fig,ax=plt.subplots(figsize=(6,5))
+fig,ax=plt.subplots(figsize=(4,4))
 sns.scatterplot(x=beh.rates_diff.values, y=pivoted_avg.difference.values,hue=pivoted_avg.condition.values,s=300,alpha=.7,palette=pl,ax=ax)
-ax.plot(beh.rates_diff.values, intercept + slope * beh.rates_diff.values, color='steelblue', label='Regression Line',linewidth=3)
-ax.legend(['Regression Line', 'Control', 'VIP Inhibition', 'VIP Excitation'], fontsize='small')
+ax.plot(beh.rates_diff.values, intercept + slope * beh.rates_diff.values, color='steelblue', linewidth=3)
+ax.legend(['Control', 'VIP Inhibition', 'VIP Excitation'], fontsize='small')
 ax.set_xlabel("% Correct trials (LEDon-LEDoff)")
 ax.set_ylabel("Reward cell %")
-ax.set_title(f"Correlation (r) = {r_value:.4f}, p-value = {p_value:.3g}")
+ax.set_title(f"r={r_value:.3g}, p={p_value:.3g}",fontsize=16)
 ax.spines[['top', 'right']].set_visible(False)
+fig.suptitle('Reward cell vs. performance')
 plt.savefig(os.path.join(savedst, 'rewardcell_v_performance.svg'), bbox_inches='tight')
 #%%
 # Map old cell types to new ones

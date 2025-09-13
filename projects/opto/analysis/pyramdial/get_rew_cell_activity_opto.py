@@ -26,6 +26,7 @@ savedst = r'C:\Users\Han\Box\neuro_phd_stuff\han_2023-\vip_paper'
 saveddataset = r"Z:\saved_datasets\radian_tuning_curves_reward_cell_bytrialtype_vipopto.p"
 with open(saveddataset, "rb") as fp: #unpickle
       radian_alignment_saved = pickle.load(fp)
+from statsmodels.stats.multitest import multipletests
 
 # tcs_correct, coms_correct, tcs_fail, coms_fail, tcs_correct_early, coms_correct_early, tcs_fail_early, coms_fail_early
 # get all cell activity
@@ -35,7 +36,7 @@ for ii in range(len(conddf)):
       if ii%10==0: print(ii)
       dff.append(get_dff_opto(conddf, ii, pc=True))
 #%%
-s =12 # pointsize
+s =10 # pointsize
 a=.7
 # plot relative fc3 transients
 plt.rc('font', size=20)          # controls default text sizes
@@ -55,72 +56,99 @@ df=df[~((df.animals=='z15')&(df.days<8))]
 df=df[~((df.animals=='e217')&(df.days<9)&(df.days==26))]
 df=df[~((df.animals=='e216')&((df.days<32)|(df.days.isin([57]))))]
 df=df[~((df.animals=='e200')&((df.days.isin([67,68,81]))))]
-# df=df[~((df.animals=='e218')&(df.days>44))]
-# df=df[df['dff_target-prev']<.4] # xclude outlier fl days
 #%%
-dforg = df.loc[~((df.animals=='e190')|(df.animals=='e189'))] # exclude noisy days
- =dforg[dforg.optoep.values>1]
-df=dforg.groupby(['animals','condition']).median(numeric_only=True)
-df=df.reset_index()
-pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
-fig,ax = plt.subplots(figsize=(3,5))
-sns.stripplot(x="condition", y="dff_target", hue = 'condition',s=12, data=df,palette=pl, ax=ax,alpha=.7)
-sns.barplot(x="condition", y="dff_target", hue = 'condition', data=df,palette=pl, ax=ax,fill=False,errorbar='se')
-# sns.violinplot(x="condition", y="dff_target-prev", hue = 'condition', data=df,palette=pl,ax=ax) 
+dfnew=pd.DataFrame()
+dfnew['dff'] = np.concatenate([df.dff_target,df.dff_prev])
+dfnew['epoch'] = np.concatenate([['opto']*len(df.dff_target),['prev']*len(df.dff_prev)])
+dfnew['condition'] = np.concatenate([df.condition]*2)
+dfnew['animals'] = np.concatenate([df.animals]*2)
+dfnew['days'] = np.concatenate([df.days]*2)
+dfnew['optoep'] = np.concatenate([df.optoep]*2)
+dfnew['dff_target-prev'] = np.concatenate([df.dff_target,df.dff_prev])
+dfnew = dfnew.loc[~((dfnew.animals=='e190')|(dfnew.animals=='e189'))] # exclude noisy days
+dfnew =dfnew[dfnew.optoep.values>1]
 
-ax.spines[['top','right']].set_visible(False)
-# ax.get_legend().set_visible(False)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-ax.set_ylabel(f'Mean $\\Delta F/F$')
-# ax.set_xticks([0,1], labels=['Control', 'VIP\nInhibition'])
+#%%
+# plot dff
+conds = ['ctrl', 'vip', 'vip_ex']
+comparisons = list(itertools.combinations(conds, 2))[:-1]
+
+fig, axes = plt.subplots(ncols = 2, figsize=(8,5.5),width_ratios=[1.8,1])
+# expand opto vs. prev
+ax=axes[0]
+pl=['k','slategray']
+sns.boxplot(x="condition", y="dff", hue='epoch', data=dfnew,hue_order=['prev','opto'],
+              fill=False, ax=ax,palette=pl,legend=False,showfliers=False)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_ylabel('$\Delta F/F$')
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
 ax.set_xlabel('')
-# Prepare groups by condition
-groups = [group['dff_target-prev'].values for name, group in df.groupby('condition')]
-# Unique conditions
-conds = df['condition'].unique()
-# Collect data by condition
-data_by_group = {cond: df[df['condition'] == cond]['dff_target'].values for cond in conds}
-# Perform Kruskal-Wallis H-test
-h_stat, p_val = scipy.stats.kruskal(*groups)
-import itertools
-import statsmodels.stats.multitest as smm
-# Generate all pairwise comparisons
-comparisons = list(itertools.combinations(conds, 2))[:2]
+pl = {'ctrl': "slategray", 'vip': 'red', 'vip_ex':'darkgoldenrod'}
+ax.set_title('All pyramidal cells')
+# ---- add n annotations ----
+counts = dfnew.groupby(['condition', 'epoch']).size().reset_index(name='n')
 
-# Perform Mann-Whitney U tests
-pvals = []
-results = []
-for (g1, g2) in comparisons:
-    stat, p = scipy.stats.ranksums(data_by_group[g1], data_by_group[g2], alternative='two-sided')
-    pvals.append(p)
-    results.append((g1, g2, stat, p))
+# find positions of boxes
+positions = {}
+for i, cond in enumerate(dfnew['condition'].unique()):
+    for j, epoch in enumerate(['prev', 'opto']):
+        positions[(cond, epoch)] = i + j*0.2 - 0.1  # boxplot dodge offset
 
-# Multiple comparisons correction
-# rejected, pvals_corrected = smm.multipletests(pvals, method='fdr_bh')[:2]
-def get_xtick_positions(ax, conds):
-    xticks = []
-    for label in conds:
-        for i, tick in enumerate(ax.get_xticklabels()):
-            if tick.get_text() == label:
-                xticks.append(i)
-                break
-    return xticks
+for (cond, epoch), n in counts.set_index(['condition','epoch'])['n'].items():
+    xpos = positions[(cond, epoch)]
+    ymax = 0.12
+    ax.text(xpos, ymax, f"n={n}", ha='center', va='bottom', fontsize=9)
 
-xtick_map = get_xtick_positions(ax, conds)
-y_max = df['dff_target-prev'].max()
-h=0.03
-for idx, ((g1, g2, _, raw_p), corr_p, sig) in enumerate(zip(results, pvals, rejected)):
-      x1, x2 = xtick_map[conds.tolist().index(g1)], xtick_map[conds.tolist().index(g2)]
-      y = y_max + h + idx * h/3
-      ax.plot([x1, x1, x2, x2], [y - 0.003, y, y, y - 0.003], lw=1.5, color='k')
-      annotation = f"p = {corr_p:.3f}"
-      ax.text((x1 + x2) / 2, y - 0.015, annotation, ha='center', va='bottom', fontsize=14)
-ax.set_xticklabels(['Control', 'VIP\nInhibtion', 'VIP\nExcitation'], rotation=20)
+# ---- aggregate for other panel (as you had) ----
+dfagg = dfnew.groupby(['animals','condition']).mean(numeric_only=True).reset_index()
 
-# Print results
-print("\nPost hoc Mann-Whitney U tests (Bonferroni-corrected):")
-for i, (g1, g2, stat, raw_p) in enumerate(results):
-    print(f"{g1} vs. {g2} -> U={stat:.2f}, raw p={raw_p:.4f}, corrected p={pvals_corrected[i]:.4f}, significant={rejected[i]}")
-print("Kruskal-Wallis results:")
-print(f"H-test statistic = {h_stat:.4f}, p-value = {p_val:.4f}")
-plt.savefig(os.path.join(savedst, 'dff.svg'), bbox_inches='tight')
+
+ax=axes[1]
+sns.barplot(x="condition", y="dff_target-prev", hue='condition', data=dfagg,
+            palette=pl, errorbar='se', fill=False, ax=ax)
+sns.stripplot(x="condition", y="dff_target-prev", hue='condition', data=dfagg,
+              palette=pl, alpha=a, s=s, ax=ax)
+ax.spines[['top', 'right']].set_visible(False)
+ax.set_xticks([0, 1, 2])
+ax.set_xticklabels(['Control', 'VIP\nInhibition', 'VIP\nExcitation'], rotation=20)
+ax.set_ylabel('')
+ax.set_xlabel('')
+# Add significance annotations
+def add_sig(ax, group1, group2, y_pos, stat,pval, xoffset=0.05,h=.005):
+    x1 = conds.index(group1)
+    x2 = conds.index(group2)
+    x_center = (x1 + x2) / 2
+    plt.plot([x1, x1, x2, x2], [y_pos, y_pos + h, y_pos + h, y_pos], lw=1.5, color='black')
+    if pval < 0.001:
+        sig = '***'
+    elif pval < 0.01:
+        sig = '**'
+    elif pval < 0.05:
+        sig = '*'
+    else:
+        sig = ''
+    plt.text(x_center, y_pos, sig, ha='center', va='bottom', fontsize=38)
+    plt.text(x_center, y_pos-h, f'stat={stat:.3g},p={pval:.3g}', ha='center', fontsize=8)
+# Pairwise Mann-Whitney U testsn (Wilcoxon rank-sum)
+p_vals = []
+stats=[]
+for c1, c2 in comparisons:
+    x1 = dfagg[dfagg['condition'] == c1]['dff_target-prev'].dropna()
+    x2 = dfagg[dfagg['condition'] == c2]['dff_target-prev'].dropna()
+    stat, p = scipy.stats.ranksums(x1, x2, alternative='two-sided')
+    p_vals.append(p)
+    stats.append(stat)
+# Correct for multiple comparisons
+reject, p_vals_corrected, _, _ = multipletests(p_vals, method='fdr_bh')
+
+# Plot all pairwise comparisons
+y_start = dfagg['dff_target-prev'].max()
+gap = .002
+for i, (c1, c2) in enumerate(comparisons):
+    add_sig(ax, c1, c2, y_start, stats[i],p_vals_corrected[i])
+    y_start += gap
+# ax.set_ylim([-35,10])
+ax.set_title('Per mouse')
+fig.suptitle('Mean $\Delta F/F$, All pyramidal cells')
+plt.tight_layout()
+plt.savefig(os.path.join(savedst, 'vip_opto_dff.svg'), bbox_inches='tight')
